@@ -10,22 +10,29 @@
   };
 
   outputs = inputs:
-    inputs.flake-parts.lib.mkFlake {inherit inputs;} {
+    inputs.flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
       imports = [
         ./flake
         ./perSystem
+        ./flakeModules/shell.nix
       ];
 
       systems = ["x86_64-linux"];
-    };
+
+      flake = rec {
+        flakeModule = flakeModules.default;
+        flakeModules = rec {
+          default = shell;
+          shell = ./flakeModules/shell.nix;
+        };
+      };
+
+      # debug = true;
+    });
 
   nixConfig = {
-    extra-substituters = [
-      "https://cache.iog.io"
-    ];
-    extra-trusted-public-keys = [
-      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-    ];
+    extra-substituters = ["https://cache.iog.io"];
+    extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
     allow-import-from-derivation = "true";
   };
 }
