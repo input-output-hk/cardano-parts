@@ -6,18 +6,7 @@
     self',
     ...
   }: {
-    devShells.default = pkgs.mkShell {
-      packages = with pkgs; [
-        deadnix
-        just
-        nushell
-        statix
-      ];
-
-      shellHook = ''
-        ln -sf ${lib.getExe self'.packages.pre-push} .git/hooks/
-        ln -sf ${config.treefmt.build.configFile} treefmt.toml
-      '';
-    };
+    config.cardano-parts.shell.defaultShell = "min";
+    config.cardano-parts.shell.enableVars = false;
   };
 }
