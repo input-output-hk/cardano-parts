@@ -16,7 +16,9 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
   };
 
-  outputs = inputs:
+  outputs = inputs: let
+    inherit ((import ./flake/lib.nix {inherit inputs;}).flake.lib) recursiveImports;
+  in
     inputs.flake-parts.lib.mkFlake {inherit inputs;} ({
       flake-parts-lib,
       self,
@@ -24,24 +26,17 @@
       ...
     }: let
       inherit (flake-parts-lib) importApply;
+
+      # Required for passing localFlake ref to an exportable flakeModule
       ifmShell = importApply ./flakeModules/shell.nix {
         inherit withSystem;
         localFlake = self;
       };
     in {
       imports =
-        [
-          ./flake
-          ./perSystem/checks
-          ./perSystem/devShells
-          ./perSystem/packages/pre-push/default.nix
-          ./perSystem/packages/rain.nix
-          ./perSystem/packages/terraform.nix
-        ]
-        ++ [
-          ifmShell
-          ./flakeModules/cluster.nix
-        ];
+        recursiveImports [./flake ./perSystem]
+        # Special imports
+        ++ [./flakeModules/cluster.nix ifmShell];
 
       systems = ["x86_64-linux"];
 
