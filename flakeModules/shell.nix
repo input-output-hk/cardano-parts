@@ -56,6 +56,7 @@ in {
 
       withLocal = withSystem system;
       treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.defaultFormatterCfg;
+      isPartsRepo = "${lib.getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
 
       mainSubmodule = submodule {
         options = {
@@ -94,7 +95,9 @@ in {
             type = str;
             description = mdDoc "The cardano-parts default formatter hook.";
             default = ''
-              ln -sf ${treefmtEval.config.build.configFile} treefmt.toml
+              if ${isPartsRepo}; then
+                ln -sf ${treefmtEval.config.build.configFile} treefmt.toml
+              fi
             '';
           };
 
@@ -108,7 +111,9 @@ in {
             type = str;
             description = mdDoc "The cardano-parts default git and shell hooks.";
             default = ''
-              ln -sf ${lib.getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
+              if ${isPartsRepo} && [ -d .git/hooks ]; then
+                ln -sf ${lib.getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
+              fi
             '';
           };
 
