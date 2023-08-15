@@ -25,14 +25,16 @@
     }: let
       inherit (flake-parts-lib) importApply;
       ifmShell = importApply ./flakeModules/shell.nix {
-        localFlake = self;
         inherit withSystem;
+        localFlake = self;
       };
     in {
       imports =
         [
           ./flake
-          ./perSystem
+          ./perSystem/checks
+          ./perSystem/devShells
+          ./perSystem/packages/pre-push/default.nix
           ./perSystem/packages/rain.nix
           ./perSystem/packages/terraform.nix
         ]

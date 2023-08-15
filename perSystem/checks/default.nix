@@ -1,6 +1,5 @@
 {
   imports = [
-    ./lint
     ./test
   ];
 }

@@ -1,7 +1,21 @@
+# flakeModule: inputs.cardano-parts.flakeModules.cluster
+#
+# TODO: Move this to a docs generator
+#
+# Attributes available on flakeModule import:
+#   flake.cardano-parts.cluster.bucketName
+#   flake.cardano-parts.cluster.domain
+#   flake.cardano-parts.cluster.kms
+#   flake.cardano-parts.cluster.orgId
+#   flake.cardano-parts.cluster.profile
+#   flake.cardano-parts.cluster.region
+#   flake.cardano-parts.cluster.regions
+#
+# Tips:
+#   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.cluster.<...>
 {
   config,
   lib,
-  flake-parts-lib,
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
