@@ -198,12 +198,10 @@ in {
             description = mdDoc "Developer package group";
             default =
               cfgPkg.min
-              ++ [
-                # TODO:
-                # cabal
-                # ghcid
-                # ...
-              ];
+              ++ localFlake.inputs.haskellNix.devShells.${system}.default.buildInputs
+              ++ (with pkgs; [
+                ghcid
+              ]);
           };
 
           test = mkOption {
@@ -211,21 +209,24 @@ in {
             description = mdDoc "Testing package group";
             default =
               cfgPkg.min
-              ++ (with pkgs; [
-                b2sum
-                haskellPackages.cbor-tool
-                # TODO:
-                # bech32
-                # cardano-address
-                # cardano-cli
-                # cardano-node
-                # cardano-wallet
-                # db-analyzer
-                # db-synthesizer
-                # db-truncater
-                # update-cabal-source-repo-checksums
-                # ...
-              ]);
+              ++ (with pkgs;
+                with localFlake.packages.${system}; [
+                  b2sum
+                  haskellPackages.cbor-tool
+                  bech32
+                  cardano-address
+                  cardano-cli
+                  cardano-cli-ng
+                  cardano-node
+                  cardano-node-ng
+                  cardano-wallet
+                  db-analyser
+                  db-synthesizer
+                  db-truncater
+                  # TODO:
+                  # token-metadata-creator
+                  # update-cabal-source-repo-checksums
+                ]);
           };
 
           ops = mkOption {
@@ -233,14 +234,15 @@ in {
             description = mdDoc "Operations package group";
             default =
               cfgPkg.test
-              ++ (with pkgs; [
-                awscli2
-                localFlake.inputs.colmena.packages.${system}.colmena
-                localFlake.packages.${system}.rain
-                localFlake.packages.${system}.terraform
-                sops
-                wireguard-tools
-              ]);
+              ++ (with pkgs;
+                with localFlake.packages.${system}; [
+                  awscli2
+                  localFlake.inputs.colmena.packages.${system}.colmena
+                  rain
+                  sops
+                  terraform
+                  wireguard-tools
+                ]);
           };
 
           all = mkOption {
