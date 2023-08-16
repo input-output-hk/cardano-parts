@@ -8,8 +8,8 @@
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib) foldl mdDoc mkDefault mkOption optionalAttrs optionalString recursiveUpdate types;
-  inherit (types) anything attrs attrsOf bool enum nullOr listOf package str submodule;
+  inherit (lib) mdDoc mkDefault mkOption types;
+  inherit (types) submodule;
 in {
   options = {
     perSystem = mkPerSystemOption ({

@@ -14,6 +14,18 @@
     terranix.url = "github:terranix/terranix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
+
+    # Cardano related inputs
+    # TODO: Address large and likely unneeded stackage.nix ref in each haskell.nix input adding ~320 MB source deps
+    cardano-cli-ng.url = "github:input-output-hk/cardano-cli/cardano-cli-8.5.0.0-nix";
+    cardano-db-sync.url = "github:input-output-hk/cardano-db-sync/13.1.1.3";
+    # cardano-faucet.url = "github:input-output-hk/cardano-faucet";
+    cardano-node-ng.url = "github:input-output-hk/cardano-node/8.2.1-pre";
+    cardano-node.url = "github:input-output-hk/cardano-node/8.1.2";
+    cardano-wallet.url = "github:cardano-foundation/cardano-wallet/v2023-07-18";
+    haskellNix.url = "github:input-output-hk/haskell.nix";
+    iohkNix.url = "github:input-output-hk/iohk-nix";
+    offchain-metadata-tools.url = "github:input-output-hk/offchain-metadata-tools/feat-add-password-to-db-conn-string";
   };
 
   outputs = inputs: let
