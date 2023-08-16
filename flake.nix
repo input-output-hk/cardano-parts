@@ -27,23 +27,28 @@
     }: let
       inherit (flake-parts-lib) importApply;
 
-      # Required for passing localFlake ref to an exportable flakeModule
-      ifmShell = importApply ./flakeModules/shell.nix {
-        inherit withSystem;
-        localFlake = self;
-      };
+      passLocalFlake = flakeModuleFile:
+        importApply flakeModuleFile {
+          inherit withSystem;
+          localFlake = self;
+        };
+
+      fmCluster = ./flakeModules/cluster.nix;
+      fmPkgs = passLocalFlake ./flakeModules/pkgs.nix;
+      fmShell = passLocalFlake ./flakeModules/shell.nix;
     in {
       imports =
         recursiveImports [./flake ./perSystem]
         # Special imports
-        ++ [./flakeModules/cluster.nix ifmShell];
+        ++ [fmCluster fmPkgs fmShell];
 
       systems = ["x86_64-linux"];
 
       flake = {
         flakeModules = {
-          cluster = ./flakeModules/cluster.nix;
-          shell = ifmShell;
+          cluster = fmCluster;
+          pkgs = fmPkgs;
+          shell = fmShell;
         };
       };
 
