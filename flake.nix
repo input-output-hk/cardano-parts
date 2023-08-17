@@ -16,16 +16,23 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
 
     # Cardano related inputs
-    # TODO: Address large and likely unneeded stackage.nix ref in each haskell.nix input adding ~320 MB source deps
     cardano-cli-ng.url = "github:input-output-hk/cardano-cli/cardano-cli-8.5.0.0-nix";
     cardano-db-sync.url = "github:input-output-hk/cardano-db-sync/13.1.1.3";
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet";
     cardano-node-ng.url = "github:input-output-hk/cardano-node/8.2.1-pre";
     cardano-node.url = "github:input-output-hk/cardano-node/8.1.2";
     cardano-wallet.url = "github:cardano-foundation/cardano-wallet/v2023-07-18";
-    haskellNix.url = "github:input-output-hk/haskell.nix";
-    iohkNix.url = "github:input-output-hk/iohk-nix";
+    empty-flake.url = "github:input-output-hk/empty-flake";
+    haskell-nix.url = "github:input-output-hk/haskell.nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
     offchain-metadata-tools.url = "github:input-output-hk/offchain-metadata-tools/feat-add-password-to-db-conn-string";
+
+    # Reduce stackage.nix large download source deps for any haskell.nix pins found in `nix flake metadata`
+    # Add nested stackage refs once updating transitive inputs are allowed:
+    #   https://github.com/NixOS/nix/issues/5790
+    #   https://github.com/NixOS/nix/pull/8819
+    # Until then, stackage nested deps add about 2 GB d/l on first direnv load
+    haskell-nix.inputs.stackage.follows = "empty-flake";
   };
 
   outputs = inputs: let
@@ -39,15 +46,15 @@
     }: let
       inherit (flake-parts-lib) importApply;
 
-      passLocalFlake = flakeModuleFile:
-        importApply flakeModuleFile {
-          inherit withSystem;
-          localFlake = self;
-        };
+      passLocalFlake = flakeModuleFile: extraCfg:
+        importApply flakeModuleFile ({
+            localFlake = self;
+          }
+          // extraCfg);
 
       fmCluster = ./flakeModules/cluster.nix;
-      fmPkgs = passLocalFlake ./flakeModules/pkgs.nix;
-      fmShell = passLocalFlake ./flakeModules/shell.nix;
+      fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
+      fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
     in {
       imports =
         recursiveImports [./flake ./perSystem]
