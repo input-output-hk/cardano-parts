@@ -51,7 +51,8 @@ in {
     }: let
       cfg = config.cardano-parts;
       cfgShell = cfg.shell;
-      cfgPkg = cfgShell.pkgGroup;
+      cfgPkgGroup = cfgShell.pkgGroup;
+      cfgPkgs = cfg.pkgs;
       flakeCfg = flake.config.flake.cardano-parts;
 
       withLocal = withSystem system;
@@ -71,7 +72,7 @@ in {
       shellSubmodule = submodule {
         options = {
           defaultShell = mkOption {
-            type = nullOr (enum (builtins.attrNames cfgPkg));
+            type = nullOr (enum (builtins.attrNames cfgPkgGroup));
             description = mdDoc "The cardano-parts shell to set as default, if desired.";
             default = null;
           };
@@ -197,8 +198,8 @@ in {
             type = listOf package;
             description = mdDoc "Developer package group";
             default =
-              cfgPkg.min
-              ++ localFlake.inputs.haskellNix.devShells.${system}.default.buildInputs
+              cfgPkgGroup.min
+              ++ localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
               ++ (with pkgs; [
                 ghcid
               ]);
@@ -208,9 +209,9 @@ in {
             type = listOf package;
             description = mdDoc "Testing package group";
             default =
-              cfgPkg.min
+              cfgPkgGroup.min
               ++ (with pkgs;
-                with localFlake.packages.${system}; [
+                with cfgPkgs; [
                   b2sum
                   haskellPackages.cbor-tool
                   bech32
@@ -223,8 +224,8 @@ in {
                   db-analyser
                   db-synthesizer
                   db-truncater
+                  token-metadata-creator
                   # TODO:
-                  # token-metadata-creator
                   # update-cabal-source-repo-checksums
                 ]);
           };
@@ -233,7 +234,7 @@ in {
             type = listOf package;
             description = mdDoc "Operations package group";
             default =
-              cfgPkg.test
+              cfgPkgGroup.test
               ++ (with pkgs;
                 with localFlake.packages.${system}; [
                   awscli2
@@ -249,8 +250,8 @@ in {
             type = listOf package;
             description = mdDoc "Kitchen sink package group";
             default =
-              cfgPkg.dev
-              ++ cfgPkg.ops;
+              cfgPkgGroup.dev
+              ++ cfgPkgGroup.ops;
           };
         };
       };
@@ -268,7 +269,7 @@ in {
         devShells = let
           mkShell = pkgGroup:
             pkgs.mkShell ({
-                packages = cfgPkg.${pkgGroup};
+                packages = cfgPkgGroup.${pkgGroup};
                 shellHook =
                   # Add optional git/shell and formatter hooks
                   optionalString cfgShell.enableHooks cfgShell.defaultHooks
@@ -279,7 +280,7 @@ in {
         in
           # Add default devShells composed of available flakeModule package groups
           # Add optional defaultShell
-          foldl (shells: n: recursiveUpdate shells {"cardano-parts-${n}" = mkShell n;}) {} (builtins.attrNames cfgPkg)
+          foldl (shells: n: recursiveUpdate shells {"cardano-parts-${n}" = mkShell n;}) {} (builtins.attrNames cfgPkgGroup)
           // optionalAttrs (cfgShell.defaultShell != null) {default = config.devShells."cardano-parts-${cfgShell.defaultShell}";};
 
         # Add optional checks: lint, formatter
