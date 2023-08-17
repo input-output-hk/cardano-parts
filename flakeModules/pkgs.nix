@@ -77,7 +77,7 @@ in {
           (mkPkg "cardano-cli-ng" (mkWrapper "cardano-cli-ng" localFlake.inputs.cardano-cli-ng.packages.${system}."cardano-cli:exe:cardano-cli"))
           (mkPkg "cardano-db-sync" localFlake.inputs.cardano-db-sync.packages.${system}.cardano-db-sync)
           (mkPkg "cardano-db-tool" localFlake.inputs.cardano-db-sync.packages.${system}.cardano-db-tool)
-          (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}.cardano-faucet)
+          (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
           (mkPkg "cardano-node" localFlake.inputs.cardano-node.packages.${system}.cardano-node)
           (mkPkg "cardano-node-ng" (mkWrapper "cardano-node-ng" localFlake.inputs.cardano-node-ng.packages.${system}.cardano-node))
           (mkPkg "cardano-submit-api" localFlake.inputs.cardano-node.packages.${system}.cardano-submit-api)
