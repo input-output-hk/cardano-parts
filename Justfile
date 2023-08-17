@@ -7,3 +7,6 @@ default:
 lint:
   deadnix -f
   statix check
+
+show-flake:
+  nix flake show --allow-import-from-derivation

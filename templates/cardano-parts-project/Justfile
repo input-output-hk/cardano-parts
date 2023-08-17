@@ -37,6 +37,9 @@ save-bootstrap-ssh-key:
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
 
+show-flake:
+  nix flake show --allow-import-from-derivation
+
 show-nameservers:
   #!/usr/bin/env nu
   let domain = (nix eval --raw '.#cardano-parts.cluster.domain')
