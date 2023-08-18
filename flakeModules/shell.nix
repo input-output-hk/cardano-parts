@@ -15,6 +15,7 @@
 #   perSystem.cardano-parts.shell.enableHooks
 #   perSystem.cardano-parts.shell.enableLint
 #   perSystem.cardano-parts.shell.enableVars
+#   perSystem.cardano-parts.shell.extraPkgs
 #   perSystem.cardano-parts.shell.pkgGroup.<...>
 #
 # Attributes optionally configured on flakeModule import depending on above config:
@@ -172,6 +173,12 @@ in {
             default = true;
           };
 
+          extraPkgs = mkOption {
+            type = listOf package;
+            description = mdDoc "Extra packages which are added to all devShells.";
+            default = [];
+          };
+
           pkgGroup = mkOption {
             type = pkgGroupSubmodule;
             description = mdDoc "Package groups for mkShell composition";
@@ -269,7 +276,7 @@ in {
         devShells = let
           mkShell = pkgGroup:
             pkgs.mkShell ({
-                packages = cfgPkgGroup.${pkgGroup};
+                packages = cfgPkgGroup.${pkgGroup} ++ cfgShell.extraPkgs;
                 shellHook =
                   # Add optional git/shell and formatter hooks
                   optionalString cfgShell.enableHooks cfgShell.defaultHooks
