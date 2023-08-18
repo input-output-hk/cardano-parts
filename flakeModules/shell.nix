@@ -263,8 +263,6 @@ in {
         };
       };
     in {
-      _file = ./shell.nix;
-
       # perSystem level option definition
       options.cardano-parts = mkOption {
         type = mainSubmodule;

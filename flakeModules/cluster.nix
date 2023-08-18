@@ -97,8 +97,6 @@
   };
 in {
   options = {
-    _file = ./cluster.nix;
-
     # Top level option definition
     flake.cardano-parts = mkOption {
       type = mainSubmodule;

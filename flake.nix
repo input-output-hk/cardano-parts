@@ -7,6 +7,7 @@
     colmena.inputs.nixpkgs.follows = "nixpkgs";
     colmena.url = "github:zhaofengli/colmena/v0.4.0";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    inputs-check.url = "github:johnalotoski/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
     sops-nix.url = "github:Mic92/sops-nix";
@@ -74,7 +75,12 @@
       imports =
         recursiveImports [./flake ./perSystem]
         # Special imports
-        ++ [fmCluster fmPkgs fmShell];
+        ++ [
+          fmCluster
+          fmPkgs
+          fmShell
+          inputs.inputs-check.flakeModule
+        ];
 
       systems = ["x86_64-linux"];
 
