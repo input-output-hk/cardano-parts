@@ -28,11 +28,26 @@
     offchain-metadata-tools.url = "github:input-output-hk/offchain-metadata-tools/feat-add-password-to-db-conn-string";
 
     # Reduce stackage.nix large download source deps for any haskell.nix pins found in `nix flake metadata`
-    # Add nested stackage refs once updating transitive inputs are allowed:
+    # Residual nested stackage refs can be addressed once updating transitive inputs are allowed:
     #   https://github.com/NixOS/nix/issues/5790
     #   https://github.com/NixOS/nix/pull/8819
     # Until then, stackage nested deps add about 2 GB d/l on first direnv load
     haskell-nix.inputs.stackage.follows = "empty-flake";
+
+    # By setting all haskell.nix pins to this flake's haskell.nix pin, all stackage.nix refs are set to ~0 size,
+    # all hackage.nix refs will be shared ~(50 MB per ref), reducing closure size significantly
+    cardano-cli-ng.inputs.haskellNix.follows = "haskell-nix";
+    cardano-cli-ng.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
+    cardano-db-sync.inputs.haskellNix.follows = "haskell-nix";
+    cardano-db-sync.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
+    cardano-faucet.inputs.haskellNix.follows = "haskell-nix";
+    cardano-faucet.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
+    cardano-node-ng.inputs.haskellNix.follows = "haskell-nix";
+    cardano-node-ng.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
+    cardano-node.inputs.haskellNix.follows = "haskell-nix";
+    cardano-node.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
+    cardano-wallet.inputs.haskellNix.follows = "haskell-nix";
+    cardano-wallet.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
   };
 
   outputs = inputs: let
