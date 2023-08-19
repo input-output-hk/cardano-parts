@@ -94,8 +94,6 @@ in {
         ];
       };
     in {
-      _file = ./pkgs.nix;
-
       # perSystem level option definition
       options.cardano-parts = mkOption {
         type = mainSubmodule;
