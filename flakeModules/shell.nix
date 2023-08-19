@@ -41,7 +41,7 @@
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib) foldl' mdDoc mkDefault mkOption optionalAttrs optionalString recursiveUpdate types;
+  inherit (lib) concatMapStringsSep foldl' getExe head mdDoc mkDefault mkOption optionalAttrs optionalString range recursiveUpdate reverseList types;
   inherit (types) anything attrs attrsOf bool enum nullOr listOf package str submodule;
 in {
   options = {
@@ -58,7 +58,7 @@ in {
 
       withLocal = withSystem system;
       treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
-      isPartsRepo = "${lib.getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
+      isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
 
       globalDefault = isGlobal: default:
         if isGlobal
@@ -113,7 +113,7 @@ in {
             description = mdDoc "The cardano-parts default git and shell hooks.";
             default = globalDefault isGlobal ''
               if ${isPartsRepo} && [ -d .git/hooks ]; then
-                ln -sf ${lib.getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
+                ln -sf ${getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
               fi
             '';
           };
@@ -307,12 +307,40 @@ in {
           ]);
       };
 
-      # Select between global and perShell scope when perShell options should
-      # take precedence over global options.
+      # Select between global and perShell scope precedence
       selectScope = id: f: boolCheck: option:
         if cfgShell.${id}.${boolCheck} != null
         then f cfgShell.${id}.${boolCheck} cfgShell.${id}.${option}
         else f cfgShell.global.${boolCheck} cfgShell.global.${option};
+
+      infoShellHook = id: allPkgs: let
+        minWidth =
+          head (
+            reverseList (
+              builtins.sort builtins.lessThan (
+                map (pkg: builtins.stringLength pkg.name) allPkgs
+              )
+            )
+          )
+          + 2;
+        justify = count: foldl' (acc: _: acc + " ") "" (range 1 count);
+      in
+        with pkgs; ''
+          echo "Cardano Parts DevShell: cardano-parts-${id}" | ${lolcat}/bin/lolcat
+          echo
+          echo "Other devshells available are:"
+          echo "${concatMapStringsSep "\n" (id: "  cardano-parts-${id}") definedIds}"
+          echo
+          echo "The following packages are available in this cardano-parts-${id} devShell:"
+          echo
+          echo "${builtins.concatStringsSep "\n" (map (pkg:
+            if builtins.hasAttr "description" pkg.meta
+            then "${pkg.name}${justify (minWidth - builtins.stringLength pkg.name)}${pkg.meta.description}"
+            else "${pkg.name}")
+          allPkgs)}"
+          echo
+          echo
+        '';
     in {
       # perSystem level option definition
       options.cardano-parts = mkOption {
@@ -323,13 +351,16 @@ in {
         cardano-parts = mkDefault {};
 
         devShells = let
-          mkShell = id:
+          mkShell = id: let
+            allPkgs = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
+          in
             pkgs.mkShell ({
-                packages = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
+                packages = allPkgs;
                 shellHook =
                   # Add optional git/shell and formatter hooks
                   selectScope id optionalString "enableHooks" "defaultHooks"
-                  + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook";
+                  + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
+                  + infoShellHook id allPkgs;
               }
               # Add optional default shell environment variables
               // selectScope id optionalAttrs "enableVars" "defaultVars");
@@ -341,11 +372,11 @@ in {
 
         # Add optional checks: lint, formatter
         checks =
-          lib.optionalAttrs cfgShell.global.enableLint {lint = cfgShell.global.defaultLintPkg;}
-          // lib.optionalAttrs cfgShell.global.enableFormatter {treefmt = cfgShell.global.defaultFormatterCheck;};
+          optionalAttrs cfgShell.global.enableLint {lint = cfgShell.global.defaultLintPkg;}
+          // optionalAttrs cfgShell.global.enableFormatter {treefmt = cfgShell.global.defaultFormatterCheck;};
 
         # Add optional formatter
-        formatter = lib.optionalAttrs cfgShell.global.enableFormatter cfgShell.global.defaultFormatterPkg;
+        formatter = optionalAttrs cfgShell.global.enableFormatter cfgShell.global.defaultFormatterPkg;
       };
     });
   };
