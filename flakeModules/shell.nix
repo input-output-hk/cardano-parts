@@ -219,10 +219,16 @@ in {
             isGlobal = true;
             id = "global";
             description = mdDoc "The cardano-parts devShell global configuration options.";
-            extraCfg.defaultShell = mkOption {
-              type = nullOr (enum definedIds);
-              description = mdDoc "The cardano-parts devShell to set as default, if desired.";
-              default = null;
+            extraCfg = {
+              defaultShell = mkOption {
+                type = nullOr (enum definedIds);
+                description = mdDoc "The cardano-parts devShell to set as default, if desired.";
+                default = null;
+              };
+
+              pkgs = mkOption {
+                default = map (id: config.packages."cardano-parts-menu-${id}") definedIds;
+              };
             };
           }
           # Set per devShell options
@@ -313,34 +319,49 @@ in {
         then f cfgShell.${id}.${boolCheck} cfgShell.${id}.${option}
         else f cfgShell.global.${boolCheck} cfgShell.global.${option};
 
-      infoShellHook = id: allPkgs: let
-        minWidth =
-          head (
-            reverseList (
-              builtins.sort builtins.lessThan (
-                map (pkg: builtins.stringLength pkg.name) allPkgs
-              )
-            )
-          )
-          + 2;
-        justify = count: foldl' (acc: _: acc + " ") "" (range 1 count);
-      in
-        with pkgs; ''
-          echo "Cardano Parts DevShell: cardano-parts-${id}" | ${lolcat}/bin/lolcat
-          echo
-          echo "Other devshells available are:"
-          echo "${concatMapStringsSep "\n" (id: "  cardano-parts-${id}") definedIds}"
-          echo
-          echo "The following packages are available in this cardano-parts-${id} devShell:"
-          echo
-          echo "${builtins.concatStringsSep "\n" (map (pkg:
-            if builtins.hasAttr "description" pkg.meta
-            then "${pkg.name}${justify (minWidth - builtins.stringLength pkg.name)}${pkg.meta.description}"
-            else "${pkg.name}")
-          allPkgs)}"
-          echo
-          echo
-        '';
+      mkMenuWrapper = id:
+        (pkgs.writeShellScriptBin "menu" ''
+          exec ${lib.getExe config.packages."cardano-parts-menu-${id}"} "$@"
+        '')
+        .overrideAttrs {meta.description = "Wrapper for cardano-parts-menu-${id}";};
+
+      mkMenu = id: {
+        "cardano-parts-menu-${id}" =
+          (pkgs.writeShellApplication {
+            name = "cardano-parts-menu-${id}";
+            runtimeInputs = with pkgs; [lolcat];
+
+            text = let
+              allPkgs = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
+              justify = count: foldl' (acc: _: acc + " ") "" (range 1 count);
+              minWidth =
+                head (
+                  reverseList (
+                    builtins.sort builtins.lessThan (
+                      map (pkg: builtins.stringLength pkg.name) allPkgs
+                    )
+                  )
+                )
+                + 2;
+            in ''
+              echo "Cardano Parts DevShell Menu: cardano-parts-${id}" | lolcat
+              echo
+              echo "The following packages are available in cardano-parts-${id} devShell:"
+              echo
+              echo "${builtins.concatStringsSep "\n" (map (pkg:
+                if builtins.hasAttr "description" pkg.meta
+                then "${pkg.name}${justify (minWidth - builtins.stringLength pkg.name)}${pkg.meta.description}"
+                else "${pkg.name}")
+              allPkgs)}"
+              echo
+              echo
+              echo "Other cardano-parts devshells available are:"
+              echo "${concatMapStringsSep "\n" (id: "  cardano-parts-${id}") definedIds}"
+              echo
+            '';
+          })
+          .overrideAttrs {meta.description = "Cardano parts menu for devShell cardano-parts-${id}";};
+      };
     in {
       # perSystem level option definition
       options.cardano-parts = mkOption {
@@ -355,12 +376,14 @@ in {
             allPkgs = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
           in
             pkgs.mkShell ({
-                packages = allPkgs;
+                packages = allPkgs ++ [(mkMenuWrapper id)];
                 shellHook =
                   # Add optional git/shell and formatter hooks
                   selectScope id optionalString "enableHooks" "defaultHooks"
                   + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
-                  + infoShellHook id allPkgs;
+                  + ''
+                    menu
+                  '';
               }
               # Add optional default shell environment variables
               // selectScope id optionalAttrs "enableVars" "defaultVars");
@@ -377,6 +400,9 @@ in {
 
         # Add optional formatter
         formatter = optionalAttrs cfgShell.global.enableFormatter cfgShell.global.defaultFormatterPkg;
+
+        # Make devshell menu packages cardano-parts-menu-<id>
+        packages = foldl' (acc: id: recursiveUpdate acc (mkMenu id)) {} definedIds;
       };
     });
   };
