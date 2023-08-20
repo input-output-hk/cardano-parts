@@ -33,7 +33,7 @@
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib) foldl mdDoc mkDefault mkOption recursiveUpdate types;
+  inherit (lib) mdDoc mkDefault mkOption recursiveUpdate types;
   inherit (types) package submodule;
 in {
   options = {
@@ -55,9 +55,10 @@ in {
       };
 
       mkWrapper = name: pkg:
-        pkgs.writeShellScriptBin name ''
+        (pkgs.writeShellScriptBin name ''
           exec ${lib.getExe pkg} "$@"
-        '';
+        '')
+        .overrideAttrs {meta.description = "Wrapper for ${pkg.meta.name}";};
 
       mainSubmodule = submodule {
         options = {
@@ -70,7 +71,7 @@ in {
       };
 
       pkgsSubmodule = submodule {
-        options = foldl recursiveUpdate {} [
+        options = lib.foldl' recursiveUpdate {} [
           (mkPkg "bech32" localFlake.inputs.cardano-node.packages.${system}.bech32)
           (mkPkg "cardano-address" localFlake.inputs.cardano-wallet.packages.${system}.cardano-address)
           (mkPkg "cardano-cli" localFlake.inputs.cardano-node.packages.${system}.cardano-cli)
