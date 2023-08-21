@@ -319,6 +319,13 @@ in
           then f cfgShell.${id}.${boolCheck} cfgShell.${id}.${option}
           else f cfgShell.global.${boolCheck} cfgShell.global.${option};
 
+        allPkgs = id:
+          cfgShell.${id}.pkgs
+          ++ cfgShell.${id}.extraPkgs
+          ++ cfgShell.global.pkgs
+          ++ cfgShell.global.extraPkgs
+          ++ [(mkMenuWrapper id)];
+
         mkMenuWrapper = id:
           (pkgs.writeShellScriptBin "menu" ''
             exec ${getExe config.packages."menu-${id}"} "$@"
@@ -332,7 +339,6 @@ in
               runtimeInputs = with pkgs; [lolcat];
 
               text = let
-                allPkgs = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
                 pkgStr = pkg:
                   if getVersion pkg != ""
                   then "${getName pkg} (${getVersion pkg})"
@@ -341,7 +347,7 @@ in
                   head (
                     reverseList (
                       builtins.sort builtins.lessThan (
-                        map (pkg: builtins.stringLength pkg.name) allPkgs
+                        map (pkg: builtins.stringLength pkg.name) (allPkgs id)
                       )
                     )
                   )
@@ -355,7 +361,7 @@ in
                   if builtins.hasAttr "description" pkg.meta
                   then pkgStr pkg + fixedWidthString (minWidth - builtins.stringLength (pkgStr pkg)) " " "" + pkg.meta.description
                   else pkgStr pkg)
-                allPkgs)}"
+                (allPkgs id))}"
                 echo
                 echo
                 echo "Other cardano-parts devShells available are:"
@@ -375,11 +381,9 @@ in
           cardano-parts = mkDefault {};
 
           devShells = let
-            mkShell = id: let
-              allPkgs = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
-            in
+            mkShell = id:
               pkgs.mkShell ({
-                  packages = allPkgs ++ [(mkMenuWrapper id)];
+                  packages = allPkgs id;
                   shellHook =
                     # Add optional git/shell and formatter hooks
                     selectScope id optionalString "enableHooks" "defaultHooks"
