@@ -3077,11 +3077,11 @@
         "nixpkgs": "nixpkgs_32"
       },
       "locked": {
-        "lastModified": 1692491023,
-        "narHash": "sha256-xdalTfndkqP94ysxbSncF5JVT6JWJTCN0hh6tN2W2no=",
+        "lastModified": 1692581862,
+        "narHash": "sha256-OHaQH/lh5qq7cqfuPAJx/rFKsc/WH4jIkJ/o3qz7Duk=",
         "owner": "johnalotoski",
         "repo": "inputs-check",
-        "rev": "fcbb2bdf8d78be877199c10308babc0c35b8ac91",
+        "rev": "52ee5e99175dedee32722496a4c940c679d70e79",
         "type": "github"
       },
       "original": {
