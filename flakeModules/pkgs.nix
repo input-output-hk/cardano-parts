@@ -61,7 +61,7 @@
           Since cardanoLib is system dependent, placing it in
           legacyPackages seems most appropriate.
 
-          The default definition must be a function of system.
+          The definition must be a function of system.
         '';
         default = system:
           (import localFlake.inputs.nixpkgs {

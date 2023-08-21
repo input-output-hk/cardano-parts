@@ -37,8 +37,8 @@ save-bootstrap-ssh-key:
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
 
-show-flake:
-  nix flake show --allow-import-from-derivation
+show-flake *ARGS:
+  nix flake show --allow-import-from-derivation {{ARGS}}
 
 show-nameservers:
   #!/usr/bin/env nu
