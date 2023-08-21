@@ -7,7 +7,7 @@
     colmena.inputs.nixpkgs.follows = "nixpkgs";
     colmena.url = "github:zhaofengli/colmena/v0.4.0";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    inputs-check.url = "github:johnalotoski/inputs-check";
+    inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
     sops-nix.url = "github:Mic92/sops-nix";
