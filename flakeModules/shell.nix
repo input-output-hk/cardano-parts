@@ -323,7 +323,7 @@ in
           (pkgs.writeShellScriptBin "menu" ''
             exec ${lib.getExe config.packages."cardano-parts-menu-${id}"} "$@"
           '')
-          .overrideAttrs (old: {meta = old.meta // {description = "Wrapper for cardano-parts-menu-${id}";};});
+          .overrideAttrs (_: {meta.description = "Wrapper for cardano-parts-menu-${id}";});
 
         mkMenu = id: {
           "cardano-parts-menu-${id}" = (pkgs.writeShellApplication
@@ -360,7 +360,7 @@ in
                 echo
               '';
             })
-          .overrideAttrs (old: {meta = old.meta // {description = "Cardano parts menu for devShell cardano-parts-${id}";};});
+          .overrideAttrs (_: {meta.description = "Cardano parts menu for devShell cardano-parts-${id}";});
         };
       in {
         # perSystem level option definition
