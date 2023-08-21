@@ -333,7 +333,6 @@ in
 
               text = let
                 allPkgs = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
-                justify = count: foldl' (acc: _: acc + " ") "" (range 1 count);
                 minWidth =
                   head (
                     reverseList (
@@ -350,13 +349,13 @@ in
                 echo
                 echo "${builtins.concatStringsSep "\n" (map (pkg:
                   if builtins.hasAttr "description" pkg.meta
-                  then "${pkg.name}${justify (minWidth - builtins.stringLength pkg.name)}${pkg.meta.description}"
+                  then pkg.name + fixedWidthString (minWidth - builtins.stringLength pkg.name) " " "" + pkg.meta.description
                   else "${pkg.name}")
                 allPkgs)}"
                 echo
                 echo
                 echo "Other cardano-parts devshells available are:"
-                echo "${concatMapStringsSep "\n" (id: "  cardano-parts-${id}") definedIds}"
+                echo "${concatMapStringsSep "\n" (id: "  cardano-parts-${id} (info: cardano-parts-menu-${id})") definedIds}"
                 echo
               '';
             })
