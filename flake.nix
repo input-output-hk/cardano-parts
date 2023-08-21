@@ -69,6 +69,7 @@
           // extraCfg);
 
       fmCluster = ./flakeModules/cluster.nix;
+      fmEntrypoints = ./flakeModules/entrypoints.nix;
       fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
       fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
     in {
@@ -77,6 +78,7 @@
         # Special imports
         ++ [
           fmCluster
+          fmEntrypoints
           fmPkgs
           fmShell
           inputs.inputs-check.flakeModule
@@ -87,6 +89,7 @@
       flake = {
         flakeModules = {
           cluster = fmCluster;
+          entrypoints = fmEntrypoints;
           pkgs = fmPkgs;
           shell = fmShell;
         };
