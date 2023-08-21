@@ -3,7 +3,7 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.common = moduleWithSystem ({system}: {
+  flake.nixosModules.basic = moduleWithSystem ({system}: {
     name,
     config,
     pkgs,
