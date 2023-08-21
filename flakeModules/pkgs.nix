@@ -56,9 +56,15 @@ in
 
         mkWrapper = name: pkg:
           (pkgs.writeShellScriptBin name ''
-            exec ${lib.getExe pkg} "$@"
+            exec ${getExe pkg} "$@"
           '')
-          .overrideAttrs (_: {meta.description = "Wrapper for ${pkg.meta.name}";});
+          .overrideAttrs (_: {
+            meta.description = "Wrapper for ${getName pkg}${
+              if getVersion pkg != ""
+              then " (${getVersion pkg})"
+              else ""
+            }";
+          });
 
         mainSubmodule = submodule {
           options = {
@@ -71,7 +77,7 @@ in
         };
 
         pkgsSubmodule = submodule {
-          options = lib.foldl' recursiveUpdate {} [
+          options = foldl' recursiveUpdate {} [
             (mkPkg "bech32" localFlake.inputs.cardano-node.packages.${system}.bech32)
             (mkPkg "cardano-address" localFlake.inputs.cardano-wallet.packages.${system}.cardano-address)
             (mkPkg "cardano-cli" localFlake.inputs.cardano-node.packages.${system}.cardano-cli)

@@ -321,7 +321,7 @@ in
 
         mkMenuWrapper = id:
           (pkgs.writeShellScriptBin "menu" ''
-            exec ${lib.getExe config.packages."cardano-parts-menu-${id}"} "$@"
+            exec ${getExe config.packages."cardano-parts-menu-${id}"} "$@"
           '')
           .overrideAttrs (_: {meta.description = "Wrapper for cardano-parts-menu-${id}";});
 
@@ -333,6 +333,10 @@ in
 
               text = let
                 allPkgs = cfgShell.${id}.pkgs ++ cfgShell.${id}.extraPkgs ++ cfgShell.global.pkgs ++ cfgShell.global.extraPkgs;
+                pkgStr = pkg:
+                  if getVersion pkg != ""
+                  then "${getName pkg} (${getVersion pkg})"
+                  else getName pkg;
                 minWidth =
                   head (
                     reverseList (
@@ -341,7 +345,7 @@ in
                       )
                     )
                   )
-                  + 2;
+                  + 4;
               in ''
                 echo "Cardano Parts DevShell Menu: cardano-parts-${id}" | lolcat
                 echo
@@ -349,8 +353,8 @@ in
                 echo
                 echo "${builtins.concatStringsSep "\n" (map (pkg:
                   if builtins.hasAttr "description" pkg.meta
-                  then pkg.name + fixedWidthString (minWidth - builtins.stringLength pkg.name) " " "" + pkg.meta.description
-                  else "${pkg.name}")
+                  then pkgStr pkg + fixedWidthString (minWidth - builtins.stringLength (pkgStr pkg)) " " "" + pkg.meta.description
+                  else pkgStr pkg)
                 allPkgs)}"
                 echo
                 echo
