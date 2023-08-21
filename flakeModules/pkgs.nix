@@ -58,7 +58,7 @@ in
           (pkgs.writeShellScriptBin name ''
             exec ${lib.getExe pkg} "$@"
           '')
-          .overrideAttrs {meta.description = "Wrapper for ${pkg.meta.name}";};
+          .overrideAttrs (old: {meta = old.meta // {description = "Wrapper for ${pkg.meta.name}";};});
 
         mainSubmodule = submodule {
           options = {
