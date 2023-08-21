@@ -20,7 +20,7 @@
 #
 # Attributes optionally configured on flakeModule import depending on above config:
 #   perSystem.checks.<lint|treefmt>
-#   perSystem.devShells.cardano-parts-<[default]|<id>>
+#   perSystem.devShells.<[default]|<id>>
 #   perSystem.formatter
 #
 # Tips:
@@ -227,7 +227,7 @@ in
                 };
 
                 pkgs = mkOption {
-                  default = map (id: config.packages."cardano-parts-menu-${id}") definedIds;
+                  default = map (id: config.packages."menu-${id}") definedIds;
                 };
               };
             }
@@ -321,14 +321,14 @@ in
 
         mkMenuWrapper = id:
           (pkgs.writeShellScriptBin "menu" ''
-            exec ${getExe config.packages."cardano-parts-menu-${id}"} "$@"
+            exec ${getExe config.packages."menu-${id}"} "$@"
           '')
-          .overrideAttrs (_: {meta.description = "Wrapper for cardano-parts-menu-${id}";});
+          .overrideAttrs (_: {meta.description = "Wrapper for menu-${id}";});
 
         mkMenu = id: {
-          "cardano-parts-menu-${id}" = (pkgs.writeShellApplication
+          "menu-${id}" = (pkgs.writeShellApplication
             {
-              name = "cardano-parts-menu-${id}";
+              name = "menu-${id}";
               runtimeInputs = with pkgs; [lolcat];
 
               text = let
@@ -347,9 +347,9 @@ in
                   )
                   + 4;
               in ''
-                echo "Cardano Parts DevShell Menu: cardano-parts-${id}" | lolcat
+                echo "Cardano Parts DevShell Menu: ${id}" | lolcat
                 echo
-                echo "The following packages are available in cardano-parts-${id} devShell:"
+                echo "The following packages are available in the ${id} devShell:"
                 echo
                 echo "${builtins.concatStringsSep "\n" (map (pkg:
                   if builtins.hasAttr "description" pkg.meta
@@ -358,12 +358,12 @@ in
                 allPkgs)}"
                 echo
                 echo
-                echo "Other cardano-parts devshells available are:"
-                echo "${concatMapStringsSep "\n" (id: "  cardano-parts-${id} (info: cardano-parts-menu-${id})") definedIds}"
+                echo "Other cardano-parts devShells available are:"
+                echo "${concatMapStringsSep "\n" (id: "  ${id} (info: menu-${id})") definedIds}"
                 echo
               '';
             })
-          .overrideAttrs (_: {meta.description = "Cardano parts menu for devShell cardano-parts-${id}";});
+          .overrideAttrs (_: {meta.description = "Cardano parts menu for devShell ${id}";});
         };
       in {
         # perSystem level option definition
@@ -393,8 +393,8 @@ in
           in
             # Add default devShells composed of available defined cardano-parts.shell.<id> attrsets
             # Add optional defaultShell
-            foldl' (shells: id: recursiveUpdate shells {"cardano-parts-${id}" = mkShell id;}) {} definedIds
-            // optionalAttrs (cfgShell.global.defaultShell != null) {default = config.devShells."cardano-parts-${cfgShell.global.defaultShell}";};
+            foldl' (shells: id: recursiveUpdate shells {${id} = mkShell id;}) {} definedIds
+            // optionalAttrs (cfgShell.global.defaultShell != null) {default = config.devShells.${cfgShell.global.defaultShell};};
 
           # Add optional checks: lint, formatter
           checks =
@@ -404,7 +404,7 @@ in
           # Add optional formatter
           formatter = optionalAttrs cfgShell.global.enableFormatter cfgShell.global.defaultFormatterPkg;
 
-          # Make devshell menu packages cardano-parts-menu-<id>
+          # Make devshell menu packages menu-<id>
           packages = foldl' (acc: id: recursiveUpdate acc (mkMenu id)) {} definedIds;
         };
       });
