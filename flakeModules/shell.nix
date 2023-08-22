@@ -324,7 +324,8 @@ in
           ++ cfgShell.${id}.extraPkgs
           ++ cfgShell.global.pkgs
           ++ cfgShell.global.extraPkgs
-          ++ [(mkMenuWrapper id)];
+          ++ [(mkMenuWrapper id)]
+          ++ selectScope id optional "enableFormatter" "defaultFormatterPkg";
 
         mkMenuWrapper = id:
           (pkgs.writeShellScriptBin "menu" ''

@@ -8,3 +8,10 @@
 /.terraform*
 /cluster.tf.json
 /.gcroots
+workbench
+result*
+*.skey
+*.vkey
+*.cert
+*.txbody
+*.txsigned
