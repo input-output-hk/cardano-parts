@@ -8,5 +8,5 @@ lint:
   deadnix -f
   statix check
 
-show-flake:
-  nix flake show --allow-import-from-derivation
+show-flake *ARGS:
+  nix flake show --allow-import-from-derivation {{ARGS}}

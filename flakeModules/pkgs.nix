@@ -3,6 +3,7 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
+#   flake.cardano-parts.pkgs.cardano-lib
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
@@ -27,16 +28,60 @@
 # Tips:
 #   * perSystem attrs are simply accessed through [config.]<...> from within system module context
 #   * flake level attrs are accessed from flake at [config.]flake.cardano-parts.pkgs.<...>
-{localFlake}: {
+{localFlake}: flake @ {
   flake-parts-lib,
   lib,
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib.types) package submodule;
+  inherit (lib) mdDoc mkOption;
+  inherit (lib.types) anything package submodule;
+
+  mainSubmodule = submodule {
+    options = {
+      pkgs = mkOption {
+        type = mainPkgsSubmodule;
+        description = mdDoc "Cardano-parts packages options";
+        default = {};
+      };
+    };
+  };
+
+  mainPkgsSubmodule = submodule {
+    options = {
+      cardanoLib = mkOption {
+        type = anything;
+        description = mdDoc ''
+          The cardano-parts system dependent default package for cardanoLib.
+
+          Iohk-nix cardanoLib is not a proper package derivation and
+          fails flake .#packages.$system type checking. On the other hand,
+          in .#legacyPackages.$system it is ignored but useable.
+
+          Since cardanoLib is system dependent, placing it in
+          legacyPackages seems most appropriate.
+
+          The definition must be a function of system.
+        '';
+        default = system:
+          (import localFlake.inputs.nixpkgs {
+            inherit system;
+            overlays = map (
+              overlay: localFlake.inputs.iohk-nix.overlays.${overlay}
+            ) (builtins.attrNames localFlake.inputs.iohk-nix.overlays);
+          })
+          .cardanoLib;
+      };
+    };
+  };
 in
   with lib; {
     options = {
+      # Top level option definition
+      flake.cardano-parts = mkOption {
+        type = mainSubmodule;
+      };
+
       perSystem = mkPerSystemOption ({
         config,
         pkgs,
@@ -66,7 +111,7 @@ in
             }";
           });
 
-        mainSubmodule = submodule {
+        mainPerSystemSubmodule = submodule {
           options = {
             pkgs = mkOption {
               type = pkgsSubmodule;
@@ -103,9 +148,10 @@ in
       in {
         # perSystem level option definition
         options.cardano-parts = mkOption {
-          type = mainSubmodule;
+          type = mainPerSystemSubmodule;
         };
 
+        # perSystem level config definition
         config = {
           cardano-parts = mkDefault {};
 
@@ -136,5 +182,17 @@ in
           };
         };
       });
+    };
+
+    config = {
+      # Top level config definition
+      flake.cardano-parts = mkDefault {};
+
+      flake.legacyPackages = foldl' (legacyPackages: system:
+        recursiveUpdate
+        legacyPackages {
+          ${system}.cardanoLib = flake.config.flake.cardano-parts.pkgs.cardanoLib system;
+        }) {}
+      flake.config.systems;
     };
   }

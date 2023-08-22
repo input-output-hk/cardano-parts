@@ -18,8 +18,9 @@
           ./perSystem
         ]
         ++ [
-          inputs.cardano-parts.flakeModules.pkgs
           inputs.cardano-parts.flakeModules.cluster
+          inputs.cardano-parts.flakeModules.entrypoints
+          inputs.cardano-parts.flakeModules.pkgs
           inputs.cardano-parts.flakeModules.shell
         ];
       systems = ["x86_64-linux"];
