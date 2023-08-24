@@ -4,7 +4,7 @@
   lib,
   ...
 }: let
-  inherit (config.flake) nixosModules;
+  inherit (config.flake) nixosModules nixosConfigurations;
 in {
   flake.colmena = let
     # Region defs:
@@ -22,8 +22,31 @@ in {
     # Helper fns:
     ebs = size: {aws.instance.root_block_device.volume_size = lib.mkDefault size;};
   in {
-    meta.nixpkgs = import inputs.nixpkgs {
-      system = "x86_64-linux";
+    meta = {
+      nixpkgs = import inputs.nixpkgs {
+        system = "x86_64-linux";
+      };
+
+      # Make node spec info available to nixosModules
+      nodeSpecialArgs =
+        lib.foldl'
+        (acc: node: let
+          instanceType = node: nixosConfigurations.${node}.config.aws.instance.instance_type;
+        in
+          lib.recursiveUpdate acc {
+            ${node}.nodeResources = {
+              inherit
+                (config.flake.cardano-parts.aws-ec2.spec.${instanceType node})
+                provider
+                coreCount
+                cpuCount
+                memMiB
+                nodeType
+                threadsPerCore
+                ;
+            };
+          })
+        {} (builtins.attrNames nixosConfigurations);
     };
 
     defaults.imports = [

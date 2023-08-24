@@ -80,6 +80,7 @@
           }
           // extraCfg);
 
+      fmAwsEc2 = ./flakeModules/aws-ec2.nix;
       fmCluster = ./flakeModules/cluster.nix;
       fmEntrypoints = ./flakeModules/entrypoints.nix;
       fmJobs = passLocalFlake ./flakeModules/jobs.nix {};
@@ -90,6 +91,7 @@
         recursiveImports [./flake ./perSystem]
         # Special imports
         ++ [
+          fmAwsEc2
           fmCluster
           fmEntrypoints
           fmJobs
@@ -102,6 +104,7 @@
 
       flake = {
         flakeModules = {
+          aws-ec2 = fmAwsEc2;
           cluster = fmCluster;
           entrypoints = fmEntrypoints;
           jobs = fmJobs;
