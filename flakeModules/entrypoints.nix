@@ -185,8 +185,13 @@ in
               [ -z "''${NODE_TOPOLOGY:-}" ] && echo "NODE_TOPOLOGY env var must be set -- aborting" && exit 1
               args+=("--topology" "$NODE_TOPOLOGY")
               echo "Running node as:"
-              echo "${config.packages.cardano-node}/bin/cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
-              exec ${config.packages.cardano-node}/bin/cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              if [ -n "''${UNSTABLE:-}" ] && test "''${UNSTABLE}" = true; then
+                echo "${config.packages.cardano-node-ng}/bin/cardano-node-ng run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec ${config.packages.cardano-node-ng}/bin/cardano-node-ng run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              else
+                echo "${config.packages.cardano-node}/bin/cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec ${config.packages.cardano-node}/bin/cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              fi
             '';
           };
         };
