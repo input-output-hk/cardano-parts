@@ -142,9 +142,9 @@ in
               type = globalType isGlobal attrs;
               description = mdDoc "The cardano-parts default devShell env vars.";
               default = globalDefault isGlobal {
-                AWS_PROFILE = flakeCfg.cluster.profile;
-                AWS_REGION = flakeCfg.cluster.region;
-                KMS = flakeCfg.cluster.kms;
+                AWS_PROFILE = flakeCfg.cluster.infra.aws.profile;
+                AWS_REGION = flakeCfg.cluster.infra.aws.region;
+                KMS = flakeCfg.cluster.infra.aws.kms;
                 SSH_CONFIG_FILE = ".ssh_config";
               };
             };

@@ -5,7 +5,7 @@ flake @ {
   config,
   ...
 }: let
-  inherit (config.flake.cardano-parts) cluster;
+  cluster = config.flake.cardano-parts.cluster.infra.aws;
   amis = import "${inputs.nixpkgs}/nixos/modules/virtualisation/ec2-amis.nix";
 
   underscore = lib.replaceStrings ["-"] ["_"];
