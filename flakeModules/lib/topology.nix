@@ -1,10 +1,9 @@
 lib: groupCfg:
-# Argument `lib` is provided by the lib argument flakeModule upon import into the
-# flake.cardano-parts.lib.topology option default.
+# Argument `lib` is provided by the lib flakeModule topology option default:
+#   flake.cardano-parts.lib.topology
 #
-# Argument groupCfg is provided by nixosModules where-ever topology lib is required.
-# Since groupCfg can vary per machine is multiple Cardano networks exist within a single org,
-# this provides a mechanism to replace the legacy globals functionality from cardano-ops.
+# Argument groupCfg is provided by nixosModules whenever topology lib is required.
+# GroupCfg is a mechanism to allow multiple cardano networks from within a single repo.
 with lib; rec {
   inherit (groupCfg.legacy) regions;
 

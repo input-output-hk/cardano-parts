@@ -34,16 +34,20 @@ in {
           instanceType = node: nixosConfigurations.${node}.config.aws.instance.instance_type;
         in
           lib.recursiveUpdate acc {
-            ${node}.nodeResources = {
-              inherit
-                (config.flake.cardano-parts.aws-ec2.spec.${instanceType node})
-                provider
-                coreCount
-                cpuCount
-                memMiB
-                nodeType
-                threadsPerCore
-                ;
+            ${node} = {
+              nodeResources = {
+                inherit
+                  (config.flake.cardano-parts.aws-ec2.spec.${instanceType node})
+                  provider
+                  coreCount
+                  cpuCount
+                  memMiB
+                  nodeType
+                  threadsPerCore
+                  ;
+
+                inherit (nixosConfigurations.${node}.config.cardano-group) nodeGroup;
+              };
             };
           })
         {} (builtins.attrNames nixosConfigurations);
@@ -52,6 +56,7 @@ in {
     defaults.imports = [
       inputs.cardano-parts.nixosModules.aws-ec2
       inputs.cardano-parts.nixosModules.basic
+      inputs.cardano-parts.nixosModules.cardano-group
       nixosModules.common
       nixos-23-05
     ];
