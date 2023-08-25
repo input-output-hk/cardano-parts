@@ -58,6 +58,22 @@
         "type": "github"
       }
     },
+    "aws-datacenters": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1661138375,
+        "narHash": "sha256-+GXTmOUFLAejN+aaebbsUx8FMvyIE437QBJGJPcBN+w=",
+        "owner": "turnkeylinux",
+        "repo": "aws-datacenters",
+        "rev": "a005bd76b93a830d9649d03521f5e12402754d2c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "turnkeylinux",
+        "repo": "aws-datacenters",
+        "type": "github"
+      }
+    },
     "bats-assert": {
       "flake": false,
       "locked": {
@@ -1308,6 +1324,7 @@
     "root": {
       "inputs": {
         "auth-keys-hub": "auth-keys-hub",
+        "aws-datacenters": "aws-datacenters",
         "capkgs": "capkgs",
         "cardano-cli-ng-service": "cardano-cli-ng-service",
         "cardano-db-sync-service": "cardano-db-sync-service",

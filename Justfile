@@ -24,4 +24,22 @@ update-aws-ec2-spec AWS_PROFILE region=AWS_REGION:
     | reject VCpuInfo.ValidCores? VCpuInfo.ValidThreadsPerCore?
     | sort-by InstanceType
   )
-  {InstanceTypes: $spec} | save --force flakeModules/aws-ec2.json
+  mkdir flakeModules/aws/
+  {InstanceTypes: $spec} | save --force flakeModules/aws/ec2-spec.json
+
+update-aws-ec2-datacenters:
+  #!/usr/bin/env nu
+  nix flake lock --update-input aws-datacenters
+  let src = (nix eval --raw --impure --expr '(builtins.getFlake (toString ./.)).inputs.aws-datacenters.outPath')
+  let countries = (
+    open -r ($src | path join output/countries.index | debug)
+    | from csv --noheaders --separator ';'
+    | reduce --fold ([] | into record) {|c,s| $s | merge {$c.column1: $c.column3} }
+  )
+  let usa = (
+    open -r ($src | path join output/usa.index)
+    | from csv --noheaders --separator ';'
+    | reduce --fold ([] | into record) {|c,s| $s | merge {$c.column2: $c.column3} }
+  )
+  mkdir flakeModules/aws/
+  $countries | merge $usa | to json | save --force flakeModules/aws/state-index.json

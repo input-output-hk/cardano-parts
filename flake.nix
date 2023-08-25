@@ -17,6 +17,10 @@
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
     # Cardano related inputs
+    aws-datacenters = {
+      url = "github:turnkeylinux/aws-datacenters";
+      flake = false;
+    };
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
@@ -80,7 +84,7 @@
           }
           // extraCfg);
 
-      fmAwsEc2 = ./flakeModules/aws-ec2.nix;
+      fmAws = ./flakeModules/aws.nix;
       fmCluster = ./flakeModules/cluster.nix;
       fmEntrypoints = ./flakeModules/entrypoints.nix;
       fmJobs = passLocalFlake ./flakeModules/jobs.nix {};
@@ -91,7 +95,7 @@
         recursiveImports [./flake ./perSystem]
         # Special imports
         ++ [
-          fmAwsEc2
+          fmAws
           fmCluster
           fmEntrypoints
           fmJobs
@@ -104,7 +108,7 @@
 
       flake = {
         flakeModules = {
-          aws-ec2 = fmAwsEc2;
+          aws = fmAws;
           cluster = fmCluster;
           entrypoints = fmEntrypoints;
           jobs = fmJobs;
