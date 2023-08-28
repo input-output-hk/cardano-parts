@@ -3,8 +3,9 @@ lib: groupCfg:
 #   flake.cardano-parts.lib.topology
 #
 # Argument groupCfg is provided by nixosModules whenever topology lib is required.
-# GroupCfg is a mechanism to allow multiple cardano networks from within a single repo.
+# GroupCfg is a mechanism to allow multiple cardano networks within a single repo.
 with lib; rec {
+  inherit (groupCfg) domain;
   inherit (groupCfg.legacy) regions;
 
   # Function composition
@@ -130,6 +131,8 @@ with lib; rec {
       else "europe";
   in "${prefix}.${groupCfg.legacy.environmentConfig.relaysNew}";
 
+  fqdn = name: "${name}.${domain}";
+
   # Modify node definition for some given nodes, by name.
   forNodes = modDef: nodes: forNodesWith (def: elem def.name nodes) modDef;
 
@@ -137,7 +140,7 @@ with lib; rec {
   forNodesWith = p: modDef: def:
     if (p def)
     then
-      (lib.recursiveUpdate def modDef)
+      (recursiveUpdate def modDef)
       // (optionalAttrs (modDef ? imports) {
         imports = (def.imports or []) ++ modDef.imports;
       })
@@ -161,6 +164,40 @@ with lib; rec {
     # (also exclude empty batches, which can happen if n > #relays for each region)
   in
     filter (b: b != []) (genList (i: concatMap (rs: elemAt rs i) byRegions) n);
+
+  # Create instanceProducers compatible with the cardano-node service
+  instanceProducers = cfg: nodes: i:
+    (flatten (map (toNormalizedProducerGroup nodes) (filter (g: length g != 0) [
+      (concatMap (i:
+        map (p: {
+          addr = cfg.ipv6HostAddr p;
+          port =
+            if cfg.shareIpv6port
+            then cfg.port
+            else cfg.port + p;
+        })
+        i.producers) (filter (x: x.name == i) (intraInstancesTopologies cfg)))
+      (producerShare i (producersSameRegionRelays cfg) cfg.instances)
+      (producerShare (cfg.instances - i - 1) (producersOtherRegionRelays cfg) cfg.instances)
+      (producerShare i (producersCoreNode cfg) cfg.instances)
+    ])))
+    ++ optionals cfg.useInstancePublicProducersAsProducers (
+      flatten (map (toNormalizedProducerGroup nodes) (filter (g: length g != 0) [
+        (producerShare (cfg.instances - i - 1) (producersThirdParty cfg) cfg.instances)
+      ]))
+    );
+
+  # Create instancePublicProducers compatible with the cardano-node service
+  instancePublicProducers = cfg: nodes: i:
+    optionals (!cfg.useInstancePublicProducersAsProducers)
+    (flatten (map (toNormalizedProducerGroup nodes) (filter (g: length g != 0) [
+      (producerShare (cfg.instances - i - 1) (producersThirdParty cfg) cfg.instances)
+    ])));
+
+  intraInstancesTopologies = cfg:
+    connectNodesWithin
+    cfg.maxIntraInstancesPeers
+    (genList (i: {name = i;}) cfg.instances);
 
   # Given regions (eg. { a = { name = "eu-central-1"; }; b = { name = "us-east-2"; };})
   # return a function that return the basis of a bft core node definition,
@@ -456,6 +493,23 @@ with lib; rec {
   oneHopConnectNodes = nodeGroup:
     connectNodesWithin (nbPeersOneHopGroup (length nodeGroup)) nodeGroup;
 
+  producerShare = i: producers: instances: let
+    indexed = imap0 (idx: node: {inherit idx node;}) producers;
+    filtered = filter ({idx, ...}: mod idx instances == i) indexed;
+  in
+    catAttrs "node" filtered;
+
+  # Partitioning of producers into useful lists
+  producersCoreNode = cfg: (producersSplitDeployed cfg).right;
+  producersDeployed = cfg: (producersSplit cfg).right;
+  producersOtherRegionRelays = cfg: (producersSplitRelays cfg).wrong;
+  producersRelayNode = cfg: (producersSplitDeployed cfg).wrong;
+  producersSameRegionRelays = cfg: (producersSplitRelays cfg).right;
+  producersSplit = cfg: partition (n: nodes ? ${n.addr or n}) cfg.allProducers;
+  producersSplitDeployed = cfg: partition (n: nodes.${n}.config.cardano-parts.roles.isCardanoCore) (producersDeployed cfg);
+  producersSplitRelays = cfg: partition (r: nodes.${r}.config.aws.region == nodes.${name}.config.aws.region) (producersRelayNode cfg);
+  producersThirdParty = cfg: (producersSplit cfg).wrong;
+
   # Same as 'connectGroupWith' but with regional affinity:
   # nodes only connect to nodes in the same region.
   regionalConnectGroupWith = withGroup: let
@@ -576,6 +630,36 @@ with lib; rec {
     in
       mapAttrs (_: (imap0 (index: mergeAttrs {inherit index;}))) thirdPartyRelaysByRegions;
 
+  # Create a producers groups compatible with the cardano-node service
+  toNormalizedProducerGroup = nodes: producers: let
+    mkAccessPointsElement = n:
+      {
+        address = let
+          a = n.addr or n;
+        in
+          if (nodes ? ${a})
+          then fqdn a
+          else a;
+        port = n.port or nodePort;
+      }
+      // optionalAttrs (!cfg.useNewTopology) {
+        valency = n.valency or 1;
+      };
+
+    mkAccessPoints = producers: {
+      accessPoints = map mkAccessPointsElement producers;
+      valency = length producers;
+    };
+
+    mkSingleMemberAccessPoints = map (n: {
+      accessPoints = [(mkAccessPointsElement n)];
+      valency = n.valency or 1;
+    });
+  in
+    if cfg.useSingleMemberAccessPoints
+    then mkSingleMemberAccessPoints producers
+    else mkAccessPoints producers;
+
   # Return the given node group so that it form a network connected via two hops at max.
   twoHopsConnectNodes = nodeGroup:
     connectNodesWithin (nbPeersTwoHopsGroup (length nodeGroup)) nodeGroup;
@@ -595,7 +679,7 @@ with lib; rec {
     def;
 
   # Enable eventlog collection for the given list of nodes (first arg), eta reduced.
-  withEventlog = lib.recursiveUpdate {
+  withEventlog = recursiveUpdate {
     services.cardano-node.eventlog = true;
   };
 

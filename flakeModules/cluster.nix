@@ -136,6 +136,12 @@
 
   groupSubmodule = submodule {
     options = {
+      domain = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group domain";
+        default = cfgAws.domain;
+      };
+
       legacy = mkOption {
         type = legacySubmodule;
         description = mdDoc "Cardano-parts cluster group legacy submodule";
