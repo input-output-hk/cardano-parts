@@ -45,8 +45,6 @@ in {
                   nodeType
                   threadsPerCore
                   ;
-
-                inherit (nixosConfigurations.${node}.config.cardano-group) nodeGroup;
               };
             };
           })
@@ -56,7 +54,7 @@ in {
     defaults.imports = [
       inputs.cardano-parts.nixosModules.aws-ec2
       inputs.cardano-parts.nixosModules.basic
-      inputs.cardano-parts.nixosModules.cardano-group
+      inputs.cardano-parts.nixosModules.cardano-parts
       nixosModules.common
       nixos-23-05
     ];
