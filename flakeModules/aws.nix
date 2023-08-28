@@ -50,7 +50,7 @@
 
       spec = mkOption {
         type = attrsOf anything;
-        description = mdDoc "The cardano-parts aws ec2 instance type raw spec reference.";
+        description = mdDoc "The cardano-parts aws ec2 instance type spec reference.";
         default = foldl' (acc: spec:
           recursiveUpdate acc {
             ${spec.InstanceType} = {

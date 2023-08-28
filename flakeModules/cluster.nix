@@ -10,18 +10,18 @@
 #   flake.cardano-parts.cluster.infra.aws.profile
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
-#   flake.cardano-parts.cluster.group.<default|name>.additionalPeers
-#   flake.cardano-parts.cluster.group.<default|name>.cardanoNodePort
-#   flake.cardano-parts.cluster.group.<default|name>.environmentConfig
-#   flake.cardano-parts.cluster.group.<default|name>.explorerHostName
-#   flake.cardano-parts.cluster.group.<default|name>.nbInstancesPerRelay
-#   flake.cardano-parts.cluster.group.<default|name>.poolsExcludeList
-#   flake.cardano-parts.cluster.group.<default|name>.relaysExcludeList
-#   flake.cardano-parts.cluster.group.<default|name>.relayNodes
-#   flake.cardano-parts.cluster.group.<default|name>.relaysNew
-#   flake.cardano-parts.cluster.group.<default|name>.regions
-#   flake.cardano-parts.cluster.group.<default|name>.regionsSubstitutes
-#   flake.cardano-parts.cluster.group.<default|name>.topology
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.additionalPeers
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.cardanoNodePort
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.environmentConfig
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.explorerHostName
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.nbInstancesPerRelay
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.poolsExcludeList
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.relaysExcludeList
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.relayNodes
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.relaysNew
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.regions
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.regionsSubstitutes
+#   flake.cardano-parts.cluster.group.<default|name>.legacy.topology
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.cluster.<...>

@@ -7,117 +7,11 @@ lib: groupCfg:
 with lib; rec {
   inherit (groupCfg.legacy) regions;
 
-  # Used when connecting to thrid-party relays by regions affinity,
-  # since we don't have relays in every regions,
-  # we define a substitute region for each region we don't deploy to;
-  regionsSubstitutes =
-    {
-      eu-north-1 = "eu-central-1";
-      ap-northeast-3 = "ap-northeast-1";
-      ap-northeast-2 = "ap-northeast-1";
-      cn-north-1 = "ap-northeast-1";
-      cn-northwest-1 = "ap-northeast-1";
-      ap-east-1 = "ap-southeast-1";
-      ap-south-1 = "ap-southeast-1";
-      ap-southeast-2 = "ap-southeast-1";
-      me-south-1 = "ap-southeast-1";
-      us-east-1 = "us-east-2";
-      sa-east-1 = "us-east-2";
-      ca-central-1 = "us-east-2";
-      us-west-2 = "us-west-1";
-      af-south-1 = "eu-west-2";
-      eu-west-1 = "eu-west-2";
-      eu-west-3 = "eu-west-2";
-      # For when we use only 3 regions:
-      eu-west-2 = "eu-central-1";
-      us-west-1 = "us-east-2";
-      ap-northeast-1 = "ap-southeast-1";
-    }
-    // (groupCfg.legacy.regionsSubstitutes or {});
-
   # Function composition
   compose = f: g: x: f (g x);
 
   # Compose list of function
   composeAll = builtins.foldl' compose id;
-
-  # Round a float to integer, toward 0.
-  roundToInt = f: toInt (head (splitString "." (toString f)));
-
-  withModule = m: def:
-    def
-    // {
-      imports = (def.imports or []) ++ [m];
-    };
-
-  # Auto restart cardano-node service every given hours
-  # (plus 'nodeId' minutes to reduce likelihood of simultaneous restart of many nodes).
-  withAutoRestartEvery = h: def:
-    withModule {
-      services.cardano-node.extraServiceConfig = i: {
-        serviceConfig.RuntimeMaxSec =
-          h
-          * 60
-          * 60
-          + 60 * ((def.nodeId or 0) + (5 * i));
-      };
-    }
-    def;
-
-  # Modify node definition for some nodes that satisfy predicate.
-  forNodesWith = p: modDef: def:
-    if (p def)
-    then
-      (lib.recursiveUpdate def modDef)
-      // (optionalAttrs (modDef ? imports) {
-        imports = (def.imports or []) ++ modDef.imports;
-      })
-    else def;
-
-  # Modify node definition for some given nodes, by name.
-  forNodes = modDef: nodes: forNodesWith (def: elem def.name nodes) modDef;
-
-  # Enable the given profiling mode (first arg) for
-  # the given list of nodes (second arg).
-  withProfiling = p: (forNodes {
-    services.cardano-node = {
-      profiling = p;
-      extraServiceConfig = _: {
-        serviceConfig = {
-          # Disable autorestart (which would override profiling data):
-          RuntimeMaxSec = "infinity";
-          Restart = "no";
-        };
-      };
-    };
-  });
-
-  # Enable eventlog collection for the given list of nodes (first arg), eta reduced.
-  withEventlog = lib.recursiveUpdate {
-    services.cardano-node.eventlog = true;
-  };
-
-  # Return the dns name of the continental group of relay
-  # that is the nearest to the given region.
-  relayGroupForRegion = region: let
-    prefix =
-      if (hasPrefix "ap" region)
-      then "asia-pacific"
-      else if (hasPrefix "us" region)
-      then "north-america"
-      else "europe";
-  in "${prefix}.${groupCfg.legacy.relaysNew}";
-
-  # Return the dns name of the continental group of relay, for the target env,
-  # that is the nearest to the given region.
-  envRelayGroupForRegion = region: let
-    prefix =
-      if (hasPrefix "ap" region)
-      then "asia-pacific"
-      else if (hasPrefix "us" region)
-      then "north-america"
-      else "europe";
-  in "${prefix}.${groupCfg.legacy.environmentConfig.relaysNew}";
 
   # Connect a group of nodes (second arg) with the given group (first arg),
   # so that every node of the first group appears exactly once
@@ -147,75 +41,6 @@ with lib; rec {
           producers = node.producers ++ map (n: n.node.name) (withGroupProducers idx);
         })
       indexedGroup;
-
-  # Same as 'connectGroupWith' but with regional affinity:
-  # nodes only connect to nodes in the same region.
-  regionalConnectGroupWith = withGroup: let
-    withGroupByRegion = mapAttrs (_: connectGroupWith) (groupBy (n: n.region) withGroup);
-  in
-    group: let
-      byRegion = groupBy (n: n.region) group;
-      byName =
-        groupBy (n: n.name)
-        (concatLists (mapAttrsToList (r: (withGroupByRegion.${r} or id)) byRegion));
-    in
-      map (node:
-        node
-        // {
-          inherit (head byName.${node.name}) producers;
-        })
-      group;
-
-  # Given a node group size, this function return the minimal number of peers required so
-  # that every node in the group is connected within one "hop" to every other nodes in that group.
-  nbPeersOneHopGroup = let
-    # list of max number of nodes that can be connected within one hop using 'nbPeers':
-    maxNbNodes =
-      genList (nbPeers: {
-        maxNbNodes = nbPeers * nbPeers + nbPeers;
-        inherit nbPeers;
-      })
-      100;
-  in
-    groupSize: (findFirst (i: groupSize <= i.maxNbNodes) (throw "too many nodes") maxNbNodes).nbPeers;
-
-  # Given a node group size, this function return the minimal number of peers required so
-  # that every node in the group is connected within two "hops" to every other nodes in that group.
-  nbPeersTwoHopsGroup = let
-    # list of max number of nodes that can be connected within two hop using 'nbPeers':
-    maxNbNodes =
-      genList (nbPeers: {
-        maxNbNodes = nbPeers * nbPeers * nbPeers + nbPeers * nbPeers + nbPeers;
-        inherit nbPeers;
-      })
-      100;
-  in
-    groupSize: (findFirst (i: groupSize <= i.maxNbNodes) (throw "too many nodes") maxNbNodes).nbPeers;
-
-  # Given a constraint in maximum number of peers and a node group size,
-  # this function return the minimal number of peers required so that every node in the group
-  # is connected within one hop (if possible within 'maxPeers') or two hops (otherwise)
-  # to every other nodes in that group.
-  nbPeersWithin = maxPeers: groupSize: let
-    nbPeers1Hop = nbPeersOneHopGroup groupSize;
-  in
-    if (groupSize <= (maxPeers + 1))
-    then groupSize - 1
-    else if (nbPeers1Hop <= maxPeers)
-    then nbPeers1Hop
-    else nbPeersTwoHopsGroup groupSize;
-
-  # Return the given node group so that it form a fully connected network
-  fullyConnectNodes = nodeGroup:
-    connectNodesWithin (length nodeGroup) nodeGroup;
-
-  # Return the given node group so that it form a network connected via one hop at max.
-  oneHopConnectNodes = nodeGroup:
-    connectNodesWithin (nbPeersOneHopGroup (length nodeGroup)) nodeGroup;
-
-  # Return the given node group so that it form a network connected via two hops at max.
-  twoHopsConnectNodes = nodeGroup:
-    connectNodesWithin (nbPeersTwoHopsGroup (length nodeGroup)) nodeGroup;
 
   # Given a constraint in maximum number of peers, this function connects the given node group
   # so that every node in the group is connected within one hop (if possible within 'maxPeers')
@@ -263,151 +88,6 @@ with lib; rec {
       })
     topologies;
 
-  # Return registered third-party relays, as saved in registered_relays_topology.json from
-  # https://${groupCfg.legacy.explorerHostName}/relays/topology.json
-  thirdPartyRelays =
-    groupCfg.legacy.additionalPeers
-    ++ (filter (r: !(hasSuffix groupCfg.legacy.relaysNew r.addr))
-      (
-        if builtins.pathExists ../static/registered_relays_topology.json
-        then (builtins.fromJSON (builtins.readFile ../static/registered_relays_topology.json)).Producers
-        else []
-      ));
-
-  # Return the relays regional dns entry that is closest to the given region,
-  # as a producer with given valency.
-  # For use by core nodes to avoid relying on specific relay nodes,
-  # thus allowing restarting relays and scaling up/down easily without affecting core nodes.
-  regionalRelaysProducer = region: valency: {
-    addr = relayGroupForRegion region;
-    port = groupCfg.legacy.cardanoNodePort;
-    inherit valency;
-  };
-
-  # Return the target env relays regional dns entry that is closest to the given region,
-  # as a producer with given valency.
-  # For use by core nodes to avoid relying on specific relay nodes,
-  # thus allowing restarting relays and scaling up/down easily without affecting core nodes.
-  envRegionalRelaysProducer = region: valency: {
-    addr = envRelayGroupForRegion region;
-    port = groupCfg.legacy.cardanoNodePort;
-    inherit valency;
-  };
-
-  # Given regions (eg. { a = { name = "eu-central-1"; }; b = { name = "us-east-2"; };})
-  # return a function that return the basis of a bft core node definition,
-  # with name, region and relays as producers, from the region letter, an index (relative to region)
-  # and given additional attributes.
-  mkBftCoreNode = r: idx: attrs:
-    rec {
-      name = "bft-${r}-${toString idx}";
-      stakePool = false;
-      region = regions.${r}.name;
-      producers =
-        # some nearby relays:
-        [(envRegionalRelaysProducer region 2)];
-    }
-    // attrs;
-
-  # Given regions (eg. { a = { name = "eu-central-1"; }; b = { name = "us-east-2"; };})
-  # return a function that return the basis of a bft core node definition,
-  # with name, region and relays as producers, from the region letter, an index (relative to region)
-  # a ticker id and given additional attributes.
-  mkStakingPool = r: idx: ticker: attrs: let
-    suffix = optionalString (ticker != "") "-${ticker}";
-  in
-    rec {
-      name = "stk-${r}-${toString idx}${suffix}";
-      region = regions.${r}.name;
-      producers =
-        # some nearby relays:
-        [(envRegionalRelaysProducer region 2)];
-      org = "IOHK";
-      stakePool = true;
-    }
-    // (optionalAttrs (ticker != "") {
-      inherit ticker;
-    })
-    // attrs;
-
-  # Make a 3 nodes : 1 block producer, 2 relay, independent staking pool setup.
-  mkStakingPoolNodes = r1: id: r2: ticker: def: let
-    stkNode =
-      {
-        name = "stk-${r1}-${toString id}-${ticker}";
-        region = regions.${r1}.name;
-        stakePool = true;
-        inherit ticker;
-        producers = [relay1.name relay2.name];
-      }
-      // def;
-    relay1 =
-      rec {
-        name = "rel-${r1}-${toString id}";
-        region = regions.${r1}.name;
-        producers = [
-          stkNode.name
-          relay2.name
-          (envRegionalRelaysProducer region 1)
-        ];
-      }
-      // def;
-    relay2 =
-      rec {
-        name = "rel-${r2}-${toString id}";
-        region = regions.${r2}.name;
-        producers = [
-          stkNode.name
-          relay1.name
-          (envRegionalRelaysProducer region 1)
-        ];
-      }
-      // def;
-  in [
-    stkNode
-    relay1
-    relay2
-  ];
-
-  thirdPartyRelaysByRegions = let
-    regions' = mapAttrsToList (_: r: r.name) regions;
-  in
-    {
-      # Regions where relays will be deployed (at least one if minRelays not defined), eg.:
-      # ["eu-central-1" "us-east-2"];
-      regions ? regions',
-    }: let
-      defaultRegion = head regions;
-
-      stateAwsAffinityIndex = builtins.fromJSON (builtins.readFile (pkgs.aws-affinity-indexes + "/state-index.json"));
-
-      allocateRegion = bestRegion:
-        if (builtins.elem bestRegion regions)
-        then bestRegion
-        else
-          allocateRegion (
-            regionsSubstitutes.${bestRegion}
-            or (builtins.trace
-              "WARNING: relay associated with unknown 'region': ${bestRegion} (to be added in 'regionsSubstitutes'). Using ${defaultRegion})"
-              defaultRegion)
-          );
-
-      thirdPartyRelaysByRegions = groupBy (r: r.region) (map
-        (
-          relay: let
-            bestRegion =
-              stateAwsAffinityIndex.${relay.state}
-              or (builtins.trace "WARNING: relay has unknown 'state': ${relay.state}. Using ${defaultRegion})" defaultRegion);
-          in
-            relay
-            // {
-              region = converge allocateRegion bestRegion;
-            }
-        )
-        thirdPartyRelays);
-    in
-      mapAttrs (_: (imap0 (index: mergeAttrs {inherit index;}))) thirdPartyRelaysByRegions;
-
   connectWithThirdPartyRelays = relays: let
     byRegion = groupBy (n: n.region) relays;
     regions = attrNames byRegion;
@@ -428,6 +108,74 @@ with lib; rec {
         indexed
     )
     regions;
+
+  # Return the target env relays regional dns entry that is closest to the given region,
+  # as a producer with given valency.
+  # For use by core nodes to avoid relying on specific relay nodes,
+  # thus allowing restarting relays and scaling up/down easily without affecting core nodes.
+  envRegionalRelaysProducer = region: valency: {
+    addr = envRelayGroupForRegion region;
+    port = groupCfg.legacy.cardanoNodePort;
+    inherit valency;
+  };
+
+  # Return the dns name of the continental group of relay, for the target env,
+  # that is the nearest to the given region.
+  envRelayGroupForRegion = region: let
+    prefix =
+      if (hasPrefix "ap" region)
+      then "asia-pacific"
+      else if (hasPrefix "us" region)
+      then "north-america"
+      else "europe";
+  in "${prefix}.${groupCfg.legacy.environmentConfig.relaysNew}";
+
+  # Modify node definition for some given nodes, by name.
+  forNodes = modDef: nodes: forNodesWith (def: elem def.name nodes) modDef;
+
+  # Modify node definition for some nodes that satisfy predicate.
+  forNodesWith = p: modDef: def:
+    if (p def)
+    then
+      (lib.recursiveUpdate def modDef)
+      // (optionalAttrs (modDef ? imports) {
+        imports = (def.imports or []) ++ modDef.imports;
+      })
+    else def;
+
+  # Return the given node group so that it form a fully connected network
+  fullyConnectNodes = nodeGroup:
+    connectNodesWithin (length nodeGroup) nodeGroup;
+
+  # Generate n batches (if possible) of relay nodes, as a list of lists of node names,
+  # in a way that minimize impact on connectivity within each regions.
+  genRelayBatches = n: let
+    byRegions = attrValues (mapAttrs (_: regionRelays: let
+      indexed = imap0 (i: mergeAttrs {inherit i;}) regionRelays;
+      # within each regions, create n lists using mod result, so that each batches does not includes consecutive relays (eg. rel-a-1 and rel-a-2),
+      # which could deteriorate connectivity within each region:
+    in
+      genList (i: (map (r: r.name) (filter (r: mod r.i n == i) indexed))) n)
+    (groupBy (r: r.region) groupCfg.legacy.relayNodes));
+    # then join each list in same position in each region, to form final batches
+    # (also exclude empty batches, which can happen if n > #relays for each region)
+  in
+    filter (b: b != []) (genList (i: concatMap (rs: elemAt rs i) byRegions) n);
+
+  # Given regions (eg. { a = { name = "eu-central-1"; }; b = { name = "us-east-2"; };})
+  # return a function that return the basis of a bft core node definition,
+  # with name, region and relays as producers, from the region letter, an index (relative to region)
+  # and given additional attributes.
+  mkBftCoreNode = r: idx: attrs:
+    rec {
+      name = "bft-${r}-${toString idx}";
+      stakePool = false;
+      region = regions.${r}.name;
+      producers =
+        # some nearby relays:
+        [(envRegionalRelaysProducer region 2)];
+    }
+    // attrs;
 
   # Generate relay nodes definitions,
   # potentially with auto-scaling so that relay nodes can support all third-party block producers.
@@ -578,20 +326,65 @@ with lib; rec {
         )
         indexedRegions));
 
-  # Generate n batches (if possible) of relay nodes, as a list of lists of node names,
-  # in a way that minimize impact on connectivity within each regions.
-  genRelayBatches = n: let
-    byRegions = attrValues (mapAttrs (_: regionRelays: let
-      indexed = imap0 (i: mergeAttrs {inherit i;}) regionRelays;
-      # within each regions, create n lists using mod result, so that each batches does not includes consecutive relays (eg. rel-a-1 and rel-a-2),
-      # which could deteriorate connectivity within each region:
-    in
-      genList (i: (map (r: r.name) (filter (r: mod r.i n == i) indexed))) n)
-    (groupBy (r: r.region) groupCfg.legacy.relayNodes));
-    # then join each list in same position in each region, to form final batches
-    # (also exclude empty batches, which can happen if n > #relays for each region)
+  # Given regions (eg. { a = { name = "eu-central-1"; }; b = { name = "us-east-2"; };})
+  # return a function that return the basis of a bft core node definition,
+  # with name, region and relays as producers, from the region letter, an index (relative to region)
+  # a ticker id and given additional attributes.
+  mkStakingPool = r: idx: ticker: attrs: let
+    suffix = optionalString (ticker != "") "-${ticker}";
   in
-    filter (b: b != []) (genList (i: concatMap (rs: elemAt rs i) byRegions) n);
+    rec {
+      name = "stk-${r}-${toString idx}${suffix}";
+      region = regions.${r}.name;
+      producers =
+        # some nearby relays:
+        [(envRegionalRelaysProducer region 2)];
+      org = "IOHK";
+      stakePool = true;
+    }
+    // (optionalAttrs (ticker != "") {
+      inherit ticker;
+    })
+    // attrs;
+
+  # Make a 3 nodes : 1 block producer, 2 relay, independent staking pool setup.
+  mkStakingPoolNodes = r1: id: r2: ticker: def: let
+    stkNode =
+      {
+        name = "stk-${r1}-${toString id}-${ticker}";
+        region = regions.${r1}.name;
+        stakePool = true;
+        inherit ticker;
+        producers = [relay1.name relay2.name];
+      }
+      // def;
+    relay1 =
+      rec {
+        name = "rel-${r1}-${toString id}";
+        region = regions.${r1}.name;
+        producers = [
+          stkNode.name
+          relay2.name
+          (envRegionalRelaysProducer region 1)
+        ];
+      }
+      // def;
+    relay2 =
+      rec {
+        name = "rel-${r2}-${toString id}";
+        region = regions.${r2}.name;
+        producers = [
+          stkNode.name
+          relay1.name
+          (envRegionalRelaysProducer region 1)
+        ];
+      }
+      // def;
+  in [
+    stkNode
+    relay1
+    relay2
+  ];
 
   # Compute the minimum number of batches necessary to stay below
   # a given maximum number of nodes per batches.
@@ -619,4 +412,211 @@ with lib; rec {
         (throw "max batch size cannot be under number of regions")
         batchSizes)
       .nbBatches;
+
+  # Given a node group size, this function return the minimal number of peers required so
+  # that every node in the group is connected within one "hop" to every other nodes in that group.
+  nbPeersOneHopGroup = let
+    # list of max number of nodes that can be connected within one hop using 'nbPeers':
+    maxNbNodes =
+      genList (nbPeers: {
+        maxNbNodes = nbPeers * nbPeers + nbPeers;
+        inherit nbPeers;
+      })
+      100;
+  in
+    groupSize: (findFirst (i: groupSize <= i.maxNbNodes) (throw "too many nodes") maxNbNodes).nbPeers;
+
+  # Given a node group size, this function return the minimal number of peers required so
+  # that every node in the group is connected within two "hops" to every other nodes in that group.
+  nbPeersTwoHopsGroup = let
+    # list of max number of nodes that can be connected within two hop using 'nbPeers':
+    maxNbNodes =
+      genList (nbPeers: {
+        maxNbNodes = nbPeers * nbPeers * nbPeers + nbPeers * nbPeers + nbPeers;
+        inherit nbPeers;
+      })
+      100;
+  in
+    groupSize: (findFirst (i: groupSize <= i.maxNbNodes) (throw "too many nodes") maxNbNodes).nbPeers;
+
+  # Given a constraint in maximum number of peers and a node group size,
+  # this function return the minimal number of peers required so that every node in the group
+  # is connected within one hop (if possible within 'maxPeers') or two hops (otherwise)
+  # to every other nodes in that group.
+  nbPeersWithin = maxPeers: groupSize: let
+    nbPeers1Hop = nbPeersOneHopGroup groupSize;
+  in
+    if (groupSize <= (maxPeers + 1))
+    then groupSize - 1
+    else if (nbPeers1Hop <= maxPeers)
+    then nbPeers1Hop
+    else nbPeersTwoHopsGroup groupSize;
+
+  # Return the given node group so that it form a network connected via one hop at max.
+  oneHopConnectNodes = nodeGroup:
+    connectNodesWithin (nbPeersOneHopGroup (length nodeGroup)) nodeGroup;
+
+  # Same as 'connectGroupWith' but with regional affinity:
+  # nodes only connect to nodes in the same region.
+  regionalConnectGroupWith = withGroup: let
+    withGroupByRegion = mapAttrs (_: connectGroupWith) (groupBy (n: n.region) withGroup);
+  in
+    group: let
+      byRegion = groupBy (n: n.region) group;
+      byName =
+        groupBy (n: n.name)
+        (concatLists (mapAttrsToList (r: (withGroupByRegion.${r} or id)) byRegion));
+    in
+      map (node:
+        node
+        // {
+          inherit (head byName.${node.name}) producers;
+        })
+      group;
+
+  # Return the relays regional dns entry that is closest to the given region,
+  # as a producer with given valency.
+  # For use by core nodes to avoid relying on specific relay nodes,
+  # thus allowing restarting relays and scaling up/down easily without affecting core nodes.
+  regionalRelaysProducer = region: valency: {
+    addr = relayGroupForRegion region;
+    port = groupCfg.legacy.cardanoNodePort;
+    inherit valency;
+  };
+
+  # Used when connecting to thrid-party relays by regions affinity,
+  # since we don't have relays in every regions,
+  # we define a substitute region for each region we don't deploy to;
+  regionsSubstitutes =
+    {
+      eu-north-1 = "eu-central-1";
+      ap-northeast-3 = "ap-northeast-1";
+      ap-northeast-2 = "ap-northeast-1";
+      cn-north-1 = "ap-northeast-1";
+      cn-northwest-1 = "ap-northeast-1";
+      ap-east-1 = "ap-southeast-1";
+      ap-south-1 = "ap-southeast-1";
+      ap-southeast-2 = "ap-southeast-1";
+      me-south-1 = "ap-southeast-1";
+      us-east-1 = "us-east-2";
+      sa-east-1 = "us-east-2";
+      ca-central-1 = "us-east-2";
+      us-west-2 = "us-west-1";
+      af-south-1 = "eu-west-2";
+      eu-west-1 = "eu-west-2";
+      eu-west-3 = "eu-west-2";
+      # For when we use only 3 regions:
+      eu-west-2 = "eu-central-1";
+      us-west-1 = "us-east-2";
+      ap-northeast-1 = "ap-southeast-1";
+    }
+    // (groupCfg.legacy.regionsSubstitutes or {});
+
+  # Return the dns name of the continental group of relay
+  # that is the nearest to the given region.
+  relayGroupForRegion = region: let
+    prefix =
+      if (hasPrefix "ap" region)
+      then "asia-pacific"
+      else if (hasPrefix "us" region)
+      then "north-america"
+      else "europe";
+  in "${prefix}.${groupCfg.legacy.relaysNew}";
+
+  # Round a float to integer, toward 0.
+  roundToInt = f: toInt (head (splitString "." (toString f)));
+
+  # Return registered third-party relays, as saved in registered_relays_topology.json from
+  # https://${groupCfg.legacy.explorerHostName}/relays/topology.json
+  thirdPartyRelays =
+    groupCfg.legacy.additionalPeers
+    ++ (filter (r: !(hasSuffix groupCfg.legacy.relaysNew r.addr))
+      (
+        if builtins.pathExists ../static/registered_relays_topology.json
+        then (builtins.fromJSON (builtins.readFile ../static/registered_relays_topology.json)).Producers
+        else []
+      ));
+
+  thirdPartyRelaysByRegions = let
+    regions' = mapAttrsToList (_: r: r.name) regions;
+  in
+    {
+      # Regions where relays will be deployed (at least one if minRelays not defined), eg.:
+      # ["eu-central-1" "us-east-2"];
+      regions ? regions',
+    }: let
+      defaultRegion = head regions;
+
+      stateAwsAffinityIndex = builtins.fromJSON (builtins.readFile (pkgs.aws-affinity-indexes + "/state-index.json"));
+
+      allocateRegion = bestRegion:
+        if (builtins.elem bestRegion regions)
+        then bestRegion
+        else
+          allocateRegion (
+            regionsSubstitutes.${bestRegion}
+            or (builtins.trace
+              "WARNING: relay associated with unknown 'region': ${bestRegion} (to be added in 'regionsSubstitutes'). Using ${defaultRegion})"
+              defaultRegion)
+          );
+
+      thirdPartyRelaysByRegions = groupBy (r: r.region) (map
+        (
+          relay: let
+            bestRegion =
+              stateAwsAffinityIndex.${relay.state}
+              or (builtins.trace "WARNING: relay has unknown 'state': ${relay.state}. Using ${defaultRegion})" defaultRegion);
+          in
+            relay
+            // {
+              region = converge allocateRegion bestRegion;
+            }
+        )
+        thirdPartyRelays);
+    in
+      mapAttrs (_: (imap0 (index: mergeAttrs {inherit index;}))) thirdPartyRelaysByRegions;
+
+  # Return the given node group so that it form a network connected via two hops at max.
+  twoHopsConnectNodes = nodeGroup:
+    connectNodesWithin (nbPeersTwoHopsGroup (length nodeGroup)) nodeGroup;
+
+  # Auto restart cardano-node service every given hours
+  # (plus 'nodeId' minutes to reduce likelihood of simultaneous restart of many nodes).
+  withAutoRestartEvery = h: def:
+    withModule {
+      services.cardano-node.extraServiceConfig = i: {
+        serviceConfig.RuntimeMaxSec =
+          h
+          * 60
+          * 60
+          + 60 * ((def.nodeId or 0) + (5 * i));
+      };
+    }
+    def;
+
+  # Enable eventlog collection for the given list of nodes (first arg), eta reduced.
+  withEventlog = lib.recursiveUpdate {
+    services.cardano-node.eventlog = true;
+  };
+
+  withModule = m: def:
+    def
+    // {
+      imports = (def.imports or []) ++ [m];
+    };
+
+  # Enable the given profiling mode (first arg) for
+  # the given list of nodes (second arg).
+  withProfiling = p: (forNodes {
+    services.cardano-node = {
+      profiling = p;
+      extraServiceConfig = _: {
+        serviceConfig = {
+          # Disable autorestart (which would override profiling data):
+          RuntimeMaxSec = "infinity";
+          Restart = "no";
+        };
+      };
+    };
+  });
 }
