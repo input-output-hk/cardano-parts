@@ -1,7 +1,23 @@
+# nixosModule: config.cardano-parts
+#
+# TODO: Move this to a docs generator
+#
+# Attributes available on nixos module import:
+#   config.cardano-parts.cluster.group
+#   config.cardano-parts.cluster.perNode.hostAddr
+#   config.cardano-parts.cluster.perNode.isCardanoCore
+#   config.cardano-parts.cluster.perNode.isCardanoRelay
+#   config.cardano-parts.cluster.perNode.isCustom
+#   config.cardano-parts.cluster.perNode.isExplorer
+#   config.cardano-parts.cluster.perNode.isExplorerBackend
+#   config.cardano-parts.cluster.perNode.isFaucet
+#   config.cardano-parts.cluster.perNode.isMetadata
+#   config.cardano-parts.cluster.perNode.isSnapshots
+#   config.cardano-parts.cluster.perNode.nodeId
 flake @ {config, ...}: {
   flake.nixosModules.cardano-parts = {lib, ...}: let
     inherit (lib) mkOption types;
-    inherit (types) anything bool attrsOf submodule;
+    inherit (types) anything attrsOf bool ints nullOr str submodule;
 
     mkBoolOpt = mkOption {
       type = bool;
@@ -16,9 +32,9 @@ flake @ {config, ...}: {
           default = {};
         };
 
-        roles = mkOption {
-          type = rolesSubmodule;
-          description = "Cardano-parts nixos roles submodule";
+        perNode = mkOption {
+          type = perNodeSubmodule;
+          description = "Cardano-parts nixos perNode submodule";
           default = {};
         };
       };
@@ -34,8 +50,14 @@ flake @ {config, ...}: {
       };
     };
 
-    rolesSubmodule = submodule {
+    perNodeSubmodule = submodule {
       options = {
+        hostAddr = mkOption {
+          type = str;
+          description = "The hostAddr to associate with the nixos node";
+          default = "0.0.0.0";
+        };
+
         isCardanoCore = mkBoolOpt;
         isCardanoRelay = mkBoolOpt;
         isSnapshots = mkBoolOpt;
@@ -44,6 +66,12 @@ flake @ {config, ...}: {
         isExplorerBackend = mkBoolOpt;
         isFaucet = mkBoolOpt;
         isMetadata = mkBoolOpt;
+
+        nodeId = mkOption {
+          type = nullOr ints.unsigned;
+          description = "The hostAddr to associate with the nixos node";
+          default = null;
+        };
       };
     };
   in {

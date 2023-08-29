@@ -31,7 +31,7 @@
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf ints listOf port str submodule;
+  inherit (types) addCheck anything attrsOf ints listOf nullOr port str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -164,10 +164,22 @@
         default = 3001;
       };
 
+      cardanoNodePrometheusExporterPort = mkOption {
+        type = port;
+        description = mdDoc "The cardano-parts group cardanoNodePrometheusExporterPort definition for building group topology.";
+        default = 12798;
+      };
+
       environmentConfig = mkOption {
         type = attrsOf anything;
         description = mdDoc "The cardano-parts group environmentConfig definition for building group topology.";
         default = {};
+      };
+
+      environmentName = mkOption {
+        type = nullOr str;
+        description = mdDoc "The cardano-parts group environmentName definition for building group topology.";
+        default = null;
       };
 
       explorerHostName = mkOption {

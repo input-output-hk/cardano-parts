@@ -3,7 +3,8 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
-#   flake.cardano-parts.pkgs.cardano-lib
+#   flake.cardano-parts.pkgs.special.cardano-lib
+#   flake.cardano-parts.pkgs.special.cardano-node-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
@@ -35,7 +36,7 @@
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
   inherit (lib) mdDoc mkOption;
-  inherit (lib.types) anything package submodule;
+  inherit (lib.types) anything package str submodule;
 
   mainSubmodule = submodule {
     options = {
@@ -48,6 +49,16 @@
   };
 
   mainPkgsSubmodule = submodule {
+    options = {
+      special = mkOption {
+        type = specialPkgsSubmodule;
+        description = mdDoc "Cardano-parts special package options";
+        default = {};
+      };
+    };
+  };
+
+  specialPkgsSubmodule = submodule {
     options = {
       cardanoLib = mkOption {
         type = anything;
@@ -71,6 +82,12 @@
             ) (builtins.attrNames localFlake.inputs.iohk-nix.overlays);
           })
           .cardanoLib;
+      };
+
+      cardano-node-service = mkOption {
+        type = str;
+        description = "The cardano-parts default cardano-node-service import path string.";
+        default = "${localFlake.inputs.cardano-node}/nix/nixos";
       };
     };
   };
@@ -196,7 +213,7 @@ in
       flake.legacyPackages = foldl' (legacyPackages: system:
         recursiveUpdate
         legacyPackages {
-          ${system}.cardanoLib = flake.config.flake.cardano-parts.pkgs.cardanoLib system;
+          ${system}.cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
         }) {}
       flake.config.systems;
     };
