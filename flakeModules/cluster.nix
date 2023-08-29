@@ -281,7 +281,7 @@ flake @ {
       topologyLib = mkOption {
         type = functionTo (attrsOf anything);
         description = mdDoc "Cardano-parts cluster group topologyLib.";
-        default = cfg.lib.topology;
+        default = cfg.lib.topologyLib;
       };
     };
   };

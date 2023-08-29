@@ -226,20 +226,20 @@ with lib; rec {
       # { a = { name = "eu-central-1"; minRelays = 3; };
       #   b = { name = "us-east-2"; minRelays = 2; }; }
       regions ? regions',
-      # core nodes to be included in producers arrays of relays
-      # each core node appears exactly once across relays of each region:
+      # Core nodes to be included in producers arrays of relays.
+      # Each core node appears exactly once across relays of each region:
       coreNodes,
-      # relays are named using a ${relayPrefix}-${regionLetter}-${index} scheme:
+      # Relays are named using a ${relayPrefix}-${regionLetter}-${index} scheme:
       relayPrefix ? "rel",
-      # each relay as a maximum of 'maxInRegionPeers' other relays of same region in producers array.
+      # Each relay as a maximum of 'maxInRegionPeers' other relays of same region in producers array.
       # Reducing this parameter increase room for third-party relays.
       maxInRegionPeers ? 6,
       # Limit producers array size to 'maxProducersPerNode' on average (plus or minus 1 depending on nodes).
       # Increasing this parameter gives room for more third-party relays, at the expense of (linearly) more CPU/ram consumption.
       maxProducersPerNode ? 20,
-      # if true (default) the number of relays in each will computed so that it can handle all third party relays while
+      # If true (default) the number of relays in each will computed so that it can handle all third party relays while
       # staying below 'maxProducersPerNode' constraint (but in all case above "minRelays" defined for region).
-      autoscaling ? true,
+      autoscaling ? false,
     }: let
       inUseRegions = mapAttrsToList (_: r: r.name) regions;
       nbRegions = length inUseRegions;
@@ -579,6 +579,8 @@ with lib; rec {
 
   # Round a float to integer, toward 0.
   roundToInt = f: toInt (head (splitString "." (toString f)));
+
+  shiftList = n: list: drop n list ++ (take n list);
 
   # Return registered third-party relays, as saved in registered_relays_topology.json from
   # https://${groupCfg.legacy.explorerHostName}/relays/topology.json

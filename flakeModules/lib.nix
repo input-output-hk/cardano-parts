@@ -3,7 +3,7 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
-#   flake.cardano-parts.lib.topology
+#   flake.cardano-parts.lib.topologyLib
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.lib.<...>
@@ -27,7 +27,7 @@
 
   libSubmodule = submodule {
     options = {
-      topology = mkOption {
+      topologyLib = mkOption {
         type = functionTo (attrsOf anything);
         description = mdDoc ''
           The cardano-parts topology library.
