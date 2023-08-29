@@ -22,16 +22,26 @@
 #   flake.cardano-parts.cluster.group.<default|name>.legacy.regions
 #   flake.cardano-parts.cluster.group.<default|name>.legacy.regionsSubstitutes
 #   flake.cardano-parts.cluster.group.<default|name>.legacy.topology
+#   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
+#   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
+#   flake.cardano-parts.cluster.group.<default|name>.meta.domain
+#   flake.cardano-parts.cluster.group.<default|name>.name
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-cli
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node-pkgs
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-submit-api
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.cluster.<...>
-{
+flake @ {
   config,
   lib,
+  withSystem,
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf ints listOf nullOr port str submodule;
+  inherit (types) addCheck anything attrsOf functionTo ints listOf nullOr package port str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -47,7 +57,7 @@
     options = {
       cluster = mkOption {
         type = clusterSubmodule;
-        description = mdDoc "Cardano-parts cluster options";
+        description = mdDoc "Cardano-parts cluster options.";
         default = {};
       };
     };
@@ -57,13 +67,13 @@
     options = {
       infra = mkOption {
         type = infraSubmodule;
-        description = mdDoc "Cardano-parts cluster infra submodule";
+        description = mdDoc "Cardano-parts cluster infra submodule.";
         default = {};
       };
 
       group = mkOption {
         type = attrsOf groupSubmodule;
-        description = mdDoc "Cardano-parts cluster group submodule";
+        description = mdDoc "Cardano-parts cluster group submodule.";
         default = {};
       };
     };
@@ -73,7 +83,7 @@
     options = {
       aws = mkOption {
         type = awsSubmodule;
-        description = mdDoc "Cardano-parts cluster infra aws submodule";
+        description = mdDoc "Cardano-parts cluster infra aws submodule.";
         default = {};
       };
     };
@@ -134,21 +144,39 @@
     };
   };
 
-  groupSubmodule = submodule {
+  groupSubmodule = submodule ({name, ...}: {
     options = {
-      domain = mkOption {
+      meta = mkOption {
+        type = metaSubmodule;
+        description = mdDoc "Cardano-parts cluster group meta submodule.";
+        default = {};
+      };
+
+      name = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group domain";
-        default = cfgAws.domain;
+        description = mdDoc "Cardano-parts cluster group name.";
+        default = name;
+      };
+
+      pkgs = mkOption {
+        type = pkgsSubmodule;
+        description = mdDoc "Cardano-parts cluster group pkgs submodule.";
+        default = {};
       };
 
       legacy = mkOption {
         type = legacySubmodule;
-        description = mdDoc "Cardano-parts cluster group legacy submodule";
+        description = mdDoc "Cardano-parts cluster group legacy submodule.";
+        default = {};
+      };
+
+      lib = mkOption {
+        type = libSubmodule;
+        description = mdDoc "Cardano-parts cluster group lib submodule.";
         default = {};
       };
     };
-  };
+  });
 
   legacySubmodule = submodule {
     options = {
@@ -234,6 +262,74 @@
         type = attrsOf anything;
         description = mdDoc "The cardano-parts group topology definition for group topology.";
         default = {};
+      };
+    };
+  };
+
+  libSubmodule = submodule {
+    options = {
+      cardanoLib = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          Cardano-parts cluster group default cardanoLib.
+
+          The definition must be a function of system.
+        '';
+        default = cfg.pkgs.special.cardanoLib;
+      };
+
+      topologyLib = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc "Cardano-parts cluster group topologyLib.";
+        default = cfg.lib.topology;
+      };
+    };
+  };
+
+  metaSubmodule = submodule {
+    options = {
+      cardano-node-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
+        default = cfg.pkgs.special.cardano-node-service;
+      };
+
+      domain = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group domain.";
+        default = cfgAws.domain;
+      };
+    };
+  };
+
+  pkgsSubmodule = submodule {
+    options = {
+      cardano-cli = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-cli package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli);
+      };
+
+      cardano-node = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-node package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node);
+      };
+
+      cardano-node-pkgs = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          Cardano-parts cluster group default cardano-node-pkgs.
+
+          The definition must be a function of system.
+        '';
+        default = cfg.pkgs.special.cardano-node-pkgs;
+      };
+
+      cardano-submit-api = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-submit-api package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api);
       };
     };
   };

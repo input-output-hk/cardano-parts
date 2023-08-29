@@ -5,7 +5,7 @@ lib: groupCfg:
 # Argument groupCfg is provided by nixosModules whenever topology lib is required.
 # GroupCfg is a mechanism to allow multiple cardano networks within a single repo.
 with lib; rec {
-  inherit (groupCfg) domain;
+  inherit (groupCfg.meta) domain;
   inherit (groupCfg.legacy) regions;
 
   # Function composition

@@ -5,6 +5,7 @@
 # Attributes available on flakeModule import:
 #   flake.cardano-parts.pkgs.special.cardano-lib
 #   flake.cardano-parts.pkgs.special.cardano-node-service
+#   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
@@ -32,11 +33,12 @@
 {localFlake}: flake @ {
   flake-parts-lib,
   lib,
+  withSystem,
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
   inherit (lib) mdDoc mkOption;
-  inherit (lib.types) anything package str submodule;
+  inherit (lib.types) anything attrsOf functionTo package str submodule;
 
   mainSubmodule = submodule {
     options = {
@@ -84,9 +86,28 @@
           .cardanoLib;
       };
 
+      cardano-node-pkgs = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          The cardano-parts default cardano-node-pkgs attrset.
+
+          Used in cardano-node nixos service as an alternative to specifying
+          packages individually.  This is an attrset of packages and not a proper
+          package derivation.
+
+          The definition must be a function of system.
+        '';
+        default = system: {
+          cardano-cli = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli);
+          cardano-node = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node);
+          cardano-submit-api = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api);
+          cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
+        };
+      };
+
       cardano-node-service = mkOption {
         type = str;
-        description = "The cardano-parts default cardano-node-service import path string.";
+        description = mdDoc "The cardano-parts default cardano-node-service import path string.";
         default = "${localFlake.inputs.cardano-node}/nix/nixos";
       };
     };
