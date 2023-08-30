@@ -60,7 +60,7 @@ in {
           --signing-key-file "$PAYMENT_KEY".skey \
           "''${SIGNING_ARGS[@]}"
 
-        if [ "''${SUBMIT_TX:-TRUE}" = "TRUE" ]; then
+        if [ "''${SUBMIT_TX:-true}" = "true" ]; then
           # TODO: remove if we figure out how to make it detect where in epoch we are
           if ! cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned; then
             cardano-cli governance create-update-proposal \
@@ -139,7 +139,9 @@ in {
             popd &> /dev/null
 
             cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
-            cardano-cli address key-gen --signing-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.skey" --verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
+            cardano-cli address key-gen \
+              --signing-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.skey" \
+              --verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
           '';
         };
 
@@ -166,6 +168,7 @@ in {
                   '{byronGenesisBlob: $byron, shelleyGenesisBlob: $shelley, alonzoGenesisBlob: $alonzo, conwayGenesisBlob: $conway, nodeConfig: $config}' \
                 > config.json
                 cp config.json "./secrets/cardano/$ENV_NAME.json"
+
                 pushd delegate-keys &> /dev/null
                   for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
                     jq -n \
@@ -201,12 +204,10 @@ in {
           name = "job-create-stake-pools";
           runtimeInputs = [cardano-cli cardano-address pkgs.jq pkgs.coreutils];
           text = ''
-            # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR
+            # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
 
-
             END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
-
             mkdir -p "$STAKE_POOL_DIR"
 
             # Generate wallet in control of all the funds delegated to the stake pools
@@ -264,8 +265,6 @@ in {
             (for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
               cat "$STAKE_POOL_DIR"/sp-"$i"{.opcert,-vrf.skey,-kes.skey} | jq -s
             done) > "$STAKE_POOL_DIR"/bulk.creds.pools.json
-
-
           '';
         };
 
@@ -275,6 +274,7 @@ in {
           text = ''
             # Inputs: $PAYMENT_KEY, $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $POOL_PLEDGE, $POOL_RELAY, $POOL_RELAY_PORT, $SUBMIT_TX, $ERA, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
+
             export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
 
             if [ -z "''${POOL_PLEDGE:-}" ]; then
@@ -300,6 +300,7 @@ in {
                 --cold-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.vkey \
                 --stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
                 --out-file sp-"$i"-owner-delegation.cert
+
               # shellcheck disable=SC2031
               cardano-cli stake-pool registration-certificate \
                 --testnet-magic "$TESTNET_MAGIC" \
@@ -333,6 +334,7 @@ in {
               SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_POOL_DIR/sp-$i-cold.skey")
               SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_POOL_DIR/sp-$i-owner-stake.skey")
             done
+
             # Generate arrays needed for build/sign commands
             BUILD_TX_ARGS=()
             SIGN_TX_ARGS=()
@@ -365,7 +367,7 @@ in {
               --signing-key-file "$PAYMENT_KEY".skey \
               "''${SIGN_TX_ARGS[@]}"
 
-            if [ "''${SUBMIT_TX:-TRUE}" = "TRUE" ]; then
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-pool-reg.txsigned
             fi
           '';
@@ -494,7 +496,7 @@ in {
               --address "$BYRON_ADDRESS" \
               --signing-key-file "$BYRON_SIGNING_KEY"
 
-            if [ "''${SUBMIT_TX:-TRUE}" = "TRUE" ]; then
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-byron.txsigned
             fi
           '';
@@ -576,19 +578,20 @@ in {
             ${updateProposalTemplate}
           '';
         };
+
         packages.job-submit-gov-action = writeShellApplication {
           name = "job-submit-gov-action";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, STAKE_KEY, ERA, $DEBUG, ACTION_ARGS[]
-            ERA=''${ERA:+"--conway-era"}
-            ACTION=''${ACTION:+"create-constitution"}
-            PREV_CONSTITUTION=$(cardano-cli query constitution-hash --testnet-magic 42)
-
+            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $STAKE_KEY, $ERA, $DEBUG, $GOV_ACTION_DEPOSIT, ACTION_ARGS[]
             [ -n "''${DEBUG:-}" ] && set -x
 
             BUILD_TX_ARGS=()
             SIGN_TX_ARGS=()
+
+            ERA=''${ERA:+"--conway-era"}
+            ACTION=''${ACTION:+"create-constitution"}
+            PREV_CONSTITUTION=$(cardano-cli query constitution-hash --testnet-magic 42)
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
@@ -596,8 +599,17 @@ in {
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
+
             # TODO: make work with other actions than constitution
-            cardano-cli conway governance action "$ACTION" --testnet --stake-verification-key-file "$STAKE_KEY".vkey --constitution "We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional atire" --governance-action-deposit "$GOV_ACTION_DEPOSIT" --out-file "$ACTION".action --proposal-url "https://proposals.sancho.network/1" --anchor-data-hash "FOO" --constitution-url BAR
+            cardano-cli conway governance action "$ACTION" \
+              --testnet \
+              --stake-verification-key-file "$STAKE_KEY".vkey \
+              --constitution "We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional atire" \
+              --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
+              --out-file "$ACTION".action \
+              --proposal-url "https://proposals.sancho.network/1" \
+              --anchor-data-hash "FOO" \
+              --constitution-url "BAR"
 
             # Generate transaction
             TXIN=$(
@@ -609,9 +621,6 @@ in {
             )
 
             # Generate arrays needed for build/sign commands
-            BUILD_TX_ARGS=()
-            SIGN_TX_ARGS=()
-
             BUILD_TX_ARGS+=("--constitution-file" "$ACTION".action)
             SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_KEY".skey)
 
@@ -632,17 +641,17 @@ in {
             echo "Previous Constitution hash: $PREV_CONSTITUTION"
             echo "New Constitution hash: TODO"
 
-            if [ "''${SUBMIT_TX:-TRUE}" = "TRUE" ]; then
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-"$ACTION".txsigned
             fi
           '';
         };
+
         packages.job-submit-vote = writeShellApplication {
           name = "job-submit-vote";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $VOTE_KEY, $TESTNET_MAGIC, $ACTION_TX_ID, $ACTION_TX_INDEX, $ROLE, $DECISION, $ERA, $DEBUG, VOTE_ARGS[]
-
+            # Inputs: $PAYMENT_KEY, $VOTE_KEY, $TESTNET_MAGIC, $ACTION_TX_ID, $ROLE, $DECISION, $ERA, $DEBUG, VOTE_ARGS[]
             [ -n "''${DEBUG:-}" ] && set -x
 
             BUILD_TX_ARGS=()
@@ -692,9 +701,6 @@ in {
             )
 
             # Generate arrays needed for build/sign commands
-            BUILD_TX_ARGS=()
-            SIGN_TX_ARGS=()
-
             BUILD_TX_ARGS+=("--vote-file" "$ROLE".vote)
             SIGN_TX_ARGS+=("--signing-key-file" "$VOTE_KEY".skey)
 
@@ -712,32 +718,48 @@ in {
               --signing-key-file "$PAYMENT_KEY".skey \
               "''${SIGN_TX_ARGS[@]}"
 
-            if [ "''${SUBMIT_TX:-TRUE}" = "TRUE" ]; then
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-vote-"$ROLE".txsigned
             fi
           '';
         };
+
         packages.job-register-drep = writeShellApplication {
           name = "job-register-drep";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
             # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $DREP_DIR, $POOL_KEY $VOTING_POWER, $INDEX, $ERA, $DEBUG,
-
             [ -n "''${DEBUG:-}" ] && set -x
 
             mkdir -p "$DREP_DIR"
 
-            cardano-cli address key-gen --verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey --signing-key-file "$DREP_DIR"/pay-"$INDEX".skey
-            cardano-cli stake-address key-gen --verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
-            cardano-cli conway governance drep key-gen --verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey --signing-key-file "$DREP_DIR"/drep-"$INDEX".skey
+            cardano-cli address key-gen \
+              --verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
+              --signing-key-file "$DREP_DIR"/pay-"$INDEX".skey
 
-            DREP_ADDRESS=$(cardano-cli address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey)
+            cardano-cli stake-address key-gen \
+              --verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+              --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
+
+            cardano-cli conway governance drep key-gen \
+              --verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
+              --signing-key-file "$DREP_DIR"/drep-"$INDEX".skey
+
+            DREP_ADDRESS=$(
+              cardano-cli address build \
+                --testnet-magic "$TESTNET_MAGIC" \
+                --payment-verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
+                --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey
+            )
 
             cardano-cli stake-address registration-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --out-file drep-"$INDEX"-stake.cert
 
-            cardano-cli conway governance drep registration-certificate --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey --key-reg-deposit-amt 0 --out-file drep-"$INDEX"-drep.cert
+            cardano-cli conway governance drep registration-certificate \
+              --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
+              --key-reg-deposit-amt 0 \
+              --out-file drep-"$INDEX"-drep.cert
 
             cardano-cli conway governance drep delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
@@ -751,6 +773,7 @@ in {
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
+
             # Generate transaction
             TXIN=$(
               cardano-cli query utxo \
@@ -777,23 +800,23 @@ in {
               --signing-key-file "$PAYMENT_KEY".skey \
               --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
 
-            if [ "''${SUBMIT_TX:-TRUE}" = "TRUE" ]; then
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-"$INDEX".txsigned
             fi
           '';
         };
+
         packages.job-delegate-drep = writeShellApplication {
           name = "job-delegate-drep";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
             # Inputs: $PAYMENT_KEY, $STAKE_KEY, $DREP_KEY, $POOL_KEY, $TESTNET_MAGIC, $ERA, $DEBUG,
-
             [ -n "''${DEBUG:-}" ] && set -x
 
             cardano-cli conway governance drep delegation-certificate \
               --drep-verification-key-file "$DREP_KEY".vkey \
               --stake-verification-key-file "$STAKE_KEY".vkey \
-               --cold-verification-key-file "$POOL_KEY".vkey \
+              --cold-verification-key-file "$POOL_KEY".vkey \
               --out-file drep-delegation.cert
 
             WITNESSES=2
@@ -802,6 +825,7 @@ in {
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
+
             # Generate transaction
             TXIN=$(
               cardano-cli query utxo \
@@ -825,7 +849,7 @@ in {
               --signing-key-file "$PAYMENT_KEY".skey \
               --signing-key-file "$STAKE_KEY".skey
 
-            if [ "''${SUBMIT_TX:-TRUE}" = "TRUE" ]; then
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-delegation.txsigned
             fi
           '';
