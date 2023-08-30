@@ -1,3 +1,4 @@
 /.envrc.local
 /.direnv
 /treefmt.toml
+result*

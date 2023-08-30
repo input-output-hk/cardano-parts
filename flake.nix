@@ -70,6 +70,7 @@
 
       fmCluster = ./flakeModules/cluster.nix;
       fmEntrypoints = ./flakeModules/entrypoints.nix;
+      fmJobs = passLocalFlake ./flakeModules/jobs.nix {};
       fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
       fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
     in {
@@ -79,6 +80,7 @@
         ++ [
           fmCluster
           fmEntrypoints
+          fmJobs
           fmPkgs
           fmShell
           inputs.inputs-check.flakeModule
@@ -90,6 +92,7 @@
         flakeModules = {
           cluster = fmCluster;
           entrypoints = fmEntrypoints;
+          jobs = fmJobs;
           pkgs = fmPkgs;
           shell = fmShell;
         };
