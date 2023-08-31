@@ -6,7 +6,7 @@ lib: groupCfg:
 # GroupCfg is a mechanism to allow multiple cardano networks within a single repo.
 with lib; rec {
   inherit (groupCfg.meta) domain;
-  inherit (groupCfg.legacy) regions;
+  inherit (groupCfg.legacy) cardanoNodePort regions;
 
   # Function composition
   compose = f: g: x: f (g x);
@@ -50,7 +50,10 @@ with lib; rec {
     groupSize = length nodeGroup;
     nbPeers = nbPeersWithin maxPeers groupSize;
     indexedNodes = imap0 (idx: node: {inherit idx node;}) nodeGroup;
-    names = let names = map (n: n.name) nodeGroup; in names ++ names; # to avoid overflows
+    names = let
+      names = map (n: n.name) nodeGroup;
+    in
+      names ++ names; # to avoid overflows
     topologies =
       map (
         {
@@ -116,7 +119,7 @@ with lib; rec {
   # thus allowing restarting relays and scaling up/down easily without affecting core nodes.
   envRegionalRelaysProducer = region: valency: {
     addr = envRelayGroupForRegion region;
-    port = groupCfg.legacy.cardanoNodePort;
+    port = cardanoNodePort;
     inherit valency;
   };
 
@@ -134,7 +137,7 @@ with lib; rec {
   fqdn = name: "${name}.${domain}";
 
   # Modify node definition for some given nodes, by name.
-  forNodes = modDef: nodes: forNodesWith (def: elem def.name nodes) modDef;
+  forNodes = modDef: nodeNameList: forNodesWith (def: elem def.name nodeNameList) modDef;
 
   # Modify node definition for some nodes that satisfy predicate.
   forNodesWith = p: modDef: def:
@@ -167,7 +170,7 @@ with lib; rec {
 
   # Create instanceProducers compatible with the cardano-node service
   instanceProducers = cfg: nodes: i:
-    (flatten (map (toNormalizedProducerGroup nodes) (filter (g: length g != 0) [
+    flatten (map (toNormalizedProducerGroup cfg nodes) (filter (g: length g != 0) [
       (concatMap (i:
         map (p: {
           addr = cfg.ipv6HostAddr p;
@@ -177,21 +180,21 @@ with lib; rec {
             else cfg.port + p;
         })
         i.producers) (filter (x: x.name == i) (intraInstancesTopologies cfg)))
-      (producerShare i (producersSameRegionRelays cfg) cfg.instances)
-      (producerShare (cfg.instances - i - 1) (producersOtherRegionRelays cfg) cfg.instances)
-      (producerShare i (producersCoreNode cfg) cfg.instances)
-    ])))
+      (producerShare i (producersSameRegionRelays cfg nodes) cfg.instances)
+      (producerShare (cfg.instances - i - 1) (producersOtherRegionRelays cfg nodes) cfg.instances)
+      (producerShare i (producersCoreNode cfg nodes) cfg.instances)
+    ]))
     ++ optionals cfg.useInstancePublicProducersAsProducers (
-      flatten (map (toNormalizedProducerGroup nodes) (filter (g: length g != 0) [
-        (producerShare (cfg.instances - i - 1) (producersThirdParty cfg) cfg.instances)
+      flatten (map (toNormalizedProducerGroup cfg nodes) (filter (g: length g != 0) [
+        (producerShare (cfg.instances - i - 1) (producersThirdParty cfg nodes) cfg.instances)
       ]))
     );
 
   # Create instancePublicProducers compatible with the cardano-node service
   instancePublicProducers = cfg: nodes: i:
     optionals (!cfg.useInstancePublicProducersAsProducers)
-    (flatten (map (toNormalizedProducerGroup nodes) (filter (g: length g != 0) [
-      (producerShare (cfg.instances - i - 1) (producersThirdParty cfg) cfg.instances)
+    (flatten (map (toNormalizedProducerGroup cfg nodes) (filter (g: length g != 0) [
+      (producerShare (cfg.instances - i - 1) (producersThirdParty cfg nodes) cfg.instances)
     ])));
 
   intraInstancesTopologies = cfg:
@@ -500,15 +503,15 @@ with lib; rec {
     catAttrs "node" filtered;
 
   # Partitioning of producers into useful lists
-  producersCoreNode = cfg: (producersSplitDeployed cfg).right;
-  producersDeployed = cfg: (producersSplit cfg).right;
-  producersOtherRegionRelays = cfg: (producersSplitRelays cfg).wrong;
-  producersRelayNode = cfg: (producersSplitDeployed cfg).wrong;
-  producersSameRegionRelays = cfg: (producersSplitRelays cfg).right;
-  producersSplit = cfg: partition (n: nodes ? ${n.addr or n}) cfg.allProducers;
-  producersSplitDeployed = cfg: partition (n: nodes.${n}.config.cardano-parts.roles.isCardanoCore) (producersDeployed cfg);
-  producersSplitRelays = cfg: partition (r: nodes.${r}.config.aws.region == nodes.${name}.config.aws.region) (producersRelayNode cfg);
-  producersThirdParty = cfg: (producersSplit cfg).wrong;
+  producersCoreNode = cfg: nodes: (producersSplitDeployed cfg nodes).right;
+  producersDeployed = cfg: nodes: (producersSplit cfg nodes).right;
+  producersOtherRegionRelays = cfg: nodes: (producersSplitRelays cfg nodes).wrong;
+  producersRelayNode = cfg: nodes: (producersSplitDeployed cfg nodes).wrong;
+  producersSameRegionRelays = cfg: nodes: (producersSplitRelays cfg nodes).right;
+  producersSplit = cfg: nodes: partition (n: nodes ? ${n.addr or n}) cfg.allProducers;
+  producersSplitDeployed = cfg: nodes: partition (n: nodes.${n}.config.cardano-parts.roles.isCardanoCore) (producersDeployed cfg nodes);
+  producersSplitRelays = cfg: nodes: partition (r: nodes.${r}.config.aws.region == nodes.${name}.config.aws.region) (producersRelayNode cfg nodes);
+  producersThirdParty = cfg: nodes: (producersSplit cfg nodes).wrong;
 
   # Same as 'connectGroupWith' but with regional affinity:
   # nodes only connect to nodes in the same region.
@@ -534,11 +537,11 @@ with lib; rec {
   # thus allowing restarting relays and scaling up/down easily without affecting core nodes.
   regionalRelaysProducer = region: valency: {
     addr = relayGroupForRegion region;
-    port = groupCfg.legacy.cardanoNodePort;
+    port = cardanoNodePort;
     inherit valency;
   };
 
-  # Used when connecting to thrid-party relays by regions affinity,
+  # Used when connecting to third-party relays by regions affinity,
   # since we don't have relays in every regions,
   # we define a substitute region for each region we don't deploy to;
   regionsSubstitutes =
@@ -633,7 +636,7 @@ with lib; rec {
       mapAttrs (_: (imap0 (index: mergeAttrs {inherit index;}))) thirdPartyRelaysByRegions;
 
   # Create a producers groups compatible with the cardano-node service
-  toNormalizedProducerGroup = nodes: producers: let
+  toNormalizedProducerGroup = cfg: nodes: producers: let
     mkAccessPointsElement = n:
       {
         address = let
@@ -642,7 +645,7 @@ with lib; rec {
           if (nodes ? ${a})
           then fqdn a
           else a;
-        port = n.port or nodePort;
+        port = n.port or cardanoNodePort;
       }
       // optionalAttrs (!cfg.useNewTopology) {
         valency = n.valency or 1;

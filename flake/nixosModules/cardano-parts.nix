@@ -3,25 +3,25 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.cardano-parts.cluster.group.<...>                        # Inherited from flakeModule cluster.group assignment
-#   config.cardano-parts.cluster.perNode.legacy                     # Placeholder
-#   config.cardano-parts.cluster.perNode.lib.cardanoLib
-#   config.cardano-parts.cluster.perNode.lib.topologyLib
-#   config.cardano-parts.cluster.perNode.meta.cardano-node-service
-#   config.cardano-parts.cluster.perNode.meta.hostAddr
-#   config.cardano-parts.cluster.perNode.meta.nodeId
-#   config.cardano-parts.cluster.perNode.pkgs.cardano-cli
-#   config.cardano-parts.cluster.perNode.pkgs.cardano-node
-#   config.cardano-parts.cluster.perNode.pkgs.cardano-node-pkgs
-#   config.cardano-parts.cluster.perNode.pkgs.cardano-submit-api
-#   config.cardano-parts.cluster.perNode.roles.isCardanoCore
-#   config.cardano-parts.cluster.perNode.roles.isCardanoRelay
-#   config.cardano-parts.cluster.perNode.roles.isCustom
-#   config.cardano-parts.cluster.perNode.roles.isExplorer
-#   config.cardano-parts.cluster.perNode.roles.isExplorerBackend
-#   config.cardano-parts.cluster.perNode.roles.isFaucet
-#   config.cardano-parts.cluster.perNode.roles.isMetadata
-#   config.cardano-parts.cluster.perNode.roles.isSnapshots
+#   config.cardano-parts.cluster.group.<...>                # Inherited from flakeModule cluster.group assignment
+#   config.cardano-parts.perNode.legacy                     # Placeholder
+#   config.cardano-parts.perNode.lib.cardanoLib
+#   config.cardano-parts.perNode.lib.topologyLib
+#   config.cardano-parts.perNode.meta.cardano-node-service
+#   config.cardano-parts.perNode.meta.hostAddr
+#   config.cardano-parts.perNode.meta.nodeId
+#   config.cardano-parts.perNode.pkgs.cardano-cli
+#   config.cardano-parts.perNode.pkgs.cardano-node
+#   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
+#   config.cardano-parts.perNode.pkgs.cardano-submit-api
+#   config.cardano-parts.perNode.roles.isCardanoCore
+#   config.cardano-parts.perNode.roles.isCardanoRelay
+#   config.cardano-parts.perNode.roles.isCustom
+#   config.cardano-parts.perNode.roles.isExplorer
+#   config.cardano-parts.perNode.roles.isExplorerBackend
+#   config.cardano-parts.perNode.roles.isFaucet
+#   config.cardano-parts.perNode.roles.isMetadata
+#   config.cardano-parts.perNode.roles.isSnapshots
 flake @ {moduleWithSystem, ...}: {
   flake.nixosModules.cardano-parts = moduleWithSystem ({system}: {
     config,
