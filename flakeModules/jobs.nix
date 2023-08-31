@@ -742,7 +742,6 @@ in {
             cardano-cli conway governance drep delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
-              --cold-verification-key-file "$POOL_KEY".vkey \
               --out-file drep-"$INDEX"-delegation.cert
 
             WITNESSES=2
