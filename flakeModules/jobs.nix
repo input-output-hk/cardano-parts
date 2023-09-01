@@ -728,7 +728,7 @@ in {
           name = "job-register-drep";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $DREP_DIR, $POOL_KEY $VOTING_POWER, $INDEX, $ERA, $DEBUG,
+            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $DREP_DIR, $VOTING_POWER, $INDEX, $ERA, $DEBUG,
             [ -n "''${DEBUG:-}" ] && set -x
 
             mkdir -p "$DREP_DIR"
@@ -809,7 +809,7 @@ in {
           name = "job-delegate-drep";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $STAKE_KEY, $DREP_KEY, $POOL_KEY, $TESTNET_MAGIC, $ERA, $DEBUG,
+            # Inputs: $PAYMENT_KEY, $STAKE_KEY, $DREP_KEY, $TESTNET_MAGIC, $ERA, $DEBUG,
             [ -n "''${DEBUG:-}" ] && set -x
 
             cardano-cli conway governance drep delegation-certificate \
