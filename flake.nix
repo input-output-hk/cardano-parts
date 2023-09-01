@@ -17,6 +17,7 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
 
     # Cardano related inputs
+    capkgs.url = "github:input-output-hk/capkgs";
     cardano-cli-ng.url = "github:input-output-hk/cardano-cli/cardano-cli-8.5.0.0-nix";
     cardano-db-sync.url = "github:input-output-hk/cardano-db-sync/13.1.1.3";
     cardano-faucet.url = "github:input-output-hk/cardano-faucet";
@@ -102,6 +103,7 @@
     });
 
   nixConfig = {
+    extra-experimental-features = ["fetch-closure"];
     extra-substituters = ["https://cache.iog.io"];
     extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
     allow-import-from-derivation = "true";

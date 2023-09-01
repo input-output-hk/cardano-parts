@@ -1,5 +1,5 @@
 {
   perSystem = {
-    cardano-parts.shell.defaultShell = "ops";
+    cardano-parts.shell.global.defaultShell = "ops";
   };
 }
