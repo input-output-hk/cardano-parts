@@ -728,7 +728,7 @@ in {
           name = "job-register-drep";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $DREP_DIR, $POOL_KEY $VOTING_POWER, $INDEX, $ERA, $DEBUG,
+            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $DREP_DIR, $VOTING_POWER, $INDEX, $ERA, $DEBUG,
             [ -n "''${DEBUG:-}" ] && set -x
 
             mkdir -p "$DREP_DIR"
@@ -764,7 +764,6 @@ in {
             cardano-cli conway governance drep delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
-              --cold-verification-key-file "$POOL_KEY".vkey \
               --out-file drep-"$INDEX"-delegation.cert
 
             WITNESSES=2
@@ -810,13 +809,12 @@ in {
           name = "job-delegate-drep";
           runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $STAKE_KEY, $DREP_KEY, $POOL_KEY, $TESTNET_MAGIC, $ERA, $DEBUG,
+            # Inputs: $PAYMENT_KEY, $STAKE_KEY, $DREP_KEY, $TESTNET_MAGIC, $ERA, $DEBUG,
             [ -n "''${DEBUG:-}" ] && set -x
 
             cardano-cli conway governance drep delegation-certificate \
-              --drep-verification-key-file "$DREP_KEY".vkey \
               --stake-verification-key-file "$STAKE_KEY".vkey \
-              --cold-verification-key-file "$POOL_KEY".vkey \
+              --drep-verification-key-file "$DREP_KEY".vkey \
               --out-file drep-delegation.cert
 
             WITNESSES=2
