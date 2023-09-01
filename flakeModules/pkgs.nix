@@ -130,7 +130,7 @@ in
             (mkPkg "cardano-db-sync" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-db-sync-13-1-1-3-cardano-db-sync-exe-cardano-db-sync-13-1-1-3)
             (mkPkg "cardano-db-tool" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-db-sync-13-1-1-3-cardano-db-sync-exe-cardano-db-tool-13-1-1-3)
             # TODO: Add faucet repo to capkgs
-            (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
+            # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
             (mkPkg "cardano-node" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-cardano-node-exe-cardano-node-8-1-2)
             (mkPkg "cardano-node-ng" (mkWrapper "cardano-node-ng" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-2-1-pre-cardano-node-exe-cardano-node-8-2-1))
             (mkPkg "cardano-submit-api" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-cardano-submit-api-exe-cardano-submit-api-3-1-2)
@@ -140,11 +140,11 @@ in
             (mkPkg "db-synthesizer" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-ouroboros-consensus-cardano-exe-db-synthesizer-0-6-0-0)
             (mkPkg "db-truncater" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-2-1-pre-ouroboros-consensus-cardano-exe-db-truncater-0-7-0-0)
             # TODO: Add offchain-metadata-tools repo to capkgs
-            (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
-            (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
-            (mkPkg "metadata-validator-github" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-validator-github)
-            (mkPkg "metadata-webhook" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-webhook)
-            (mkPkg "token-metadata-creator" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.token-metadata-creator)
+            # (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
+            # (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
+            # (mkPkg "metadata-validator-github" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-validator-github)
+            # (mkPkg "metadata-webhook" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-webhook)
+            # (mkPkg "token-metadata-creator" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.token-metadata-creator)
           ];
         };
       in {
