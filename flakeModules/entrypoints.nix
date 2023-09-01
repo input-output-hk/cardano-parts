@@ -15,6 +15,8 @@ in
       }: let
         inherit (flake.config.flake.legacyPackages.${system}) cardanoLib;
 
+        cfgPkgs = config.cardano-parts.pkgs;
+
         # Use the iohk-nix mkConfigHtml attr and transform the output to what mdbook expects
         generateStaticHTMLConfigs = environments: let
           cardano-deployment = cardanoLib.mkConfigHtml environments;
@@ -71,7 +73,7 @@ in
           # Make entrypoints
           packages.run-cardano-node = pkgs.writeShellApplication {
             name = "run-cardano-node";
-            runtimeInputs = with config.packages; [cardano-node];
+            runtimeInputs = [pkgs.jq];
             text = ''
               [ -z "''${DATA_DIR:-}" ] && echo "DATA_DIR env var must be set -- aborting" && exit 1
 
@@ -186,11 +188,11 @@ in
               args+=("--topology" "$NODE_TOPOLOGY")
               echo "Running node as:"
               if [ "''${UNSTABLE:-}" = "true" ]; then
-                echo "${config.packages.cardano-node-ng}/bin/cardano-node-ng run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
-                exec ${config.packages.cardano-node-ng}/bin/cardano-node-ng run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+                echo "${lib.getExe cfgPkgs.cardano-node-ng} run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec ${lib.getExe cfgPkgs.cardano-node-ng} run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
               else
-                echo "${config.packages.cardano-node}/bin/cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
-                exec ${config.packages.cardano-node}/bin/cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+                echo "${lib.getExe cfgPkgs.cardano-node} run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec ${lib.getExe cfgPkgs.cardano-node} run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
               fi
             '';
           };

@@ -159,6 +159,13 @@ in
           cardano-parts = mkDefault {};
 
           packages = {
+            # TODO:
+            # cardano-faucet
+            # metadata-server
+            # metadata-sync
+            # metadata-validator-github
+            # metadata-webhook
+            # token-metadata-creator
             inherit
               (cfgPkgs)
               bech32
@@ -167,7 +174,6 @@ in
               cardano-cli-ng
               cardano-db-sync
               cardano-db-tool
-              cardano-faucet
               cardano-node
               cardano-node-ng
               cardano-submit-api
@@ -176,11 +182,6 @@ in
               db-analyser
               db-synthesizer
               db-truncater
-              metadata-server
-              metadata-sync
-              metadata-validator-github
-              metadata-webhook
-              token-metadata-creator
               ;
           };
         };
