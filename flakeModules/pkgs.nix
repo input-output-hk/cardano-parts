@@ -90,6 +90,7 @@ in
       }: let
         cfg = config.cardano-parts;
         cfgPkgs = cfg.pkgs;
+        caPkgs = localFlake.inputs.capkgs.packages.${system};
 
         mkPkg = name: pkg: {
           ${name} = mkOption {
@@ -123,22 +124,22 @@ in
 
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
-            (mkPkg "bech32" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-bech32-exe-bech32-1-1-2)
-            (mkPkg "cardano-address" localFlake.inputs.capkgs.packages.${system}.cardano-foundation-cardano-wallet-v2023-07-18-cardano-addresses-cli-exe-cardano-address-3-12-0)
-            (mkPkg "cardano-cli" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-cardano-cli-exe-cardano-cli-8-1-2)
-            (mkPkg "cardano-cli-ng" (mkWrapper "cardano-cli-ng" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-2-1-pre-cardano-cli-exe-cardano-cli-8-5-0-0))
-            (mkPkg "cardano-db-sync" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-db-sync-13-1-1-3-cardano-db-sync-exe-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-db-tool" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-db-sync-13-1-1-3-cardano-db-sync-exe-cardano-db-tool-13-1-1-3)
+            (mkPkg "bech32" caPkgs.input-output-hk-cardano-node-8-1-2-bech32-exe-bech32-1-1-2)
+            (mkPkg "cardano-address" caPkgs.cardano-foundation-cardano-wallet-v2023-07-18-cardano-addresses-cli-exe-cardano-address-3-12-0)
+            (mkPkg "cardano-cli" caPkgs.input-output-hk-cardano-node-8-1-2-cardano-cli-exe-cardano-cli-8-1-2)
+            (mkPkg "cardano-cli-ng" (mkWrapper "cardano-cli-ng" caPkgs.input-output-hk-cardano-node-8-2-1-pre-cardano-cli-exe-cardano-cli-8-5-0-0))
+            (mkPkg "cardano-db-sync" caPkgs.input-output-hk-cardano-db-sync-13-1-1-3-cardano-db-sync-exe-cardano-db-sync-13-1-1-3)
+            (mkPkg "cardano-db-tool" caPkgs.input-output-hk-cardano-db-sync-13-1-1-3-cardano-db-tool-exe-cardano-db-tool-13-1-1-3)
             # TODO: Add faucet repo to capkgs
             # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
-            (mkPkg "cardano-node" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-cardano-node-exe-cardano-node-8-1-2)
-            (mkPkg "cardano-node-ng" (mkWrapper "cardano-node-ng" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-2-1-pre-cardano-node-exe-cardano-node-8-2-1))
-            (mkPkg "cardano-submit-api" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-cardano-submit-api-exe-cardano-submit-api-3-1-2)
-            (mkPkg "cardano-tracer" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-cardano-tracer-exe-cardano-tracer-0-1-0)
-            (mkPkg "cardano-wallet" localFlake.inputs.capkgs.packages.${system}.cardano-foundation-cardano-wallet-v2023-07-18-cardano-wallet-2023-7-18)
-            (mkPkg "db-analyser" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-ouroboros-consensus-cardano-exe-db-analyser-0-6-0-0)
-            (mkPkg "db-synthesizer" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-1-2-ouroboros-consensus-cardano-exe-db-synthesizer-0-6-0-0)
-            (mkPkg "db-truncater" localFlake.inputs.capkgs.packages.${system}.input-output-hk-cardano-node-8-2-1-pre-ouroboros-consensus-cardano-exe-db-truncater-0-7-0-0)
+            (mkPkg "cardano-node" caPkgs.input-output-hk-cardano-node-8-1-2-cardano-node-exe-cardano-node-8-1-2)
+            (mkPkg "cardano-node-ng" (mkWrapper "cardano-node-ng" caPkgs.input-output-hk-cardano-node-8-2-1-pre-cardano-node-exe-cardano-node-8-2-1))
+            (mkPkg "cardano-submit-api" caPkgs.input-output-hk-cardano-node-8-1-2-cardano-submit-api-exe-cardano-submit-api-3-1-2)
+            (mkPkg "cardano-tracer" caPkgs.input-output-hk-cardano-node-8-1-2-cardano-tracer-exe-cardano-tracer-0-1-0)
+            (mkPkg "cardano-wallet" caPkgs.cardano-foundation-cardano-wallet-v2023-07-18-cardano-wallet-2023-7-18)
+            (mkPkg "db-analyser" caPkgs.input-output-hk-cardano-node-8-1-2-ouroboros-consensus-cardano-exe-db-analyser-0-6-0-0)
+            (mkPkg "db-synthesizer" caPkgs.input-output-hk-cardano-node-8-1-2-ouroboros-consensus-cardano-exe-db-synthesizer-0-6-0-0)
+            (mkPkg "db-truncater" caPkgs.input-output-hk-cardano-node-8-2-1-pre-ouroboros-consensus-cardano-exe-db-truncater-0-7-0-0)
             # TODO: Add offchain-metadata-tools repo to capkgs
             # (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
             # (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
