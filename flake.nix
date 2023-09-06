@@ -17,10 +17,6 @@
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
     # Cardano related inputs
-    aws-datacenters = {
-      url = "github:turnkeylinux/aws-datacenters";
-      flake = false;
-    };
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";

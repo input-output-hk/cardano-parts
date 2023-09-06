@@ -5,7 +5,6 @@
 # Attributes available on flakeModule import:
 #   flake.cardano-parts.aws.ec2.rawSpec
 #   flake.cardano-parts.aws.ec2.spec
-#   flake.cardano-parts.aws.ec2.stateAffinityIndex
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.aws.<...>
@@ -43,12 +42,6 @@
 
   ec2Submodule = submodule {
     options = {
-      stateAffinityIndex = mkOption {
-        type = anything;
-        description = mdDoc "The cardano-parts aws ec2 datacenter state affinity index.";
-        default = builtins.fromJSON (builtins.readFile ./aws/state-index.json);
-      };
-
       rawSpec = mkOption {
         type = anything;
         description = mdDoc "The cardano-parts aws ec2 instance type raw spec reference.";
