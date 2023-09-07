@@ -90,6 +90,7 @@ in
       }: let
         cfg = config.cardano-parts;
         cfgPkgs = cfg.pkgs;
+        caPkgs = localFlake.inputs.capkgs.packages.${system};
 
         mkPkg = name: pkg: {
           ${name} = mkOption {
@@ -123,26 +124,28 @@ in
 
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
-            (mkPkg "bech32" localFlake.inputs.cardano-node.packages.${system}.bech32)
-            (mkPkg "cardano-address" localFlake.inputs.cardano-wallet.packages.${system}.cardano-address)
-            (mkPkg "cardano-cli" localFlake.inputs.cardano-node.packages.${system}.cardano-cli)
-            (mkPkg "cardano-cli-ng" (mkWrapper "cardano-cli-ng" localFlake.inputs.cardano-cli-ng.packages.${system}."cardano-cli:exe:cardano-cli"))
-            (mkPkg "cardano-db-sync" localFlake.inputs.cardano-db-sync.packages.${system}.cardano-db-sync)
-            (mkPkg "cardano-db-tool" localFlake.inputs.cardano-db-sync.packages.${system}.cardano-db-tool)
-            (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
-            (mkPkg "cardano-node" localFlake.inputs.cardano-node.packages.${system}.cardano-node)
-            (mkPkg "cardano-node-ng" (mkWrapper "cardano-node-ng" localFlake.inputs.cardano-node-ng.packages.${system}.cardano-node))
-            (mkPkg "cardano-submit-api" localFlake.inputs.cardano-node.packages.${system}.cardano-submit-api)
-            (mkPkg "cardano-tracer" localFlake.inputs.cardano-node.packages.${system}.cardano-tracer)
-            (mkPkg "cardano-wallet" localFlake.inputs.cardano-wallet.packages.${system}.cardano-wallet)
-            (mkPkg "db-analyser" localFlake.inputs.cardano-node.packages.${system}.db-analyser)
-            (mkPkg "db-synthesizer" localFlake.inputs.cardano-node.packages.${system}.db-synthesizer)
-            (mkPkg "db-truncater" localFlake.inputs.cardano-node-ng.packages.${system}.db-truncater)
-            (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
-            (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
-            (mkPkg "metadata-validator-github" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-validator-github)
-            (mkPkg "metadata-webhook" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-webhook)
-            (mkPkg "token-metadata-creator" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.token-metadata-creator)
+            (mkPkg "bech32" caPkgs.bech32-exe-bech32-1-1-2-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-address" caPkgs.cardano-addresses-cli-exe-cardano-address-3-12-0-cardano-foundation-cardano-wallet-v2023-07-18)
+            (mkPkg "cardano-cli" caPkgs.cardano-cli-exe-cardano-cli-8-1-2-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-cli-ng" (mkWrapper "cardano-cli-ng" caPkgs.cardano-cli-exe-cardano-cli-8-5-0-0-input-output-hk-cardano-node-8-2-1-pre))
+            (mkPkg "cardano-db-sync" caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
+            (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
+            # TODO: Add faucet repo to capkgs
+            # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
+            (mkPkg "cardano-node" caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-node-ng" (mkWrapper "cardano-node-ng" caPkgs.cardano-node-exe-cardano-node-8-2-1-input-output-hk-cardano-node-8-2-1-pre))
+            (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-2-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-tracer" caPkgs.cardano-tracer-exe-cardano-tracer-0-1-0-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-wallet" caPkgs.cardano-wallet-2023-7-18-cardano-foundation-cardano-wallet-v2023-07-18)
+            (mkPkg "db-analyser" caPkgs.ouroboros-consensus-cardano-exe-db-analyser-0-6-0-0-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "db-synthesizer" caPkgs.ouroboros-consensus-cardano-exe-db-synthesizer-0-6-0-0-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "db-truncater" caPkgs.ouroboros-consensus-cardano-exe-db-truncater-0-7-0-0-input-output-hk-cardano-node-8-2-1-pre)
+            # TODO: Add offchain-metadata-tools repo to capkgs
+            # (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
+            # (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
+            # (mkPkg "metadata-validator-github" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-validator-github)
+            # (mkPkg "metadata-webhook" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-webhook)
+            # (mkPkg "token-metadata-creator" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.token-metadata-creator)
           ];
         };
       in {
@@ -156,6 +159,13 @@ in
           cardano-parts = mkDefault {};
 
           packages = {
+            # TODO:
+            # cardano-faucet
+            # metadata-server
+            # metadata-sync
+            # metadata-validator-github
+            # metadata-webhook
+            # token-metadata-creator
             inherit
               (cfgPkgs)
               bech32
@@ -164,7 +174,6 @@ in
               cardano-cli-ng
               cardano-db-sync
               cardano-db-tool
-              cardano-faucet
               cardano-node
               cardano-node-ng
               cardano-submit-api
@@ -173,11 +182,6 @@ in
               db-analyser
               db-synthesizer
               db-truncater
-              metadata-server
-              metadata-sync
-              metadata-validator-github
-              metadata-webhook
-              token-metadata-creator
               ;
           };
         };

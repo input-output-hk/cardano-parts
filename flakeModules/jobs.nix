@@ -8,7 +8,7 @@ in {
       ...
     }: let
       inherit (pkgs) writeShellApplication;
-      inherit (config.packages) cardano-cli cardano-address;
+      inherit (config.cardano-parts.pkgs) cardano-cli cardano-address;
       updateProposalTemplate = ''
         # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $TESTNET_MAGIC, $PROPOSAL_ARGS, $SUBMIT_TX, $ERA, $DEBUG
 
@@ -92,7 +92,7 @@ in {
       config = {
         packages.job-gen-custom-node-config = writeShellApplication {
           name = "job-gen-custom-node-config";
-          runtimeInputs = [cardano-cli pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $START_TIME, $SLOT_LENGTH, $SECURITY_PARAM, $TESTNET_MAGIC, $TEMPLATE_DIR, $GENESIS_DIR, $NUM_GENESIS_KEYS, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
@@ -148,7 +148,7 @@ in {
         packages.job-gen-custom-kv-config =
           writeShellApplication {
             name = "job-gen-custom-kv-config";
-            runtimeInputs = [pkgs.jq pkgs.coreutils pkgs.sops];
+            runtimeInputs = with pkgs; [coreutils jq sops];
             text = ''
               # Inputs: $GENESIS_DIR, $NUM_GENESIS_KEYS, $ENV_NAME, $DEBUG
               [ -n "''${DEBUG:-}" ] && set -x
@@ -202,7 +202,7 @@ in {
 
         packages.job-create-stake-pool-keys = writeShellApplication {
           name = "job-create-stake-pools";
-          runtimeInputs = [cardano-cli cardano-address pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-address cardano-cli coreutils jq];
           text = ''
             # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
@@ -270,7 +270,7 @@ in {
 
         packages.job-register-stake-pools = writeShellApplication {
           name = "job-register-stake-pools";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $POOL_PLEDGE, $POOL_RELAY, $POOL_RELAY_PORT, $SUBMIT_TX, $ERA, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
@@ -376,7 +376,7 @@ in {
         packages.job-gen-custom-kv-config-pools =
           writeShellApplication {
             name = "job-gen-custom-kv-config-pools";
-            runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+            runtimeInputs = with pkgs; [cardano-cli coreutils jq];
             text = ''
               # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $ENV_NAME, $DEBUG
               [ -n "''${DEBUG:-}" ] && set -x
@@ -415,7 +415,7 @@ in {
         packages.job-rotate-kes-pools =
           writeShellApplication {
             name = "job-rotate-kes-pools";
-            runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+            runtimeInputs = with pkgs; [cardano-cli coreutils jq];
             text = ''
               # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $ENV_NAME, $CURRENT_KES_PERIOD, $DEBUG
               [ -n "''${DEBUG:-}" ] && set -x
@@ -463,7 +463,7 @@ in {
 
         packages.job-move-genesis-utxo = writeShellApplication {
           name = "job-move-genesis-utxo";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_ADDRESS, $BYRON_SIGNING_KEY, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
@@ -504,7 +504,7 @@ in {
 
         packages.job-update-proposal-generic = writeShellApplication {
           name = "job-update-proposal-generic";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, [$MAJOR_VERSION], $TESTNET_MAGIC, $PROPOSAL_ARGS, $SUBMIT_TX, $ERA, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
@@ -521,7 +521,7 @@ in {
 
         packages.job-update-proposal-d = writeShellApplication {
           name = "job-update-proposal-d";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $D_VALUE, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
@@ -535,7 +535,7 @@ in {
 
         packages.job-update-proposal-hard-fork = writeShellApplication {
           name = "job-update-proposal-hard-fork";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $MAJOR_VERSION, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
             [ -n "''${DEBUG:-}" ] && set -x
@@ -581,7 +581,7 @@ in {
 
         packages.job-submit-gov-action = writeShellApplication {
           name = "job-submit-gov-action";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $STAKE_KEY, $ERA, $DEBUG, $GOV_ACTION_DEPOSIT, ACTION_ARGS[]
             [ -n "''${DEBUG:-}" ] && set -x
@@ -649,7 +649,7 @@ in {
 
         packages.job-submit-vote = writeShellApplication {
           name = "job-submit-vote";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $VOTE_KEY, $TESTNET_MAGIC, $ACTION_TX_ID, $ROLE, $DECISION, $ERA, $DEBUG, VOTE_ARGS[]
             [ -n "''${DEBUG:-}" ] && set -x
@@ -726,7 +726,7 @@ in {
 
         packages.job-register-drep = writeShellApplication {
           name = "job-register-drep";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $DREP_DIR, $VOTING_POWER, $INDEX, $ERA, $DEBUG,
             [ -n "''${DEBUG:-}" ] && set -x
@@ -807,7 +807,7 @@ in {
 
         packages.job-delegate-drep = writeShellApplication {
           name = "job-delegate-drep";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
           text = ''
             # Inputs: $PAYMENT_KEY, $STAKE_KEY, $DREP_KEY, $TESTNET_MAGIC, $ERA, $DEBUG,
             [ -n "''${DEBUG:-}" ] && set -x

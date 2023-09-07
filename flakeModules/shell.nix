@@ -278,7 +278,8 @@ in
                         db-analyser
                         db-synthesizer
                         db-truncater
-                        token-metadata-creator
+                        # Until offchain-metadata-tools repo is added to capkgs
+                        # token-metadata-creator
                         # TODO:
                         # update-cabal-source-repo-checksums
                       ]);
