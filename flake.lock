@@ -193,16 +193,16 @@
     "cardano-cli-ng-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1691168478,
-        "narHash": "sha256-JurqewSSHOuNzobzUxbfNDhKnSN9BK31y39pQM+H7+M=",
+        "lastModified": 1693332449,
+        "narHash": "sha256-aYaJ50ptPNV5K/T/Kqa/yyS/Kko3/C2CjIvGoI4vVJA=",
         "owner": "input-output-hk",
         "repo": "cardano-cli",
-        "rev": "aebdcce52df97072c54858a99a287bb4a2f9acfe",
+        "rev": "59d9717b010340837bcf1d5eb6b678d6ba5df36f",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "cardano-cli-8.5.0.0-nix",
+        "ref": "cardano-cli-8.7.0.0",
         "repo": "cardano-cli",
         "type": "github"
       }
@@ -227,15 +227,16 @@
     "cardano-faucet-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1692239482,
-        "narHash": "sha256-2WxlV8mW+IyDGhehjKiihunyXZ16OWnypX0dms53kX0=",
+        "lastModified": 1694106093,
+        "narHash": "sha256-PX5pp513/P8LOpbAm7c2FU6ZOSVeBKBMMymn68b7Tp4=",
         "owner": "input-output-hk",
         "repo": "cardano-faucet",
-        "rev": "0eb6ecf575112c715211af7d08c5de8be2561c38",
+        "rev": "ba2a8d9b300a81ccec67aaa32a5dffbdee5e11ad",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "8.3",
         "repo": "cardano-faucet",
         "type": "github"
       }
@@ -243,16 +244,16 @@
     "cardano-node-ng-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1691329439,
-        "narHash": "sha256-CPB2O5/QeQrV8EQQwEICTJQE1cp3KeUEh43ZICbE338=",
+        "lastModified": 1694027776,
+        "narHash": "sha256-64Nc6CKSMe4SoOu1zaqP9XekWWMDsTVRAJ5faEvbkb4=",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "a29ee68ba2c850cd50be39a3105ef191cfbc41d5",
+        "rev": "2f041a1b21233ced41e2f8a8bca20e97ed257f0d",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "8.2.1-pre",
+        "ref": "8.3.1-pre",
         "repo": "cardano-node",
         "type": "github"
       }
@@ -813,11 +814,11 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1691469905,
-        "narHash": "sha256-TV0p1dFGYAMl1dLJEfe/tNFjxvV2H7VgHU1I43q+b84=",
+        "lastModified": 1693968598,
+        "narHash": "sha256-2wFadXHMgNYrF7N6jndfp3Ywm2G0r+QTPifrlzugkjo=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "2f3760f135616ebc477d3ed74eba9b63c22f83a0",
+        "rev": "7d738e59d276336d1e02447e27b0373164d3bc88",
         "type": "github"
       },
       "original": {
