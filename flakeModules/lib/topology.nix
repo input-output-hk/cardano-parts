@@ -509,7 +509,7 @@ with lib; rec {
   producersRelayNode = cfg: nodes: (producersSplitDeployed cfg nodes).wrong;
   producersSameRegionRelays = cfg: nodes: (producersSplitRelays cfg nodes).right;
   producersSplit = cfg: nodes: partition (n: nodes ? ${n.addr or n}) cfg.allProducers;
-  producersSplitDeployed = cfg: nodes: partition (n: nodes.${n}.config.cardano-parts.roles.isCardanoCore) (producersDeployed cfg nodes);
+  producersSplitDeployed = cfg: nodes: partition (n: nodes.${n}.config.cardano-parts.cluster.perNode.roles.isCardanoCore) (producersDeployed cfg nodes);
   producersSplitRelays = cfg: nodes: partition (r: nodes.${r}.config.aws.region == nodes.${name}.config.aws.region) (producersRelayNode cfg nodes);
   producersThirdParty = cfg: nodes: (producersSplit cfg nodes).wrong;
 

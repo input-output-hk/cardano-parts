@@ -108,7 +108,7 @@
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-node-service import path string.";
-        default = "${localFlake.inputs.cardano-node}/nix/nixos";
+        default = "${localFlake.inputs.cardano-node-service}/nix/nixos";
       };
     };
   };

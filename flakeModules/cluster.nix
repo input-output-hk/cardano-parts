@@ -26,6 +26,7 @@
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.domain
+#   flake.cardano-parts.cluster.group.<default|name>.environmentName
 #   flake.cardano-parts.cluster.group.<default|name>.name
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-cli
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node
@@ -204,12 +205,6 @@ flake @ {
         default = {};
       };
 
-      environmentName = mkOption {
-        type = nullOr str;
-        description = mdDoc "The cardano-parts group environmentName definition for building group topology.";
-        default = null;
-      };
-
       explorerHostName = mkOption {
         type = str;
         description = mdDoc "The cardano-parts group environmentConfig definition for building group topology.";
@@ -298,6 +293,12 @@ flake @ {
         type = str;
         description = mdDoc "Cardano-parts cluster group domain.";
         default = cfgAws.domain;
+      };
+
+      environmentName = mkOption {
+        type = nullOr str;
+        description = mdDoc "Cardano-parts cluster group environmentName.";
+        default = "custom";
       };
     };
   };

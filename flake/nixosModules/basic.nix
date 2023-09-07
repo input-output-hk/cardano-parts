@@ -116,13 +116,14 @@
     '';
 
     nix = {
+      package = inputs.nix.packages.${system}.nix;
       registry.nixpkgs.flake = inputs.nixpkgs;
       optimise.automatic = true;
       gc.automatic = true;
 
       settings = {
         max-jobs = "auto";
-        experimental-features = ["nix-command" "flakes" "cgroups"];
+        experimental-features = ["nix-command" "fetch-closure" "flakes" "cgroups"];
         auto-optimise-store = true;
         system-features = ["recursive-nix" "nixos-test"];
         builders-use-substitutes = true;
