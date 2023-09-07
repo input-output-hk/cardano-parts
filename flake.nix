@@ -24,7 +24,7 @@
 
     # Cardano related inputs required for service config
     cardano-cli-ng-service = {
-      url = "github:input-output-hk/cardano-cli/cardano-cli-8.5.0.0-nix";
+      url = "github:input-output-hk/cardano-cli/cardano-cli-8.7.0.0";
       flake = false;
     };
 
@@ -35,12 +35,12 @@
 
     # TODO: No faucet nixos service yet
     cardano-faucet-service = {
-      url = "github:input-output-hk/cardano-faucet";
+      url = "github:input-output-hk/cardano-faucet/8.3";
       flake = false;
     };
 
     cardano-node-ng-service = {
-      url = "github:input-output-hk/cardano-node/8.2.1-pre";
+      url = "github:input-output-hk/cardano-node/8.3.1-pre";
       flake = false;
     };
 
