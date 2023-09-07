@@ -332,46 +332,57 @@ in
           (pkgs.writeShellScriptBin "menu" ''
             exec ${getExe config.packages."menu-${id}"} "$@"
           '')
-          .overrideAttrs (_: {meta.description = "Wrapper for menu-${id}";});
+          .overrideAttrs (
+            _: {
+              meta.description = "Wrapper for menu-${id}";
+              meta.mainProgram = "menu";
+            }
+          );
 
         mkMenu = id: {
-          "menu-${id}" = (pkgs.writeShellApplication
-            {
-              name = "menu-${id}";
-              runtimeInputs = with pkgs; [lolcat];
+          "menu-${id}" =
+            (pkgs.writeShellApplication
+              {
+                name = "menu-${id}";
+                runtimeInputs = with pkgs; [lolcat];
 
-              text = let
-                pkgStr = pkg:
-                  if getVersion pkg != ""
-                  then "${getName pkg} (${getVersion pkg})"
-                  else getName pkg;
-                minWidth =
-                  head (
-                    reverseList (
-                      builtins.sort builtins.lessThan (
-                        map (pkg: builtins.stringLength pkg.name) (allPkgs id)
+                text = let
+                  pkgStr = pkg:
+                    if getVersion pkg != ""
+                    then "${getName pkg} (${getVersion pkg})"
+                    else getName pkg;
+                  minWidth =
+                    head (
+                      reverseList (
+                        builtins.sort builtins.lessThan (
+                          map (pkg: builtins.stringLength pkg.name) (allPkgs id)
+                        )
                       )
                     )
-                  )
-                  + 4;
-              in ''
-                echo "Cardano Parts DevShell Menu: ${id}" | lolcat
-                echo
-                echo "The following packages are available in the ${id} devShell:"
-                echo
-                echo "${builtins.concatStringsSep "\n" (map (pkg:
-                  if builtins.hasAttr "description" pkg.meta
-                  then pkgStr pkg + fixedWidthString (minWidth - builtins.stringLength (pkgStr pkg)) " " "" + pkg.meta.description
-                  else pkgStr pkg)
-                (allPkgs id))}"
-                echo
-                echo
-                echo "Other cardano-parts devShells available are:"
-                echo "${concatMapStringsSep "\n" (id: "  ${id} (info: menu-${id})") definedIds}"
-                echo
-              '';
-            })
-          .overrideAttrs (_: {meta.description = "Cardano parts menu for devShell ${id}";});
+                    + 4;
+                in ''
+                  echo "Cardano Parts DevShell Menu: ${id}" | lolcat
+                  echo
+                  echo "The following packages are available in the ${id} devShell:"
+                  echo
+                  echo "${builtins.concatStringsSep "\n" (map (pkg:
+                    if builtins.hasAttr "description" pkg.meta
+                    then pkgStr pkg + fixedWidthString (minWidth - builtins.stringLength (pkgStr pkg)) " " "" + pkg.meta.description
+                    else pkgStr pkg)
+                  (allPkgs id))}"
+                  echo
+                  echo
+                  echo "Other cardano-parts devShells available are:"
+                  echo "${concatMapStringsSep "\n" (id: "  ${id} (info: menu-${id})") definedIds}"
+                  echo
+                '';
+              })
+            .overrideAttrs (
+              _: {
+                meta.description = "Cardano parts menu for devShell ${id}";
+                meta.mainProgram = "menu-${id}";
+              }
+            );
         };
       in {
         # perSystem level option definition

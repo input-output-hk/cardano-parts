@@ -18,7 +18,7 @@
           ./perSystem
         ]
         ++ [
-          inputs.cardano-parts.flakeModules.aws-ec2
+          inputs.cardano-parts.flakeModules.aws
           inputs.cardano-parts.flakeModules.cluster
           inputs.cardano-parts.flakeModules.entrypoints
           inputs.cardano-parts.flakeModules.jobs
@@ -30,7 +30,6 @@
     };
 
   nixConfig = {
-    extra-experimental-features = ["fetch-closure"];
     extra-substituters = ["https://cache.iog.io"];
     extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
     allow-import-from-derivation = "true";

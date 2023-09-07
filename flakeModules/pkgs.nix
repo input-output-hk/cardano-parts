@@ -110,6 +110,7 @@ in
               then " (${getVersion pkg})"
               else ""
             }";
+            meta.mainProgram = name;
           });
 
         mainPerSystemSubmodule = submodule {
