@@ -18,6 +18,7 @@
           ./perSystem
         ]
         ++ [
+          inputs.cardano-parts.flakeModules.aws-ec2
           inputs.cardano-parts.flakeModules.cluster
           inputs.cardano-parts.flakeModules.entrypoints
           inputs.cardano-parts.flakeModules.jobs
