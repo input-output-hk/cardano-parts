@@ -10,12 +10,12 @@
 #   flake.cardano-parts.cluster.infra.aws.profile
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
+#   flake.cardano-parts.cluster.group.<default|name>.groupName
 #   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.domain
-#   flake.cardano-parts.cluster.group.<default|name>.environmentName
-#   flake.cardano-parts.cluster.group.<default|name>.name
+#   flake.cardano-parts.cluster.group.<default|name>.meta.environmentName
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-cli
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node-pkgs
@@ -141,7 +141,7 @@ flake @ {
         default = {};
       };
 
-      name = mkOption {
+      groupName = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group name.";
         default = name;

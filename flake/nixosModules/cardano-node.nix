@@ -30,11 +30,11 @@ flake: {
 
     cfg = config.services.cardano-node;
   in {
-    imports = [
-      # TODO: nixos perNode configurable cardano-node-service import without infinite recursion
-      # flake.config.flake.cardano-parts.cluster.group.default.meta.cardano-node-service
-      "${flake.inputs.cardano-node-service}/nix/nixos"
-    ];
+    # Leave the import of the upstream cardano-node service for cardano-parts consuming repos so that service import can be customized.
+    # Unfortunately, we can't customize the import based on perNode nixos options as this leads to infinite recursion.
+    # imports = [
+    #   config.cardano-parts.perNode.pkgs.cardano-node-service;
+    # ];
 
     options = {
       services.cardano-node = {
