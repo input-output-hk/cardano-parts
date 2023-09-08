@@ -4,7 +4,6 @@
 #
 # Attributes available on nixos module import:
 #   config.cardano-parts.cluster.group.<...>                # Inherited from flakeModule cluster.group assignment
-#   config.cardano-parts.perNode.legacy                     # Placeholder
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.topologyLib
 #   config.cardano-parts.perNode.meta.cardano-node-service
@@ -29,7 +28,7 @@ flake @ {moduleWithSystem, ...}: {
     ...
   }: let
     inherit (lib) foldl' mdDoc mkOption recursiveUpdate types;
-    inherit (types) anything attrsOf bool ints package nullOr str submodule;
+    inherit (types) anything attrsOf bool ints package port nullOr str submodule;
 
     cfg = config.cardano-parts.cluster;
 
@@ -82,12 +81,6 @@ flake @ {moduleWithSystem, ...}: {
 
     perNodeSubmodule = submodule {
       options = {
-        legacy = mkOption {
-          type = legacySubmodule;
-          description = mdDoc "Cardano-parts nixos perNode legacy submodule";
-          default = {};
-        };
-
         lib = mkOption {
           type = libSubmodule;
           description = mdDoc "Cardano-parts nixos perNode lib submodule";
@@ -114,10 +107,6 @@ flake @ {moduleWithSystem, ...}: {
       };
     };
 
-    legacySubmodule = submodule {
-      options = {};
-    };
-
     libSubmodule = submodule {
       options = foldl' recursiveUpdate {} [
         (mkSpecialOpt "cardanoLib" (attrsOf anything) (cfg.group.lib.cardanoLib system))
@@ -127,6 +116,18 @@ flake @ {moduleWithSystem, ...}: {
 
     metaSubmodule = submodule {
       options = {
+        cardanoNodePort = mkOption {
+          type = port;
+          description = mdDoc "The port to associate with the nixos cardano-node.";
+          default = cfg.group.meta.cardanoNodePort;
+        };
+
+        cardanoNodePrometheusExporterPort = mkOption {
+          type = port;
+          description = mdDoc "The port to associate with the nixos cardano-node prometheus exporter.";
+          default = cfg.group.meta.cardanoNodePrometheusExporterPort;
+        };
+
         cardano-node-service = mkOption {
           type = str;
           description = mdDoc "The cardano-node-service import path string.";
@@ -135,14 +136,14 @@ flake @ {moduleWithSystem, ...}: {
 
         hostAddr = mkOption {
           type = str;
-          description = mdDoc "The hostAddr to associate with the nixos node";
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node";
           default = "0.0.0.0";
         };
 
         nodeId = mkOption {
           type = nullOr ints.unsigned;
-          description = mdDoc "The hostAddr to associate with the nixos node";
-          default = null;
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node";
+          default = 0;
         };
       };
     };

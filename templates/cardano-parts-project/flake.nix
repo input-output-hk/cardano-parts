@@ -22,6 +22,7 @@
           inputs.cardano-parts.flakeModules.cluster
           inputs.cardano-parts.flakeModules.entrypoints
           inputs.cardano-parts.flakeModules.jobs
+          inputs.cardano-parts.flakeModules.lib
           inputs.cardano-parts.flakeModules.pkgs
           inputs.cardano-parts.flakeModules.shell
         ];

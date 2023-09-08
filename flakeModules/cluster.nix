@@ -10,18 +10,6 @@
 #   flake.cardano-parts.cluster.infra.aws.profile
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.additionalPeers
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.cardanoNodePort
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.environmentConfig
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.explorerHostName
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.nbInstancesPerRelay
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.poolsExcludeList
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.relaysExcludeList
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.relayNodes
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.relaysNew
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.regions
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.regionsSubstitutes
-#   flake.cardano-parts.cluster.group.<default|name>.legacy.topology
 #   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
@@ -42,7 +30,7 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf functionTo ints listOf nullOr package port str submodule;
+  inherit (types) addCheck anything attrsOf functionTo nullOr package port str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -165,12 +153,6 @@ flake @ {
         default = {};
       };
 
-      legacy = mkOption {
-        type = legacySubmodule;
-        description = mdDoc "Cardano-parts cluster group legacy submodule.";
-        default = {};
-      };
-
       lib = mkOption {
         type = libSubmodule;
         description = mdDoc "Cardano-parts cluster group lib submodule.";
@@ -178,88 +160,6 @@ flake @ {
       };
     };
   });
-
-  legacySubmodule = submodule {
-    options = {
-      additionalPeers = mkOption {
-        type = listOf anything;
-        description = mdDoc "The cardano-parts group additionalPeers definition for building group topology.";
-        default = [];
-      };
-
-      cardanoNodePort = mkOption {
-        type = port;
-        description = mdDoc "The cardano-parts group cardanoNodePort definition for building group topology.";
-        default = 3001;
-      };
-
-      cardanoNodePrometheusExporterPort = mkOption {
-        type = port;
-        description = mdDoc "The cardano-parts group cardanoNodePrometheusExporterPort definition for building group topology.";
-        default = 12798;
-      };
-
-      environmentConfig = mkOption {
-        type = attrsOf anything;
-        description = mdDoc "The cardano-parts group environmentConfig definition for building group topology.";
-        default = {};
-      };
-
-      explorerHostName = mkOption {
-        type = str;
-        description = mdDoc "The cardano-parts group environmentConfig definition for building group topology.";
-        default = "https://explorer.cardano.org";
-      };
-
-      nbInstancesPerRelay = mkOption {
-        type = ints.positive;
-        description = mdDoc "The cardano-parts group nbInstancesPerRelay definition for building group topology.";
-        default = 1;
-      };
-
-      poolsExcludeList = mkOption {
-        type = listOf anything;
-        description = mdDoc "The cardano-parts group poolsExcludeList definition for building group topology.";
-        default = [];
-      };
-
-      relaysExcludeList = mkOption {
-        type = listOf anything;
-        description = mdDoc "The cardano-parts group relaysExcludeList definition for building group topology.";
-        default = [];
-      };
-
-      relayNodes = mkOption {
-        type = listOf anything;
-        description = mdDoc "The cardano-parts group relayNodes definition for building group topology.";
-        default = [];
-      };
-
-      relaysNew = mkOption {
-        type = str;
-        description = mdDoc "The cardano-parts group relaysNew definition for building group topology.";
-        default = "";
-      };
-
-      regions = mkOption {
-        type = attrsOf anything;
-        description = mdDoc "The cardano-parts group regions definition for building group topology.";
-        default = {};
-      };
-
-      regionsSubstitutes = mkOption {
-        type = attrsOf anything;
-        description = mdDoc "The cardano-parts group regionsSubstitutes definition for building group topology.";
-        default = {};
-      };
-
-      topology = mkOption {
-        type = attrsOf anything;
-        description = mdDoc "The cardano-parts group topology definition for group topology.";
-        default = {};
-      };
-    };
-  };
 
   libSubmodule = submodule {
     options = {
@@ -283,6 +183,18 @@ flake @ {
 
   metaSubmodule = submodule {
     options = {
+      cardanoNodePort = mkOption {
+        type = port;
+        description = mdDoc "Cardano-parts cluster group cardanoNodePort.";
+        default = 3001;
+      };
+
+      cardanoNodePrometheusExporterPort = mkOption {
+        type = port;
+        description = mdDoc "Cardano-parts cluster group cardanoNodePrometheusExporterPort.";
+        default = 12798;
+      };
+
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
