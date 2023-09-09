@@ -11,6 +11,7 @@
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
 #   flake.cardano-parts.cluster.group.<default|name>.groupName
+#   flake.cardano-parts.cluster.group.<default|name>.groupPrefix
 #   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
@@ -145,6 +146,15 @@ flake @ {
         type = str;
         description = mdDoc "Cardano-parts cluster group name.";
         default = name;
+      };
+
+      groupPrefix = mkOption {
+        type = str;
+        description = mdDoc ''
+          Cardano-parts cluster group prefix.
+          Machines belonging to this group will have Colmena names starting with this prefix;
+        '';
+        default = "";
       };
 
       pkgs = mkOption {

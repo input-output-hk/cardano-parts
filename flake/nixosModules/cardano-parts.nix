@@ -3,9 +3,11 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.cardano-parts.cluster.group.<...>                # Inherited from flakeModule cluster.group assignment
+#   config.cardano-parts.cluster.group.<...>                             # Inherited from flakeModule cluster.group assignment
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.topologyLib
+#   config.cardano-parts.perNode.meta.cardanoNodePort
+#   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.hostAddr
 #   config.cardano-parts.perNode.meta.nodeId
