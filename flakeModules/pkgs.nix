@@ -3,9 +3,11 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
-#   flake.cardano-parts.pkgs.special.cardano-lib
-#   flake.cardano-parts.pkgs.special.cardano-node-service
+#   flake.cardano-parts.pkgs.special.cardanoLib
+#   flake.cardano-parts.pkgs.special.cardanoLibNg
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
+#   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
+#   flake.cardano-parts.pkgs.special.cardano-node-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
@@ -16,6 +18,7 @@
 #   perSystem.cardano-parts.pkgs.cardano-node
 #   perSystem.cardano-parts.pkgs.cardano-node-ng
 #   perSystem.cardano-parts.pkgs.cardano-submit-api
+#   perSystem.cardano-parts.pkgs.cardano-submit-api-ng
 #   perSystem.cardano-parts.pkgs.cardano-tracer
 #   perSystem.cardano-parts.pkgs.cardano-wallet
 #   perSystem.cardano-parts.pkgs.db-analyser
@@ -86,6 +89,26 @@
           .cardanoLib;
       };
 
+      cardanoLibNg = mkOption {
+        type = anything;
+        description = mdDoc ''
+          The cardano-parts system dependent default package for cardanoLibNg.
+
+          This is the same as the cardanoLib option with the exception that the
+          iohk-nix-ng flake input is used to obtain cardanoLib.
+
+          The definition must be a function of system.
+        '';
+        default = system:
+          (import localFlake.inputs.nixpkgs {
+            inherit system;
+            overlays = map (
+              overlay: localFlake.inputs.iohk-nix-ng.overlays.${overlay}
+            ) (builtins.attrNames localFlake.inputs.iohk-nix-ng.overlays);
+          })
+          .cardanoLib;
+      };
+
       cardano-node-pkgs = mkOption {
         type = functionTo (attrsOf anything);
         description = mdDoc ''
@@ -102,6 +125,24 @@
           cardano-node = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node);
           cardano-submit-api = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api);
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
+        };
+      };
+
+      cardano-node-pkgs-ng = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          The cardano-parts default cardano-node-pkgs-ng attrset.
+
+          This is the same as the cardano-node-pkgs option with the exception that the
+          *-ng flake inputs are used for composing the package set.
+
+          The definition must be a function of system.
+        '';
+        default = system: {
+          cardano-cli = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli-ng);
+          cardano-node = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node-ng);
+          cardano-submit-api = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api-ng);
+          cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
         };
       };
 
@@ -174,6 +215,7 @@ in
             (mkPkg "cardano-node" caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-node-ng" (mkWrapper "cardano-node-ng" caPkgs.cardano-node-exe-cardano-node-8-2-1-input-output-hk-cardano-node-8-2-1-pre))
             (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-2-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-submit-api-ng" (mkWrapper "cardano-submit-api-ng" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-3-input-output-hk-cardano-node-8-2-1-pre))
             (mkPkg "cardano-tracer" caPkgs.cardano-tracer-exe-cardano-tracer-0-1-0-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-wallet" caPkgs.cardano-wallet-2023-7-18-cardano-foundation-cardano-wallet-v2023-07-18)
             (mkPkg "db-analyser" caPkgs.ouroboros-consensus-cardano-exe-db-analyser-0-6-0-0-input-output-hk-cardano-node-8-1-2)
