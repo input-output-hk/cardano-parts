@@ -5,7 +5,7 @@
   #
   # Define cluster-wide configuration.
   # This has to evaluate fast and is imported in various places.
-  flake.cardano-parts.cluster = {
+  flake.cardano-parts.cluster.infra.aws = {
     # orgId = "UPDATE_ME";
     # region = "eu-central-1";
     # profile = "UPDATE_ME";

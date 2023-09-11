@@ -16,7 +16,6 @@
   inherit (lib) foldl' mdDoc mkDefault mkOption recursiveUpdate types;
   inherit (types) anything attrsOf submodule;
 
-  # Clean up this flake reference?
   cfg = config.flake.cardano-parts;
   cfgEc2 = cfg.aws.ec2;
 
@@ -50,7 +49,7 @@
 
       spec = mkOption {
         type = attrsOf anything;
-        description = mdDoc "The cardano-parts aws ec2 instance type raw spec reference.";
+        description = mdDoc "The cardano-parts aws ec2 instance type spec reference.";
         default = foldl' (acc: spec:
           recursiveUpdate acc {
             ${spec.InstanceType} = {

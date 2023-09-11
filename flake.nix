@@ -10,6 +10,7 @@
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
+    nix.url = "github:nixos/nix/2.17-maintenance";
     sops-nix.url = "github:Mic92/sops-nix";
     terraform-providers.url = "github:nix-community/nixpkgs-terraform-providers-bin";
     terranix.url = "github:terranix/terranix";
@@ -84,6 +85,7 @@
       fmCluster = ./flakeModules/cluster.nix;
       fmEntrypoints = ./flakeModules/entrypoints.nix;
       fmJobs = passLocalFlake ./flakeModules/jobs.nix {};
+      fmLib = ./flakeModules/lib.nix;
       fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
       fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
     in {
@@ -95,6 +97,7 @@
           fmCluster
           fmEntrypoints
           fmJobs
+          fmLib
           fmPkgs
           fmShell
           inputs.inputs-check.flakeModule
@@ -108,6 +111,7 @@
           cluster = fmCluster;
           entrypoints = fmEntrypoints;
           jobs = fmJobs;
+          lib = fmLib;
           pkgs = fmPkgs;
           shell = fmShell;
         };
