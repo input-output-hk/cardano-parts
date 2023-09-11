@@ -61,18 +61,24 @@ flake: {
     };
 
     config = {
-      environment.systemPackages = [cardano-node-pkgs.cardano-cli];
-      environment.variables = {CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;};
-      networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
+      environment.systemPackages = mkDefault [cardano-node-pkgs.cardano-cli];
+      environment.variables = mkDefault {CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;};
+      networking.firewall = mkDefault {allowedTCPPorts = [cardanoNodePort];};
 
       services.cardano-node = {
-        inherit hostAddr nodeId;
+        inherit hostAddr;
 
         enable = true;
-        cardanoNodePackages = mkDefault cardano-node-pkgs;
         environment = environmentName;
 
-        # Fall back to the iohk-nix environment base topology definition if no custom producers are defined
+        # Setting environments to the perNode cardanoLib default ensures
+        # that nodeConfig is obtained from perNode cardanoLib iohk-nix pin.
+        environments = mkDefault cardanoLib.environments;
+
+        cardanoNodePackages = mkDefault cardano-node-pkgs;
+        nodeId = mkDefault nodeId;
+
+        # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
         topology = mkDefault (
           if
             (cfg.producers == [])
@@ -89,7 +95,7 @@ flake: {
           else (i: "::127.0.0.${toString (i + 1)}")
         );
 
-        port = cardanoNodePort;
+        port = mkDefault cardanoNodePort;
         producers = mkDefault [];
         publicProducers = mkDefault [];
 
