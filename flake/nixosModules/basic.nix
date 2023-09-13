@@ -60,6 +60,7 @@
 
     environment.systemPackages = with pkgs; [
       awscli2
+      age
       bat
       bind
       cloud-utils
@@ -80,6 +81,7 @@
       pciutils
       ripgrep
       rsync
+      ssh-to-age
       sops
       sysstat
       tcpdump

@@ -239,8 +239,10 @@ in
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
                     deadnix
+                    fd
                     just
                     nushell
+                    ripgrep
                     statix
                     xxd
                   ];
@@ -293,10 +295,12 @@ in
                     config.cardano-parts.shell.test.pkgs
                     ++ (with pkgs;
                       with localFlake.packages.${system}; [
+                        age
                         awscli2
                         localFlake.inputs.colmena.packages.${system}.colmena
                         rain
                         sops
+                        ssh-to-age
                         terraform
                         wireguard-tools
                       ]);
