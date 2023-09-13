@@ -13,7 +13,8 @@ in
         system,
         ...
       }: let
-        inherit (flake.config.flake.legacyPackages.${system}) cardanoLib;
+        cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
+        cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
 
         cfgPkgs = config.cardano-parts.pkgs;
 
@@ -84,7 +85,11 @@ in
               chmod -R +w "$DATA_DIR/config/custom"
 
               # The menu of environments that we ship as built-in envs
-              ${copyEnvsTemplate cardanoLib.environments}
+              if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
+                ${copyEnvsTemplate cardanoLibNg.environments}
+              else
+                ${copyEnvsTemplate cardanoLib.environments}
+              fi
 
               # CASE: built-in environment
               if [ -n "''${ENVIRONMENT:-}" ]; then
