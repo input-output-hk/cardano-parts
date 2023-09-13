@@ -49,6 +49,7 @@ in
         config,
         pkgs,
         system,
+        self',
         ...
       }: let
         cfg = config.cardano-parts;
@@ -273,13 +274,17 @@ in
                         bech32
                         cardano-address
                         cardano-cli
-                        cardano-cli-ng
                         cardano-node
-                        cardano-node-ng
                         cardano-wallet
                         db-analyser
                         db-synthesizer
                         db-truncater
+
+                        # The `-ng` variants use the packages derivation as that provides the wrapping,
+                        # whereas the cardano-parts option for `-ng` variants alone provides the unwrapped derivation.
+                        self'.packages.cardano-cli-ng
+                        self'.packages.cardano-node-ng
+
                         # Until offchain-metadata-tools repo is added to capkgs
                         # token-metadata-creator
                         # TODO:
