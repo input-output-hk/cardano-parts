@@ -11,6 +11,7 @@
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
 #   flake.cardano-parts.cluster.group.<default|name>.groupName
+#   flake.cardano-parts.cluster.group.<default|name>.groupOutPath
 #   flake.cardano-parts.cluster.group.<default|name>.groupPrefix
 #   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
@@ -146,6 +147,20 @@ flake @ {
         type = str;
         description = mdDoc "Cardano-parts cluster group name.";
         default = name;
+      };
+
+      groupOutPath = mkOption {
+        type = str;
+        description = mdDoc ''
+          Cardano-parts cluster group out path of the consuming repository's flake.
+
+          In some cases, such as importing nixos configuration modules from cardano-parts,
+          the nixos modules `self` reference will refer to the cardano parts flake rather than
+          the consuming repository's flake.
+
+          By default this option retains a self reference of the flake from the consuming repository.
+        '';
+        default = flake.self.outPath;
       };
 
       groupPrefix = mkOption {
