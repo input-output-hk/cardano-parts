@@ -72,6 +72,10 @@
       Cardano = TPraos // lib.optionalAttrs byronKeysExist RealPBFT;
     };
   in {
+    systemd.services.cardano-node = {
+      after = ["sops-boot-fix.service"];
+      wants = ["sops-boot-fix.service"];
+    };
     services.cardano-node = serviceCfg.${protocol};
     sops.secrets = keysCfg.${protocol};
     users.users.cardano-node.extraGroups = ["keys"];
