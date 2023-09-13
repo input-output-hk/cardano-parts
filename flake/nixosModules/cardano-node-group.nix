@@ -62,9 +62,9 @@ flake: {
     };
 
     config = {
-      environment.systemPackages = mkDefault [cardano-node-pkgs.cardano-cli];
-      environment.variables = mkDefault {CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;};
-      networking.firewall = mkDefault {allowedTCPPorts = [cardanoNodePort];};
+      environment.systemPackages = [cardano-node-pkgs.cardano-cli];
+      environment.variables = {CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;};
+      networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
 
       services.cardano-node = {
         inherit hostAddr;
