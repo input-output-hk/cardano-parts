@@ -1,11 +1,18 @@
+# nixosModule: module-basic
+#
+# TODO: Move this to a docs generator
+#
+# Attributes available on nixos module import:
+#
+# Tips:
+#
 {
   inputs,
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.basic = moduleWithSystem ({system}: {
+  flake.nixosModules.module-basic = moduleWithSystem ({system}: {
     name,
-    config,
     pkgs,
     ...
   }: {
@@ -27,32 +34,6 @@
       tmp.cleanOnBoot = true;
       kernelParams = ["boot.trace"];
       loader.grub.configurationLimit = 10;
-    };
-
-    # Sops-secrets service provides a systemd hook for other services
-    # needing to be restarted after new secrets are pushed.
-    #
-    # Example usage:
-    #   systemd.services.<name> = {
-    #     after = ["sops-secrets.service"];
-    #     wants = ["sops-secrets.service"];
-    #   };
-    #
-    # Also, on boot SOPS runs in stage 2 without networking.
-    # For repositories using KMS sops secrets, this prevent KMS from working,
-    # so we repeat the activation script until decryption succeeds.
-    systemd.services.sops-secrets = {
-      wantedBy = ["multi-user.target"];
-      after = ["network-online.target"];
-
-      script = "${config.system.activationScripts.setupSecrets.text}";
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        Restart = "on-failure";
-        RestartSec = "2s";
-      };
     };
 
     documentation = {
@@ -147,7 +128,10 @@
 
     hardware = {
       cpu.amd.updateMicrocode = true;
+      cpu.intel.updateMicrocode = true;
       enableRedistributableFirmware = true;
     };
+
+    system.stateVersion = "23.05";
   });
 }

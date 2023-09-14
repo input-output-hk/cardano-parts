@@ -1,4 +1,4 @@
-# nixosModule: config.cardano-parts
+# nixosModule: module-cardano-parts
 #
 # TODO: Move this to a docs generator
 #
@@ -17,7 +17,7 @@
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
 #   config.cardano-parts.perNode.roles.isCardanoDensePool
 flake @ {moduleWithSystem, ...}: {
-  flake.nixosModules.cardano-parts = moduleWithSystem ({system}: {
+  flake.nixosModules.module-cardano-parts = moduleWithSystem ({system}: {
     config,
     lib,
     ...

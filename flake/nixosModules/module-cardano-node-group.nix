@@ -1,4 +1,4 @@
-# nixosModule: config.cardano-node-group
+# nixosModule: module-cardano-node-group
 #
 # TODO: Move this to a docs generator
 #
@@ -12,7 +12,7 @@
 #   * This module assists with group deployments
 #   * The upstream cardano-node nixos service module should still be imported separately
 flake: {
-  flake.nixosModules.cardano-node-group = {
+  flake.nixosModules.module-cardano-node-group = {
     config,
     pkgs,
     lib,

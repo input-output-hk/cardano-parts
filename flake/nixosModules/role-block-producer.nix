@@ -1,5 +1,13 @@
+# nixosModule: role-block-producer
+#
+# TODO: Move this to a docs generator
+#
+# Attributes available on nixos module import:
+#
+# Tips:
+#
 {
-  flake.nixosModules.block-producer = {
+  flake.nixosModules.role-block-producer = {
     config,
     name,
     lib,
