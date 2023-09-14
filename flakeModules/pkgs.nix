@@ -189,12 +189,15 @@ in
             exec ${getExe pkg} "$@"
           '')
           .overrideAttrs (_: {
-            meta.description = "Wrapper for ${getName pkg}${
-              if getVersion pkg != ""
-              then " (${getVersion pkg})"
-              else ""
-            }";
-            meta.mainProgram = name;
+            meta = {
+              description = "Wrapper for ${getName pkg}${
+                if getVersion pkg != ""
+                then " (${getVersion pkg})"
+                else ""
+              }";
+              mainProgram = name;
+            };
+            version = getVersion pkg;
           });
 
         mainPerSystemSubmodule = submodule {
@@ -209,20 +212,25 @@ in
 
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
+            # TODO: Fix the missing meta/version info upstream
             (mkPkg "bech32" caPkgs.bech32-exe-bech32-1-1-2-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-address" caPkgs.cardano-addresses-cli-exe-cardano-address-3-12-0-cardano-foundation-cardano-wallet-v2023-07-18)
-            (mkPkg "cardano-cli" caPkgs.cardano-cli-exe-cardano-cli-8-1-2-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-cli-ng" caPkgs.cardano-cli-exe-cardano-cli-8-5-0-0-input-output-hk-cardano-node-8-2-1-pre)
+            (mkPkg "cardano-cli" (caPkgs.cardano-cli-exe-cardano-cli-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
+            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-exe-cardano-cli-8-5-0-0-input-output-hk-cardano-node-8-2-1-pre // {version = "8.5.0.0";}))
             (mkPkg "cardano-db-sync" caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
             (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
             # TODO: Add faucet repo to capkgs
             # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
-            (mkPkg "cardano-node" caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-node-ng" caPkgs.cardano-node-exe-cardano-node-8-2-1-input-output-hk-cardano-node-8-2-1-pre)
+            (mkPkg "cardano-node" (caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
+            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-exe-cardano-node-8-2-1-input-output-hk-cardano-node-8-2-1-pre // {version = "8.2.1";}))
             (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-2-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-3-input-output-hk-cardano-node-8-2-1-pre)
             (mkPkg "cardano-tracer" caPkgs.cardano-tracer-exe-cardano-tracer-0-1-0-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-wallet" caPkgs.cardano-wallet-2023-7-18-cardano-foundation-cardano-wallet-v2023-07-18)
+            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-2023-7-18-cardano-foundation-cardano-wallet-v2023-07-18
+              // {
+                pname = "cardano-wallet";
+                meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
+              }))
             (mkPkg "db-analyser" caPkgs.ouroboros-consensus-cardano-exe-db-analyser-0-6-0-0-input-output-hk-cardano-node-8-1-2)
             (mkPkg "db-synthesizer" caPkgs.ouroboros-consensus-cardano-exe-db-synthesizer-0-6-0-0-input-output-hk-cardano-node-8-1-2)
             (mkPkg "db-truncater" caPkgs.ouroboros-consensus-cardano-exe-db-truncater-0-7-0-0-input-output-hk-cardano-node-8-2-1-pre)

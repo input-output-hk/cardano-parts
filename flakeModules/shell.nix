@@ -43,6 +43,7 @@
   inherit (flake-parts-lib) mkPerSystemOption;
   inherit (lib.types) anything attrs attrsOf bool enum nullOr listOf package str submodule;
 in
+  with builtins;
   with lib; {
     options = {
       perSystem = mkPerSystemOption ({
@@ -71,7 +72,7 @@ in
           then type
           else nullOr type;
 
-        definedIds = builtins.filter (id: !(builtins.elem id ["global"])) (builtins.attrNames cfgShell);
+        definedIds = filter (id: !(elem id ["global"])) (attrNames cfgShell);
 
         mkCommonShellOptions = {
           isGlobal,
@@ -316,8 +317,11 @@ in
                 description = mdDoc "Kitchen sink devShell";
                 extraCfg.pkgs = mkOption {
                   default =
-                    config.cardano-parts.shell.dev.pkgs
-                    ++ config.cardano-parts.shell.ops.pkgs;
+                    config.cardano-parts.shell.ops.pkgs
+                    ++ localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
+                    ++ (with pkgs; [
+                      ghcid
+                    ]);
                 };
               }
             ]);
@@ -330,12 +334,13 @@ in
           else f cfgShell.global.${boolCheck} cfgShell.global.${option};
 
         allPkgs = id:
-          cfgShell.${id}.pkgs
-          ++ cfgShell.${id}.extraPkgs
-          ++ cfgShell.global.pkgs
-          ++ cfgShell.global.extraPkgs
-          ++ [(mkMenuWrapper id)]
-          ++ selectScope id optional "enableFormatter" "defaultFormatterPkg";
+          sort (a: b: pkgName a < pkgName b)
+          (cfgShell.${id}.pkgs
+            ++ cfgShell.${id}.extraPkgs
+            ++ cfgShell.global.pkgs
+            ++ cfgShell.global.extraPkgs
+            ++ [(mkMenuWrapper id)]
+            ++ selectScope id optional "enableFormatter" "defaultFormatterPkg");
 
         mkMenuWrapper = id:
           (pkgs.writeShellScriptBin "menu" ''
@@ -356,18 +361,11 @@ in
                 runtimeInputs = with pkgs; [lolcat];
 
                 text = let
-                  pkgName = pkg: pkg.meta.mainProgram or (getName pkg);
-
-                  pkgStr = pkg:
-                    if getVersion pkg != ""
-                    then "${pkgName pkg} (${getVersion pkg})"
-                    else pkgName pkg;
-
                   minWidth =
                     head (
                       reverseList (
-                        builtins.sort builtins.lessThan (
-                          map (pkg: builtins.stringLength pkg.name) (allPkgs id)
+                        sort lessThan (
+                          map (pkg: stringLength pkg.name) (allPkgs id)
                         )
                       )
                     )
@@ -377,9 +375,9 @@ in
                   echo
                   echo "The following packages are available in the ${id} devShell:"
                   echo
-                  echo "${builtins.concatStringsSep "\n" (map (pkg:
-                    if builtins.hasAttr "description" pkg.meta
-                    then pkgStr pkg + fixedWidthString (minWidth - builtins.stringLength (pkgStr pkg)) " " "" + pkg.meta.description
+                  echo "${concatStringsSep "\n" (map (pkg:
+                    if hasAttr "description" pkg.meta
+                    then pkgStr pkg + fixedWidthString (minWidth - stringLength (pkgStr pkg)) " " "" + pkg.meta.description
                     else pkgStr pkg)
                   (allPkgs id))}"
                   echo
@@ -396,6 +394,13 @@ in
               }
             );
         };
+
+        pkgName = pkg: pkg.meta.mainProgram or (getName pkg);
+
+        pkgStr = pkg:
+          if getVersion pkg != ""
+          then "${pkgName pkg} (${getVersion pkg})"
+          else pkgName pkg;
       in {
         # perSystem level option definition
         options.cardano-parts = mkOption {
