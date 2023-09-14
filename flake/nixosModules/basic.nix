@@ -29,19 +29,23 @@
       loader.grub.configurationLimit = 10;
     };
 
-    # On boot, SOPS runs in stage 2 without networking, this prevents KMS from
-    # working, so we repeat the activation script until decryption succeeds.
-    systemd.services.sops-boot-fix = {
+    # Sops-secrets service provides a systemd hook for other services
+    # needing to be restarted after new secrets are pushed.
+    #
+    # Example usage:
+    #   systemd.services.<name> = {
+    #     after = ["sops-secrets.service"];
+    #     wants = ["sops-secrets.service"];
+    #   };
+    #
+    # Also, on boot SOPS runs in stage 2 without networking.
+    # For repositories using KMS sops secrets, this prevent KMS from working,
+    # so we repeat the activation script until decryption succeeds.
+    systemd.services.sops-secrets = {
       wantedBy = ["multi-user.target"];
       after = ["network-online.target"];
 
-      script = ''
-        ${config.system.activationScripts.setupSecrets.text}
-
-        # For wireguard enabled machines
-        { systemctl list-unit-files wireguard-wg0.service &> /dev/null \
-          && systemctl restart wireguard-wg0.service; } || true
-      '';
+      script = "${config.system.activationScripts.setupSecrets.text}";
 
       serviceConfig = {
         Type = "oneshot";
