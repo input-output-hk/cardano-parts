@@ -20,6 +20,7 @@ flake: {
     nodeResources,
     ...
   }: let
+    inherit (builtins) fromJSON readFile;
     inherit (lib) min mkDefault mkIf mkOption types;
     inherit (types) bool float int;
     inherit (nodeResources) cpuCount memMiB;
@@ -28,11 +29,17 @@ flake: {
     inherit (config.cardano-parts.perNode.lib) cardanoLib;
     inherit (config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
     inherit (config.cardano-parts.perNode.pkgs) cardano-node-pkgs;
+    inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
+    inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
 
     cfg = config.services.cardano-node;
   in {
-    # Leave the import of the upstream cardano-node service for cardano-parts consuming repos so that service import can be customized.
-    # Unfortunately, we can't customize the import based on perNode nixos options as this leads to infinite recursion.
+    # Leave the import of the upstream cardano-node service for
+    # cardano-parts consuming repos so that service import can be customized.
+    #
+    # Unfortunately, we can't customize the import based on
+    # perNode nixos options as this leads to infinite recursion.
+    #
     # imports = [
     #   config.cardano-parts.perNode.pkgs.cardano-node-service;
     # ];
@@ -63,8 +70,14 @@ flake: {
 
     config = {
       environment.systemPackages = [cardano-node-pkgs.cardano-cli];
-      environment.variables = {CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;};
-      networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
+      environment.variables = {
+        CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+        CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
+        TESTNET_MAGIC = toString protocolMagic;
+      };
+
+      # Leave firewall rules to role config
+      # networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
 
       services.cardano-node = {
         inherit hostAddr;
