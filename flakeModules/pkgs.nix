@@ -40,8 +40,27 @@
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib) mdDoc mkOption;
+  inherit (lib) filterAttrs init last mdDoc mkOption updateManyAttrsByPath;
   inherit (lib.types) anything attrsOf functionTo package str submodule;
+
+  removeByPath = pathList:
+    updateManyAttrsByPath [
+      {
+        path = init pathList;
+        update = filterAttrs (n: _: n != (last pathList));
+      }
+    ];
+
+  mkCardanoLib = system: flakeRef:
+  # Remove the dead testnet environment until it is removed from iohk-nix
+    removeByPath ["environments" "testnet"]
+    (import localFlake.inputs.nixpkgs {
+      inherit system;
+      overlays = map (
+        overlay: flakeRef.overlays.${overlay}
+      ) (builtins.attrNames flakeRef.overlays);
+    })
+    .cardanoLib;
 
   mainSubmodule = submodule {
     options = {
@@ -79,14 +98,7 @@
 
           The definition must be a function of system.
         '';
-        default = system:
-          (import localFlake.inputs.nixpkgs {
-            inherit system;
-            overlays = map (
-              overlay: localFlake.inputs.iohk-nix.overlays.${overlay}
-            ) (builtins.attrNames localFlake.inputs.iohk-nix.overlays);
-          })
-          .cardanoLib;
+        default = system: mkCardanoLib system localFlake.inputs.iohk-nix;
       };
 
       cardanoLibNg = mkOption {
@@ -99,14 +111,7 @@
 
           The definition must be a function of system.
         '';
-        default = system:
-          (import localFlake.inputs.nixpkgs {
-            inherit system;
-            overlays = map (
-              overlay: localFlake.inputs.iohk-nix-ng.overlays.${overlay}
-            ) (builtins.attrNames localFlake.inputs.iohk-nix-ng.overlays);
-          })
-          .cardanoLib;
+        default = system: mkCardanoLib system localFlake.inputs.iohk-nix-ng;
       };
 
       cardano-node-pkgs = mkOption {
