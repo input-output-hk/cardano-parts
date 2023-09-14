@@ -280,8 +280,8 @@ in
                         db-synthesizer
                         db-truncater
 
-                        # The `-ng` variants use the packages derivation as that provides the wrapping,
-                        # whereas the cardano-parts option for `-ng` variants alone provides the unwrapped derivation.
+                        # The packages derivations of the `-ng` pkgs provide
+                        # the wrapped binary to avoid cli name collision.
                         self'.packages.cardano-cli-ng
                         self'.packages.cardano-node-ng
 
@@ -356,10 +356,13 @@ in
                 runtimeInputs = with pkgs; [lolcat];
 
                 text = let
+                  pkgName = pkg: pkg.meta.mainProgram or (getName pkg);
+
                   pkgStr = pkg:
                     if getVersion pkg != ""
-                    then "${getName pkg} (${getVersion pkg})"
-                    else getName pkg;
+                    then "${pkgName pkg} (${getVersion pkg})"
+                    else pkgName pkg;
+
                   minWidth =
                     head (
                       reverseList (
