@@ -362,11 +362,9 @@ in
 
                 text = let
                   minWidth =
-                    head (
-                      reverseList (
-                        sort lessThan (
-                          map (pkg: stringLength pkg.name) (allPkgs id)
-                        )
+                    last (
+                      sort lessThan (
+                        map (pkg: stringLength (pkgStr pkg)) (allPkgs id)
                       )
                     )
                     + 4;

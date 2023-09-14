@@ -15,15 +15,7 @@
 #   config.cardano-parts.perNode.pkgs.cardano-node
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
-#   config.cardano-parts.perNode.roles.isCardanoCore
 #   config.cardano-parts.perNode.roles.isCardanoDensePool
-#   config.cardano-parts.perNode.roles.isCardanoRelay
-#   config.cardano-parts.perNode.roles.isCustom
-#   config.cardano-parts.perNode.roles.isExplorer
-#   config.cardano-parts.perNode.roles.isExplorerBackend
-#   config.cardano-parts.perNode.roles.isFaucet
-#   config.cardano-parts.perNode.roles.isMetadata
-#   config.cardano-parts.perNode.roles.isSnapshots
 flake @ {moduleWithSystem, ...}: {
   flake.nixosModules.cardano-parts = moduleWithSystem ({system}: {
     config,
@@ -162,15 +154,7 @@ flake @ {moduleWithSystem, ...}: {
 
     rolesSubmodule = submodule {
       options = {
-        isCardanoCore = mkBoolOpt;
         isCardanoDensePool = mkBoolOpt;
-        isCardanoRelay = mkBoolOpt;
-        isSnapshots = mkBoolOpt;
-        isCustom = mkBoolOpt;
-        isExplorer = mkBoolOpt;
-        isExplorerBackend = mkBoolOpt;
-        isFaucet = mkBoolOpt;
-        isMetadata = mkBoolOpt;
       };
     };
   in {
