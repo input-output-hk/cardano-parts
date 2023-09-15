@@ -14,13 +14,14 @@
     ...
   }: let
     inherit (lib) last mkForce optionalAttrs;
-    inherit (groupCfg) groupName groupOutPath;
+    inherit (groupCfg) groupName groupFlake;
     inherit (groupCfg.meta) environmentName;
     inherit (perNodeCfg.lib) cardanoLib;
 
     groupCfg = config.cardano-parts.cluster.group;
     perNodeCfg = config.cardano-parts.perNode;
     protocol = cardanoLib.environments.${environmentName}.nodeConfig.Protocol;
+    groupOutPath = groupFlake.self.outPath;
     owner = "cardano-node";
     group = "cardano-node";
 

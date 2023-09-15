@@ -32,7 +32,7 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf functionTo nullOr package port str submodule;
+  inherit (types) addCheck anything attrsOf functionTo nullOr package port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -149,18 +149,27 @@ flake @ {
         default = name;
       };
 
-      groupOutPath = mkOption {
-        type = str;
+      groupFlake = mkOption {
+        type = attrsOf raw;
         description = mdDoc ''
-          Cardano-parts cluster group out path of the consuming repository's flake.
+          Cardano-parts cluster flake of the consuming repository.
 
-          In some cases, such as importing nixos configuration modules from cardano-parts,
-          the nixos modules `self` reference will refer to the cardano parts flake rather than
-          the consuming repository's flake.
+          In certain cases, the cardano-parts flake will be used instead of the
+          consuming repository's flake and this may not be desired behavior.
 
-          By default this option retains a self reference of the flake from the consuming repository.
+          Examples:
+
+          * While importing nixosModules from cardano-parts, by default the `self`
+          reference outPath will refer to cardano-parts directories, but for the
+          secrets use case the desired path reference would be from groupFlake.
+
+          * While overriding nixos config from cardano-parts nixosModules, any
+          referenced perSystem or top level flake parts config options will originate
+          from cardano-parts and not overrides set in the consuming repository.
+          In this case, the desired withSystem or top level flake config context
+          should also originate from groupFlake.
         '';
-        default = flake.self.outPath;
+        default = flake;
       };
 
       groupPrefix = mkOption {
