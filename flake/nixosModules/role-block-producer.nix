@@ -13,6 +13,7 @@
     lib,
     ...
   }: let
+    inherit (lib) last mkForce optionalAttrs;
     inherit (groupCfg) groupName groupOutPath;
     inherit (groupCfg.meta) environmentName;
     inherit (perNodeCfg.lib) cardanoLib;
@@ -34,7 +35,7 @@
     operationalCertificate = "${groupOutPath}/secrets/${groupName}/${name}-node.opcert";
     bulkCredentials = "${groupOutPath}/secrets/${groupName}/${name}-bulk.creds";
 
-    trimStorePrefix = path: lib.last (builtins.split "/nix/store/[^/]+/" path);
+    trimStorePrefix = path: last (builtins.split "/nix/store/[^/]+/" path);
     verboseTrace = key: builtins.traceVerbose ("${name}: using " + (trimStorePrefix key));
 
     mkSopsSecret = secretName: key: {
@@ -61,7 +62,7 @@
           operationalCertificate = "/run/secrets/cardano-node-operational-cert";
         };
 
-      Cardano = TPraos // lib.optionalAttrs byronKeysExist RealPBFT;
+      Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
     };
 
     keysCfg = rec {
@@ -77,14 +78,21 @@
           // (mkSopsSecret "cardano-node-kes-signing" kesKey)
           // (mkSopsSecret "cardano-node-operational-cert" operationalCertificate);
 
-      Cardano = TPraos // lib.optionalAttrs byronKeysExist RealPBFT;
+      Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
     };
   in {
     systemd.services.cardano-node = {
       after = ["sops-secrets.service"];
       wants = ["sops-secrets.service"];
     };
-    services.cardano-node = serviceCfg.${protocol};
+
+    services.cardano-node =
+      serviceCfg.${protocol}
+      // {
+        publicProducers = mkForce [];
+        usePeersFromLedgerAfterSlot = -1;
+      };
+
     sops.secrets = keysCfg.${protocol};
     users.users.cardano-node.extraGroups = ["keys"];
   };
