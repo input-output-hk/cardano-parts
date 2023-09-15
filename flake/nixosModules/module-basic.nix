@@ -1,11 +1,18 @@
+# nixosModule: module-basic
+#
+# TODO: Move this to a docs generator
+#
+# Attributes available on nixos module import:
+#
+# Tips:
+#
 {
   inputs,
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.basic = moduleWithSystem ({system}: {
+  flake.nixosModules.module-basic = moduleWithSystem ({system}: {
     name,
-    config,
     pkgs,
     ...
   }: {
@@ -29,28 +36,6 @@
       loader.grub.configurationLimit = 10;
     };
 
-    # On boot, SOPS runs in stage 2 without networking, this prevents KMS from
-    # working, so we repeat the activation script until decryption succeeds.
-    systemd.services.sops-boot-fix = {
-      wantedBy = ["multi-user.target"];
-      after = ["network-online.target"];
-
-      script = ''
-        ${config.system.activationScripts.setupSecrets.text}
-
-        # For wireguard enabled machines
-        { systemctl list-unit-files wireguard-wg0.service &> /dev/null \
-          && systemctl restart wireguard-wg0.service; } || true
-      '';
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        Restart = "on-failure";
-        RestartSec = "2s";
-      };
-    };
-
     documentation = {
       nixos.enable = false;
       man.man-db.enable = false;
@@ -60,6 +45,7 @@
 
     environment.systemPackages = with pkgs; [
       awscli2
+      age
       bat
       bind
       cloud-utils
@@ -80,6 +66,7 @@
       pciutils
       ripgrep
       rsync
+      ssh-to-age
       sops
       sysstat
       tcpdump
@@ -141,7 +128,10 @@
 
     hardware = {
       cpu.amd.updateMicrocode = true;
+      cpu.intel.updateMicrocode = true;
       enableRedistributableFirmware = true;
     };
+
+    system.stateVersion = "23.05";
   });
 }

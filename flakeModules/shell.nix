@@ -43,12 +43,14 @@
   inherit (flake-parts-lib) mkPerSystemOption;
   inherit (lib.types) anything attrs attrsOf bool enum nullOr listOf package str submodule;
 in
+  with builtins;
   with lib; {
     options = {
       perSystem = mkPerSystemOption ({
         config,
         pkgs,
         system,
+        self',
         ...
       }: let
         cfg = config.cardano-parts;
@@ -70,7 +72,7 @@ in
           then type
           else nullOr type;
 
-        definedIds = builtins.filter (id: !(builtins.elem id ["global"])) (builtins.attrNames cfgShell);
+        definedIds = filter (id: !(elem id ["global"])) (attrNames cfgShell);
 
         mkCommonShellOptions = {
           isGlobal,
@@ -239,8 +241,10 @@ in
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
                     deadnix
+                    fd
                     just
                     nushell
+                    ripgrep
                     statix
                     xxd
                   ];
@@ -271,13 +275,17 @@ in
                         bech32
                         cardano-address
                         cardano-cli
-                        cardano-cli-ng
                         cardano-node
-                        cardano-node-ng
                         cardano-wallet
                         db-analyser
                         db-synthesizer
                         db-truncater
+
+                        # The packages derivations of the `-ng` pkgs provide
+                        # the wrapped binary to avoid cli name collision.
+                        self'.packages.cardano-cli-ng
+                        self'.packages.cardano-node-ng
+
                         # Until offchain-metadata-tools repo is added to capkgs
                         # token-metadata-creator
                         # TODO:
@@ -293,10 +301,12 @@ in
                     config.cardano-parts.shell.test.pkgs
                     ++ (with pkgs;
                       with localFlake.packages.${system}; [
+                        age
                         awscli2
                         localFlake.inputs.colmena.packages.${system}.colmena
                         rain
                         sops
+                        ssh-to-age
                         terraform
                         wireguard-tools
                       ]);
@@ -307,8 +317,11 @@ in
                 description = mdDoc "Kitchen sink devShell";
                 extraCfg.pkgs = mkOption {
                   default =
-                    config.cardano-parts.shell.dev.pkgs
-                    ++ config.cardano-parts.shell.ops.pkgs;
+                    config.cardano-parts.shell.ops.pkgs
+                    ++ localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
+                    ++ (with pkgs; [
+                      ghcid
+                    ]);
                 };
               }
             ]);
@@ -321,12 +334,13 @@ in
           else f cfgShell.global.${boolCheck} cfgShell.global.${option};
 
         allPkgs = id:
-          cfgShell.${id}.pkgs
-          ++ cfgShell.${id}.extraPkgs
-          ++ cfgShell.global.pkgs
-          ++ cfgShell.global.extraPkgs
-          ++ [(mkMenuWrapper id)]
-          ++ selectScope id optional "enableFormatter" "defaultFormatterPkg";
+          sort (a: b: pkgName a < pkgName b)
+          (cfgShell.${id}.pkgs
+            ++ cfgShell.${id}.extraPkgs
+            ++ cfgShell.global.pkgs
+            ++ cfgShell.global.extraPkgs
+            ++ [(mkMenuWrapper id)]
+            ++ selectScope id optional "enableFormatter" "defaultFormatterPkg");
 
         mkMenuWrapper = id:
           (pkgs.writeShellScriptBin "menu" ''
@@ -347,16 +361,10 @@ in
                 runtimeInputs = with pkgs; [lolcat];
 
                 text = let
-                  pkgStr = pkg:
-                    if getVersion pkg != ""
-                    then "${getName pkg} (${getVersion pkg})"
-                    else getName pkg;
                   minWidth =
-                    head (
-                      reverseList (
-                        builtins.sort builtins.lessThan (
-                          map (pkg: builtins.stringLength pkg.name) (allPkgs id)
-                        )
+                    last (
+                      sort lessThan (
+                        map (pkg: stringLength (pkgStr pkg)) (allPkgs id)
                       )
                     )
                     + 4;
@@ -365,9 +373,9 @@ in
                   echo
                   echo "The following packages are available in the ${id} devShell:"
                   echo
-                  echo "${builtins.concatStringsSep "\n" (map (pkg:
-                    if builtins.hasAttr "description" pkg.meta
-                    then pkgStr pkg + fixedWidthString (minWidth - builtins.stringLength (pkgStr pkg)) " " "" + pkg.meta.description
+                  echo "${concatStringsSep "\n" (map (pkg:
+                    if hasAttr "description" pkg.meta
+                    then pkgStr pkg + fixedWidthString (minWidth - stringLength (pkgStr pkg)) " " "" + pkg.meta.description
                     else pkgStr pkg)
                   (allPkgs id))}"
                   echo
@@ -384,6 +392,13 @@ in
               }
             );
         };
+
+        pkgName = pkg: pkg.meta.mainProgram or (getName pkg);
+
+        pkgStr = pkg:
+          if getVersion pkg != ""
+          then "${pkgName pkg} (${getVersion pkg})"
+          else pkgName pkg;
       in {
         # perSystem level option definition
         options.cardano-parts = mkOption {

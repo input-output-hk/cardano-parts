@@ -13,7 +13,8 @@ in
         system,
         ...
       }: let
-        inherit (flake.config.flake.legacyPackages.${system}) cardanoLib;
+        cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
+        cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
 
         cfgPkgs = config.cardano-parts.pkgs;
 
@@ -84,7 +85,11 @@ in
               chmod -R +w "$DATA_DIR/config/custom"
 
               # The menu of environments that we ship as built-in envs
-              ${copyEnvsTemplate cardanoLib.environments}
+              if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
+                ${copyEnvsTemplate cardanoLibNg.environments}
+              else
+                ${copyEnvsTemplate cardanoLib.environments}
+              fi
 
               # CASE: built-in environment
               if [ -n "''${ENVIRONMENT:-}" ]; then
@@ -187,7 +192,10 @@ in
               [ -z "''${NODE_TOPOLOGY:-}" ] && echo "NODE_TOPOLOGY env var must be set -- aborting" && exit 1
               args+=("--topology" "$NODE_TOPOLOGY")
               echo "Running node as:"
-              if [ "''${UNSTABLE:-}" = "true" ]; then
+              if [ "''${USE_SHELL_BINS:-}" = "true" ]; then
+                echo "cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              elif [ "''${UNSTABLE:-}" = "true" ]; then
                 echo "${lib.getExe cfgPkgs.cardano-node-ng} run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
                 exec ${lib.getExe cfgPkgs.cardano-node-ng} run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
               else

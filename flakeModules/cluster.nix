@@ -10,12 +10,14 @@
 #   flake.cardano-parts.cluster.infra.aws.profile
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
+#   flake.cardano-parts.cluster.group.<default|name>.groupName
+#   flake.cardano-parts.cluster.group.<default|name>.groupOutPath
+#   flake.cardano-parts.cluster.group.<default|name>.groupPrefix
 #   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.domain
-#   flake.cardano-parts.cluster.group.<default|name>.environmentName
-#   flake.cardano-parts.cluster.group.<default|name>.name
+#   flake.cardano-parts.cluster.group.<default|name>.meta.environmentName
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-cli
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node-pkgs
@@ -30,7 +32,7 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf functionTo nullOr package port str submodule;
+  inherit (types) addCheck anything attrsOf functionTo nullOr package port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -141,10 +143,42 @@ flake @ {
         default = {};
       };
 
-      name = mkOption {
+      groupName = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group name.";
         default = name;
+      };
+
+      groupFlake = mkOption {
+        type = attrsOf raw;
+        description = mdDoc ''
+          Cardano-parts cluster flake of the consuming repository.
+
+          In certain cases, the cardano-parts flake will be used instead of the
+          consuming repository's flake and this may not be desired behavior.
+
+          Examples:
+
+          * While importing nixosModules from cardano-parts, by default the `self`
+          reference outPath will refer to cardano-parts directories, but for the
+          secrets use case the desired path reference would be from groupFlake.
+
+          * While overriding nixos config from cardano-parts nixosModules, any
+          referenced perSystem or top level flake parts config options will originate
+          from cardano-parts and not overrides set in the consuming repository.
+          In this case, the desired withSystem or top level flake config context
+          should also originate from groupFlake.
+        '';
+        default = flake;
+      };
+
+      groupPrefix = mkOption {
+        type = str;
+        description = mdDoc ''
+          Cardano-parts cluster group prefix.
+          Machines belonging to this group will have Colmena names starting with this prefix;
+        '';
+        default = "";
       };
 
       pkgs = mkOption {

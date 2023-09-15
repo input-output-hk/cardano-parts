@@ -5,21 +5,49 @@ in {
     perSystem = mkPerSystemOption ({
       config,
       pkgs,
+      lib,
       ...
     }: let
       inherit (pkgs) writeShellApplication;
-      inherit (config.cardano-parts.pkgs) cardano-cli cardano-address;
+      inherit (cfgPkgs) cardano-address;
+
+      cfgPkgs = config.cardano-parts.pkgs;
+
+      selectCardanoCli = ''
+        # Inputs:
+        #   [$UNSTABLE]
+        #   [$USE_SHELL_BINS]
+
+        if [ "''${USE_SHELL_BINS:-}" = "true" ]; then
+          CARDANO_CLI="cardano-cli"
+        elif [ "''${UNSTABLE:-}" = "true" ]; then
+          CARDANO_CLI="${lib.getExe cfgPkgs.cardano-cli-ng}"
+        else
+          CARDANO_CLI="${lib.getExe cfgPkgs.cardano-cli}"
+        fi
+      '';
+
       updateProposalTemplate = ''
-        # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $TESTNET_MAGIC, $PROPOSAL_ARGS, $SUBMIT_TX, $ERA, $DEBUG
+        # Inputs:
+        #   [$DEBUG]
+        #   [$ERA]
+        #   $KEY_DIR
+        #   $NUM_GENESIS_KEYS
+        #   $PAYMENT_KEY
+        #   $PROPOSAL_ARGS
+        #   [$SUBMIT_TX]
+        #   $TESTNET_MAGIC
+        #   [$UNSTABLE]
+        #   [$USE_SHELL_BINS]
 
         CHANGE_ADDRESS=$(
-          cardano-cli address build \
+          "$CARDANO_CLI" address build \
             --payment-verification-key-file "$PAYMENT_KEY".vkey \
             --testnet-magic "$TESTNET_MAGIC"
         )
 
         TXIN=$(
-          cardano-cli query utxo \
+          "$CARDANO_CLI" query utxo \
             --address "$CHANGE_ADDRESS" \
             --testnet-magic "$TESTNET_MAGIC" \
             --out-file /dev/stdout \
@@ -27,7 +55,7 @@ in {
         )
 
         EPOCH=$(
-          cardano-cli query tip \
+          "$CARDANO_CLI" query tip \
             --testnet-magic "$TESTNET_MAGIC" \
           | jq .epoch
         )
@@ -41,20 +69,20 @@ in {
           SIGNING_ARGS+=("--signing-key-file" "$KEY_DIR/delegate-keys/shelley.00$i.skey")
         done
 
-        cardano-cli governance create-update-proposal \
+        "$CARDANO_CLI" governance create-update-proposal \
           --epoch "$EPOCH" \
           "''${PROPOSAL_ARGS[@]}" \
           "''${PROPOSAL_KEY_ARGS[@]}" \
           --out-file update.proposal
 
-        cardano-cli transaction build ''${ERA:+$ERA} \
+        "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
           --tx-in "$TXIN" \
           --change-address "$CHANGE_ADDRESS" \
           --update-proposal-file update.proposal \
           --testnet-magic "$TESTNET_MAGIC" \
           --out-file tx-proposal.txbody
 
-        cardano-cli transaction sign \
+        "$CARDANO_CLI" transaction sign \
           --tx-body-file tx-proposal.txbody \
           --out-file tx-proposal.txsigned \
           --signing-key-file "$PAYMENT_KEY".skey \
@@ -62,27 +90,27 @@ in {
 
         if [ "''${SUBMIT_TX:-true}" = "true" ]; then
           # TODO: remove if we figure out how to make it detect where in epoch we are
-          if ! cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned; then
-            cardano-cli governance create-update-proposal \
+          if ! "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned; then
+            "$CARDANO_CLI" governance create-update-proposal \
               --epoch $(("$EPOCH" + 1)) \
               "''${PROPOSAL_ARGS[@]}" \
               "''${PROPOSAL_KEY_ARGS[@]}" \
               --out-file update.proposal
 
-            cardano-cli transaction build ''${ERA:+$ERA} \
+            "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --update-proposal-file update.proposal \
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-proposal.txbody
 
-            cardano-cli transaction sign \
+            "$CARDANO_CLI" transaction sign \
               --tx-body-file tx-proposal.txbody \
               --out-file tx-proposal.txsigned \
               --signing-key-file "$PAYMENT_KEY".skey \
               "''${SIGNING_ARGS[@]}"
 
-            cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned
+            "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned
           fi
         fi
       '';
@@ -92,9 +120,20 @@ in {
       config = {
         packages.job-gen-custom-node-config = writeShellApplication {
           name = "job-gen-custom-node-config";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $START_TIME, $SLOT_LENGTH, $SECURITY_PARAM, $TESTNET_MAGIC, $TEMPLATE_DIR, $GENESIS_DIR, $NUM_GENESIS_KEYS, $DEBUG
+            # Inputs:
+            #   [$DEBUG]
+            #   [$GENESIS_DIR]
+            #   [$NUM_GENESIS_KEYS]
+            #   [$SECURITY_PARAM]
+            #   [$SLOT_LENGTH]
+            #   [$START_TIME]
+            #   [$TEMPLATE_DIR]
+            #   [$TESTNET_MAGIC]
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
 
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
@@ -102,11 +141,18 @@ in {
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
-            export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix}/cardano-lib/testnet-template"}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
 
+            if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
+              export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
+            else
+              export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix}/cardano-lib/testnet-template"}
+            fi
+
+            ${selectCardanoCli}
+
             mkdir -p "$GENESIS_DIR"
-            cardano-cli genesis create-cardano \
+            "$CARDANO_CLI" genesis create-cardano \
               --genesis-dir "$GENESIS_DIR" \
               --gen-genesis-keys "$NUM_GENESIS_KEYS" \
               --gen-utxo-keys 1 \
@@ -126,7 +172,7 @@ in {
             pushd "$GENESIS_DIR/genesis-keys" &> /dev/null
               for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
                 mv shelley.00"$i".vkey shelley.00"$i".vkey-ext
-                cardano-cli key non-extended-key \
+                "$CARDANO_CLI" key non-extended-key \
                   --extended-verification-key-file shelley.00"$i".vkey-ext \
                   --verification-key-file shelley.00"$i".vkey
               done
@@ -139,7 +185,7 @@ in {
             popd &> /dev/null
 
             cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
-            cardano-cli address key-gen \
+            "$CARDANO_CLI" address key-gen \
               --signing-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.skey" \
               --verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
           '';
@@ -150,7 +196,14 @@ in {
             name = "job-gen-custom-kv-config";
             runtimeInputs = with pkgs; [coreutils jq sops];
             text = ''
-              # Inputs: $GENESIS_DIR, $NUM_GENESIS_KEYS, $ENV_NAME, $DEBUG
+              # Inputs:
+              #   [$DEBUG]
+              #   [$ENV_NAME]
+              #   [$GENESIS_DIR]
+              #   [$NUM_GENESIS_KEYS]
+              #   [$UNSTABLE]
+              #   [$USE_SHELL_BINS]
+
               [ -n "''${DEBUG:-}" ] && set -x
 
               export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
@@ -202,10 +255,19 @@ in {
 
         packages.job-create-stake-pool-keys = writeShellApplication {
           name = "job-create-stake-pools";
-          runtimeInputs = with pkgs; [cardano-address cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [cardano-address coreutils jq];
           text = ''
-            # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $DEBUG
+            # Inputs:
+            #   [$DEBUG]
+            #   $NUM_POOLS
+            #   $STAKE_POOL_DIR
+            #   $START_INDEX
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
             mkdir -p "$STAKE_POOL_DIR"
@@ -216,11 +278,11 @@ in {
             # Extract reward address vkey
             cardano-address key from-recovery-phrase Shelley < "$STAKE_POOL_DIR"/owner.mnemonic \
               | cardano-address key child 1852H/1815H/"0"H/2/0 \
-              | cardano-cli key convert-cardano-address-key --shelley-stake-key \
+              | "$CARDANO_CLI" key convert-cardano-address-key --shelley-stake-key \
                 --signing-key-file /dev/stdin --out-file /dev/stdout \
-              | cardano-cli key verification-key --signing-key-file /dev/stdin \
+              | "$CARDANO_CLI" key verification-key --signing-key-file /dev/stdin \
                 --verification-key-file /dev/stdout \
-              | cardano-cli key non-extended-key \
+              | "$CARDANO_CLI" key non-extended-key \
                 --extended-verification-key-file /dev/stdin \
                 --verification-key-file "$STAKE_POOL_DIR"/sp-0-reward-stake.vkey
 
@@ -228,33 +290,33 @@ in {
               # Extract stake skey/vkey needed for pool registration and delegation
               cardano-address key from-recovery-phrase Shelley < "$STAKE_POOL_DIR"/owner.mnemonic \
                 | cardano-address key child 1852H/1815H/"$i"H/2/0 \
-                | cardano-cli key convert-cardano-address-key --shelley-stake-key \
+                | "$CARDANO_CLI" key convert-cardano-address-key --shelley-stake-key \
                   --signing-key-file /dev/stdin \
                   --out-file /dev/stdout \
                 | tee "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.skey \
-                | cardano-cli key verification-key \
+                | "$CARDANO_CLI" key verification-key \
                   --signing-key-file /dev/stdin \
                   --verification-key-file /dev/stdout \
-                | cardano-cli key non-extended-key \
+                | "$CARDANO_CLI" key non-extended-key \
                   --extended-verification-key-file /dev/stdin \
                   --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey
 
               # Generate cold, vrf and kes keys
-              cardano-cli node key-gen \
+              "$CARDANO_CLI" node key-gen \
                 --cold-signing-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.skey \
                 --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.vkey \
                 --operational-certificate-issue-counter-file "$STAKE_POOL_DIR"/sp-"$i"-cold.counter
 
-              cardano-cli node key-gen-VRF \
+              "$CARDANO_CLI" node key-gen-VRF \
                 --signing-key-file "$STAKE_POOL_DIR"/sp-"$i"-vrf.skey \
                 --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-vrf.vkey
 
-              cardano-cli node key-gen-KES \
+              "$CARDANO_CLI" node key-gen-KES \
                 --signing-key-file "$STAKE_POOL_DIR"/sp-"$i"-kes.skey \
                 --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-kes.vkey
 
               # Generate opcert
-              cardano-cli node issue-op-cert \
+              "$CARDANO_CLI" node issue-op-cert \
                 --kes-period 0 \
                 --kes-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-kes.vkey \
                 --operational-certificate-issue-counter-file "$STAKE_POOL_DIR"/sp-"$i"-cold.counter \
@@ -270,12 +332,27 @@ in {
 
         packages.job-register-stake-pools = writeShellApplication {
           name = "job-register-stake-pools";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $POOL_PLEDGE, $POOL_RELAY, $POOL_RELAY_PORT, $SUBMIT_TX, $ERA, $DEBUG
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ERA]
+            #   $NUM_POOLS
+            #   $PAYMENT_KEY
+            #   [$POOL_PLEDGE]
+            #   $POOL_RELAY
+            #   $POOL_RELAY_PORT
+            #   [$STAKE_POOL_DIR]
+            #   $START_INDEX
+            #   [$SUBMIT_TX]
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
 
             export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
+
+            ${selectCardanoCli}
 
             if [ -z "''${POOL_PLEDGE:-}" ]; then
               echo "Pool pledge is defaulting to 1 million ADA"
@@ -285,24 +362,24 @@ in {
             WITNESSES=$(("$NUM_POOLS" * 2 + 1))
             END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
             CHANGE_ADDRESS=$(
-              cardano-cli address build \
+              "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
             for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
               # Generate stake registration and delegation certificate
-              cardano-cli stake-address registration-certificate \
+              "$CARDANO_CLI" stake-address registration-certificate \
                 --stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
                 --out-file sp-"$i"-owner-registration.cert
 
-              cardano-cli stake-address delegation-certificate \
+              "$CARDANO_CLI" stake-address delegation-certificate \
                 --cold-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.vkey \
                 --stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
                 --out-file sp-"$i"-owner-delegation.cert
 
               # shellcheck disable=SC2031
-              cardano-cli stake-pool registration-certificate \
+              "$CARDANO_CLI" stake-pool registration-certificate \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --cold-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.vkey \
                 --pool-cost 500000000 \
@@ -318,7 +395,7 @@ in {
 
             # Generate transaction
             TXIN=$(
-              cardano-cli query utxo \
+              "$CARDANO_CLI" query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
@@ -340,7 +417,7 @@ in {
             SIGN_TX_ARGS=()
             for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
               STAKE_POOL_ADDR=$(
-                cardano-cli address build \
+                "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
                 --testnet-magic "$TESTNET_MAGIC"
@@ -353,7 +430,7 @@ in {
               SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_POOL_DIR/sp-$i-owner-stake.skey")
             done
 
-            cardano-cli transaction build ''${ERA:+$ERA} \
+            "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -361,14 +438,14 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-pool-reg.txbody
 
-            cardano-cli transaction sign \
+            "$CARDANO_CLI" transaction sign \
               --tx-body-file tx-pool-reg.txbody \
               --out-file tx-pool-reg.txsigned \
               --signing-key-file "$PAYMENT_KEY".skey \
               "''${SIGN_TX_ARGS[@]}"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-pool-reg.txsigned
+              "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-pool-reg.txsigned
             fi
           '';
         };
@@ -376,9 +453,15 @@ in {
         packages.job-gen-custom-kv-config-pools =
           writeShellApplication {
             name = "job-gen-custom-kv-config-pools";
-            runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+            runtimeInputs = with pkgs; [coreutils jq];
             text = ''
-              # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $ENV_NAME, $DEBUG
+              # Inputs:
+              #   [$DEBUG]
+              #   [$ENV_NAME]
+              #   $NUM_POOLS
+              #   $STAKE_POOL_DIR
+              #   $START_INDEX
+
               [ -n "''${DEBUG:-}" ] && set -x
 
               export ENV_NAME=''${ENV_NAME:-"custom-env"}
@@ -415,21 +498,33 @@ in {
         packages.job-rotate-kes-pools =
           writeShellApplication {
             name = "job-rotate-kes-pools";
-            runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+            runtimeInputs = with pkgs; [coreutils jq];
             text = ''
-              # Inputs: $NUM_POOLS, $START_INDEX, $STAKE_POOL_DIR, $ENV_NAME, $CURRENT_KES_PERIOD, $DEBUG
+              # Inputs:
+              #   $CURRENT_KES_PERIOD
+              #   [$DEBUG]
+              #   [$ENV_NAME]
+              #   $NUM_POOLS
+              #   $STAKE_POOL_DIR
+              #   $START_INDEX
+              #   [$UNSTABLE]
+              #   [$USE_SHELL_BINS]
+
               [ -n "''${DEBUG:-}" ] && set -x
 
               export ENV_NAME=''${ENV_NAME:-"custom-env"}
+
+              ${selectCardanoCli}
+
               END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
               mkdir -p "./secrets/cardano/$ENV_NAME"
               pushd "$STAKE_POOL_DIR" &> /dev/null
                 for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
-                  cardano-cli node key-gen-KES \
+                  "$CARDANO_CLI" node key-gen-KES \
                     --signing-key-file sp-"$i"-kes.skey \
                     --verification-key-file sp-"$i"-kes.vkey
 
-                  cardano-cli node issue-op-cert \
+                  "$CARDANO_CLI" node issue-op-cert \
                     --kes-verification-key-file sp-"$i"-kes.vkey \
                     --cold-signing-key-file sp-"$i"-cold.skey \
                     --operational-certificate-issue-counter-file sp-"$i"-cold.counter \
@@ -463,13 +558,24 @@ in {
 
         packages.job-move-genesis-utxo = writeShellApplication {
           name = "job-move-genesis-utxo";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_ADDRESS, $BYRON_SIGNING_KEY, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
+            # Inputs:
+            #   $BYRON_SIGNING_KEY
+            #   [$DEBUG]
+            #   [$ERA]
+            #   $PAYMENT_ADDRESS
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
 
+            ${selectCardanoCli}
+
             BYRON_UTXO=$(
-              cardano-cli query utxo \
+              "$CARDANO_CLI" query utxo \
                 --whole-utxo \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
@@ -484,30 +590,44 @@ in {
             BYRON_ADDRESS=$(echo "$BYRON_UTXO" | jq -r '.address')
             TXIN=$(echo "$BYRON_UTXO" | jq -r '.txin')
 
-            cardano-cli transaction build-raw ''${ERA:+$ERA} \
+            "$CARDANO_CLI" transaction build-raw ''${ERA:+$ERA} \
               --tx-in "$TXIN" \
               --tx-out "$PAYMENT_ADDRESS+$SUPPLY" \
               --fee "$FEE" \
               --out-file tx-byron.txbody
 
-            cardano-cli transaction sign \
+            "$CARDANO_CLI" transaction sign \
               --tx-body-file tx-byron.txbody \
               --out-file tx-byron.txsigned \
               --address "$BYRON_ADDRESS" \
               --signing-key-file "$BYRON_SIGNING_KEY"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-byron.txsigned
+              "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-byron.txsigned
             fi
           '';
         };
 
         packages.job-update-proposal-generic = writeShellApplication {
           name = "job-update-proposal-generic";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, [$MAJOR_VERSION], $TESTNET_MAGIC, $PROPOSAL_ARGS, $SUBMIT_TX, $ERA, $DEBUG
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ERA]
+            #   $KEY_DIR
+            #   [$MAJOR_VERSION]
+            #   $NUM_GENESIS_KEYS
+            #   $PAYMENT_KEY
+            #   $PROPOSAL_ARGS[]
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             if [ "$#" -eq 0 ]; then
               echo "Generic update proposal args must be provided as cli args in the pattern:"
@@ -521,10 +641,23 @@ in {
 
         packages.job-update-proposal-d = writeShellApplication {
           name = "job-update-proposal-d";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $D_VALUE, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
+            # Inputs:
+            #   [$DEBUG]
+            #   $D_VALUE
+            #   [$ERA]
+            #   $KEY_DIR
+            #   $NUM_GENESIS_KEYS
+            #   $PAYMENT_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             PROPOSAL_ARGS=(
               "--decentralization-parameter" "$D_VALUE"
@@ -535,10 +668,23 @@ in {
 
         packages.job-update-proposal-hard-fork = writeShellApplication {
           name = "job-update-proposal-hard-fork";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $MAJOR_VERSION, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ERA]
+            #   $KEY_DIR
+            #   $MAJOR_VERSION
+            #   $NUM_GENESIS_KEYS
+            #   $PAYMENT_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             PROPOSAL_ARGS=(
               "--protocol-major-version" "$MAJOR_VERSION"
@@ -550,10 +696,23 @@ in {
 
         packages.job-update-proposal-cost-model = writeShellApplication {
           name = "job-update-proposal-cost-model";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [jq coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $COST_MODEL, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
+            # Inputs:
+            #   $COST_MODEL
+            #   [$DEBUG]
+            #   [$ERA]
+            #   $KEY_DIR
+            #   $NUM_GENESIS_KEYS
+            #   $PAYMENT_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             PROPOSAL_ARGS=(
               "--cost-model-file" "$COST_MODEL"
@@ -564,10 +723,22 @@ in {
 
         packages.job-update-proposal-mainnet-params = writeShellApplication {
           name = "job-update-proposal-mainnet-params";
-          runtimeInputs = [cardano-cli pkgs.jq pkgs.coreutils];
+          runtimeInputs = with pkgs; [jq coreutils];
           text = ''
-            # Inputs: $PAYMENT_KEY, $NUM_GENESIS_KEYS, $KEY_DIR, $TESTNET_MAGIC, $SUBMIT_TX, $ERA, $DEBUG
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ERA]
+            #   $KEY_DIR
+            #   $NUM_GENESIS_KEYS
+            #   $PAYMENT_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             PROPOSAL_ARGS=(
               "--max-block-body-size" "90112"
@@ -581,27 +752,40 @@ in {
 
         packages.job-submit-gov-action = writeShellApplication {
           name = "job-submit-gov-action";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $STAKE_KEY, $ERA, $DEBUG, $GOV_ACTION_DEPOSIT, ACTION_ARGS[]
+            # Inputs:
+            #   $ACTION
+            #   [$DEBUG]
+            #   [$ERA]
+            #   $GOV_ACTION_DEPOSIT
+            #   $PAYMENT_KEY
+            #   $STAKE_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             BUILD_TX_ARGS=()
             SIGN_TX_ARGS=()
 
             ERA=''${ERA:+"--conway-era"}
             ACTION=''${ACTION:+"create-constitution"}
-            PREV_CONSTITUTION=$(cardano-cli query constitution-hash --testnet-magic 42)
+            PREV_CONSTITUTION=$("$CARDANO_CLI" query constitution-hash --testnet-magic 42)
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
-              cardano-cli address build \
+              "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
             # TODO: make work with other actions than constitution
-            cardano-cli conway governance action "$ACTION" \
+            "$CARDANO_CLI" conway governance action "$ACTION" \
               --testnet \
               --stake-verification-key-file "$STAKE_KEY".vkey \
               --constitution "We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional atire" \
@@ -613,7 +797,7 @@ in {
 
             # Generate transaction
             TXIN=$(
-              cardano-cli query utxo \
+              "$CARDANO_CLI" query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
@@ -624,7 +808,7 @@ in {
             BUILD_TX_ARGS+=("--constitution-file" "$ACTION".action)
             SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_KEY".skey)
 
-            cardano-cli transaction build ''${ERA:+$ERA} \
+            "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -632,7 +816,7 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-"$ACTION".txbody
 
-            cardano-cli transaction sign \
+            "$CARDANO_CLI" transaction sign \
               --tx-body-file tx-"$ACTION".txbody \
               --out-file tx-"$ACTION".txsigned \
               --signing-key-file "$PAYMENT_KEY".skey \
@@ -642,17 +826,32 @@ in {
             echo "New Constitution hash: TODO"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-"$ACTION".txsigned
+              "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-"$ACTION".txsigned
             fi
           '';
         };
 
         packages.job-submit-vote = writeShellApplication {
           name = "job-submit-vote";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $VOTE_KEY, $TESTNET_MAGIC, $ACTION_TX_ID, $ROLE, $DECISION, $ERA, $DEBUG, VOTE_ARGS[]
+            # Inputs:
+            #   $ACTION_TX_ID
+            #   [$DEBUG]
+            #   $DECISION
+            #   [$ERA]
+            #   $PAYMENT_KEY
+            #   $ROLE
+            #   $TESTNET_MAGIC
+            #   $VOTE_KEY
+            #   [SUBMIT_TX]
+            #   VOTE_ARGS[]
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             BUILD_TX_ARGS=()
             SIGN_TX_ARGS=()
@@ -684,16 +883,16 @@ in {
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
-              cardano-cli address build \
+              "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
             # TODO: make work with other actions than constitution
-            cardano-cli conway governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
+            "$CARDANO_CLI" conway governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
 
             # Generate transaction
             TXIN=$(
-              cardano-cli query utxo \
+              "$CARDANO_CLI" query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
@@ -704,7 +903,7 @@ in {
             BUILD_TX_ARGS+=("--vote-file" "$ROLE".vote)
             SIGN_TX_ARGS+=("--signing-key-file" "$VOTE_KEY".skey)
 
-            cardano-cli transaction build ''${ERA:+$ERA} \
+            "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -712,77 +911,90 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-vote-"$ROLE".txbody
 
-            cardano-cli transaction sign \
+            "$CARDANO_CLI" transaction sign \
               --tx-body-file tx-vote-"$ROLE".txbody \
               --out-file tx-vote-"$ROLE".txsigned \
               --signing-key-file "$PAYMENT_KEY".skey \
               "''${SIGN_TX_ARGS[@]}"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-vote-"$ROLE".txsigned
+              "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-vote-"$ROLE".txsigned
             fi
           '';
         };
 
         packages.job-register-drep = writeShellApplication {
           name = "job-register-drep";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $TESTNET_MAGIC, $DREP_DIR, $VOTING_POWER, $INDEX, $ERA, $DEBUG,
+            # Inputs:
+            #   [$DEBUG]
+            #   $DREP_DIR
+            #   [$ERA]
+            #   $INDEX
+            #   $PAYMENT_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   $VOTING_POWER
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
 
             mkdir -p "$DREP_DIR"
 
-            cardano-cli address key-gen \
+            "$CARDANO_CLI" address key-gen \
               --verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/pay-"$INDEX".skey
 
-            cardano-cli stake-address key-gen \
+            "$CARDANO_CLI" stake-address key-gen \
               --verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
 
-            cardano-cli conway governance drep key-gen \
+            "$CARDANO_CLI" conway governance drep key-gen \
               --verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/drep-"$INDEX".skey
 
             DREP_ADDRESS=$(
-              cardano-cli address build \
+              "$CARDANO_CLI" address build \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --payment-verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
                 --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey
             )
 
-            cardano-cli stake-address registration-certificate \
+            "$CARDANO_CLI" stake-address registration-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --out-file drep-"$INDEX"-stake.cert
 
-            cardano-cli conway governance drep registration-certificate \
+            "$CARDANO_CLI" conway governance drep registration-certificate \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --key-reg-deposit-amt 0 \
               --out-file drep-"$INDEX"-drep.cert
 
-            cardano-cli conway governance drep delegation-certificate \
+            "$CARDANO_CLI" conway governance drep delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file drep-"$INDEX"-delegation.cert
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
-              cardano-cli address build \
+              "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
             # Generate transaction
             TXIN=$(
-              cardano-cli query utxo \
+              "$CARDANO_CLI" query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
               | jq -r 'to_entries[0] | .key'
             )
 
-            cardano-cli transaction build ''${ERA:+$ERA} \
+            "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
               --tx-in "$TXIN" \
               --tx-out "$DREP_ADDRESS"+"$VOTING_POWER" \
               --change-address "$CHANGE_ADDRESS" \
@@ -793,47 +1005,59 @@ in {
               --certificate drep-"$INDEX"-delegation.cert \
               --out-file tx-drep-"$INDEX".txbody
 
-            cardano-cli transaction sign \
+            "$CARDANO_CLI" transaction sign \
               --tx-body-file tx-drep-"$INDEX".txbody \
               --out-file tx-drep-"$INDEX".txsigned \
               --signing-key-file "$PAYMENT_KEY".skey \
               --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-"$INDEX".txsigned
+              "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-"$INDEX".txsigned
             fi
           '';
         };
 
         packages.job-delegate-drep = writeShellApplication {
           name = "job-delegate-drep";
-          runtimeInputs = with pkgs; [cardano-cli coreutils jq];
+          runtimeInputs = with pkgs; [coreutils jq];
           text = ''
-            # Inputs: $PAYMENT_KEY, $STAKE_KEY, $DREP_KEY, $TESTNET_MAGIC, $ERA, $DEBUG,
+            # Inputs:
+            #   [$DEBUG]
+            #   $DREP_KEY
+            #   [$ERA]
+            #   $PAYMENT_KEY
+            #   $STAKE_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
             [ -n "''${DEBUG:-}" ] && set -x
 
-            cardano-cli conway governance drep delegation-certificate \
+              ${selectCardanoCli}
+
+            "$CARDANO_CLI" conway governance drep delegation-certificate \
               --stake-verification-key-file "$STAKE_KEY".vkey \
               --drep-verification-key-file "$DREP_KEY".vkey \
               --out-file drep-delegation.cert
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
-              cardano-cli address build \
+              "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
             # Generate transaction
             TXIN=$(
-              cardano-cli query utxo \
+              "$CARDANO_CLI" query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
               | jq -r 'to_entries[0] | .key'
             )
 
-            cardano-cli transaction build ''${ERA:+$ERA} \
+            "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -841,14 +1065,14 @@ in {
               --certificate drep-delegation.cert \
               --out-file tx-drep-delegation.txbody
 
-            cardano-cli transaction sign \
+            "$CARDANO_CLI" transaction sign \
               --tx-body-file tx-drep-delegation.txbody \
               --out-file tx-drep-delegation.txsigned \
               --signing-key-file "$PAYMENT_KEY".skey \
               --signing-key-file "$STAKE_KEY".skey
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              cardano-cli transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-delegation.txsigned
+              "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-delegation.txsigned
             fi
           '';
         };

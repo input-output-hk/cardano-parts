@@ -1,5 +1,16 @@
+# nixosModule: module-aws-ec2
+#
+# TODO: Move this to a docs generator
+#
+# Attributes available on nixos module import:
+#   config.aws.instance
+#   config.aws.region
+#   config.aws.route53
+#
+# Tips:
+#
 {inputs, ...}: {
-  flake.nixosModules.aws-ec2 = {lib, ...}: let
+  flake.nixosModules.module-aws-ec2 = {lib, ...}: let
     inherit (lib) mkDefault mkOption types;
     inherit (types) anything nullOr str submodule;
   in {
@@ -12,12 +23,12 @@
         default = null;
         type = types.nullOr (submodule {
           options = {
-            region = mkOption {
-              type = str;
-            };
-
             instance = mkOption {
               type = anything;
+            };
+
+            region = mkOption {
+              type = str;
             };
 
             route53 = mkOption {

@@ -1,11 +1,13 @@
-# nixosModule: config.cardano-parts
+# nixosModule: module-cardano-parts
 #
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.cardano-parts.cluster.group.<...>                # Inherited from flakeModule cluster.group assignment
+#   config.cardano-parts.cluster.group.<...>                             # Inherited from flakeModule cluster.group assignment
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.topologyLib
+#   config.cardano-parts.perNode.meta.cardanoNodePort
+#   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.hostAddr
 #   config.cardano-parts.perNode.meta.nodeId
@@ -13,16 +15,9 @@
 #   config.cardano-parts.perNode.pkgs.cardano-node
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
-#   config.cardano-parts.perNode.roles.isCardanoCore
-#   config.cardano-parts.perNode.roles.isCardanoRelay
-#   config.cardano-parts.perNode.roles.isCustom
-#   config.cardano-parts.perNode.roles.isExplorer
-#   config.cardano-parts.perNode.roles.isExplorerBackend
-#   config.cardano-parts.perNode.roles.isFaucet
-#   config.cardano-parts.perNode.roles.isMetadata
-#   config.cardano-parts.perNode.roles.isSnapshots
+#   config.cardano-parts.perNode.roles.isCardanoDensePool
 flake @ {moduleWithSystem, ...}: {
-  flake.nixosModules.cardano-parts = moduleWithSystem ({system}: {
+  flake.nixosModules.module-cardano-parts = moduleWithSystem ({system}: {
     config,
     lib,
     ...
@@ -159,14 +154,7 @@ flake @ {moduleWithSystem, ...}: {
 
     rolesSubmodule = submodule {
       options = {
-        isCardanoCore = mkBoolOpt;
-        isCardanoRelay = mkBoolOpt;
-        isSnapshots = mkBoolOpt;
-        isCustom = mkBoolOpt;
-        isExplorer = mkBoolOpt;
-        isExplorerBackend = mkBoolOpt;
-        isFaucet = mkBoolOpt;
-        isMetadata = mkBoolOpt;
+        isCardanoDensePool = mkBoolOpt;
       };
     };
   in {
