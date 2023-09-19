@@ -17,10 +17,10 @@
     inherit (groupCfg) groupName groupFlake;
     inherit (groupCfg.meta) environmentName;
     inherit (perNodeCfg.lib) cardanoLib;
+    inherit (cardanoLib.environments.${environmentName}.nodeConfig) Protocol ShelleyGenesisFile;
 
     groupCfg = config.cardano-parts.cluster.group;
     perNodeCfg = config.cardano-parts.perNode;
-    protocol = cardanoLib.environments.${environmentName}.nodeConfig.Protocol;
     groupOutPath = groupFlake.self.outPath;
     owner = "cardano-node";
     group = "cardano-node";
@@ -33,6 +33,7 @@
     # Shelly+ era secrets path definitions
     vrfKey = "${groupOutPath}/secrets/${groupName}/${name}-node-vrf.skey";
     kesKey = "${groupOutPath}/secrets/${groupName}/${name}-node-kes.skey";
+    coldVerification = "${groupOutPath}/secrets/${groupName}/${name}-node-cold.vkey";
     operationalCertificate = "${groupOutPath}/secrets/${groupName}/${name}-node.opcert";
     bulkCredentials = "${groupOutPath}/secrets/${groupName}/${name}-bulk.creds";
 
@@ -73,10 +74,13 @@
 
       TPraos =
         if perNodeCfg.roles.isCardanoDensePool
-        then (mkSopsSecret "cardano-node-bulk-credentials" bulkCredentials)
+        then
+          (mkSopsSecret "cardano-node-bulk-credentials" bulkCredentials)
+          // (mkSopsSecret "cardano-node-cold-verification" coldVerification)
         else
           (mkSopsSecret "cardano-node-vrf-signing" vrfKey)
           // (mkSopsSecret "cardano-node-kes-signing" kesKey)
+          // (mkSopsSecret "cardano-node-cold-verification" coldVerification)
           // (mkSopsSecret "cardano-node-operational-cert" operationalCertificate);
 
       Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
@@ -88,13 +92,30 @@
     };
 
     services.cardano-node =
-      serviceCfg.${protocol}
+      serviceCfg.${Protocol}
       // {
         publicProducers = mkForce [];
         usePeersFromLedgerAfterSlot = -1;
       };
 
-    sops.secrets = keysCfg.${protocol};
+    sops.secrets = keysCfg.${Protocol};
     users.users.cardano-node.extraGroups = ["keys"];
+
+    environment.shellAliases = {
+      show-kes-period-info = ''
+        cardano-cli \
+          query kes-period-info \
+          --op-cert-file /run/secrets/cardano-node-operational-cert
+      '';
+
+      show-leadership-schedule = ''
+        cardano-cli \
+          query leadership-schedule \
+          --genesis ${ShelleyGenesisFile} \
+          --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+          --vrf-signing-key-file /run/secrets/cardano-node-vrf-signing \
+          --current
+      '';
+    };
   };
 }
