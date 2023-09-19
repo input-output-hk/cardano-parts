@@ -1,0 +1,23 @@
+# Example rule set for sops age encryption of per block producer secrets with an sre admin key
+# keys:
+#   - &sre $AGE_KEY_SRE
+#   - &group1-bp-a-1 $AGE_KEY_GROUP1_BP_A_1
+#   - &group2-bp-a-1 $AGE_KEY_GROUP2_BP_A_1
+#   - &group3-bp-a-1 $AGE_KEY_GROUP3_BP_A_1
+#
+# creation_rules:
+#   - path_regex: group1/[^/]+\.*$
+#     key_groups:
+#     - age:
+#       - *sre
+#       - *group1-bp-a-1
+#   - path_regex: group2/[^/]+\.*$
+#     key_groups:
+#     - age:
+#       - *sre
+#       - *group2-bp-a-1
+#   - path_regex: group3/[^/]+\.*$
+#     key_groups:
+#     - age:
+#       - *sre
+#       - *group3-bp-a-1
