@@ -4,19 +4,24 @@ flake @ {
   lib,
   config,
   ...
-}: let
+}:
+with builtins;
+with lib; let
+  inherit (config.flake.cardano-parts.cluster) group;
+
   cluster = config.flake.cardano-parts.cluster.infra.aws;
+
   amis = import "${inputs.nixpkgs}/nixos/modules/virtualisation/ec2-amis.nix";
-
-  underscore = lib.replaceStrings ["-"] ["_"];
   awsProviderFor = region: "aws.${underscore region}";
+  hyphen = replaceStrings ["."] ["-"];
+  underscore = replaceStrings ["-"] ["_"];
 
-  nixosConfigurations = lib.mapAttrs (_: node: node.config) config.flake.nixosConfigurations;
-  nodes = lib.filterAttrs (_: node: node.aws != null) nixosConfigurations;
-  mapNodes = f: lib.mapAttrs f nodes;
+  nixosConfigurations = mapAttrs (_: node: node.config) config.flake.nixosConfigurations;
+  nodes = filterAttrs (_: node: node.aws != null && node.aws.instance.count > 0) nixosConfigurations;
+  mapNodes = f: mapAttrs f nodes;
 
   regions =
-    lib.mapAttrsToList (region: enabled: {
+    mapAttrsToList (region: enabled: {
       region = underscore region;
       count =
         if enabled
@@ -25,7 +30,34 @@ flake @ {
     })
     cluster.regions;
 
-  mapRegions = f: lib.foldl' lib.recursiveUpdate {} (lib.forEach regions f);
+  mapRegions = f: foldl' recursiveUpdate {} (forEach regions f);
+
+  # Generate a list of all multivalue dns resources tf needs to create
+  multivalueDnsList = sort lessThan (unique (
+    filter (e: e != null) (map (g: getAttrFromPath [g "groupRelayMultivalueDns"] group) (attrNames group))
+  ));
+
+  # Different groups can share the same multivalue dns resource.
+  # Is node `n` in group `g` a member of the multivalue fqdn `dns`?
+  isMultivalueDnsMember = dns: g: n:
+    if
+      dns
+      == group.${g}.groupRelayMultivalueDns
+      && hasPrefix "${group.${g}.groupPrefix}${group.${g}.groupRelaySubstring}" n
+    then true
+    else false;
+
+  # Generate an attrset with attr names of multivalueDns fqdns and attr values of their member node names.
+  multivalueDnsAttrs = foldl' (acc: dns:
+    recursiveUpdate acc {
+      ${dns} = sort lessThan (filter (e: e != null) (flatten (map (g:
+        map (n:
+          if (isMultivalueDnsMember dns g n)
+          then n
+          else null)
+        (attrNames nodes)) (attrNames group))));
+    }) {}
+  multivalueDnsList;
 in {
   flake.terraform.cluster = inputs.cardano-parts.inputs.terranix.lib.terranixConfiguration {
     system = "x86_64-linux";
@@ -49,7 +81,7 @@ in {
           };
         };
 
-        provider.aws = lib.forEach (builtins.attrNames cluster.regions) (region: {
+        provider.aws = forEach (attrNames cluster.regions) (region: {
           inherit region;
           alias = underscore region;
         });
@@ -97,7 +129,7 @@ in {
 
           aws_iam_role.ec2_role = {
             name = "ec2Role";
-            assume_role_policy = builtins.toJSON {
+            assume_role_policy = toJSON {
               Version = "2012-10-17";
               Statement = [
                 {
@@ -111,7 +143,7 @@ in {
 
           aws_iam_role_policy_attachment = let
             mkRoleAttachments = roleResourceName: policyList:
-              lib.listToAttrs (map (policy: {
+              listToAttrs (map (policy: {
                   name = "${roleResourceName}_policy_attachment_${policy}";
                   value = {
                     role = "\${aws_iam_role.${roleResourceName}.name}";
@@ -120,13 +152,13 @@ in {
                 })
                 policyList);
           in
-            lib.foldl' lib.recursiveUpdate {} [
+            foldl' recursiveUpdate {} [
               (mkRoleAttachments "ec2_role" ["kms_user"])
             ];
 
           aws_iam_policy.kms_user = {
             name = "kmsUser";
-            policy = builtins.toJSON {
+            policy = toJSON {
               Version = "2012-10-17";
               Statement = [
                 {
@@ -174,7 +206,7 @@ in {
           # the reference from the instance. Then apply, and if that succeeds,
           # remove the group here and apply again.
           aws_security_group = let
-            mkRule = lib.recursiveUpdate {
+            mkRule = recursiveUpdate {
               protocol = "tcp";
               cidr_blocks = ["0.0.0.0/0"];
               ipv6_cidr_blocks = ["::/0"];
@@ -201,6 +233,11 @@ in {
                     to_port = 22;
                   })
                   (mkRule {
+                    description = "Allow Cardano";
+                    from_port = 3001;
+                    to_port = 3001;
+                  })
+                  (mkRule {
                     description = "Allow Wireguard";
                     from_port = 51820;
                     to_port = 51820;
@@ -219,15 +256,32 @@ in {
               };
             });
 
-          aws_route53_record = mapNodes (
-            nodeName: _: {
-              zone_id = "\${data.aws_route53_zone.selected.zone_id}";
-              name = "${nodeName}.\${data.aws_route53_zone.selected.name}";
-              type = "A";
-              ttl = "300";
-              records = ["\${aws_eip.${nodeName}[0].public_ip}"];
-            }
-          );
+          aws_route53_record =
+            # Generate individual route53 node records
+            mapNodes (
+              nodeName: _: {
+                zone_id = "\${data.aws_route53_zone.selected.zone_id}";
+                name = "${nodeName}.\${data.aws_route53_zone.selected.name}";
+                type = "A";
+                ttl = "300";
+                records = ["\${aws_eip.${nodeName}[0].public_ip}"];
+              }
+            )
+            # Generate multivalue route53 records
+            // foldl' (acc: dns:
+              recursiveUpdate acc (listToAttrs (map (nodeName: {
+                  name = "${hyphen dns}-${nodeName}";
+                  value = {
+                    zone_id = "\${data.aws_route53_zone.selected.zone_id}";
+                    name = dns;
+                    type = "A";
+                    ttl = "300";
+                    records = ["\${aws_eip.${nodeName}[0].public_ip}"];
+                    multivalue_answer_routing_policy = true;
+                    set_identifier = "${hyphen dns}-${nodeName}";
+                  };
+                })
+                multivalueDnsAttrs.${dns}))) {} (attrNames multivalueDnsAttrs);
 
           local_file.ssh_config = {
             filename = "\${path.module}/.ssh_config";
@@ -242,11 +296,11 @@ in {
                 ServerAliveInterval 60
 
               ${
-                builtins.concatStringsSep "\n" (map (name: ''
+                concatStringsSep "\n" (map (name: ''
                     Host ${name}
                       HostName ''${aws_eip.${name}[0].public_ip}
                   '')
-                  (builtins.attrNames (lib.filterAttrs (_: node: node.aws.instance.count > 0) nodes)))
+                  (attrNames nodes))
               }
             '';
           };

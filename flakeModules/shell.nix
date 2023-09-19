@@ -243,6 +243,7 @@ in
                     deadnix
                     fd
                     just
+                    moreutils
                     nushell
                     ripgrep
                     statix

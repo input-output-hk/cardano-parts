@@ -10,11 +10,16 @@
 #   flake.cardano-parts.cluster.infra.aws.profile
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
+#   flake.cardano-parts.cluster.group.<default|name>.groupBlockProducerSubstring
+#   flake.cardano-parts.cluster.group.<default|name>.groupFlake
 #   flake.cardano-parts.cluster.group.<default|name>.groupName
-#   flake.cardano-parts.cluster.group.<default|name>.groupOutPath
 #   flake.cardano-parts.cluster.group.<default|name>.groupPrefix
+#   flake.cardano-parts.cluster.group.<default|name>.groupRelayMultivalueDns
+#   flake.cardano-parts.cluster.group.<default|name>.groupRelaySubstring
 #   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePort
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePrometheusExporterPort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.domain
 #   flake.cardano-parts.cluster.group.<default|name>.meta.environmentName
@@ -143,12 +148,6 @@ flake @ {
         default = {};
       };
 
-      groupName = mkOption {
-        type = str;
-        description = mdDoc "Cardano-parts cluster group name.";
-        default = name;
-      };
-
       groupFlake = mkOption {
         type = attrsOf raw;
         description = mdDoc ''
@@ -172,13 +171,46 @@ flake @ {
         default = flake;
       };
 
+      groupName = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group name.";
+        default = name;
+      };
+
       groupPrefix = mkOption {
         type = str;
         description = mdDoc ''
           Cardano-parts cluster group prefix.
-          Machines belonging to this group will have Colmena names starting with this prefix;
+          Machines belonging to this group will have Colmena names starting with this prefix.
         '';
         default = "";
+      };
+
+      groupRelayMultivalueDns = mkOption {
+        type = nullOr str;
+        description = mdDoc ''
+          Cardano-parts cluster group multivalue DNS.
+          Machines belonging to this group and in the relay role have their IP A address added to this multivalue DNS record.
+        '';
+        default = null;
+      };
+
+      groupRelaySubstring = mkOption {
+        type = str;
+        description = mdDoc ''
+          Cardano-parts cluster group relay substring.
+          Machines belonging to this group and in the relay role will have Colmena names containing this substring.
+        '';
+        default = "rel-";
+      };
+
+      groupBlockProducerSubstring = mkOption {
+        type = str;
+        description = mdDoc ''
+          Cardano-parts cluster group block producer substring.
+          Machines belonging to this group and in the block producer role will have Colmena names containing this substring.
+        '';
+        default = "bp-";
       };
 
       pkgs = mkOption {
