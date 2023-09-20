@@ -51,7 +51,7 @@ in {
             --address "$CHANGE_ADDRESS" \
             --testnet-magic "$TESTNET_MAGIC" \
             --out-file /dev/stdout \
-          | jq -r 'to_entries[0] | .key'
+          | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
         )
 
         EPOCH=$(
@@ -64,58 +64,43 @@ in {
         PROPOSAL_KEY_ARGS=()
         SIGNING_ARGS=()
 
-        for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
+        for ((i=0; i < NUM_GENESIS_KEYS; i++)); do
           PROPOSAL_KEY_ARGS+=("--genesis-verification-key-file" "$KEY_DIR/genesis-keys/shelley.00$i.vkey")
           SIGNING_ARGS+=("--signing-key-file" "$KEY_DIR/delegate-keys/shelley.00$i.skey")
         done
 
-        "$CARDANO_CLI" governance create-update-proposal \
-          --epoch "$EPOCH" \
-          "''${PROPOSAL_ARGS[@]}" \
-          "''${PROPOSAL_KEY_ARGS[@]}" \
-          --out-file update.proposal
+        CREATE_PROPOSAL() {
+          TARGET_EPOCH="$1"
 
-        "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
-          --tx-in "$TXIN" \
-          --change-address "$CHANGE_ADDRESS" \
-          --update-proposal-file update.proposal \
-          --testnet-magic "$TESTNET_MAGIC" \
-          --out-file tx-proposal.txbody
+          "$CARDANO_CLI" governance create-update-proposal \
+            --epoch "$TARGET_EPOCH" \
+            "''${PROPOSAL_ARGS[@]}" \
+            "''${PROPOSAL_KEY_ARGS[@]}" \
+            --out-file update.proposal
 
-        "$CARDANO_CLI" transaction sign \
-          --tx-body-file tx-proposal.txbody \
-          --out-file tx-proposal.txsigned \
-          --signing-key-file "$PAYMENT_KEY".skey \
-          "''${SIGNING_ARGS[@]}"
+          "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
+            --tx-in "$TXIN" \
+            --change-address "$CHANGE_ADDRESS" \
+            --update-proposal-file update.proposal \
+            --testnet-magic "$TESTNET_MAGIC" \
+            --out-file tx-proposal.txbody
+
+          "$CARDANO_CLI" transaction sign \
+            --tx-body-file tx-proposal.txbody \
+            --out-file tx-proposal.txsigned \
+            --signing-key-file "$PAYMENT_KEY".skey \
+            "''${SIGNING_ARGS[@]}"
+        }
+
+        CREATE_PROPOSAL "$EPOCH"
 
         if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-          # TODO: remove if we figure out how to make it detect where in epoch we are
           if ! "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned; then
-            "$CARDANO_CLI" governance create-update-proposal \
-              --epoch $(("$EPOCH" + 1)) \
-              "''${PROPOSAL_ARGS[@]}" \
-              "''${PROPOSAL_KEY_ARGS[@]}" \
-              --out-file update.proposal
-
-            "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
-              --tx-in "$TXIN" \
-              --change-address "$CHANGE_ADDRESS" \
-              --update-proposal-file update.proposal \
-              --testnet-magic "$TESTNET_MAGIC" \
-              --out-file tx-proposal.txbody
-
-            "$CARDANO_CLI" transaction sign \
-              --tx-body-file tx-proposal.txbody \
-              --out-file tx-proposal.txsigned \
-              --signing-key-file "$PAYMENT_KEY".skey \
-              "''${SIGNING_ARGS[@]}"
-
+            CREATE_PROPOSAL $((EPOCH + 1))
             "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned
           fi
         fi
       '';
-      # TODO: ignoring this one
-      # cabal-project-utils = nixpkgs.callPackages iohk-nix.utils.cabal-project {};
     in {
       config = {
         packages.job-gen-custom-node-config = writeShellApplication {
@@ -181,77 +166,21 @@ in {
             pushd "$GENESIS_DIR/delegate-keys" &> /dev/null
               (for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
                 cat shelley.00"$i".{opcert.json,vrf.skey,kes.skey} | jq -s
-              done) > bulk.creds.bft.json
+              done) | jq -s > bulk.creds.bft.json
             popd &> /dev/null
 
             cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
+
             "$CARDANO_CLI" address key-gen \
               --signing-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.skey" \
               --verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
+
+            "$CARDANO_CLI" address build \
+              --payment-verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey" \
+              --testnet-magic "$TESTNET_MAGIC" \
+              > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
           '';
         };
-
-        packages.job-gen-custom-kv-config =
-          writeShellApplication {
-            name = "job-gen-custom-kv-config";
-            runtimeInputs = with pkgs; [coreutils jq sops];
-            text = ''
-              # Inputs:
-              #   [$DEBUG]
-              #   [$ENV_NAME]
-              #   [$GENESIS_DIR]
-              #   [$NUM_GENESIS_KEYS]
-              #   [$UNSTABLE]
-              #   [$USE_SHELL_BINS]
-
-              [ -n "''${DEBUG:-}" ] && set -x
-
-              export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
-              export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
-              export ENV_NAME=''${ENV_NAME:-"custom-env"}
-
-              mkdir -p "./secrets/cardano/$ENV_NAME"
-              pushd "$GENESIS_DIR" &> /dev/null
-                jq -n \
-                  --arg byron "$(base64 -w 0 < byron-genesis.json)" \
-                  --arg shelley "$(base64 -w 0 < shelley-genesis.json)" \
-                  --arg alonzo "$(base64 -w 0 < alonzo-genesis.json)" \
-                  --arg conway "$(base64 -w 0 < conway-genesis.json)" \
-                  --argjson config "$(< node-config.json)" \
-                  '{byronGenesisBlob: $byron, shelleyGenesisBlob: $shelley, alonzoGenesisBlob: $alonzo, conwayGenesisBlob: $conway, nodeConfig: $config}' \
-                > config.json
-                cp config.json "./secrets/cardano/$ENV_NAME.json"
-
-                pushd delegate-keys &> /dev/null
-                  for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
-                    jq -n \
-                      --argjson cold "$(<shelley."00$i".skey)" \
-                      --argjson vrf "$(<shelley."00$i".vrf.skey)" \
-                      --argjson kes "$(<shelley."00$i".kes.skey)" \
-                      --argjson opcert "$(<shelley."00$i".opcert.json)" \
-                      --argjson counter "$(<shelley."00$i".counter.json)" \
-                      --argjson byron_cert "$(<byron."00$i".cert.json)" \
-                      '{
-                        "kes.skey": $kes,
-                        "vrf.skey": $vrf,
-                        "opcert.json": $opcert,
-                        "byron.cert.json": $byron_cert,
-                        "cold.skey": $cold,
-                        "cold.counter": $counter
-                      }' > "bft-$i.json"
-                      cp "bft-$i.json" "./secrets/cardano/$ENV_NAME"
-                  done
-                popd &> /dev/null
-
-                pushd "./secrets/cardano/$ENV_NAME" &> /dev/null
-                  for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
-                    sops -e "bft-$i.json" > "bft-$i.enc.json" && rm "bft-$i.json"
-                  done
-                popd &> /dev/null
-              popd &> /dev/null
-            '';
-          }
-          // {after = ["gen-custom-node-config"];};
 
         packages.job-create-stake-pool-keys = writeShellApplication {
           name = "job-create-stake-pools";
@@ -259,9 +188,9 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
-            #   $NUM_POOLS
+            #   $POOL_NAMES
             #   $STAKE_POOL_DIR
-            #   $START_INDEX
+            #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_SHELL_BINS]
 
@@ -269,8 +198,14 @@ in {
 
             ${selectCardanoCli}
 
-            END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
-            mkdir -p "$STAKE_POOL_DIR"
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            elif [ -n "''${POOL_NAMES:-}" ]; then
+              read -r -a POOLS <<< "$POOL_NAMES"
+            fi
+
+            mkdir -p "$STAKE_POOL_DIR"/{deploy,no-deploy}
 
             # Generate wallet in control of all the funds delegated to the stake pools
             cardano-address recovery-phrase generate > "$STAKE_POOL_DIR"/owner.mnemonic
@@ -284,49 +219,79 @@ in {
                 --verification-key-file /dev/stdout \
               | "$CARDANO_CLI" key non-extended-key \
                 --extended-verification-key-file /dev/stdin \
-                --verification-key-file "$STAKE_POOL_DIR"/sp-0-reward-stake.vkey
+                --verification-key-file "$STAKE_POOL_DIR"/reward-stake.vkey
 
-            for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
+            for ((i=0; i < ''${#POOLS[@]}; i++)); do
+              POOL_NAME="''${POOLS[$i]}"
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+
+              cp "$STAKE_POOL_DIR"/owner.mnemonic "$NO_DEPLOY_FILE"-owner.mnemonic
+              cp "$STAKE_POOL_DIR"/reward-stake.vkey "$NO_DEPLOY_FILE"-reward-stake.vkey
+
               # Extract stake skey/vkey needed for pool registration and delegation
-              cardano-address key from-recovery-phrase Shelley < "$STAKE_POOL_DIR"/owner.mnemonic \
-                | cardano-address key child 1852H/1815H/"$i"H/2/0 \
+              cardano-address key from-recovery-phrase Shelley < "$NO_DEPLOY_FILE"-owner.mnemonic \
+                | cardano-address key child 1852H/1815H/"$((i + 1))"H/2/0 \
                 | "$CARDANO_CLI" key convert-cardano-address-key --shelley-stake-key \
                   --signing-key-file /dev/stdin \
                   --out-file /dev/stdout \
-                | tee "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.skey \
+                | tee "$NO_DEPLOY_FILE"-owner-stake.skey \
                 | "$CARDANO_CLI" key verification-key \
                   --signing-key-file /dev/stdin \
                   --verification-key-file /dev/stdout \
                 | "$CARDANO_CLI" key non-extended-key \
                   --extended-verification-key-file /dev/stdin \
-                  --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey
+                  --verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey
+
+              # Generate stake address
+              "$CARDANO_CLI" stake-address build \
+                --stake-verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey \
+                --testnet-magic "$TESTNET_MAGIC" \
+                --out-file "$NO_DEPLOY_FILE"-owner-stake.addr
 
               # Generate cold, vrf and kes keys
               "$CARDANO_CLI" node key-gen \
-                --cold-signing-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.skey \
-                --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.vkey \
-                --operational-certificate-issue-counter-file "$STAKE_POOL_DIR"/sp-"$i"-cold.counter
+                --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
+                --verification-key-file "$DEPLOY_FILE"-cold.vkey \
+                --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter
 
               "$CARDANO_CLI" node key-gen-VRF \
-                --signing-key-file "$STAKE_POOL_DIR"/sp-"$i"-vrf.skey \
-                --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-vrf.vkey
+                --signing-key-file "$DEPLOY_FILE"-vrf.skey \
+                --verification-key-file "$DEPLOY_FILE"-vrf.vkey
 
               "$CARDANO_CLI" node key-gen-KES \
-                --signing-key-file "$STAKE_POOL_DIR"/sp-"$i"-kes.skey \
-                --verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-kes.vkey
+                --signing-key-file "$DEPLOY_FILE"-kes.skey \
+                --verification-key-file "$DEPLOY_FILE"-kes.vkey
+
+              # Generate stake id
+              "$CARDANO_CLI" stake-pool id \
+                --cold-verification-key-file "$DEPLOY_FILE"-cold.vkey \
+                --out-file "$NO_DEPLOY_FILE"-pool.id
 
               # Generate opcert
               "$CARDANO_CLI" node issue-op-cert \
                 --kes-period 0 \
-                --kes-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-kes.vkey \
-                --operational-certificate-issue-counter-file "$STAKE_POOL_DIR"/sp-"$i"-cold.counter \
-                --cold-signing-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.skey \
-                --out-file "$STAKE_POOL_DIR"/sp-"$i".opcert
+                --kes-verification-key-file "$DEPLOY_FILE"-kes.vkey \
+                --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter \
+                --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
+                --out-file "$DEPLOY_FILE".opcert
+
+              # Generate bulk creds file for single pool use
+              cat "$DEPLOY_FILE"{.opcert,-vrf.skey,-kes.skey} \
+                | jq -s \
+                | jq -s \
+                > "$DEPLOY_FILE"-bulk.creds
             done
 
-            (for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
-              cat "$STAKE_POOL_DIR"/sp-"$i"{.opcert,-vrf.skey,-kes.skey} | jq -s
-            done) > "$STAKE_POOL_DIR"/bulk.creds.pools.json
+            # Generate bulk creds for all pools in the pool names
+            (for ((i=0; i < ''${#POOLS[@]}; i++)); do
+              cat "$DEPLOY_FILE"{.opcert,-vrf.skey,-kes.skey} | jq -s
+            done) | jq -s > "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
+
+            # Adjust secrets permissions and clean up
+            chmod 0700 "$STAKE_POOL_DIR"/{deploy,no-deploy}
+            fd -t f . "$STAKE_POOL_DIR"/{deploy,no-deploy} -x chmod 0600
+            rm "$STAKE_POOL_DIR"/{owner.mnemonic,reward-stake.vkey}
           '';
         };
 
@@ -337,13 +302,12 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   [$ERA]
-            #   $NUM_POOLS
             #   $PAYMENT_KEY
+            #   $POOL_NAMES
             #   [$POOL_PLEDGE]
             #   $POOL_RELAY
             #   $POOL_RELAY_PORT
             #   [$STAKE_POOL_DIR]
-            #   $START_INDEX
             #   [$SUBMIT_TX]
             #   [$UNSTABLE]
             #   [$USE_SHELL_BINS]
@@ -354,44 +318,63 @@ in {
 
             ${selectCardanoCli}
 
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            elif [ -n "''${POOL_NAMES:-}" ]; then
+              read -r -a POOLS <<< "$POOL_NAMES"
+            fi
+
             if [ -z "''${POOL_PLEDGE:-}" ]; then
               echo "Pool pledge is defaulting to 1 million ADA"
               POOL_PLEDGE="1000000000000"
             fi
 
-            WITNESSES=$(("$NUM_POOLS" * 2 + 1))
-            END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
+            NUM_POOLS=$((''${#POOLS[@]}))
+            WITNESSES=$((NUM_POOLS * 2 + 1))
             CHANGE_ADDRESS=$(
               "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
-            for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
+            for ((i=0; i < NUM_POOLS; i++)); do
+              POOL_NAME="''${POOLS[$i]}"
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+
               # Generate stake registration and delegation certificate
               "$CARDANO_CLI" stake-address registration-certificate \
-                --stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
-                --out-file sp-"$i"-owner-registration.cert
+                --stake-verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey \
+                --out-file "$POOL_NAME"-owner-registration.cert
 
               "$CARDANO_CLI" stake-address delegation-certificate \
-                --cold-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.vkey \
-                --stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
-                --out-file sp-"$i"-owner-delegation.cert
+                --cold-verification-key-file "$DEPLOY_FILE"-cold.vkey \
+                --stake-verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey \
+                --out-file "$POOL_NAME"-owner-delegation.cert
 
               # shellcheck disable=SC2031
               "$CARDANO_CLI" stake-pool registration-certificate \
                 --testnet-magic "$TESTNET_MAGIC" \
-                --cold-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-cold.vkey \
+                --cold-verification-key-file "$DEPLOY_FILE"-cold.vkey \
                 --pool-cost 500000000 \
                 --pool-margin 1 \
-                --pool-owner-stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
+                --pool-owner-stake-verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey \
                 --pool-pledge "$POOL_PLEDGE" \
                 --single-host-pool-relay "$POOL_RELAY" \
                 --pool-relay-port "$POOL_RELAY_PORT" \
-                --pool-reward-account-verification-key-file "$STAKE_POOL_DIR"/sp-0-reward-stake.vkey \
-                --vrf-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-vrf.vkey \
-                --out-file sp-"$i"-registration.cert
+                --pool-reward-account-verification-key-file "$NO_DEPLOY_FILE"-reward-stake.vkey \
+                --vrf-verification-key-file "$DEPLOY_FILE"-vrf.vkey \
+                --out-file "$POOL_NAME"-registration.cert
             done
+
+            # Generate the reward payment address
+            "$CARDANO_CLI" address build \
+              --payment-verification-key-file "$PAYMENT_KEY".vkey \
+              --stake-verification-key-file "$NO_DEPLOY_FILE"-reward-stake.vkey \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --out-file "$NO_DEPLOY_FILE"-reward-payment-stake.addr
+            chmod 0600 "$NO_DEPLOY_FILE"-reward-payment-stake.addr
 
             # Generate transaction
             TXIN=$(
@@ -399,35 +382,34 @@ in {
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
-              | jq -r 'to_entries[0] | .key'
+              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
             # Generate arrays needed for build/sign commands
             BUILD_TX_ARGS=()
             SIGN_TX_ARGS=()
 
-            for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
-              BUILD_TX_ARGS+=("--certificate-file" "sp-$i-registration.cert")
-              SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_POOL_DIR/sp-$i-cold.skey")
-              SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_POOL_DIR/sp-$i-owner-stake.skey")
-            done
-
             # Generate arrays needed for build/sign commands
-            BUILD_TX_ARGS=()
-            SIGN_TX_ARGS=()
-            for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
+            for ((i=0; i < NUM_POOLS; i++)); do
+              POOL_NAME="''${POOLS[$i]}"
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+
               STAKE_POOL_ADDR=$(
                 "$CARDANO_CLI" address build \
                 --payment-verification-key-file "$PAYMENT_KEY".vkey \
-                --stake-verification-key-file "$STAKE_POOL_DIR"/sp-"$i"-owner-stake.vkey \
-                --testnet-magic "$TESTNET_MAGIC"
+                --stake-verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey \
+                --testnet-magic "$TESTNET_MAGIC" \
+                | tee "$NO_DEPLOY_FILE"-owner-payment-stake.addr
               )
+              chmod 0600 "$NO_DEPLOY_FILE"-owner-payment-stake.addr
+
               BUILD_TX_ARGS+=("--tx-out" "$STAKE_POOL_ADDR+$POOL_PLEDGE")
-              BUILD_TX_ARGS+=("--certificate-file" "sp-$i-owner-registration.cert")
-              BUILD_TX_ARGS+=("--certificate-file" "sp-$i-registration.cert")
-              BUILD_TX_ARGS+=("--certificate-file" "sp-$i-owner-delegation.cert")
-              SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_POOL_DIR/sp-$i-cold.skey")
-              SIGN_TX_ARGS+=("--signing-key-file" "$STAKE_POOL_DIR/sp-$i-owner-stake.skey")
+              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-owner-registration.cert")
+              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-registration.cert")
+              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-owner-delegation.cert")
+              SIGN_TX_ARGS+=("--signing-key-file" "$NO_DEPLOY_FILE-cold.skey")
+              SIGN_TX_ARGS+=("--signing-key-file" "$NO_DEPLOY_FILE-owner-stake.skey")
             done
 
             "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
@@ -450,51 +432,6 @@ in {
           '';
         };
 
-        packages.job-gen-custom-kv-config-pools =
-          writeShellApplication {
-            name = "job-gen-custom-kv-config-pools";
-            runtimeInputs = with pkgs; [coreutils jq];
-            text = ''
-              # Inputs:
-              #   [$DEBUG]
-              #   [$ENV_NAME]
-              #   $NUM_POOLS
-              #   $STAKE_POOL_DIR
-              #   $START_INDEX
-
-              [ -n "''${DEBUG:-}" ] && set -x
-
-              export ENV_NAME=''${ENV_NAME:-"custom-env"}
-
-              END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
-              mkdir -p "./secrets/cardano/$ENV_NAME"
-              pushd "$STAKE_POOL_DIR" &> /dev/null
-                for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
-                  jq -n \
-                    --argjson cold    "$(< sp-"$i"-cold.skey)" \
-                    --argjson vrf     "$(< sp-"$i"-vrf.skey)" \
-                    --argjson kes     "$(< sp-"$i"-kes.skey)" \
-                    --argjson opcert  "$(< sp-"$i".opcert)" \
-                    --argjson counter "$(< sp-"$i"-cold.counter)" \
-                    '{
-                      "kes.skey": $kes,
-                      "vrf.skey": $vrf,
-                      "opcert.json": $opcert,
-                      "cold.skey": $cold,
-                      "cold.counter": $counter
-                    }' > "./secrets/cardano/$ENV_NAME/sp-$i.json"
-                done
-              popd &> /dev/null
-
-              pushd "./secrets/cardano/$ENV_NAME" &> /dev/null
-                for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
-                  sops -e "sp-$i.json" > "sp-$i.enc.json" && rm "sp-$i.json"
-                done
-              popd &> /dev/null
-            '';
-          }
-          // {after = ["gen-custom-node-config"];};
-
         packages.job-rotate-kes-pools =
           writeShellApplication {
             name = "job-rotate-kes-pools";
@@ -504,9 +441,8 @@ in {
               #   $CURRENT_KES_PERIOD
               #   [$DEBUG]
               #   [$ENV_NAME]
-              #   $NUM_POOLS
+              #   $POOL_NAMES
               #   $STAKE_POOL_DIR
-              #   $START_INDEX
               #   [$UNSTABLE]
               #   [$USE_SHELL_BINS]
 
@@ -516,42 +452,29 @@ in {
 
               ${selectCardanoCli}
 
-              END_INDEX=$(("$START_INDEX" + "$NUM_POOLS"))
-              mkdir -p "./secrets/cardano/$ENV_NAME"
-              pushd "$STAKE_POOL_DIR" &> /dev/null
-                for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
-                  "$CARDANO_CLI" node key-gen-KES \
-                    --signing-key-file sp-"$i"-kes.skey \
-                    --verification-key-file sp-"$i"-kes.vkey
+              if [ -z "''${POOL_NAMES:-}" ]; then
+                echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+                exit 1
+              elif [ -n "''${POOL_NAMES:-}" ]; then
+                read -r -a POOLS <<< "$POOL_NAMES"
+              fi
 
-                  "$CARDANO_CLI" node issue-op-cert \
-                    --kes-verification-key-file sp-"$i"-kes.vkey \
-                    --cold-signing-key-file sp-"$i"-cold.skey \
-                    --operational-certificate-issue-counter-file sp-"$i"-cold.counter \
-                    --kes-period "$CURRENT_KES_PERIOD" \
-                    --out-file sp-"$i".opcert
+              for ((i=0; i < ''${#POOLS[@]}; i++)); do
+                POOL_NAME="''${POOLS[$i]}"
+                DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+                NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
 
-                  jq -n \
-                    --argjson cold    "$(< sp-"$i"-cold.skey)" \
-                    --argjson vrf     "$(< sp-"$i"-vrf.skey)" \
-                    --argjson kes     "$(< sp-"$i"-kes.skey)" \
-                    --argjson opcert  "$(< sp-"$i".opcert)" \
-                    --argjson counter "$(< sp-"$i"-cold.counter)" \
-                    '{
-                      "kes.skey": $kes,
-                      "vrf.skey": $vrf,
-                      "opcert.json": $opcert,
-                      "cold.skey": $cold,
-                      "cold.counter": $counter
-                    }' > "./secrets/cardano/$ENV_NAME/sp-$i.json"
-                done
-              popd &> /dev/null
+                "$CARDANO_CLI" node key-gen-KES \
+                  --signing-key-file "$DEPLOY_FILE"-kes.skey \
+                  --verification-key-file "$DEPLOY_FILE"-kes.vkey
 
-              pushd "./secrets/cardano/$ENV_NAME" &> /dev/null
-                for ((i="$START_INDEX"; i < "$END_INDEX"; i++)); do
-                  sops -e "sp-$i.json" > "sp-$i.enc.json" && rm "sp-$i.json"
-                done
-              popd &> /dev/null
+                "$CARDANO_CLI" node issue-op-cert \
+                  --kes-verification-key-file "$DEPLOY_FILE"-kes.vkey \
+                  --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
+                  --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter \
+                  --kes-period "$CURRENT_KES_PERIOD" \
+                  --out-file "$DEPLOY_FILE".opcert
+              done
             '';
           }
           // {after = ["gen-custom-node-config"];};
@@ -788,7 +711,7 @@ in {
             "$CARDANO_CLI" conway governance action "$ACTION" \
               --testnet \
               --stake-verification-key-file "$STAKE_KEY".vkey \
-              --constitution "We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional atire" \
+              --constitution "We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional attire" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
               --out-file "$ACTION".action \
               --proposal-url "https://proposals.sancho.network/1" \
@@ -801,7 +724,7 @@ in {
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
-              | jq -r 'to_entries[0] | .key'
+              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
             # Generate arrays needed for build/sign commands
@@ -896,7 +819,7 @@ in {
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
-              | jq -r 'to_entries[0] | .key'
+              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
             # Generate arrays needed for build/sign commands
@@ -991,7 +914,7 @@ in {
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
-              | jq -r 'to_entries[0] | .key'
+              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
             "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
@@ -1054,7 +977,7 @@ in {
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
-              | jq -r 'to_entries[0] | .key'
+              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
             "$CARDANO_CLI" transaction build ''${ERA:+$ERA} \
