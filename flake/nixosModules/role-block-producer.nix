@@ -26,16 +26,16 @@
     group = "cardano-node";
 
     # Byron era secrets path definitions
-    signingKey = "${groupOutPath}/secrets/${groupName}/${name}-byron-delegate.key";
-    delegationCertificate = "${groupOutPath}/secrets/${groupName}/${name}-byron-delegation-cert.json";
+    signingKey = "${groupOutPath}/secrets/groups/${groupName}/deploy/${name}-byron-delegate.key";
+    delegationCertificate = "${groupOutPath}/secrets/groups/${groupName}/deploy/${name}-byron-delegation-cert.json";
     byronKeysExist = builtins.pathExists signingKey && builtins.pathExists delegationCertificate;
 
     # Shelly+ era secrets path definitions
-    vrfKey = "${groupOutPath}/secrets/${groupName}/${name}-node-vrf.skey";
-    kesKey = "${groupOutPath}/secrets/${groupName}/${name}-node-kes.skey";
-    coldVerification = "${groupOutPath}/secrets/${groupName}/${name}-node-cold.vkey";
-    operationalCertificate = "${groupOutPath}/secrets/${groupName}/${name}-node.opcert";
-    bulkCredentials = "${groupOutPath}/secrets/${groupName}/${name}-bulk.creds";
+    vrfKey = "${groupOutPath}/secrets/groups/${groupName}/deploy/${name}-vrf.skey";
+    kesKey = "${groupOutPath}/secrets/groups/${groupName}/deploy/${name}-kes.skey";
+    coldVerification = "${groupOutPath}/secrets/groups/${groupName}/deploy/${name}-cold.vkey";
+    operationalCertificate = "${groupOutPath}/secrets/groups/${groupName}/deploy/${name}.opcert";
+    bulkCredentials = "${groupOutPath}/secrets/groups/${groupName}/deploy/${name}-bulk.creds";
 
     trimStorePrefix = path: last (builtins.split "/nix/store/[^/]+/" path);
     verboseTrace = key: builtins.traceVerbose ("${name}: using " + (trimStorePrefix key));
