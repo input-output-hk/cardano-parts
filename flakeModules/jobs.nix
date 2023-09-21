@@ -69,7 +69,7 @@ in {
           SIGNING_ARGS+=("--signing-key-file" "$KEY_DIR/delegate-keys/shelley.00$i.skey")
         done
 
-        CREATE_PROPOSAL() {
+        function create_proposal {
           TARGET_EPOCH="$1"
 
           "$CARDANO_CLI" governance create-update-proposal \
@@ -92,11 +92,11 @@ in {
             "''${SIGNING_ARGS[@]}"
         }
 
-        CREATE_PROPOSAL "$EPOCH"
+        create_proposal "$EPOCH"
 
         if [ "''${SUBMIT_TX:-true}" = "true" ]; then
           if ! "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned; then
-            CREATE_PROPOSAL $((EPOCH + 1))
+            create_proposal $((EPOCH + 1))
             "$CARDANO_CLI" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned
           fi
         fi
@@ -109,6 +109,7 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
+            #   [$ENV]
             #   [$GENESIS_DIR]
             #   [$NUM_GENESIS_KEYS]
             #   [$SECURITY_PARAM]
@@ -135,6 +136,8 @@ in {
             fi
 
             ${selectCardanoCli}
+
+            ENV="''${ENV:-custom}"
 
             mkdir -p "$GENESIS_DIR"
             "$CARDANO_CLI" genesis create-cardano \
@@ -167,6 +170,7 @@ in {
               (for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
                 cat shelley.00"$i".{opcert.json,vrf.skey,kes.skey} | jq -s
               done) | jq -s > bulk.creds.bft.json
+              chmod 0600 bulk.creds.bft.json
             popd &> /dev/null
 
             cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
@@ -179,6 +183,17 @@ in {
               --payment-verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey" \
               --testnet-magic "$TESTNET_MAGIC" \
               > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
+              chmod 0600 "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
+
+            # Shape the genesis output directory to match secrets layout expected
+            # by cardano-parts for environments and groups. This makes for easier
+            # import of new environment secrets.
+            pushd "$GENESIS_DIR" &> /dev/null
+              mkdir -p envs/"$ENV"
+              mv delegate-keys envs/"$ENV"/
+              mv genesis-keys envs/"$ENV"/
+              mv utxo-keys envs/"$ENV"/
+            popd &> /dev/null
           '';
         };
 
@@ -289,7 +304,7 @@ in {
             done) | jq -s > "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
 
             # Adjust secrets permissions and clean up
-            chmod 0700 "$STAKE_POOL_DIR"/{deploy,no-deploy}
+            chmod 0700 "$STAKE_POOL_DIR" "$STAKE_POOL_DIR"/{deploy,no-deploy}
             fd -t f . "$STAKE_POOL_DIR"/{deploy,no-deploy} -x chmod 0600
             rm "$STAKE_POOL_DIR"/{owner.mnemonic,reward-stake.vkey}
           '';
@@ -440,15 +455,12 @@ in {
               # Inputs:
               #   $CURRENT_KES_PERIOD
               #   [$DEBUG]
-              #   [$ENV_NAME]
               #   $POOL_NAMES
               #   $STAKE_POOL_DIR
               #   [$UNSTABLE]
               #   [$USE_SHELL_BINS]
 
               [ -n "''${DEBUG:-}" ] && set -x
-
-              export ENV_NAME=''${ENV_NAME:-"custom-env"}
 
               ${selectCardanoCli}
 
