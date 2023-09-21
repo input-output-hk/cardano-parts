@@ -232,6 +232,7 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
+            #   [$NO_DEPLOY_DIR]
             #   $POOL_NAMES
             #   $STAKE_POOL_DIR
             #   $TESTNET_MAGIC
@@ -251,7 +252,8 @@ in {
               read -r -a POOLS <<< "$POOL_NAMES"
             fi
 
-            mkdir -p "$STAKE_POOL_DIR"/{deploy,no-deploy}
+            NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"
+            mkdir -p "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"
 
             # Generate wallet in control of all the funds delegated to the stake pools
             cardano-address recovery-phrase generate > "$STAKE_POOL_DIR"/owner.mnemonic
@@ -270,7 +272,7 @@ in {
             for ((i=0; i < ''${#POOLS[@]}; i++)); do
               POOL_NAME="''${POOLS[$i]}"
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
-              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
               cp "$STAKE_POOL_DIR"/owner.mnemonic "$NO_DEPLOY_FILE"-owner.mnemonic
               cp "$STAKE_POOL_DIR"/reward-stake.vkey "$NO_DEPLOY_FILE"-reward-stake.vkey
@@ -332,14 +334,14 @@ in {
             # Generate bulk creds for all pools in the pool names
             (for ((i=0; i < ''${#POOLS[@]}; i++)); do
               cat "$STAKE_POOL_DIR/deploy/''${POOLS[$i]}"{.opcert,-vrf.skey,-kes.skey} | jq -s
-            done) | jq -s > "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
+            done) | jq -s > "$NO_DEPLOY_DIR/bulk.creds.pools.json"
 
             # Adjust secrets permissions and clean up
-            chmod 0700 "$STAKE_POOL_DIR" "$STAKE_POOL_DIR"/{deploy,no-deploy}
-            fd --type file . "$STAKE_POOL_DIR"/{deploy,no-deploy} --exec chmod 0600
+            chmod 0700 "$STAKE_POOL_DIR" "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"/
+            fd --type file . "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"/ --exec chmod 0600
             rm "$STAKE_POOL_DIR"/{owner.mnemonic,reward-stake.vkey}
 
-            fd --type file . "$STAKE_POOL_DIR"/ --exec bash -c 'encrypt_check {}'
+            fd --type file . "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR" --exec bash -c 'encrypt_check {}'
           '';
         };
 
@@ -350,6 +352,7 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   [$ERA]
+            #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
             #   $POOL_NAMES
             #   [$POOL_PLEDGE]
@@ -381,6 +384,9 @@ in {
               POOL_PLEDGE="1000000000000"
             fi
 
+            NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"
+            mkdir -p "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"
+
             NUM_POOLS=$((''${#POOLS[@]}))
             WITNESSES=$((NUM_POOLS * 2 + 1))
             CHANGE_ADDRESS=$(
@@ -392,7 +398,7 @@ in {
             for ((i=0; i < NUM_POOLS; i++)); do
               POOL_NAME="''${POOLS[$i]}"
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
-              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
               # Generate stake registration and delegation certificate
               "''${CARDANO_CLI[@]}" stake-address registration-certificate \
@@ -445,7 +451,7 @@ in {
             for ((i=0; i < NUM_POOLS; i++)); do
               POOL_NAME="''${POOLS[$i]}"
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
-              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
               STAKE_POOL_ADDR=$(
                 "''${CARDANO_CLI[@]}" address build \
@@ -492,6 +498,7 @@ in {
             # Inputs:
             #   $CURRENT_KES_PERIOD
             #   [$DEBUG]
+            #   [$NO_DEPLOY_FILE]
             #   $POOL_NAMES
             #   $STAKE_POOL_DIR
             #   [$UNSTABLE]
@@ -511,10 +518,13 @@ in {
               read -r -a POOLS <<< "$POOL_NAMES"
             fi
 
+            NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"
+            mkdir -p "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"
+
             for ((i=0; i < ''${#POOLS[@]}; i++)); do
               POOL_NAME="''${POOLS[$i]}"
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
-              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
               "''${CARDANO_CLI[@]}" node key-gen-KES \
                 --signing-key-file "$DEPLOY_FILE"-kes.skey \
@@ -547,9 +557,9 @@ in {
               (for FILE in "$STAKE_POOL_DIR/deploy/''${POOLS[$i]}"{.opcert,-vrf.skey,-kes.skey}; do
                 cat "$(decrypt_check "$FILE")"
               done) | jq -s
-            done) | jq -s > "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
+            done) | jq -s > "$NO_DEPLOY_DIR/bulk.creds.pools.json"
 
-            encrypt_check "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
+            encrypt_check "$NO_DEPLOY_DIR/bulk.creds.pools.json"
           '';
         };
 
