@@ -300,7 +300,7 @@ in {
 
             # Generate bulk creds for all pools in the pool names
             (for ((i=0; i < ''${#POOLS[@]}; i++)); do
-              cat "$DEPLOY_FILE"{.opcert,-vrf.skey,-kes.skey} | jq -s
+              cat "$STAKE_POOL_DIR/deploy/''${POOLS[$i]}"{.opcert,-vrf.skey,-kes.skey} | jq -s
             done) | jq -s > "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
 
             # Adjust secrets permissions and clean up
@@ -447,49 +447,58 @@ in {
           '';
         };
 
-        packages.job-rotate-kes-pools =
-          writeShellApplication {
-            name = "job-rotate-kes-pools";
-            runtimeInputs = with pkgs; [coreutils jq];
-            text = ''
-              # Inputs:
-              #   $CURRENT_KES_PERIOD
-              #   [$DEBUG]
-              #   $POOL_NAMES
-              #   $STAKE_POOL_DIR
-              #   [$UNSTABLE]
-              #   [$USE_SHELL_BINS]
+        packages.job-rotate-kes-pools = writeShellApplication {
+          name = "job-rotate-kes-pools";
+          runtimeInputs = with pkgs; [coreutils jq];
+          text = ''
+            # Inputs:
+            #   $CURRENT_KES_PERIOD
+            #   [$DEBUG]
+            #   $POOL_NAMES
+            #   $STAKE_POOL_DIR
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
 
-              [ -n "''${DEBUG:-}" ] && set -x
+            [ -n "''${DEBUG:-}" ] && set -x
 
-              ${selectCardanoCli}
+            ${selectCardanoCli}
 
-              if [ -z "''${POOL_NAMES:-}" ]; then
-                echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
-                exit 1
-              elif [ -n "''${POOL_NAMES:-}" ]; then
-                read -r -a POOLS <<< "$POOL_NAMES"
-              fi
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            elif [ -n "''${POOL_NAMES:-}" ]; then
+              read -r -a POOLS <<< "$POOL_NAMES"
+            fi
 
-              for ((i=0; i < ''${#POOLS[@]}; i++)); do
-                POOL_NAME="''${POOLS[$i]}"
-                DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
-                NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
+            for ((i=0; i < ''${#POOLS[@]}; i++)); do
+              POOL_NAME="''${POOLS[$i]}"
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$STAKE_POOL_DIR/no-deploy/$POOL_NAME"
 
-                "$CARDANO_CLI" node key-gen-KES \
-                  --signing-key-file "$DEPLOY_FILE"-kes.skey \
-                  --verification-key-file "$DEPLOY_FILE"-kes.vkey
+              "$CARDANO_CLI" node key-gen-KES \
+                --signing-key-file "$DEPLOY_FILE"-kes.skey \
+                --verification-key-file "$DEPLOY_FILE"-kes.vkey
 
-                "$CARDANO_CLI" node issue-op-cert \
-                  --kes-verification-key-file "$DEPLOY_FILE"-kes.vkey \
-                  --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
-                  --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter \
-                  --kes-period "$CURRENT_KES_PERIOD" \
-                  --out-file "$DEPLOY_FILE".opcert
-              done
-            '';
-          }
-          // {after = ["gen-custom-node-config"];};
+              "$CARDANO_CLI" node issue-op-cert \
+                --kes-verification-key-file "$DEPLOY_FILE"-kes.vkey \
+                --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
+                --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter \
+                --kes-period "$CURRENT_KES_PERIOD" \
+                --out-file "$DEPLOY_FILE".opcert
+
+              # Generate bulk creds file for single pool use
+              cat "$DEPLOY_FILE"{.opcert,-vrf.skey,-kes.skey} \
+                | jq -s \
+                | jq -s \
+                > "$DEPLOY_FILE"-bulk.creds
+            done
+
+            # Generate bulk creds for all pools in the pool names
+            (for ((i=0; i < ''${#POOLS[@]}; i++)); do
+              cat "$STAKE_POOL_DIR/deploy/''${POOLS[$i]}"{.opcert,-vrf.skey,-kes.skey} | jq -s
+            done) | jq -s > "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
+          '';
+        };
 
         packages.job-move-genesis-utxo = writeShellApplication {
           name = "job-move-genesis-utxo";
