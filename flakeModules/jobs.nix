@@ -12,6 +12,7 @@ in {
       inherit (cfgPkgs) cardano-address;
 
       cfgPkgs = config.cardano-parts.pkgs;
+      stdPkgs = with pkgs; [age coreutils fd jq moreutils sops];
 
       secretsFns = ''
         function decrypt_check {
@@ -23,6 +24,16 @@ in {
             echo -n "$FILE"
           fi
         }
+
+        function encrypt_check {
+          local FILE="$1"
+
+          if [ "''${USE_ENCRYPTION:-false}" = "true" ]; then
+            sops --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
+          fi
+        }
+
+        export -f encrypt_check
       '';
 
       selectCardanoCli = ''
@@ -51,7 +62,6 @@ in {
         #   $TESTNET_MAGIC
         #   [$UNSTABLE]
         #   [$USE_DECRYPTION]
-        #   [$USE_ENCRYPTION]
         #   [$USE_SHELL_BINS]
 
         CHANGE_ADDRESS=$(
@@ -119,7 +129,7 @@ in {
       config = {
         packages.job-gen-custom-node-config = writeShellApplication {
           name = "job-gen-custom-node-config";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -211,12 +221,14 @@ in {
               mv utxo-keys envs/"$ENV"/
               mv node-config.json ./*-genesis.json topology.json rundir/
             popd &> /dev/null
+
+            fd --type file . "$GENESIS_DIR/envs/$ENV"/ --exec bash -c 'encrypt_check {}'
           '';
         };
 
         packages.job-create-stake-pool-keys = writeShellApplication {
           name = "job-create-stake-pools";
-          runtimeInputs = with pkgs; [cardano-address coreutils jq];
+          runtimeInputs = stdPkgs ++ [cardano-address];
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -324,14 +336,16 @@ in {
 
             # Adjust secrets permissions and clean up
             chmod 0700 "$STAKE_POOL_DIR" "$STAKE_POOL_DIR"/{deploy,no-deploy}
-            fd -t f . "$STAKE_POOL_DIR"/{deploy,no-deploy} -x chmod 0600
+            fd --type file . "$STAKE_POOL_DIR"/{deploy,no-deploy} --exec chmod 0600
             rm "$STAKE_POOL_DIR"/{owner.mnemonic,reward-stake.vkey}
+
+            fd --type file . "$STAKE_POOL_DIR"/ --exec bash -c 'encrypt_check {}'
           '';
         };
 
         packages.job-register-stake-pools = writeShellApplication {
           name = "job-register-stake-pools";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -412,6 +426,7 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file "$NO_DEPLOY_FILE"-reward-payment-stake.addr
             chmod 0600 "$NO_DEPLOY_FILE"-reward-payment-stake.addr
+            encrypt_check "$NO_DEPLOY_FILE"-reward-payment-stake.addr
 
             # Generate transaction
             TXIN=$(
@@ -440,6 +455,7 @@ in {
                 | tee "$NO_DEPLOY_FILE"-owner-payment-stake.addr
               )
               chmod 0600 "$NO_DEPLOY_FILE"-owner-payment-stake.addr
+              encrypt_check "$NO_DEPLOY_FILE"-owner-payment-stake.addr
 
               BUILD_TX_ARGS+=("--tx-out" "$STAKE_POOL_ADDR+$POOL_PLEDGE")
               BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-owner-registration.cert")
@@ -471,7 +487,7 @@ in {
 
         packages.job-rotate-kes-pools = writeShellApplication {
           name = "job-rotate-kes-pools";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   $CURRENT_KES_PERIOD
@@ -511,18 +527,20 @@ in {
                 --kes-period "$CURRENT_KES_PERIOD" \
                 --out-file "$DEPLOY_FILE".opcert
 
+              encrypt_check "$DEPLOY_FILE"-kes.skey
+              encrypt_check "$DEPLOY_FILE"-kes.vkey
+              encrypt_check "$DEPLOY_FILE".opcert
+
               # Generate bulk creds file for single pool use
-              (
-                cat "$DEPLOY_FILE".opcert
-                cat "$(decrypt_check "$DEPLOY_FILE"-vrf.skey)"
-                cat "$DEPLOY_FILE"-kes.skey
-              ) \
+              (for FILE in "$DEPLOY_FILE"{.opcert,-vrf.skey,-kes.skey}; do
+                cat "$(decrypt_check "$FILE")"
+              done) \
                 | jq -s \
                 | jq -s \
                 > "$DEPLOY_FILE"-bulk.creds
-            done
 
-            # TODO: Encrypt files here so next step assumes all are encrypted.
+              encrypt_check "$DEPLOY_FILE"-bulk.creds
+            done
 
             # Generate bulk creds for all pools in the pool names
             (for ((i=0; i < ''${#POOLS[@]}; i++)); do
@@ -530,12 +548,14 @@ in {
                 cat "$(decrypt_check "$FILE")"
               done) | jq -s
             done) | jq -s > "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
+
+            encrypt_check "$STAKE_POOL_DIR/no-deploy/bulk.creds.pools.json"
           '';
         };
 
         packages.job-move-genesis-utxo = writeShellApplication {
           name = "job-move-genesis-utxo";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   $BYRON_SIGNING_KEY
@@ -546,7 +566,6 @@ in {
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -595,7 +614,7 @@ in {
 
         packages.job-update-proposal-generic = writeShellApplication {
           name = "job-update-proposal-generic";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -609,7 +628,6 @@ in {
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -629,7 +647,7 @@ in {
 
         packages.job-update-proposal-d = writeShellApplication {
           name = "job-update-proposal-d";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -642,7 +660,6 @@ in {
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -659,7 +676,7 @@ in {
 
         packages.job-update-proposal-hard-fork = writeShellApplication {
           name = "job-update-proposal-hard-fork";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -672,7 +689,6 @@ in {
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -690,7 +706,7 @@ in {
 
         packages.job-update-proposal-cost-model = writeShellApplication {
           name = "job-update-proposal-cost-model";
-          runtimeInputs = with pkgs; [jq coreutils];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   $COST_MODEL
@@ -720,7 +736,7 @@ in {
 
         packages.job-update-proposal-mainnet-params = writeShellApplication {
           name = "job-update-proposal-mainnet-params";
-          runtimeInputs = with pkgs; [jq coreutils];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -732,7 +748,6 @@ in {
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -752,7 +767,7 @@ in {
 
         packages.job-submit-gov-action = writeShellApplication {
           name = "job-submit-gov-action";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   $ACTION
@@ -765,7 +780,6 @@ in {
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -836,7 +850,7 @@ in {
 
         packages.job-submit-vote = writeShellApplication {
           name = "job-submit-vote";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   $ACTION_TX_ID
@@ -851,7 +865,6 @@ in {
             #   VOTE_ARGS[]
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -931,7 +944,7 @@ in {
 
         packages.job-register-drep = writeShellApplication {
           name = "job-register-drep";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -955,36 +968,37 @@ in {
             mkdir -p "$DREP_DIR"
 
             "''${CARDANO_CLI[@]}" address key-gen \
-              --verification-key-file "$(decrypt_check "$DREP_DIR"/pay-"$INDEX".vkey)" \
-              --signing-key-file "$(decrypt_check "$DREP_DIR"/pay-"$INDEX".skey)"
+              --verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
+              --signing-key-file "$DREP_DIR"/pay-"$INDEX".skey
 
             "''${CARDANO_CLI[@]}" stake-address key-gen \
-              --verification-key-file "$(decrypt_check "$DREP_DIR"/stake-"$INDEX".vkey)" \
-              --signing-key-file "$(decrypt_check "$DREP_DIR"/stake-"$INDEX".skey)"
+              --verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+              --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
 
             "''${CARDANO_CLI[@]}" conway governance drep key-gen \
-              --verification-key-file "$(decrypt_check "$DREP_DIR"/drep-"$INDEX".vkey)" \
-              --signing-key-file "$(decrypt_check "$DREP_DIR"/drep-"$INDEX".skey)"
+              --verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
+              --signing-key-file "$DREP_DIR"/drep-"$INDEX".skey
 
             DREP_ADDRESS=$(
               "''${CARDANO_CLI[@]}" address build \
                 --testnet-magic "$TESTNET_MAGIC" \
-                --payment-verification-key-file "$(decrypt_check "$DREP_DIR"/pay-"$INDEX".vkey)" \
-                --stake-verification-key-file "$(decrypt_check "$DREP_DIR"/stake-"$INDEX".vkey)"
+                --payment-verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
+                --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+                | tee "$DREP_DIR"/drep-"$INDEX".addr
             )
 
             "''${CARDANO_CLI[@]}" stake-address registration-certificate \
-              --stake-verification-key-file "$(decrypt_check "$DREP_DIR"/stake-"$INDEX".vkey)" \
+              --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --out-file drep-"$INDEX"-stake.cert
 
             "''${CARDANO_CLI[@]}" conway governance drep registration-certificate \
-              --drep-verification-key-file "$(decrypt_check "$DREP_DIR"/drep-"$INDEX".vkey)" \
+              --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --key-reg-deposit-amt 0 \
               --out-file drep-"$INDEX"-drep.cert
 
             "''${CARDANO_CLI[@]}" conway governance drep delegation-certificate \
-              --stake-verification-key-file "$(decrypt_check "$DREP_DIR"/stake-"$INDEX".vkey)" \
-              --drep-verification-key-file "$(decrypt_check "$DREP_DIR"/drep-"$INDEX".vkey)" \
+              --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+              --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file drep-"$INDEX"-delegation.cert
 
             WITNESSES=2
@@ -1020,6 +1034,8 @@ in {
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               --signing-key-file "$(decrypt_check "$DREP_DIR"/stake-"$INDEX".skey)"
 
+            fd --type file . "$DREP_DIR"/ --exec bash -c 'encrypt_check {}'
+
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-"$INDEX".txsigned
             fi
@@ -1028,7 +1044,7 @@ in {
 
         packages.job-delegate-drep = writeShellApplication {
           name = "job-delegate-drep";
-          runtimeInputs = with pkgs; [coreutils jq];
+          runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -1040,7 +1056,6 @@ in {
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
-            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
