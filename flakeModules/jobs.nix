@@ -815,7 +815,7 @@ in {
             "''${CARDANO_CLI[@]}" conway governance action "$ACTION" \
               --testnet \
               --stake-verification-key-file "$(decrypt_check "$STAKE_KEY".vkey)" \
-              --constitution "We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional attire" \
+              --constitution "\"We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional attire\"" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
               --out-file "$ACTION".action \
               --proposal-url "https://proposals.sancho.network/1" \
