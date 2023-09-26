@@ -118,6 +118,18 @@
             --vrf-signing-key-file /run/secrets/cardano-node-vrf-signing \
             --current
         '';
+
+        show-pool-id = ''
+          cardano-cli \
+            stake-pool id \
+            --cold-verification-key-file /run/secrets/cardano-node-cold-verification
+        '';
+
+        show-pool-stake-snapshot = ''
+          cardano-cli \
+            query stake-snapshot \
+            --stake-pool-id "$(show-pool-id)"
+        '';
       };
     };
 }
