@@ -71,6 +71,9 @@
       environment.systemPackages = [
         config.cardano-parts.pkgs.bech32
         cardano-node-pkgs.cardano-cli
+        config.cardano-parts.pkgs.db-analyser
+        config.cardano-parts.pkgs.db-truncater
+        config.cardano-parts.pkgs.db-synthesizer
       ];
 
       environment.variables = {
