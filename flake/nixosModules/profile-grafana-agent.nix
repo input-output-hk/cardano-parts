@@ -15,7 +15,9 @@
   }:
     with builtins;
     with lib; let
-      inherit (groupCfg) groupFlake;
+      inherit (config.cardano-parts.perNode.meta) cardanoNodePrometheusExporterPort hostAddr;
+      inherit (groupCfg) groupName groupFlake;
+      inherit (groupCfg.meta) environmentName;
 
       groupCfg = config.cardano-parts.cluster.group;
       groupOutPath = groupFlake.self.outPath;
@@ -208,6 +210,22 @@
               {
                 name = "integrations";
                 remote_write = [metrics-client];
+
+                scrape_configs = [
+                  (mkIf (config.services ? cardano-node && config.services.cardano-node.enable) {
+                    job_name = "integrations/cardano-node";
+                    static_configs = [
+                      {
+                        targets = ["${hostAddr}:${toString cardanoNodePrometheusExporterPort}"];
+                        labels = {
+                          instance = name;
+                          environment = environmentName;
+                          group = groupName;
+                        };
+                      }
+                    ];
+                  })
+                ];
               }
             ];
             global.scrape_interval = "1m";
