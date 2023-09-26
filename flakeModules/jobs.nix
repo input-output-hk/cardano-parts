@@ -231,6 +231,7 @@ in {
           runtimeInputs = stdPkgs ++ [cardano-address];
           text = ''
             # Inputs:
+            #   [$CURRENT_KES_PERIOD]
             #   [$DEBUG]
             #   [$NO_DEPLOY_DIR]
             #   $POOL_NAMES
@@ -318,7 +319,7 @@ in {
 
               # Generate opcert
               "''${CARDANO_CLI[@]}" node issue-op-cert \
-                --kes-period 0 \
+                --kes-period "''${CURRENT_KES_PERIOD:-0}" \
                 --kes-verification-key-file "$DEPLOY_FILE"-kes.vkey \
                 --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter \
                 --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
