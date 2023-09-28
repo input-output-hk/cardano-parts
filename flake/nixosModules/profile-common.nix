@@ -1,4 +1,4 @@
-# nixosModule: module-common
+# nixosModule: profile-common
 #
 # TODO: Move this to a docs generator
 #
@@ -17,7 +17,7 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.module-common = moduleWithSystem ({system}: {
+  flake.nixosModules.profile-common = moduleWithSystem ({system}: {
     config,
     lib,
     ...

@@ -1,4 +1,4 @@
-# nixosModule: module-basic
+# nixosModule: profile-basic
 #
 # TODO: Move this to a docs generator
 #
@@ -11,7 +11,7 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.module-basic = moduleWithSystem ({system}: {
+  flake.nixosModules.profile-basic = moduleWithSystem ({system}: {
     name,
     pkgs,
     ...
@@ -85,7 +85,11 @@
     };
 
     services = {
-      chrony.enable = true;
+      chrony = {
+        enable = true;
+        extraConfig = "rtcsync";
+      };
+
       cron.enable = true;
       fail2ban.enable = true;
       openssh = {

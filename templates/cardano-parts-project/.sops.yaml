@@ -1,0 +1,33 @@
+# Example:
+keys:
+  - &sre $SOPS_AGE_PUBKEY1
+  - &group1-bp-a-1 $SOPS_AGE_PUBKEY2
+creation_rules:
+  # -------------------------------------------------------
+  # General environment secrets are admin only
+  - path_regex: secrets/envs/.*$
+    key_groups:
+    - age:
+      - *sre
+
+  # -------------------------------------------------------
+  # Group no-deploy secrets are admin only
+  - path_regex: secrets/groups/[^/]+/no-deploy/.*$
+    key_groups:
+    - age:
+      - *sre
+
+  # -------------------------------------------------------
+  # Group producer secrets
+  - path_regex: secrets/groups/group1/deploy/.*$
+    key_groups:
+    - age:
+      - *sre
+      - *group1-bp-a-1
+
+  # -------------------------------------------------------
+  # Secrets catch all
+  - path_regex: secrets/.*$
+    key_groups:
+    - age:
+      - *sre

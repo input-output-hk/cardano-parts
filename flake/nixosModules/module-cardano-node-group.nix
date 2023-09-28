@@ -11,9 +11,8 @@
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
 #   * This module assists with group deployments
 #   * The upstream cardano-node nixos service module should still be imported separately
-flake: {
-  flake.nixosModules.module-cardano-node-group = {
-    config,
+{moduleWithSystem, ...}: {
+  flake.nixosModules.module-cardano-node-group = moduleWithSystem ({config, ...}: nixos @ {
     pkgs,
     lib,
     name,
@@ -25,14 +24,14 @@ flake: {
     inherit (types) bool float int;
     inherit (nodeResources) cpuCount memMiB;
 
-    inherit (config.cardano-parts.cluster.group.meta) environmentName;
-    inherit (config.cardano-parts.perNode.lib) cardanoLib;
-    inherit (config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
-    inherit (config.cardano-parts.perNode.pkgs) cardano-node-pkgs;
+    inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
+    inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
+    inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
+    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node-pkgs;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
 
-    cfg = config.services.cardano-node;
+    cfg = nixos.config.services.cardano-node;
   in {
     # Leave the import of the upstream cardano-node service for
     # cardano-parts consuming repos so that service import can be customized.
@@ -41,7 +40,7 @@ flake: {
     # perNode nixos options as this leads to infinite recursion.
     #
     # imports = [
-    #   config.cardano-parts.perNode.pkgs.cardano-node-service;
+    #   nixos.config.cardano-parts.perNode.pkgs.cardano-node-service;
     # ];
 
     options = {
@@ -69,7 +68,14 @@ flake: {
     };
 
     config = {
-      environment.systemPackages = [cardano-node-pkgs.cardano-cli];
+      environment.systemPackages = [
+        config.cardano-parts.pkgs.bech32
+        cardano-node-pkgs.cardano-cli
+        config.cardano-parts.pkgs.db-analyser
+        config.cardano-parts.pkgs.db-truncater
+        config.cardano-parts.pkgs.db-synthesizer
+      ];
+
       environment.variables = {
         CARDANO_NODE_NETWORK_ID = toString protocolMagic;
         CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
@@ -184,5 +190,5 @@ flake: {
         }
       ];
     };
-  };
+  });
 }

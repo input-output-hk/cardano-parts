@@ -91,6 +91,7 @@ in
               default = globalDefault isGlobal {
                 projectRootFile = "flake.nix";
                 programs.alejandra.enable = true;
+                settings.formatter.alejandra.includes = ["*.nix-import"];
               };
             };
 
@@ -243,6 +244,7 @@ in
                     deadnix
                     fd
                     just
+                    moreutils
                     nushell
                     ripgrep
                     statix
@@ -304,6 +306,7 @@ in
                         age
                         awscli2
                         localFlake.inputs.colmena.packages.${system}.colmena
+                        localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
                         rain
                         sops
                         ssh-to-age
