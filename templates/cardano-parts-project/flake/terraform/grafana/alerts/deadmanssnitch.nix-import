@@ -1,0 +1,17 @@
+{
+  namespace="deadmanssnitch";
+  name = "deadmanssnitch";
+  rule = [
+    {
+      alert = "DeadMansSnitch";
+      expr = "vector(1)";
+      labels.severity = "info";
+      annotations = {
+        summary = "DeadMansSnitch Pipeline";
+        description = ''
+          This is a DeadMansSnitch meant to ensure that the entire alerting pipeline is functional, see: [https://deadmanssnitch.com](https://deadmanssnitch.com).
+          This alert should ALWAYS be in alerting state. This enables Deadman's Snitch to report when this monitoring server dies or can otherwise no longer alert.'';
+      };
+    }
+  ];
+}
