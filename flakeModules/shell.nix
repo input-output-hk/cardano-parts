@@ -305,6 +305,7 @@ in
                         age
                         awscli2
                         localFlake.inputs.colmena.packages.${system}.colmena
+                        localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
                         rain
                         sops
                         ssh-to-age

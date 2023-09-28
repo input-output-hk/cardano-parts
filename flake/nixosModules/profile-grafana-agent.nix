@@ -178,7 +178,6 @@
                       "node_time_zone_offset_seconds"
                       "node_uname_info"
                       "node_vmstat_(pgmajfault|pgfault|pgpgin|pgpgout|pswpin|pswpout|oom_kill)"
-                      "process_(max_fds|open_fds)"
                     ]
                     + "$";
                 }

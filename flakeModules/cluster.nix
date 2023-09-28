@@ -10,6 +10,7 @@
 #   flake.cardano-parts.cluster.infra.aws.profile
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
+#   flake.cardano-parts.cluster.infra.grafana.stackName
 #   flake.cardano-parts.cluster.group.<default|name>.groupBlockProducerSubstring
 #   flake.cardano-parts.cluster.group.<default|name>.groupFlake
 #   flake.cardano-parts.cluster.group.<default|name>.groupName
@@ -82,6 +83,12 @@ flake @ {
         description = mdDoc "Cardano-parts cluster infra aws submodule.";
         default = {};
       };
+
+      grafana = mkOption {
+        type = grafanaSubmodule;
+        description = mdDoc "Cardano-parts cluster infra grafana submodule.";
+        default = {};
+      };
     };
   };
 
@@ -136,6 +143,16 @@ flake @ {
         type = optionCheck "string" "infra.aws.bucketName" "str";
         description = mdDoc "The cardano-parts cluster infra AWS S3 bucket to use for Terraform state.";
         default = "${cfgAws.profile}-terraform";
+      };
+    };
+  };
+
+  grafanaSubmodule = submodule {
+    options = {
+      stackName = mkOption {
+        type = optionCheck "string" "infra.grafana.stackName" "str";
+        description = mdDoc "The cardano-parts cluster infra grafana cloud stack name.";
+        default = null;
       };
     };
   };
