@@ -9,6 +9,7 @@
   };
 
   outputs = inputs: let
+    inherit (inputs.nixpkgs.lib) mkOption types;
     inherit (inputs.cardano-parts.lib) recursiveImports;
   in
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
@@ -25,6 +26,7 @@
           inputs.cardano-parts.flakeModules.lib
           inputs.cardano-parts.flakeModules.pkgs
           inputs.cardano-parts.flakeModules.shell
+          {options.flake.terraform = mkOption {type = types.attrs;};}
         ];
       systems = ["x86_64-linux"];
       debug = true;
