@@ -24,3 +24,10 @@ creation_rules:
     - age:
       - *sre
       - *group1-bp-a-1
+
+  # -------------------------------------------------------
+  # Secrets catch all
+  - path_regex: secrets/.*$
+    key_groups:
+    - age:
+      - *sre
