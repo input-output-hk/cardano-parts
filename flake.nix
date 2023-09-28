@@ -12,7 +12,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
     nix.url = "github:nixos/nix/2.17-maintenance";
     sops-nix.url = "github:Mic92/sops-nix";
-    terraform-providers.url = "github:johnalotoski/nixpkgs-terraform-providers-bin/add-mimir";
+    terraform-providers.url = "github:nix-community/nixpkgs-terraform-providers-bin";
     terranix.url = "github:terranix/terranix";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";

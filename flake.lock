@@ -1632,16 +1632,15 @@
         "nixpkgs": "nixpkgs_11"
       },
       "locked": {
-        "lastModified": 1695775982,
-        "narHash": "sha256-uRurW6VYOcCqh4UFe2d/JdeVfOWsobdYTp9wv1NqSrY=",
-        "owner": "johnalotoski",
+        "lastModified": 1695893013,
+        "narHash": "sha256-+5EuXNXwxpTiOEGCbZWtZCU75WcVwnS89heLa5xJ2K0=",
+        "owner": "nix-community",
         "repo": "nixpkgs-terraform-providers-bin",
-        "rev": "0a76041b38ce5df5b99c91a0a6074322a196670e",
+        "rev": "6c6865ae6f9bff7aaa4e86c875f520f2aca65c0d",
         "type": "github"
       },
       "original": {
-        "owner": "johnalotoski",
-        "ref": "add-mimir",
+        "owner": "nix-community",
         "repo": "nixpkgs-terraform-providers-bin",
         "type": "github"
       }
