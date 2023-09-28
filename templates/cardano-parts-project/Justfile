@@ -32,6 +32,7 @@ cf STACKNAME:
 save-bootstrap-ssh-key:
   #!/usr/bin/env nu
   print "Retrieving ssh key from terraform..."
+  terraform workspace select -or-create cluster
   let tf = (terraform show -json | from json)
   let key = ($tf.values.root_module.resources | where type == tls_private_key and name == bootstrap)
   $key.values.private_key_openssh | save .ssh_key
@@ -50,6 +51,12 @@ show-nameservers:
   print "Nameservers for the following hosted zone need to be added to the NS record of the delegating authority"
   print $"Nameservers for domain: ($domain) \(hosted zone id: ($id)) are:"
   print ($ns | to text)
+
+sops-encrypt-binary FILE:
+  sops --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
+
+sops-decrypt-binary FILE:
+  sops --input-type binary --output-type binary --decrypt {{FILE}}
 
 ssh HOSTNAME *ARGS:
   #!/usr/bin/env nu
@@ -73,35 +80,37 @@ ssh-bootstrap HOSTNAME *ARGS:
 
   ssh -F .ssh_config -i .ssh_key {{HOSTNAME}} {{ARGS}}
 
-ssh-for-each *ARGS:
+ssh-for-all *ARGS:
   #!/usr/bin/env nu
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
   $nodes | par-each {|node| just ssh -q $node {{ARGS}}}
 
+ssh-for-each HOSTNAMES *ARGS:
+  colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
+
 terraform *ARGS:
-  rm --force cluster.tf.json
-  nix build .#terraform.cluster --out-link cluster.tf.json
-  terraform {{ARGS}}
+  #!/usr/bin/env bash
+  IGREEN='\033[1;92m'
+  IRED='\033[1;91m'
+  NC='\033[0m'
+  SOPS=("sops" "--input-type" "binary" "--output-type" "binary" "--decrypt")
 
-wg-genkey KMS HOSTNAME:
-  #!/usr/bin/env nu
-  let private = 'secrets/wireguard_{{HOSTNAME}}.enc'
-  let public = 'secrets/wireguard_{{HOSTNAME}}.txt'
+  read -r -a ARGS <<< "{{ARGS}}"
+  if [[ ${ARGS[0]} =~ cluster|grafana ]]; then
+    WORKSPACE="${ARGS[0]}"
+    ARGS=("${ARGS[@]:1}")
+  else
+    WORKSPACE="cluster"
+  fi
 
-  if not ($private | path exists) {
-    print $"Generating ($private) ..."
-    wg genkey | sops --kms "{{KMS}}" -e /dev/stdin | save $private
-    git add $private
-  }
+  unset VAR_FILE
+  if [ -s "secrets/tf/$WORKSPACE.tfvars" ]; then
+    VAR_FILE="secrets/tf/$WORKSPACE.tfvars"
+  fi
 
-  if not ($public | path exists) {
-    print $"Deriving ($public) ..."
-    sops -d $private | wg pubkey | save $public
-    git add $public
-  }
+  echo -e "Running terraform in the ${IGREEN}$WORKSPACE${NC} workspace..."
+  rm --force terraform.tf.json
+  nix build ".#terraform.$WORKSPACE" --out-link terraform.tf.json
 
-wg-genkeys:
-  #!/usr/bin/env nu
-  let kms = (nix eval --raw '.#cardano-parts.cluster.infra.aws.kms')
-  let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
-  for node in $nodes { just wg-genkey $kms $node }
+  terraform workspace select -or-create "$WORKSPACE"
+  terraform ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
