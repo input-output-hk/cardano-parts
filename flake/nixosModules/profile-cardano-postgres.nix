@@ -19,7 +19,7 @@
   }:
     with builtins;
     with lib; let
-      inherit (types) bool ints nullOr str;
+      inherit (types) bool float ints nullOr str;
       inherit (nodeResources) cpuCount memMiB;
 
       connScale = 1.0 * 20 / cfg.maxConnections;
@@ -62,8 +62,8 @@
 
           ramAvailableMiB = mkOption {
             description = "The default RAM available for postgresql on the machine in MiB.";
-            type = ints.positive;
-            default = roundFloat (memMiB * 0.70);
+            type = float;
+            default = memMiB * 0.70;
           };
 
           socketPath = mkOption {

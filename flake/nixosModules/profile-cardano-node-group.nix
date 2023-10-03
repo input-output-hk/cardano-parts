@@ -4,7 +4,7 @@
 #
 # Attributes available on nixos module import:
 #   config.cardano-node.shareIpv6Address
-#   config.cardano-node.totalMaxHeapSizeMbytes
+#   config.cardano-node.totalMaxHeapSizeMiB
 #   config.cardano-node.totalCpuCores
 #
 # Tips:
@@ -45,7 +45,7 @@
 
     options = {
       services.cardano-node = {
-        totalMaxHeapSizeMbytes = mkOption {
+        totalMaxHeapSizeMiB = mkOption {
           type = float;
           default = memMiB * 0.790;
         };
@@ -143,7 +143,7 @@
           serviceConfig = {
             # Allow time to uncompress when restoring db
             TimeoutStartSec = "1h";
-            MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMbytes / cfg.instances)}M";
+            MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
             LimitNOFILE = "65535";
           };
         };
@@ -154,7 +154,7 @@
           "-A16m"
           "-qg"
           "-qb"
-          "-M${toString (cfg.totalMaxHeapSizeMbytes / cfg.instances)}M"
+          "-M${toString (cfg.totalMaxHeapSizeMiB / cfg.instances)}M"
         ];
 
         systemdSocketActivation = false;

@@ -8,10 +8,15 @@
 #   config.cardano-parts.perNode.lib.topologyLib
 #   config.cardano-parts.perNode.meta.cardanoNodePort
 #   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
+#   config.cardano-parts.perNode.meta.cardano-db-sync-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.hostAddr
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.cardano-cli
+#   config.cardano-parts.perNode.pkgs.cardano-db-sync
+#   config.cardano-parts.perNode.pkgs.cardano-db-sync-pkgs
+#   config.cardano-parts.perNode.pkgs.cardano-db-tool
+#   config.cardano-parts.perNode.pkgs.cardano-faucet
 #   config.cardano-parts.perNode.pkgs.cardano-node
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
@@ -123,6 +128,12 @@ flake @ {moduleWithSystem, ...}: {
           default = cfg.group.meta.cardanoNodePrometheusExporterPort;
         };
 
+        cardano-db-sync-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-db-sync-service import path string.";
+          default = cfg.group.meta.cardano-db-sync-service;
+        };
+
         cardano-node-service = mkOption {
           type = str;
           description = mdDoc "The cardano-node-service import path string.";
@@ -146,8 +157,12 @@ flake @ {moduleWithSystem, ...}: {
     pkgsSubmodule = submodule {
       options = foldl' recursiveUpdate {} [
         (mkPkgOpt "cardano-cli" (cfg.group.pkgs.cardano-cli system))
+        (mkPkgOpt "cardano-db-sync" (cfg.group.pkgs.cardano-db-sync system))
+        (mkPkgOpt "cardano-db-tool" (cfg.group.pkgs.cardano-db-tool system))
+        # (mkPkgOpt "cardano-faucet" (cfg.group.pkgs.cardano-faucet system))
         (mkPkgOpt "cardano-node" (cfg.group.pkgs.cardano-node system))
         (mkPkgOpt "cardano-submit-api" (cfg.group.pkgs.cardano-submit-api system))
+        (mkSpecialOpt "cardano-db-sync-pkgs" (lib.types.attrs) (cfg.group.pkgs.cardano-db-sync-pkgs system))
         (mkSpecialOpt "cardano-node-pkgs" (attrsOf anything) (cfg.group.pkgs.cardano-node-pkgs system))
       ];
     };

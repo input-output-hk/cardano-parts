@@ -21,10 +21,15 @@
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePrometheusExporterPort
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-db-sync-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.domain
 #   flake.cardano-parts.cluster.group.<default|name>.meta.environmentName
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-cli
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-db-sync
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-db-sync-pkgs
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-db-tool
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-faucet
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node-pkgs
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-submit-api
@@ -278,6 +283,12 @@ flake @ {
         default = 12798;
       };
 
+      cardano-db-sync-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
+        default = cfg.pkgs.special.cardano-db-sync-service;
+      };
+
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
@@ -304,6 +315,34 @@ flake @ {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default cardano-cli package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli);
+      };
+
+      cardano-db-sync = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-db-sync package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-sync);
+      };
+
+      cardano-db-sync-pkgs = mkOption {
+        type = functionTo (lib.types.attrs);
+        description = mdDoc ''
+          Cardano-parts cluster group default cardano-db-sync-pkgs.
+
+          The definition must be a function of system.
+        '';
+        default = cfg.pkgs.special.cardano-db-sync-pkgs;
+      };
+
+      cardano-db-tool = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-db-tool package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-tool);
+      };
+
+      cardano-faucet = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-faucet package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-faucet);
       };
 
       cardano-node = mkOption {
