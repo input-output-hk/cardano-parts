@@ -19,6 +19,7 @@
 #   flake.cardano-parts.cluster.group.<default|name>.groupRelaySubstring
 #   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoDbSyncPrometheusExporterPort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePrometheusExporterPort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-db-sync-service
@@ -271,6 +272,12 @@ flake @ {
 
   metaSubmodule = submodule {
     options = {
+      cardanoDbSyncPrometheusExporterPort = mkOption {
+        type = port;
+        description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
+        default = 8080;
+      };
+
       cardanoNodePort = mkOption {
         type = port;
         description = mdDoc "Cardano-parts cluster group cardanoNodePort.";
@@ -324,7 +331,7 @@ flake @ {
       };
 
       cardano-db-sync-pkgs = mkOption {
-        type = functionTo (lib.types.attrs);
+        type = functionTo (attrsOf anything);
         description = mdDoc ''
           Cardano-parts cluster group default cardano-db-sync-pkgs.
 

@@ -57,6 +57,7 @@
       glances
       helix
       htop
+      icdiff
       iptables
       jq
       lsof

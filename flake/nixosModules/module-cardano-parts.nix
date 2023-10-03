@@ -6,6 +6,7 @@
 #   config.cardano-parts.cluster.group.<...>                             # Inherited from flakeModule cluster.group assignment
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.topologyLib
+#   config.cardano-parts.perNode.meta.cardanoDbSyncPrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardanoNodePort
 #   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardano-db-sync-service
@@ -116,6 +117,12 @@ flake @ {moduleWithSystem, ...}: {
 
     metaSubmodule = submodule {
       options = {
+        cardanoDbSyncPrometheusExporterPort = mkOption {
+          type = port;
+          description = mdDoc "The port to associate with the nixos cardano-db-sync prometheus exporter.";
+          default = cfg.group.meta.cardanoDbSyncPrometheusExporterPort;
+        };
+
         cardanoNodePort = mkOption {
           type = port;
           description = mdDoc "The port to associate with the nixos cardano-node.";
@@ -162,7 +169,7 @@ flake @ {moduleWithSystem, ...}: {
         # (mkPkgOpt "cardano-faucet" (cfg.group.pkgs.cardano-faucet system))
         (mkPkgOpt "cardano-node" (cfg.group.pkgs.cardano-node system))
         (mkPkgOpt "cardano-submit-api" (cfg.group.pkgs.cardano-submit-api system))
-        (mkSpecialOpt "cardano-db-sync-pkgs" (lib.types.attrs) (cfg.group.pkgs.cardano-db-sync-pkgs system))
+        (mkSpecialOpt "cardano-db-sync-pkgs" lib.types.attrs (cfg.group.pkgs.cardano-db-sync-pkgs system))
         (mkSpecialOpt "cardano-node-pkgs" (attrsOf anything) (cfg.group.pkgs.cardano-node-pkgs system))
       ];
     };
