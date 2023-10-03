@@ -31,7 +31,7 @@ in {
         config.flake.cardano-parts.cluster.group.default.meta.cardano-node-service
 
         # Config for cardano-node group deployments
-        inputs.cardano-parts.nixosModules.module-cardano-node-group
+        inputs.cardano-parts.nixosModules.profile-cardano-node-group
 
         # Default group deployment topology
         topoSimple

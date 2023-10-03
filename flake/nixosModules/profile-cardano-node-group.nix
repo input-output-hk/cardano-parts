@@ -1,4 +1,4 @@
-# nixosModule: module-cardano-node-group
+# nixosModule: profile-cardano-node-group
 #
 # TODO: Move this to a docs generator
 #
@@ -12,7 +12,7 @@
 #   * This module assists with group deployments
 #   * The upstream cardano-node nixos service module should still be imported separately
 {moduleWithSystem, ...}: {
-  flake.nixosModules.module-cardano-node-group = moduleWithSystem ({config, ...}: nixos @ {
+  flake.nixosModules.profile-cardano-node-group = moduleWithSystem ({config, ...}: nixos @ {
     pkgs,
     lib,
     name,
@@ -86,8 +86,6 @@
       # networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
 
       services.cardano-node = {
-        inherit hostAddr;
-
         enable = true;
         environment = environmentName;
 
@@ -109,6 +107,7 @@
           else null
         );
 
+        hostAddr = mkDefault hostAddr;
         ipv6HostAddr = mkIf (cfg.instances > 1) (
           if cfg.shareIpv6Address
           then "::1"
@@ -171,6 +170,17 @@
             tar xzf db-restore.tar.gz
             rm db-restore.tar.gz
           fi
+        '';
+
+        postStart = ''
+          while true; do
+            # Allow other local services in the cardano-node group to use cardano-node socket
+            if [ -S ${nixos.config.services.cardano-node.socketPath 0} ]; then
+              chmod g+w ${nixos.config.services.cardano-node.socketPath 0}
+              exit 0
+            fi
+            sleep 5
+          done
         '';
 
         serviceConfig = {
