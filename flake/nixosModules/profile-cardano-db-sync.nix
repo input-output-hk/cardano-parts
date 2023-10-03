@@ -30,7 +30,7 @@
 
       groupCfg = nixos.config.cardano-parts.cluster.group;
       nodeCfg = nixos.config.services.cardano-node;
-      perNodeCfg = nixos.config.cardano-parts.cluster.perNode;
+      perNodeCfg = nixos.config.cardano-parts.perNode;
 
       # Required since db-sync still requires legacy byron application parameters as of 13.1.1.2.
       # Issue: https://github.com/input-output-hk/cardano-db-sync/issues/1473

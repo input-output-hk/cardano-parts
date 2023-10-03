@@ -15,7 +15,7 @@
   }:
     with builtins;
     with lib; let
-      inherit (config.cardano-parts.perNode.meta) cardanoNodePrometheusExporterPort hostAddr;
+      inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
 
@@ -210,17 +210,29 @@
                 name = "integrations";
                 remote_write = [metrics-client];
 
-                scrape_configs = [
+                scrape_configs = let
+                  labels = {
+                    instance = name;
+                    environment = environmentName;
+                    group = groupName;
+                  };
+                in [
+                  (mkIf (config.services ? cardano-db-sync && config.services.cardano-db-sync.enable) {
+                    job_name = "integrations/cardano-db-sync";
+                    metrics_path = "/";
+                    static_configs = [
+                      {
+                        inherit labels;
+                        targets = ["${hostAddr}:${toString cardanoDbSyncPrometheusExporterPort}"];
+                      }
+                    ];
+                  })
                   (mkIf (config.services ? cardano-node && config.services.cardano-node.enable) {
                     job_name = "integrations/cardano-node";
                     static_configs = [
                       {
+                        inherit labels;
                         targets = ["${hostAddr}:${toString cardanoNodePrometheusExporterPort}"];
-                        labels = {
-                          instance = name;
-                          environment = environmentName;
-                          group = groupName;
-                        };
                       }
                     ];
                   })
