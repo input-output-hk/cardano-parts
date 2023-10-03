@@ -25,24 +25,24 @@
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Cardano related inputs required for service config
-    cardano-cli-ng-service = {
-      url = "github:input-output-hk/cardano-cli/cardano-cli-8.5.0.0-nix";
+    cardano-db-sync-service = {
+      url = "github:input-output-hk/cardano-db-sync/13.1.1.3";
       flake = false;
     };
 
-    cardano-db-sync-service = {
+    cardano-db-sync-schema = {
       url = "github:input-output-hk/cardano-db-sync/13.1.1.3";
+      flake = false;
+    };
+
+    cardano-db-sync-schema-ng = {
+      url = "github:input-output-hk/cardano-db-sync/sancho-1-1-0";
       flake = false;
     };
 
     # TODO: No faucet nixos service yet
     cardano-faucet-service = {
       url = "github:input-output-hk/cardano-faucet";
-      flake = false;
-    };
-
-    cardano-node-ng-service = {
-      url = "github:input-output-hk/cardano-node/8.2.1-pre";
       flake = false;
     };
 

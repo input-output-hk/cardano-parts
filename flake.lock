@@ -207,20 +207,37 @@
         "type": "github"
       }
     },
-    "cardano-cli-ng-service": {
+    "cardano-db-sync-schema": {
       "flake": false,
       "locked": {
-        "lastModified": 1691168478,
-        "narHash": "sha256-JurqewSSHOuNzobzUxbfNDhKnSN9BK31y39pQM+H7+M=",
+        "lastModified": 1688568916,
+        "narHash": "sha256-XTGTi3PzCcbLL+63JSXTe7mQmGKB0YgEoW1VpqdX2d0=",
         "owner": "input-output-hk",
-        "repo": "cardano-cli",
-        "rev": "aebdcce52df97072c54858a99a287bb4a2f9acfe",
+        "repo": "cardano-db-sync",
+        "rev": "6e69a80797f2d68423b25ca7787e81533b367e42",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "cardano-cli-8.5.0.0-nix",
-        "repo": "cardano-cli",
+        "ref": "13.1.1.3",
+        "repo": "cardano-db-sync",
+        "type": "github"
+      }
+    },
+    "cardano-db-sync-schema-ng": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1694078776,
+        "narHash": "sha256-QBnUDobTwWQmooCNr1WcaAzRbAKokon8lvAN6VQ1u34=",
+        "owner": "input-output-hk",
+        "repo": "cardano-db-sync",
+        "rev": "b44eb735fe64fe4e8079935df722d0a32a41c2a4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "sancho-1-1-0",
+        "repo": "cardano-db-sync",
         "type": "github"
       }
     },
@@ -254,23 +271,6 @@
       "original": {
         "owner": "input-output-hk",
         "repo": "cardano-faucet",
-        "type": "github"
-      }
-    },
-    "cardano-node-ng-service": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1691329439,
-        "narHash": "sha256-CPB2O5/QeQrV8EQQwEICTJQE1cp3KeUEh43ZICbE338=",
-        "owner": "input-output-hk",
-        "repo": "cardano-node",
-        "rev": "a29ee68ba2c850cd50be39a3105ef191cfbc41d5",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "ref": "8.2.1-pre",
-        "repo": "cardano-node",
         "type": "github"
       }
     },
@@ -1450,10 +1450,10 @@
       "inputs": {
         "auth-keys-hub": "auth-keys-hub",
         "capkgs": "capkgs",
-        "cardano-cli-ng-service": "cardano-cli-ng-service",
+        "cardano-db-sync-schema": "cardano-db-sync-schema",
+        "cardano-db-sync-schema-ng": "cardano-db-sync-schema-ng",
         "cardano-db-sync-service": "cardano-db-sync-service",
         "cardano-faucet-service": "cardano-faucet-service",
-        "cardano-node-ng-service": "cardano-node-ng-service",
         "cardano-node-service": "cardano-node-service",
         "cardano-wallet-service": "cardano-wallet-service",
         "colmena": "colmena",

@@ -290,17 +290,16 @@ in
             (mkPkg "cardano-address" caPkgs.cardano-addresses-cli-exe-cardano-address-3-12-0-cardano-foundation-cardano-wallet-v2023-07-18)
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-exe-cardano-cli-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
             (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-exe-cardano-cli-8-12-0-0-input-output-hk-cardano-node-8-5-0-pre // {version = "8.12.0.0";}))
-            (mkPkg "cardano-db-sync" caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-db-sync-ng" caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
+            (mkPkg "cardano-db-sync" (caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3 // {exeName = "cardano-db-sync";}))
+            (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-sancho-1-1-0 // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
-            # TODO: Add faucet repo to capkgs
+            (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-sancho-1-1-0)
             # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
-            # (mkPkg "cardano-faucet-ng" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
+            (mkPkg "cardano-faucet-ng" capkgs.packages.cardano-faucet-exe-cardano-faucet-8-3-input-output-hk-cardano-faucet-master)
             (mkPkg "cardano-node" (caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
             (mkPkg "cardano-node-ng" (caPkgs.cardano-node-exe-cardano-node-8-5-0-input-output-hk-cardano-node-8-5-0-pre // {version = "8.5.0-pre";}))
-            # (mkPkg "cardano-smash" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-2-input-output-hk-cardano-node-8-1-2)
-            # (mkPkg "cardano-smash-ng" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-2-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-smash" caPkgs.cardano-smash-server-exe-cardano-smash-server-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
+            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-exe-cardano-smash-server-13-1-1-3-input-output-hk-cardano-db-sync-sancho-1-1-0)
             (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-2-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-7-input-output-hk-cardano-node-8-5-0-pre)
             (mkPkg "cardano-tracer" caPkgs.cardano-tracer-exe-cardano-tracer-0-1-0-input-output-hk-cardano-node-8-1-2)
@@ -359,7 +358,7 @@ in
             cardano-cli-ng = mkWrapper "cardano-cli-ng" cfgPkgs.cardano-cli-ng;
             cardano-db-sync-ng = mkWrapper "cardano-db-sync-ng" cfgPkgs.cardano-db-sync-ng;
             cardano-db-tool-ng = mkWrapper "cardano-db-tool-ng" cfgPkgs.cardano-db-tool-ng;
-            # cardano-faucet-ng-ng = mkWrapper "cardano-faucet-ng" cfgPkgs.cardano-faucet-ng;
+            cardano-faucet-ng = mkWrapper "cardano-faucet-ng" cfgPkgs.cardano-faucet-ng;
             cardano-node-ng = mkWrapper "cardano-node-ng" cfgPkgs.cardano-node-ng;
             cardano-smash-ng = mkWrapper "cardano-smash-ng" cfgPkgs.cardano-smash-ng;
             cardano-submit-api-ng = mkWrapper "cardano-submit-api-ng" cfgPkgs.cardano-submit-api-ng;
