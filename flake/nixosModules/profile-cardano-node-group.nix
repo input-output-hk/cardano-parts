@@ -169,8 +169,8 @@
 
         extraServiceConfig = _: {
           serviceConfig = {
-            # Allow time to uncompress when restoring db
-            TimeoutStartSec = "1h";
+            # Allow time to uncompress when replaying ledger and/or restoring db
+            TimeoutStartSec = "3h";
             MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
             LimitNOFILE = "65535";
           };
