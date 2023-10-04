@@ -27,7 +27,7 @@
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
-    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node-pkgs;
+    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node cardano-node-pkgs;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
@@ -119,6 +119,7 @@
         # that nodeConfig is obtained from perNode cardanoLib iohk-nix pin.
         environments = mkDefault cardanoLib.environments;
 
+        package = mkDefault cardano-node;
         cardanoNodePackages = mkDefault cardano-node-pkgs;
         nodeId = mkDefault nodeId;
 
