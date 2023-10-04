@@ -295,7 +295,7 @@ in
             (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
             (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-sancho-1-1-0)
             # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
-            (mkPkg "cardano-faucet-ng" capkgs.packages.cardano-faucet-exe-cardano-faucet-8-3-input-output-hk-cardano-faucet-master)
+            (mkPkg "cardano-faucet-ng" caPkgs.cardano-faucet-exe-cardano-faucet-8-3-input-output-hk-cardano-faucet-master)
             (mkPkg "cardano-node" (caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
             (mkPkg "cardano-node-ng" (caPkgs.cardano-node-exe-cardano-node-8-5-0-input-output-hk-cardano-node-8-5-0-pre // {version = "8.5.0-pre";}))
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-exe-cardano-smash-server-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
