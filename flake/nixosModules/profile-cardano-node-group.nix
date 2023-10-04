@@ -28,8 +28,34 @@
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
     inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node-pkgs;
+    inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
+
+    mkTopology = env: let
+      legacyTopology = mkEdgeTopology {
+        edgeNodes = [env.relaysNew];
+        valency = 2;
+        edgePort = env.edgePort or 3001;
+      };
+
+      p2pTopology = mkEdgeTopologyP2P {
+        edgeNodes =
+          # Mainnet is only configured for legacy topology in iohk-nix edgeNodes
+          if environmentName == "mainnet"
+          then [
+            {
+              addr = env.relaysNew;
+              port = env.edgePort;
+            }
+          ]
+          else env.edgeNodes;
+        useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
+      };
+    in
+      if cfg.useNewTopology
+      then p2pTopology
+      else legacyTopology;
 
     cfg = nixos.config.services.cardano-node;
   in {
@@ -97,13 +123,14 @@
         nodeId = mkDefault nodeId;
 
         # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
+        useNewTopology = mkDefault true;
         topology = mkDefault (
           if
             (cfg.producers == [])
             && cfg.publicProducers == []
             && cfg.instanceProducers 0 == []
             && cfg.instancePublicProducers 0 == []
-          then cardanoLib.mkTopology cardanoLib.environments.${environmentName}
+          then mkTopology cardanoLib.environments.${environmentName}
           else null
         );
 
