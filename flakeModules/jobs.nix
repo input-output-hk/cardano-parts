@@ -264,6 +264,7 @@ in {
               | cardano-address key child 1852H/1815H/"0"H/2/0 \
               | "''${CARDANO_CLI[@]}" key convert-cardano-address-key --shelley-stake-key \
                 --signing-key-file /dev/stdin --out-file /dev/stdout \
+              | tee "$STAKE_POOL_DIR"/reward-stake.skey \
               | "''${CARDANO_CLI[@]}" key verification-key --signing-key-file /dev/stdin \
                 --verification-key-file /dev/stdout \
               | "''${CARDANO_CLI[@]}" key non-extended-key \
@@ -276,6 +277,7 @@ in {
               NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
               cp "$STAKE_POOL_DIR"/owner.mnemonic "$NO_DEPLOY_FILE"-owner.mnemonic
+              cp "$STAKE_POOL_DIR"/reward-stake.skey "$NO_DEPLOY_FILE"-reward-stake.skey
               cp "$STAKE_POOL_DIR"/reward-stake.vkey "$NO_DEPLOY_FILE"-reward-stake.vkey
 
               # Extract stake skey/vkey needed for pool registration and delegation
@@ -292,11 +294,16 @@ in {
                   --extended-verification-key-file /dev/stdin \
                   --verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey
 
-              # Generate stake address
+              # Generate stake addresses for owner and reward
               "''${CARDANO_CLI[@]}" stake-address build \
                 --stake-verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file "$NO_DEPLOY_FILE"-owner-stake.addr
+
+              "''${CARDANO_CLI[@]}" stake-address build \
+                --stake-verification-key-file "$NO_DEPLOY_FILE"-reward-stake.vkey \
+                --testnet-magic "$TESTNET_MAGIC" \
+                --out-file "$NO_DEPLOY_FILE"-reward-stake.addr
 
               # Generate cold, vrf and kes keys
               "''${CARDANO_CLI[@]}" node key-gen \
@@ -340,7 +347,7 @@ in {
             # Adjust secrets permissions and clean up
             chmod 0700 "$STAKE_POOL_DIR" "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"/
             fd --type file . "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"/ --exec chmod 0600
-            rm "$STAKE_POOL_DIR"/{owner.mnemonic,reward-stake.vkey}
+            rm "$STAKE_POOL_DIR"/{owner.mnemonic,reward-stake.skey,reward-stake.vkey}
 
             fd --type file . "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR" --exec bash -c 'encrypt_check {}'
           '';
@@ -389,7 +396,7 @@ in {
             mkdir -p "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"
 
             NUM_POOLS=$((''${#POOLS[@]}))
-            WITNESSES=$((NUM_POOLS * 2 + 1))
+            WITNESSES=$((NUM_POOLS * 2 + 2))
             CHANGE_ADDRESS=$(
               "''${CARDANO_CLI[@]}" address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
@@ -406,19 +413,17 @@ in {
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-registration.cert
 
-              "''${CARDANO_CLI[@]}" stake-address registration-certificate \
-                --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
-                --out-file "$POOL_NAME"-reward.cert
+              # Include the shared wallet pool rewards registration certificate only once
+              if [ "$i" = "0" ]; then
+                "''${CARDANO_CLI[@]}" stake-address registration-certificate \
+                  --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+                  --out-file "$POOL_NAME"-reward-registration.cert
+              fi
 
               "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
                 --cold-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-cold.vkey)" \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-delegation.cert
-
-              "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
-                --cold-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-cold.vkey)" \
-                --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
-                --out-file "$POOL_NAME"-reward-delegation.cert
 
               # shellcheck disable=SC2031
               "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
@@ -474,11 +479,16 @@ in {
               encrypt_check "$NO_DEPLOY_FILE"-owner-payment-stake.addr
 
               BUILD_TX_ARGS+=("--tx-out" "$STAKE_POOL_ADDR+$POOL_PLEDGE")
-              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-reward-registration.cert")
+
+              # Include the shared wallet pool rewards registration certificate only once
+              if [ "$i" = "0" ]; then
+                BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-reward-registration.cert")
+                SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-reward-stake.skey")")
+              fi
+
               BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-owner-registration.cert")
               BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-registration.cert")
               BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-owner-delegation.cert")
-              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-reward-delegation.cert")
               SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-cold.skey")")
               SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-owner-stake.skey")")
             done
