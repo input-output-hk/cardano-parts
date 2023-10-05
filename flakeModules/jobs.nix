@@ -406,10 +406,19 @@ in {
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-registration.cert
 
+              "''${CARDANO_CLI[@]}" stake-address registration-certificate \
+                --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+                --out-file "$POOL_NAME"-reward.cert
+
               "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
                 --cold-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-cold.vkey)" \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-delegation.cert
+
+              "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
+                --cold-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-cold.vkey)" \
+                --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+                --out-file "$POOL_NAME"-reward-delegation.cert
 
               # shellcheck disable=SC2031
               "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
@@ -465,9 +474,11 @@ in {
               encrypt_check "$NO_DEPLOY_FILE"-owner-payment-stake.addr
 
               BUILD_TX_ARGS+=("--tx-out" "$STAKE_POOL_ADDR+$POOL_PLEDGE")
+              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-reward-registration.cert")
               BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-owner-registration.cert")
               BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-registration.cert")
               BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-owner-delegation.cert")
+              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-reward-delegation.cert")
               SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-cold.skey")")
               SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-owner-stake.skey")")
             done
