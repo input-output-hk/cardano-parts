@@ -309,6 +309,7 @@ in
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
                         rain
                         sops
+                        ssh-config-json
                         ssh-to-age
                         terraform
                         wireguard-tools
