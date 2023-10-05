@@ -243,9 +243,10 @@ in
                   default = with pkgs; [
                     deadnix
                     fd
+                    jq
                     just
                     moreutils
-                    nushell
+                    (nushell.override {additionalFeatures = p: p ++ ["dataframe"];})
                     ripgrep
                     statix
                     xxd
