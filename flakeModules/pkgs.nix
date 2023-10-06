@@ -257,21 +257,64 @@ in
           };
         };
 
-        mkWrapper = name: pkg:
-          (pkgs.writeShellScriptBin name ''
-            exec ${getExe pkg} "$@"
-          '')
-          .overrideAttrs (_: {
-            meta = {
-              description = "Wrapper for ${getName pkg}${
-                if getVersion pkg != ""
-                then " (${getVersion pkg})"
-                else ""
-              }";
-              mainProgram = name;
-            };
-            version = getVersion pkg;
-          });
+        mkWrapper = name: pkg: let
+          pkgName = pkg.meta.mainProgram or (getName pkg);
+        in
+          with pkgs;
+            runCommand name
+            {
+              allowSubstitutes = false;
+              executable = true;
+              preferLocalBuild = true;
+
+              text = ''
+                #!${runtimeShell}
+                exec ${getExe pkg} "$@"
+              '';
+
+              checkPhase = ''
+                ${stdenv.shellDryRun} "$target"
+              '';
+
+              passAsFile = ["text"];
+
+              meta = {
+                description = "Wrapper for ${getName pkg}${
+                  if getVersion pkg != ""
+                  then " (${getVersion pkg})"
+                  else ""
+                }";
+                mainProgram = name;
+              };
+              version = getVersion pkg;
+            }
+            ''
+              target=$out${lib.escapeShellArg "/bin/${name}"}
+              mkdir -p "$(dirname "$target")"
+
+              if [ -e "$textPath" ]; then
+                mv "$textPath" "$target"
+              else
+                echo -n "$text" > "$target"
+              fi
+
+              if [ -n "$executable" ]; then
+                chmod +x "$target"
+              fi
+
+              # Preserve nixos bash and zsh command completions for the wrapped program
+              if [ -d "${pkg}/share" ]; then
+                cp -r "${pkg}/share" $out
+                chmod -R +w $out/share
+                ${getExe fd} --type f . ${pkgName} $out/share --exec bash -c '
+                  ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/ s#${pkgName}#${getExe pkg}#g" {}
+                  ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/! s#${pkgName}#${pkgName}-ng#g" {}
+                  mv {} {}-ng
+                '
+              fi
+
+              eval "$checkPhase"
+            '';
 
         mainPerSystemSubmodule = submodule {
           options = {
