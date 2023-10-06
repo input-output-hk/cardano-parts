@@ -243,7 +243,8 @@ in
                   default = with pkgs; [
                     deadnix
                     fd
-                    jq
+                    # Need jq 1.7 for rc != 0 on empty file or stream key test
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.jq
                     just
                     moreutils
                     (nushell.override {additionalFeatures = p: p ++ ["dataframe"];})

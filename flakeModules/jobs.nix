@@ -29,7 +29,16 @@ in {
           local FILE="$1"
 
           if [ "''${USE_ENCRYPTION:-false}" = "true" ]; then
-            sops --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
+            if ! [ -L "$FILE" ]; then
+              if ! jq -e 'has("sops") and has("data") and (.data | startswith("ENC["))' &> /dev/null < "$FILE"; then
+                echo "encrypting: file $FILE"
+                sops --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
+              else
+                echo "warning: file \"$FILE\" appears to already be encrypted, skipping"
+              fi
+            else
+              echo "warning: file \"$FILE\" appears to to be a symlink, skipping"
+            fi
           fi
         }
 
@@ -308,8 +317,11 @@ in {
               # Generate cold, vrf and kes keys
               "''${CARDANO_CLI[@]}" node key-gen \
                 --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
-                --verification-key-file "$DEPLOY_FILE"-cold.vkey \
+                --verification-key-file "$NO_DEPLOY_FILE"-cold.vkey \
                 --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter
+
+              # Block producers require a copy of the cold.vkey for convienence shell aliases.
+              cp "$NO_DEPLOY_FILE"-cold.vkey "$DEPLOY_FILE"-cold.vkey
 
               "''${CARDANO_CLI[@]}" node key-gen-VRF \
                 --signing-key-file "$DEPLOY_FILE"-vrf.skey \
@@ -804,9 +816,11 @@ in {
             # Inputs:
             #   $ACTION
             #   [$DEBUG]
-            #   [$ERA]
-            #   $GOV_ACTION_DEPOSIT
+            #   [$GOV_ACTION_DEPOSIT]
             #   $PAYMENT_KEY
+            #   $PROPOSAL_ARGS
+            #   [$PROPOSAL_HASH]
+            #   [$PROPOSAL_URL]
             #   $STAKE_KEY
             #   [$SUBMIT_TX]
             #   $TESTNET_MAGIC
@@ -815,7 +829,6 @@ in {
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
-            GOV_ACTION_DEPOSIT=''${GOV_ACTION_DEPOSIT:-"0"}
 
             ${secretsFns}
             ${selectCardanoCli}
@@ -824,9 +837,10 @@ in {
             SIGN_TX_ARGS=()
 
             ACTION=''${ACTION:-"create-constitution"}
-            PROPOSAL_URL=''${PROPOSAL_URL:-"https://proposals.sancho.network/1"}
-            PROPOSAL_HASH=''${PROPOSAL_HASH:-"0000000000000000000000000000000000000000000000000000000000000000"}
+            GOV_ACTION_DEPOSIT=''${GOV_ACTION_DEPOSIT:-"0"}
             PROPOSAL_ARGS=("$@")
+            PROPOSAL_HASH=''${PROPOSAL_HASH:-"0000000000000000000000000000000000000000000000000000000000000000"}
+            PROPOSAL_URL=''${PROPOSAL_URL:-"https://proposals.sancho.network/1"}
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
@@ -886,7 +900,6 @@ in {
             #   $ACTION_TX_ID
             #   [$DEBUG]
             #   $DECISION
-            #   [$ERA]
             #   $PAYMENT_KEY
             #   $ROLE
             #   $TESTNET_MAGIC
@@ -978,9 +991,8 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
+            #   [$DREP_DEPOSIT]
             #   $DREP_DIR
-            #   $DREP_DEPOSIT
-            #   [$ERA]
             #   $INDEX
             #   $PAYMENT_KEY
             #   [$SUBMIT_TX]
@@ -994,9 +1006,9 @@ in {
             [ -n "''${DEBUG:-}" ] && set -x
 
             ${secretsFns}
-            DREP_DEPOSIT=''${DREP_DEPOSIT:-"0"}
             ${selectCardanoCli}
 
+            DREP_DEPOSIT=''${DREP_DEPOSIT:-"0"}
             mkdir -p "$DREP_DIR"
 
             "''${CARDANO_CLI[@]}" address key-gen \
@@ -1064,7 +1076,7 @@ in {
               --tx-body-file tx-drep-"$INDEX".txbody \
               --out-file tx-drep-"$INDEX".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
-              --signing-key-file "$(decrypt_check "$DREP_DIR"/stake-"$INDEX".skey)"
+              --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
 
             fd --type file . "$DREP_DIR"/ --exec bash -c 'encrypt_check {}'
 
@@ -1073,23 +1085,26 @@ in {
             fi
           '';
         };
+
         packages.job-register-cc = writeShellApplication {
           name = "job-register-cc";
           runtimeInputs = with pkgs; [coreutils jq];
           text = ''
             # Inputs:
-            #   [$DEBUG]
             #   $CC_DIR
-            #   [$ERA]
+            #   [$DEBUG]
             #   $INDEX
             #   $PAYMENT_KEY
             #   [$SUBMIT_TX]
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
+            #   [$USE_DECRYPTION]
+            #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
 
+            ${secretsFns}
             ${selectCardanoCli}
 
             mkdir -p "$CC_DIR"
@@ -1111,7 +1126,7 @@ in {
             WITNESSES=2
             CHANGE_ADDRESS=$(
               "''${CARDANO_CLI[@]}" address build \
-                --payment-verification-key-file "$PAYMENT_KEY".vkey \
+                --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
@@ -1121,7 +1136,7 @@ in {
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
-              | jq -r 'to_entries[0] | .key'
+              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
             "''${CARDANO_CLI[@]}" conway transaction build \
@@ -1135,8 +1150,10 @@ in {
             "''${CARDANO_CLI[@]}" transaction sign \
               --tx-body-file tx-cc-"$INDEX".txbody \
               --out-file tx-cc-"$INDEX".txsigned \
-              --signing-key-file "$PAYMENT_KEY".skey \
+              --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
+
+            fd --type file . "$CC_DIR"/ --exec bash -c 'encrypt_check {}'
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-cc-"$INDEX".txsigned
@@ -1151,7 +1168,6 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   $DREP_KEY
-            #   [$ERA]
             #   $PAYMENT_KEY
             #   $STAKE_KEY
             #   [$SUBMIT_TX]

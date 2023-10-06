@@ -52,13 +52,16 @@
       di
       dnsutils
       fd
+      fx
       file
       git
       glances
       helix
       htop
+      ijq
       icdiff
       iptables
+      jiq
       jq
       lsof
       nano
