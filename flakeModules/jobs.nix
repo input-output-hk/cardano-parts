@@ -794,6 +794,7 @@ in {
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
+            GOV_ACTION_DEPOSIT=''${GOV_ACTION_DEPOSIT:-"0"}
 
             ${secretsFns}
             ${selectCardanoCli}
@@ -801,9 +802,10 @@ in {
             BUILD_TX_ARGS=()
             SIGN_TX_ARGS=()
 
-            ERA=''${ERA:+"--conway-era"}
-            ACTION=''${ACTION:+"create-constitution"}
-            PREV_CONSTITUTION=$("''${CARDANO_CLI[@]}" query constitution-hash --testnet-magic 42)
+            ACTION=''${ACTION:-"create-constitution"}
+            PROPOSAL_URL=''${PROPOSAL_URL:-"https://proposals.sancho.network/1"}
+            PROPOSAL_HASH=''${PROPOSAL_HASH:-"0000000000000000000000000000000000000000000000000000000000000000"}
+            PROPOSAL_ARGS=("$@")
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
@@ -812,16 +814,15 @@ in {
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
-            # TODO: make work with other actions than constitution
             "''${CARDANO_CLI[@]}" conway governance action "$ACTION" \
               --testnet \
               --stake-verification-key-file "$(decrypt_check "$STAKE_KEY".vkey)" \
-              --constitution "\"We the people of Barataria abide by these statutes: 1. Flat Caps are permissible, but cowboy hats are the traditional attire\"" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
-              --out-file "$ACTION".action \
-              --proposal-url "https://proposals.sancho.network/1" \
-              --anchor-data-hash "FOO" \
-              --constitution-url "BAR"
+              --proposal-url "$PROPOSAL_URL" \
+              --proposal-hash "$PROPOSAL_HASH" \
+              "''${PROPOSAL_ARGS[@]}" \
+              --out-file "$ACTION".action
+
 
             # Generate transaction
             TXIN=$(
@@ -833,10 +834,10 @@ in {
             )
 
             # Generate arrays needed for build/sign commands
-            BUILD_TX_ARGS+=("--constitution-file" "$ACTION".action)
+            BUILD_TX_ARGS+=("--proposal-file" "$ACTION".action)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$STAKE_KEY".skey)")
 
-            "''${CARDANO_CLI[@]}" transaction build ''${ERA:+$ERA} \
+            "''${CARDANO_CLI[@]}" conway transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -849,9 +850,6 @@ in {
               --out-file tx-"$ACTION".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               "''${SIGN_TX_ARGS[@]}"
-
-            echo "Previous Constitution hash: $PREV_CONSTITUTION"
-            echo "New Constitution hash: TODO"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-"$ACTION".txsigned
@@ -933,7 +931,7 @@ in {
             BUILD_TX_ARGS+=("--vote-file" "$ROLE".vote)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$VOTE_KEY".skey)")
 
-            "''${CARDANO_CLI[@]}" transaction build ''${ERA:+$ERA} \
+            "''${CARDANO_CLI[@]}" conway transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -960,6 +958,7 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   $DREP_DIR
+            #   $DREP_DEPOSIT
             #   [$ERA]
             #   $INDEX
             #   $PAYMENT_KEY
@@ -974,6 +973,7 @@ in {
             [ -n "''${DEBUG:-}" ] && set -x
 
             ${secretsFns}
+            DREP_DEPOSIT=''${DREP_DEPOSIT:-"0"}
             ${selectCardanoCli}
 
             mkdir -p "$DREP_DIR"
@@ -1004,10 +1004,10 @@ in {
 
             "''${CARDANO_CLI[@]}" conway governance drep registration-certificate \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
-              --key-reg-deposit-amt 0 \
+              --key-reg-deposit-amt "$DREP_DEPOSIT" \
               --out-file drep-"$INDEX"-drep.cert
 
-            "''${CARDANO_CLI[@]}" conway governance drep delegation-certificate \
+            "''${CARDANO_CLI[@]}" conway stake-address vote-delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file drep-"$INDEX"-delegation.cert
@@ -1028,7 +1028,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" transaction build ''${ERA:+$ERA} \
+            "''${CARDANO_CLI[@]}" conway transaction build \
               --tx-in "$TXIN" \
               --tx-out "$DREP_ADDRESS"+"$VOTING_POWER" \
               --change-address "$CHANGE_ADDRESS" \
@@ -1049,6 +1049,76 @@ in {
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-"$INDEX".txsigned
+            fi
+          '';
+        };
+        packages.job-register-cc = writeShellApplication {
+          name = "job-register-cc";
+          runtimeInputs = with pkgs; [coreutils jq];
+          text = ''
+            # Inputs:
+            #   [$DEBUG]
+            #   $CC_DIR
+            #   [$ERA]
+            #   $INDEX
+            #   $PAYMENT_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            ${selectCardanoCli}
+
+            mkdir -p "$CC_DIR"
+
+            "''${CARDANO_CLI[@]}" conway governance committee key-gen-cold \
+              --verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
+              --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
+
+            "''${CARDANO_CLI[@]}" conway governance committee key-gen-hot \
+              --verification-key-file "$CC_DIR"/hot-"$INDEX".vkey \
+              --signing-key-file "$CC_DIR"/hot-"$INDEX".skey
+
+
+            "''${CARDANO_CLI[@]}" conway governance committee create-hot-key-authorization-certificate \
+              --cold-verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
+              --hot-key-file "$CC_DIR"/hot-"$INDEX".vkey \
+              --out-file cc-"$INDEX"-reg.cert
+
+            WITNESSES=2
+            CHANGE_ADDRESS=$(
+              "''${CARDANO_CLI[@]}" address build \
+                --payment-verification-key-file "$PAYMENT_KEY".vkey \
+                --testnet-magic "$TESTNET_MAGIC"
+            )
+
+            # Generate transaction
+            TXIN=$(
+              "''${CARDANO_CLI[@]}" query utxo \
+                --address "$CHANGE_ADDRESS" \
+                --testnet-magic "$TESTNET_MAGIC" \
+                --out-file /dev/stdout \
+              | jq -r 'to_entries[0] | .key'
+            )
+
+            "''${CARDANO_CLI[@]}" conway transaction build \
+              --tx-in "$TXIN" \
+              --change-address "$CHANGE_ADDRESS" \
+              --witness-override "$WITNESSES" \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --certificate cc-"$INDEX"-reg.cert \
+              --out-file tx-cc-"$INDEX".txbody
+
+            "''${CARDANO_CLI[@]}" transaction sign \
+              --tx-body-file tx-cc-"$INDEX".txbody \
+              --out-file tx-cc-"$INDEX".txsigned \
+              --signing-key-file "$PAYMENT_KEY".skey \
+              --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
+
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
+              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-cc-"$INDEX".txsigned
             fi
           '';
         };
@@ -1074,7 +1144,7 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            "''${CARDANO_CLI[@]}" conway governance drep delegation-certificate \
+            "''${CARDANO_CLI[@]}" conway stake-address vote-delegation-certificate \
               --stake-verification-key-file "$(decrypt_check "$STAKE_KEY".vkey)" \
               --drep-verification-key-file "$(decrypt_check "$DREP_KEY".vkey)" \
               --out-file drep-delegation.cert
@@ -1095,7 +1165,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" transaction build ''${ERA:+$ERA} \
+            "''${CARDANO_CLI[@]}" conway transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
