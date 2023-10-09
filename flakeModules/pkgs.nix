@@ -13,6 +13,7 @@
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
+#   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
@@ -137,6 +138,7 @@
         default = system: {
           cardanoDbSyncHaskellPackages.cardano-db-tool.components.exes.cardano-db-tool =
             withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-tool);
+          cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
           schema = flake.config.flake.cardano-parts.pkgs.special.cardano-db-sync-schema;
         };
       };
@@ -154,6 +156,7 @@
         default = system: {
           cardanoDbSyncHaskellPackages.cardano-db-tool.components.exes.cardano-db-tool =
             withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-tool-ng);
+          cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
           schema = flake.config.flake.cardano-parts.pkgs.special.cardano-db-sync-schema-ng;
         };
       };
@@ -218,16 +221,22 @@
         };
       };
 
+      cardano-db-sync-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
+        default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/cardano-db-sync-service.nix";
+      };
+
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-node-service import path string.";
         default = "${localFlake.inputs.cardano-node-service}/nix/nixos";
       };
 
-      cardano-db-sync-service = mkOption {
+      cardano-smash-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
-        default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos";
+        description = mdDoc "The cardano-parts default cardano-smash-service import path string.";
+        default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/smash-service.nix";
       };
     };
   };

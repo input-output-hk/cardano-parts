@@ -31,6 +31,8 @@
           sopsFile = pathPrefix + secretsFile + ".enc";
         };
       };
+
+      cfgSvc = config.services;
     in {
       systemd.services.grafana-agent = {
         after = ["sops-secrets.service"];
@@ -217,7 +219,7 @@
                     group = groupName;
                   };
                 in [
-                  (mkIf (config.services ? cardano-db-sync && config.services.cardano-db-sync.enable) {
+                  (mkIf (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) {
                     job_name = "integrations/cardano-db-sync";
                     metrics_path = "/";
                     static_configs = [
@@ -227,12 +229,22 @@
                       }
                     ];
                   })
-                  (mkIf (config.services ? cardano-node && config.services.cardano-node.enable) {
+                  (mkIf (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable) {
                     job_name = "integrations/cardano-node";
                     static_configs = [
                       {
                         inherit labels;
                         targets = ["${hostAddr}:${toString cardanoNodePrometheusExporterPort}"];
+                      }
+                    ];
+                  })
+                  (mkIf (cfgSvc ? cardano-smash) {
+                    job_name = "integrations/cardano-smash";
+                    metrics_path = "/";
+                    static_configs = [
+                      {
+                        inherit labels;
+                        targets = ["${hostAddr}:${toString cfgSvc.cardano-smash.registeredRelaysExporterPort}"];
                       }
                     ];
                   })

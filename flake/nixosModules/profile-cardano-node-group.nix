@@ -21,7 +21,7 @@
   }: let
     inherit (builtins) fromJSON readFile;
     inherit (lib) min mkDefault mkIf mkOption types;
-    inherit (types) bool float int;
+    inherit (types) bool float ints oneOf;
     inherit (nodeResources) cpuCount memMiB;
 
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
@@ -72,12 +72,12 @@
     options = {
       services.cardano-node = {
         totalMaxHeapSizeMiB = mkOption {
-          type = float;
+          type = oneOf [ints.positive float];
           default = memMiB * 0.790;
         };
 
         totalCpuCount = mkOption {
-          type = int;
+          type = ints.positive;
           default = min cpuCount (2 * cfg.instances);
         };
 

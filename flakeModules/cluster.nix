@@ -22,8 +22,10 @@
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoDbSyncPrometheusExporterPort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePrometheusExporterPort
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoSmashDelistedPools
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-db-sync-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-smash-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.domain
 #   flake.cardano-parts.cluster.group.<default|name>.meta.environmentName
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-cli
@@ -33,6 +35,7 @@
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-faucet
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node-pkgs
+#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-smash
 #   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-submit-api
 #
 # Tips:
@@ -44,7 +47,7 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf functionTo nullOr package port raw str submodule;
+  inherit (types) addCheck anything attrsOf functionTo listOf nullOr package port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -290,6 +293,12 @@ flake @ {
         default = 12798;
       };
 
+      cardanoSmashDelistedPools = mkOption {
+        type = listOf str;
+        description = mdDoc "Cardano-parts cluster group cardano-smash delisted pools.";
+        default = [];
+      };
+
       cardano-db-sync-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
@@ -300,6 +309,12 @@ flake @ {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
         default = cfg.pkgs.special.cardano-node-service;
+      };
+
+      cardano-smash-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-smash-service import path string.";
+        default = cfg.pkgs.special.cardano-smash-service;
       };
 
       domain = mkOption {
@@ -366,6 +381,12 @@ flake @ {
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardano-node-pkgs;
+      };
+
+      cardano-smash = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-smash package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-smash);
       };
 
       cardano-submit-api = mkOption {

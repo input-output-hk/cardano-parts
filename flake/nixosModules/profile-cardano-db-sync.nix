@@ -20,7 +20,7 @@
   }:
     with builtins;
     with lib; let
-      inherit (types) float listOf str;
+      inherit (types) float ints listOf oneOf str;
       inherit (nodeResources) memMiB;
 
       inherit (groupCfg.meta) environmentName;
@@ -72,13 +72,13 @@
 
           nodeRamAvailableMiB = mkOption {
             description = "The default RAM available for node max heap size on the machine in MiB.";
-            type = float;
+            type = oneOf [ints.positive float];
             default = memMiB * 0.20;
           };
 
           postgresRamAvailableMiB = mkOption {
             description = "The default RAM available for postgresql on the machine in MiB.";
-            type = float;
+            type = oneOf [ints.positive float];
             default = memMiB * 0.70;
           };
         };
