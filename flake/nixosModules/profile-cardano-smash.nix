@@ -3,13 +3,17 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.services.cardano-smash.enablAcme
-#   config.services.cardano-smash.explorerFqdn
+#   config.services.cardano-smash.enableAcme
 #   config.services.cardano-smash.extraFqdn
+#   config.services.cardano-smash.nginxVhostExporterPort
 #   config.services.cardano-smash.registeredRelaysExporterPort
+#   config.services.cardano-smash.varnishExporterPort
 #   config.services.cardano-smash.varnishFqdn
 #   config.services.cardano-smash.varnishRamAvailableMiB
 #   config.services.cardano-smash.varnishTtl
+#   config.nginx.vhostExporterAddress
+#   config.nginx.vhostExporterEnable
+#   config.nginx.vhostExporterPort
 #
 # Tips:
 #   * This is a cardano-smash add-on to the cardano-parts profile-cardano-db-sync nixos service module
@@ -42,8 +46,9 @@
         else floor f;
 
       cfg = config.services.cardano-smash;
-      cfgSmash = config.services.smash;
       cfgDbsync = config.services.cardano-db-sync;
+      cfgNginx = config.services.nginx;
+      cfgSmash = config.services.smash;
     in {
       options = {
         services.cardano-smash = {
@@ -71,6 +76,12 @@
             description = "The port for the registered relays metrics exporter to listen on.";
           };
 
+          varnishExporterPort = mkOption {
+            type = port;
+            default = 9131;
+            description = "The port for the nginx vhost traffic status module to bind to on localhost.";
+          };
+
           varnishFqdn = mkOption {
             type = str;
             default = "${name}.${domain}";
@@ -87,6 +98,26 @@
             type = ints.positive;
             default = 30;
             description = "The number of days for smash server cache object TTL.";
+          };
+        };
+
+        services.nginx = {
+          vhostExporterEnable = mkOption {
+            type = bool;
+            default = true;
+            description = "Whether to enable nginx vts module vhost traffic export metrics.";
+          };
+
+          vhostExporterAddress = mkOption {
+            type = str;
+            default = "127.0.0.1";
+            description = "The listen address for the nginx vhost traffic status module to bind.";
+          };
+
+          vhostExporterPort = mkOption {
+            type = port;
+            default = 9113;
+            description = "The port for the nginx vhost traffic status module to bind.";
           };
         };
       };
@@ -375,15 +406,15 @@
             PORT="${toString cfg.registeredRelaysExporterPort}"
             FILE="/var/lib/registered-relays-dump/relays/topology.json"
 
-            echo "Serving explorer topology metrics exporter for file $FILE at $IP:$PORT..."
+            echo "Serving registered relays dump metrics for file $FILE at $IP:$PORT..."
 
             while true; do
               MTIME=$(date -r "$FILE" +%s || echo -n "0")
               BYTES=$(stat -c %s "$FILE" || echo -n "0")
-              MTIME_DESC="# TYPE explorer_topology_mtime gauge"
-              MTIME_SERIES="explorer_topology_mtime $MTIME"
-              SIZE_DESC="# TYPE explorer_topology_bytes gauge"
-              SIZE_SERIES="explorer_topology_bytes $BYTES"
+              MTIME_DESC="# TYPE registered_relays_dump_mtime gauge"
+              MTIME_SERIES="registered_relays_dump_mtime $MTIME"
+              SIZE_DESC="# TYPE registered_relays_dump_bytes gauge"
+              SIZE_SERIES="registered_relays_dump_bytes $BYTES"
               echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\n\r\n$MTIME_DESC\n$MTIME_SERIES\n$SIZE_DESC\n$SIZE_SERIES" | nc -W 1 -l "$IP" "$PORT"
               echo "$MTIME_SERIES"
               echo "$SIZE_SERIES"
@@ -411,8 +442,20 @@
 
         services.nginx = {
           enable = true;
+          additionalModules = [pkgs.nginxModules.vts];
           eventsConfig = "worker_connections 4096;";
           appendConfig = "worker_rlimit_nofile 16384;";
+          appendHttpConfig = mkIf cfgNginx.vhostExporterEnable ''
+            # This config enables prom metrics exported to: /status/format/prometheus
+            vhost_traffic_status_zone;
+            server {
+              listen ${cfgNginx.vhostExporterAddress}:${toString cfgNginx.vhostExporterPort};
+              location /status {
+                vhost_traffic_status_display;
+                vhost_traffic_status_display_format html;
+              }
+            }
+          '';
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
           recommendedProxySettings = true;
@@ -530,6 +573,15 @@
           LimitNOFILE = 65535;
           LogNamespace = "nginx";
           SupplementaryGroups = "registered-relays-dump";
+        };
+
+        services.prometheus.exporters = {
+          varnish = {
+            enable = true;
+            listenAddress = "127.0.0.1";
+            port = cfg.varnishExporterPort;
+            group = "varnish";
+          };
         };
       };
     };
