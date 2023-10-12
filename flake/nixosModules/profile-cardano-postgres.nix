@@ -7,8 +7,11 @@
 #   config.services.cardano-postgres.maxConnections
 #   config.services.cardano-postgres.ramAvailableMiB
 #   config.services.cardano-postgres.socketPath
-#   config.services.cardano-postgres.withHighCapacityPostgres
 #   config.services.cardano-postgres.withPgStatStatements
+#
+# Tips:
+#   * This is a cardano-postgres profile to configure the postgresql nixos service
+#   * This module assists with optimizing postgres for use with dbsync through parameter tuning
 {
   flake.nixosModules.profile-cardano-postgres = {
     config,
@@ -23,22 +26,28 @@
       inherit (nodeResources) cpuCount memMiB;
 
       connScale = 1.0 * 20 / cfg.maxConnections;
+
       cpuScale =
         if cpuCount <= 4
         then 1.0
         else if cpuCount >= 8
         then (1.0 / 2)
         else (1.0 * 4 / cpuCount);
+
       fromFloat = f: toString (roundFloat f);
+
       numCeil = ram: ceiling:
         if ram < ceiling
         then ram
         else ceiling;
+
       numFloor = ram: floor:
         if ram > floor
         then ram
         else floor;
+
       ramScale = base: base * (max (1.0 * cfg.ramAvailableMiB / 1024) 1);
+
       roundFloat = f:
         if f >= (floor f + 0.5)
         then ceil f
@@ -70,12 +79,6 @@
             description = "The postgresql socket path to use, typically `/run/postgresql`.";
             type = str;
             default = "/run/postgresql";
-          };
-
-          withHighCapacityPostgres = mkOption {
-            description = "Configure postgresql to use additional resources to support high RAM and connection requirements.";
-            type = bool;
-            default = false;
           };
 
           withPgStatStatements = mkOption {

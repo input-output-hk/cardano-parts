@@ -5,7 +5,7 @@
 # Attributes available on nixos module import:
 #
 # Tips:
-#
+#   * This module provides a grafana-agent service and configures common application metrics hooks
 {
   flake.nixosModules.profile-grafana-agent = {
     config,

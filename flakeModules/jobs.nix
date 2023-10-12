@@ -34,7 +34,7 @@ in {
                 echo "encrypting: file $FILE"
                 sops --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
               else
-                echo "warning: file \"$FILE\" appears to already be encrypted, skipping"
+                echo "warning: file \"$FILE\" appears to already be binary encrypted, skipping"
               fi
             else
               echo "warning: file \"$FILE\" appears to to be a symlink, skipping"

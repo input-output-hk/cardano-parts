@@ -8,7 +8,9 @@
 #   config.services.nginx-vhost-exporter.port
 #
 # Tips:
-#
+#   * This is a cardano-faucet profile add-on to the cardano-faucet nixos service module
+#   * This module assists with configuring faucet secrets and metrics export
+#   * The cardano-faucet nixos service module should still be imported separately
 flake: {
   flake.nixosModules.profile-cardano-faucet = {
     config,

@@ -20,9 +20,7 @@
 #   config.services.cardano-faucet.user
 #
 # Tips:
-#   * This is a cardano-smash add-on to the cardano-parts profile-cardano-db-sync nixos service module
-#   * This module provides cardano-smash and registered relays exporter services through nginx and varnish
-#   * The cardano-parts profile-cardano-db-sync nixos service module should still be imported separately
+#   * This service-cardano-faucet nixos module provides a basic cardano-faucet service
 {moduleWithSystem, ...}: {
   flake.nixosModules.service-cardano-faucet = moduleWithSystem ({
     config,

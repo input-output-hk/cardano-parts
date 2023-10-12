@@ -8,7 +8,7 @@
 #   config.services.cardano-db-sync.postgresRamAvailableMiB
 #
 # Tips:
-#   * This is a cardano-db-sync add-on to the upstream cardano-db-sync nixos service module
+#   * This is a cardano-db-sync profile add-on to the upstream cardano-db-sync nixos service module
 #   * This module assists with configuring multiple local db-sync consumers
 #   * The upstream cardano-db-sync nixos service module should still be imported separately
 {moduleWithSystem, ...}: {
@@ -32,7 +32,7 @@
       nodeCfg = nixos.config.services.cardano-node;
       perNodeCfg = nixos.config.cardano-parts.perNode;
 
-      # Required since db-sync still requires legacy byron application parameters as of 13.1.1.2.
+      # Required since db-sync still requires legacy byron application parameters as of 13.1.1.3.
       # Issue: https://github.com/input-output-hk/cardano-db-sync/issues/1473
       #
       # environmentConfig = environments.${environmentName}.nodeConfig;
@@ -42,6 +42,7 @@
           networkConfig
           nodeConfig
           ;
+
         legacyParams = {
           ApplicationName = "cardano-sl";
           ApplicationVersion =
@@ -49,6 +50,7 @@
             then 1
             else 0;
         };
+
         networkConfig' = networkConfig // legacyParams;
         nodeConfig' = nodeConfig // legacyParams;
         NodeConfigFile' = "${__toFile "config-${environmentName}.json" (__toJSON nodeConfig')}";
@@ -110,6 +112,7 @@
             ${concatMapStrings (user: ''
               explorer-users ${user} cexplorer
             '') (["root" "cardano-db-sync"] ++ cfg.additionalDbUsers)}'';
+
           authentication = ''
             local all all ident map=explorer-users
           '';
@@ -134,8 +137,8 @@
         };
 
         # Ensure access to the cardano-node socket
-        users.users.cardano-db-sync.extraGroups = ["cardano-node"];
         users.groups.cardano-db-sync = {};
+        users.users.cardano-db-sync.extraGroups = ["cardano-node"];
         users.users.cardano-db-sync.group = "cardano-db-sync";
         users.users.cardano-db-sync.isSystemUser = true;
       };

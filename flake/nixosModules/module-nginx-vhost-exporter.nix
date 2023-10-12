@@ -9,7 +9,6 @@
 #
 # Tips:
 #   * Import this module to export nginx vhost traffic metrics
-#
 {
   flake.nixosModules.module-nginx-vhost-exporter = {
     pkgs,

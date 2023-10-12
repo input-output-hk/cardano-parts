@@ -6,6 +6,7 @@
 #   config.services.cardano-smash.acmeEmail
 #   config.services.cardano-smash.acmeProd
 #   config.services.cardano-smash.enableAcme
+#   config.services.cardano-smash.openFirewallNginx
 #   config.services.cardano-smash.registeredRelaysExporterPort
 #   config.services.cardano-smash.serverAliases
 #   config.services.cardano-smash.serverName
@@ -19,7 +20,7 @@
 #
 # Tips:
 #   * This is a cardano-smash add-on to the cardano-parts profile-cardano-db-sync nixos service module
-#   * This module provides cardano-smash and registered relays exporter services through nginx and varnish
+#   * This module provides cardano-smash through nginx and varnish services as well as a registered relays exporter
 #   * The cardano-parts profile-cardano-db-sync nixos service module should still be imported separately
 flake: {
   flake.nixosModules.profile-cardano-smash = {
@@ -71,6 +72,12 @@ flake: {
             type = bool;
             default = true;
             description = "Whether to obtain an ACME TLS cert for serving smash server via nginx.";
+          };
+
+          openFirewallNginx = mkOption {
+            type = bool;
+            default = true;
+            description = "Whether to open the firewall TCP ports used by nginx: 80, 443";
           };
 
           registeredRelaysExporterPort = mkOption {
@@ -213,10 +220,6 @@ flake: {
           dbSyncPkgs = cardano-db-sync-pkgs;
           postgres = {inherit (cfgDbsync.postgres) database port user socketdir;};
           delistedPools = cardanoSmashDelistedPools;
-
-          # TODO: Until no-basic-auth capkgs is available.
-          # In the meantime, this is not publicly exposed.
-          admins = toFile "admins" "admin,admin";
         };
 
         systemd.services.registered-relays-dump = let
@@ -422,7 +425,7 @@ flake: {
           };
         };
 
-        networking.firewall.allowedTCPPorts = mkIf cfg.enableAcme [80 443];
+        networking.firewall.allowedTCPPorts = mkIf cfg.openFirewallNginx [80 443];
 
         security.acme = mkIf cfg.enableAcme {
           acceptTerms = true;
