@@ -1,0 +1,28 @@
+{
+  namespace="cardano";
+  name = "cardano-faucet";
+  rule = [
+    {
+      alert = "faucet_utxo_low";
+      expr = ''faucet_utxo{is_valid="1"} < 2000'';
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Faucet UTxO is low in environment {{$labels.environment}}.";
+        description = ''
+          Faucet has less than 2000 UTxO remaining in environment {{$labels.environment}} on instance {{$labels.instance}}.'';
+      };
+    }
+    {
+      alert = "faucet_utxo_empty";
+      expr = ''faucet_utxo{is_valid="1"} == 0'';
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Faucet UTxO is empty in environment {{$labels.environment}}.";
+        description = ''
+          Faucet has no available UTxO in environment {{$labels.environment}} on instance {{$labels.instance}}.'';
+      };
+    }
+  ];
+}
