@@ -1,0 +1,26 @@
+{
+  namespace="cardano";
+  name = "registered-relays-dump";
+  rule = [
+    {
+      alert = "registered_relays_dump_empty";
+      expr = ''registered_relays_dump_bytes == 0'';
+      for = "12h";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: The registered relays dump file is empty";
+        description = "{{$labels.instance}}: The registered relays dump file has been empty for more than 12 hours";
+      };
+    }
+    {
+      alert = "registered_relays_dump_not_updated";
+      expr = ''timestamp(registered_relays_dump_mtime) - registered_relays_dump_mtime > 12 * 3600'';
+      for = "12h";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: The registered relays dump file is not being updated";
+        description = "{{$labels.instance}}: The registered relays dump file has not been updated for more than 1 day";
+      };
+    }
+  ];
+}

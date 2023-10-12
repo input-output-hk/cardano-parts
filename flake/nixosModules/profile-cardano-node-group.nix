@@ -1,10 +1,10 @@
-# nixosModule: module-cardano-node-group
+# nixosModule: profile-cardano-node-group
 #
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
 #   config.cardano-node.shareIpv6Address
-#   config.cardano-node.totalMaxHeapSizeMbytes
+#   config.cardano-node.totalMaxHeapSizeMiB
 #   config.cardano-node.totalCpuCores
 #
 # Tips:
@@ -12,7 +12,7 @@
 #   * This module assists with group deployments
 #   * The upstream cardano-node nixos service module should still be imported separately
 {moduleWithSystem, ...}: {
-  flake.nixosModules.module-cardano-node-group = moduleWithSystem ({config, ...}: nixos @ {
+  flake.nixosModules.profile-cardano-node-group = moduleWithSystem ({config, ...}: nixos @ {
     pkgs,
     lib,
     name,
@@ -21,15 +21,41 @@
   }: let
     inherit (builtins) fromJSON readFile;
     inherit (lib) min mkDefault mkIf mkOption types;
-    inherit (types) bool float int;
+    inherit (types) bool float ints oneOf;
     inherit (nodeResources) cpuCount memMiB;
 
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
-    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node-pkgs;
+    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node cardano-node-pkgs;
+    inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
+
+    mkTopology = env: let
+      legacyTopology = mkEdgeTopology {
+        edgeNodes = [env.relaysNew];
+        valency = 2;
+        edgePort = env.edgePort or 3001;
+      };
+
+      p2pTopology = mkEdgeTopologyP2P {
+        edgeNodes =
+          # Mainnet is only configured for legacy topology in iohk-nix edgeNodes
+          if environmentName == "mainnet"
+          then [
+            {
+              addr = env.relaysNew;
+              port = env.edgePort;
+            }
+          ]
+          else env.edgeNodes;
+        useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
+      };
+    in
+      if cfg.useNewTopology
+      then p2pTopology
+      else legacyTopology;
 
     cfg = nixos.config.services.cardano-node;
   in {
@@ -45,13 +71,13 @@
 
     options = {
       services.cardano-node = {
-        totalMaxHeapSizeMbytes = mkOption {
-          type = float;
+        totalMaxHeapSizeMiB = mkOption {
+          type = oneOf [ints.positive float];
           default = memMiB * 0.790;
         };
 
         totalCpuCount = mkOption {
-          type = int;
+          type = ints.positive;
           default = min cpuCount (2 * cfg.instances);
         };
 
@@ -86,8 +112,6 @@
       # networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
 
       services.cardano-node = {
-        inherit hostAddr;
-
         enable = true;
         environment = environmentName;
 
@@ -95,20 +119,23 @@
         # that nodeConfig is obtained from perNode cardanoLib iohk-nix pin.
         environments = mkDefault cardanoLib.environments;
 
+        package = mkDefault cardano-node;
         cardanoNodePackages = mkDefault cardano-node-pkgs;
         nodeId = mkDefault nodeId;
 
         # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
+        useNewTopology = mkDefault true;
         topology = mkDefault (
           if
             (cfg.producers == [])
             && cfg.publicProducers == []
             && cfg.instanceProducers 0 == []
             && cfg.instancePublicProducers 0 == []
-          then cardanoLib.mkTopology cardanoLib.environments.${environmentName}
+          then mkTopology cardanoLib.environments.${environmentName}
           else null
         );
 
+        hostAddr = mkDefault hostAddr;
         ipv6HostAddr = mkIf (cfg.instances > 1) (
           if cfg.shareIpv6Address
           then "::1"
@@ -142,9 +169,7 @@
 
         extraServiceConfig = _: {
           serviceConfig = {
-            # Allow time to uncompress when restoring db
-            TimeoutStartSec = "1h";
-            MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMbytes / cfg.instances)}M";
+            MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
             LimitNOFILE = "65535";
           };
         };
@@ -155,7 +180,7 @@
           "-A16m"
           "-qg"
           "-qb"
-          "-M${toString (cfg.totalMaxHeapSizeMbytes / cfg.instances)}M"
+          "-M${toString (cfg.totalMaxHeapSizeMiB / cfg.instances)}M"
         ];
 
         systemdSocketActivation = false;
@@ -173,9 +198,20 @@
           fi
         '';
 
+        postStart = ''
+          while true; do
+            # Allow other local services in the cardano-node group to use cardano-node socket
+            if [ -S ${nixos.config.services.cardano-node.socketPath 0} ]; then
+              chmod g+w ${nixos.config.services.cardano-node.socketPath 0}
+              exit 0
+            fi
+            sleep 5
+          done
+        '';
+
         serviceConfig = {
-          # Allow time to uncompress when restoring db
-          TimeoutStartSec = "1h";
+          # Allow long ledger replays and/or db-restore ungzip, including on slow systems
+          TimeoutStartSec = "infinity";
         };
       };
 

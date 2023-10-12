@@ -6,14 +6,24 @@
 #   config.cardano-parts.cluster.group.<...>                             # Inherited from flakeModule cluster.group assignment
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.topologyLib
+#   config.cardano-parts.perNode.meta.cardanoDbSyncPrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardanoNodePort
 #   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
+#   config.cardano-parts.perNode.meta.cardanoSmashDelistedPools
+#   config.cardano-parts.perNode.meta.cardano-db-sync-service
+#   config.cardano-parts.perNode.meta.cardano-faucet-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
+#   config.cardano-parts.perNode.meta.cardano-smash-service
 #   config.cardano-parts.perNode.meta.hostAddr
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.cardano-cli
+#   config.cardano-parts.perNode.pkgs.cardano-db-sync
+#   config.cardano-parts.perNode.pkgs.cardano-db-sync-pkgs
+#   config.cardano-parts.perNode.pkgs.cardano-db-tool
+#   config.cardano-parts.perNode.pkgs.cardano-faucet
 #   config.cardano-parts.perNode.pkgs.cardano-node
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
+#   config.cardano-parts.perNode.pkgs.cardano-smash
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
 #   config.cardano-parts.perNode.roles.isCardanoDensePool
 flake @ {moduleWithSystem, ...}: {
@@ -23,7 +33,7 @@ flake @ {moduleWithSystem, ...}: {
     ...
   }: let
     inherit (lib) foldl' mdDoc mkOption recursiveUpdate types;
-    inherit (types) anything attrsOf bool ints package port nullOr str submodule;
+    inherit (types) anything attrsOf bool ints listOf package port nullOr str submodule;
 
     cfg = config.cardano-parts.cluster;
 
@@ -68,7 +78,7 @@ flake @ {moduleWithSystem, ...}: {
       options = {
         group = mkOption {
           type = attrsOf anything;
-          inherit (flake.config.flake.cardano-parts.cluster.group) default;
+          inherit (flake.config.flake.cardano-parts.cluster.groups) default;
           description = mdDoc "The cardano group to associate with the nixos node.";
         };
       };
@@ -111,6 +121,12 @@ flake @ {moduleWithSystem, ...}: {
 
     metaSubmodule = submodule {
       options = {
+        cardanoDbSyncPrometheusExporterPort = mkOption {
+          type = port;
+          description = mdDoc "The port to associate with the nixos cardano-db-sync prometheus exporter.";
+          default = cfg.group.meta.cardanoDbSyncPrometheusExporterPort;
+        };
+
         cardanoNodePort = mkOption {
           type = port;
           description = mdDoc "The port to associate with the nixos cardano-node.";
@@ -123,10 +139,34 @@ flake @ {moduleWithSystem, ...}: {
           default = cfg.group.meta.cardanoNodePrometheusExporterPort;
         };
 
+        cardanoSmashDelistedPools = mkOption {
+          type = listOf str;
+          description = mdDoc "The cardano-smash delisted pools.";
+          default = cfg.group.meta.cardanoSmashDelistedPools;
+        };
+
+        cardano-db-sync-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-db-sync-service import path string.";
+          default = cfg.group.meta.cardano-db-sync-service;
+        };
+
+        cardano-faucet-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-faucet-service import path string.";
+          default = cfg.group.meta.cardano-faucet-service;
+        };
+
         cardano-node-service = mkOption {
           type = str;
           description = mdDoc "The cardano-node-service import path string.";
           default = cfg.group.meta.cardano-node-service;
+        };
+
+        cardano-smash-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-smash-service import path string.";
+          default = cfg.group.meta.cardano-smash-service;
         };
 
         hostAddr = mkOption {
@@ -146,8 +186,13 @@ flake @ {moduleWithSystem, ...}: {
     pkgsSubmodule = submodule {
       options = foldl' recursiveUpdate {} [
         (mkPkgOpt "cardano-cli" (cfg.group.pkgs.cardano-cli system))
+        (mkPkgOpt "cardano-db-sync" (cfg.group.pkgs.cardano-db-sync system))
+        (mkPkgOpt "cardano-db-tool" (cfg.group.pkgs.cardano-db-tool system))
+        (mkPkgOpt "cardano-faucet" (cfg.group.pkgs.cardano-faucet system))
         (mkPkgOpt "cardano-node" (cfg.group.pkgs.cardano-node system))
+        (mkPkgOpt "cardano-smash" (cfg.group.pkgs.cardano-smash system))
         (mkPkgOpt "cardano-submit-api" (cfg.group.pkgs.cardano-submit-api system))
+        (mkSpecialOpt "cardano-db-sync-pkgs" lib.types.attrs (cfg.group.pkgs.cardano-db-sync-pkgs system))
         (mkSpecialOpt "cardano-node-pkgs" (attrsOf anything) (cfg.group.pkgs.cardano-node-pkgs system))
       ];
     };

@@ -30,7 +30,7 @@
     # infra.grafana.stackName = "UPDATE_ME";
 
     # For defining deployment groups with varying configuration.  Adjust as needed.
-    group = {
+    groups = {
       preview1 = {
         groupPrefix = "preview1-";
         meta.environmentName = "preview";

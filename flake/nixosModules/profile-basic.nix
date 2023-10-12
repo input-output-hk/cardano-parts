@@ -52,15 +52,20 @@
       di
       dnsutils
       fd
+      fx
       file
       git
       glances
       helix
       htop
+      ijq
+      icdiff
       iptables
+      jiq
       jq
       lsof
       nano
+      neovim
       ncdu
       parted
       pciutils
@@ -113,15 +118,17 @@
       gc.automatic = true;
 
       settings = {
-        max-jobs = "auto";
-        experimental-features = ["nix-command" "fetch-closure" "flakes" "cgroups"];
         auto-optimise-store = true;
-        system-features = ["recursive-nix" "nixos-test"];
         builders-use-substitutes = true;
-        show-trace = true;
-        keep-outputs = true;
+        experimental-features = ["nix-command" "fetch-closure" "flakes" "cgroups"];
         keep-derivations = true;
+        keep-outputs = true;
+        max-jobs = "auto";
+        show-trace = true;
+        substituters = ["https://cache.iog.io"];
+        system-features = ["recursive-nix" "nixos-test"];
         tarball-ttl = 60 * 60 * 72;
+        trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
       };
     };
 

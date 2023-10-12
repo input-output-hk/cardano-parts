@@ -5,18 +5,29 @@
 # Attributes available on flakeModule import:
 #   flake.cardano-parts.pkgs.special.cardanoLib
 #   flake.cardano-parts.pkgs.special.cardanoLibNg
+#   flake.cardano-parts.pkgs.special.cardano-db-sync-schema
+#   flake.cardano-parts.pkgs.special.cardano-db-sync-schema-ng
+#   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs
+#   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs-ng
+#   flake.cardano-parts.pkgs.special.cardano-db-sync-service
+#   flake.cardano-parts.pkgs.special.cardano-faucet-service
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
+#   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
 #   perSystem.cardano-parts.pkgs.cardano-cli-ng
 #   perSystem.cardano-parts.pkgs.cardano-db-sync
+#   perSystem.cardano-parts.pkgs.cardano-db-sync-ng
 #   perSystem.cardano-parts.pkgs.cardano-db-tool
 #   perSystem.cardano-parts.pkgs.cardano-faucet
+#   perSystem.cardano-parts.pkgs.cardano-faucet-ng
 #   perSystem.cardano-parts.pkgs.cardano-node
 #   perSystem.cardano-parts.pkgs.cardano-node-ng
+#   perSystem.cardano-parts.pkgs.cardano-smash
+#   perSystem.cardano-parts.pkgs.cardano-smash-ng
 #   perSystem.cardano-parts.pkgs.cardano-submit-api
 #   perSystem.cardano-parts.pkgs.cardano-submit-api-ng
 #   perSystem.cardano-parts.pkgs.cardano-tracer
@@ -41,7 +52,7 @@
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
   inherit (lib) filterAttrs init last mdDoc mkOption updateManyAttrsByPath;
-  inherit (lib.types) anything attrsOf functionTo package str submodule;
+  inherit (lib.types) anything attrsOf functionTo package path str submodule;
 
   removeByPath = pathList:
     updateManyAttrsByPath [
@@ -114,6 +125,66 @@
         default = system: mkCardanoLib system localFlake.inputs.iohk-nix-ng;
       };
 
+      cardano-db-sync-pkgs = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          The cardano-parts default cardano-db-sync-pkgs attrset.
+
+          Used in cardano-db-sync nixos related services, such as smash and
+          service schema.  This is an attrset of packages and not a proper
+          package derivation.
+
+          The definition must be a function of system.
+        '';
+        default = system: {
+          cardanoDbSyncHaskellPackages.cardano-db-tool.components.exes.cardano-db-tool =
+            withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-tool);
+          cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
+          schema = flake.config.flake.cardano-parts.pkgs.special.cardano-db-sync-schema;
+        };
+      };
+
+      cardano-db-sync-pkgs-ng = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          The cardano-parts default cardano-db-sync-pkgs-ng attrset.
+
+          This is the same as the cardano-db-sync-pkgs option with the exception that the
+          *-ng flake inputs or packages are used for composing the package set.
+
+          The definition must be a function of system.
+        '';
+        default = system: {
+          cardanoDbSyncHaskellPackages.cardano-db-tool.components.exes.cardano-db-tool =
+            withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-tool-ng);
+          cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
+          schema = flake.config.flake.cardano-parts.pkgs.special.cardano-db-sync-schema-ng;
+        };
+      };
+
+      cardano-db-sync-schema = mkOption {
+        type = path;
+        description = mdDoc ''
+          The cardano-parts default cardano-db-sync-schema path.
+
+          Used in cardano-db-sync to provide migration schema.
+          Since only packages are provided with capkgs, a schema
+          reference needs to be provided separately.
+        '';
+        default = "${localFlake.inputs.cardano-db-sync-schema}/schema";
+      };
+
+      cardano-db-sync-schema-ng = mkOption {
+        type = path;
+        description = mdDoc ''
+          The cardano-parts default cardano-db-sync-schema-ng path.
+
+          This is the same as the cardano-db-sync-schema option with the exception that the
+          *-ng flake inputs or packages are used for composing the option.
+        '';
+        default = "${localFlake.inputs.cardano-db-sync-schema-ng}/schema";
+      };
+
       cardano-node-pkgs = mkOption {
         type = functionTo (attrsOf anything);
         description = mdDoc ''
@@ -139,7 +210,7 @@
           The cardano-parts default cardano-node-pkgs-ng attrset.
 
           This is the same as the cardano-node-pkgs option with the exception that the
-          *-ng flake inputs are used for composing the package set.
+          *-ng flake inputs or packages are used for composing the package set.
 
           The definition must be a function of system.
         '';
@@ -151,10 +222,30 @@
         };
       };
 
+      cardano-db-sync-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
+        default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/cardano-db-sync-service.nix";
+      };
+
+      # TODO: Module import fixup for local services
+      cardano-faucet-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-faucet-service import path string.";
+        # default = localFlake.nixosModules.service-cardano-faucet;
+        default = "${localFlake}/flake/nixosModules/service-cardano-faucet.nix";
+      };
+
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-node-service import path string.";
         default = "${localFlake.inputs.cardano-node-service}/nix/nixos";
+      };
+
+      cardano-smash-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-smash-service import path string.";
+        default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/smash-service.nix";
       };
     };
   };
@@ -184,21 +275,64 @@ in
           };
         };
 
-        mkWrapper = name: pkg:
-          (pkgs.writeShellScriptBin name ''
-            exec ${getExe pkg} "$@"
-          '')
-          .overrideAttrs (_: {
-            meta = {
-              description = "Wrapper for ${getName pkg}${
-                if getVersion pkg != ""
-                then " (${getVersion pkg})"
-                else ""
-              }";
-              mainProgram = name;
-            };
-            version = getVersion pkg;
-          });
+        mkWrapper = name: pkg: let
+          pkgName = pkg.meta.mainProgram or (getName pkg);
+        in
+          with pkgs;
+            runCommand name
+            {
+              allowSubstitutes = false;
+              executable = true;
+              preferLocalBuild = true;
+
+              text = ''
+                #!${runtimeShell}
+                exec ${getExe pkg} "$@"
+              '';
+
+              checkPhase = ''
+                ${stdenv.shellDryRun} "$target"
+              '';
+
+              passAsFile = ["text"];
+
+              meta = {
+                description = "Wrapper for ${getName pkg}${
+                  if getVersion pkg != ""
+                  then " (${getVersion pkg})"
+                  else ""
+                }";
+                mainProgram = name;
+              };
+              version = getVersion pkg;
+            }
+            ''
+              target=$out${lib.escapeShellArg "/bin/${name}"}
+              mkdir -p "$(dirname "$target")"
+
+              if [ -e "$textPath" ]; then
+                mv "$textPath" "$target"
+              else
+                echo -n "$text" > "$target"
+              fi
+
+              if [ -n "$executable" ]; then
+                chmod +x "$target"
+              fi
+
+              # Preserve nixos bash and zsh command completions for the wrapped program
+              if [ -d "${pkg}/share" ]; then
+                cp -r "${pkg}/share" $out
+                chmod -R +w $out/share
+                ${getExe fd} --type f . ${pkgName} $out/share --exec bash -c '
+                  ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/ s#${pkgName}#${getExe pkg}#g" {}
+                  ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/! s#${pkgName}#${pkgName}-ng#g" {}
+                  mv {} {}-ng
+                '
+              fi
+
+              eval "$checkPhase"
+            '';
 
         mainPerSystemSubmodule = submodule {
           options = {
@@ -213,27 +347,31 @@ in
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
-            (mkPkg "bech32" caPkgs.bech32-exe-bech32-1-1-2-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-address" caPkgs.cardano-addresses-cli-exe-cardano-address-3-12-0-cardano-foundation-cardano-wallet-v2023-07-18)
-            (mkPkg "cardano-cli" (caPkgs.cardano-cli-exe-cardano-cli-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
-            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-exe-cardano-cli-8-12-0-0-input-output-hk-cardano-node-8-5-0-pre // {version = "8.12.0.0";}))
-            (mkPkg "cardano-db-sync" caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
-            # TODO: Add faucet repo to capkgs
-            # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
-            (mkPkg "cardano-node" (caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
-            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-exe-cardano-node-8-5-0-input-output-hk-cardano-node-8-5-0-pre // {version = "8.5.0-pre";}))
-            (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-2-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-exe-cardano-submit-api-3-1-7-input-output-hk-cardano-node-8-5-0-pre)
-            (mkPkg "cardano-tracer" caPkgs.cardano-tracer-exe-cardano-tracer-0-1-0-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-2023-7-18-cardano-foundation-cardano-wallet-v2023-07-18
+            (mkPkg "bech32" caPkgs.bech32-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2023-07-18)
+            (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
+            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-5-0-pre // {version = "8.12.0.0";}))
+            (mkPkg "cardano-db-sync" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-13-1-1-3 // {exeName = "cardano-db-sync";}))
+            (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-sancho-1-1-0 // {exeName = "cardano-db-sync";}))
+            (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-13-1-1-3)
+            (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-sancho-1-1-0)
+            (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
+            (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
+            (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
+            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-5-0-pre // {version = "8.5.0-pre";}))
+            (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-1-1-3)
+            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-1-1-0)
+            (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-5-0-pre)
+            (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2023-07-18
               // {
                 pname = "cardano-wallet";
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
-            (mkPkg "db-analyser" caPkgs.ouroboros-consensus-cardano-exe-db-analyser-0-6-0-0-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "db-synthesizer" caPkgs.ouroboros-consensus-cardano-exe-db-synthesizer-0-6-0-0-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "db-truncater" caPkgs.ouroboros-consensus-cardano-exe-db-truncater-0-10-0-0-input-output-hk-cardano-node-8-5-0-pre)
+            (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-5-0-pre)
             # TODO: Add offchain-metadata-tools repo to capkgs
             # (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
             # (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
@@ -254,7 +392,6 @@ in
 
           packages = {
             # TODO:
-            # cardano-faucet
             # metadata-server
             # metadata-sync
             # metadata-validator-github
@@ -267,7 +404,9 @@ in
               cardano-cli
               cardano-db-sync
               cardano-db-tool
+              cardano-faucet
               cardano-node
+              cardano-smash
               cardano-submit-api
               cardano-tracer
               cardano-wallet
@@ -278,7 +417,11 @@ in
 
             # The `-ng` variants provide wrapped derivations to avoid cli collision with their non-wrapped, non-ng counterparts.
             cardano-cli-ng = mkWrapper "cardano-cli-ng" cfgPkgs.cardano-cli-ng;
+            cardano-db-sync-ng = mkWrapper "cardano-db-sync-ng" cfgPkgs.cardano-db-sync-ng;
+            cardano-db-tool-ng = mkWrapper "cardano-db-tool-ng" cfgPkgs.cardano-db-tool-ng;
+            cardano-faucet-ng = mkWrapper "cardano-faucet-ng" cfgPkgs.cardano-faucet-ng;
             cardano-node-ng = mkWrapper "cardano-node-ng" cfgPkgs.cardano-node-ng;
+            cardano-smash-ng = mkWrapper "cardano-smash-ng" cfgPkgs.cardano-smash-ng;
             cardano-submit-api-ng = mkWrapper "cardano-submit-api-ng" cfgPkgs.cardano-submit-api-ng;
           };
         };

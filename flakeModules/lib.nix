@@ -33,7 +33,7 @@
           The cardano-parts topology library.
 
           Consumers of the default definition of this library
-          need to pass a valid cardano-parts.cluster.group.$GROUPNAME
+          need to pass a valid cardano-parts.cluster.groups.$GROUPNAME
           to initialize this library for use in a given customizable
           cardano environment.
         '';

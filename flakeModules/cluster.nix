@@ -11,23 +11,33 @@
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
 #   flake.cardano-parts.cluster.infra.grafana.stackName
-#   flake.cardano-parts.cluster.group.<default|name>.groupBlockProducerSubstring
-#   flake.cardano-parts.cluster.group.<default|name>.groupFlake
-#   flake.cardano-parts.cluster.group.<default|name>.groupName
-#   flake.cardano-parts.cluster.group.<default|name>.groupPrefix
-#   flake.cardano-parts.cluster.group.<default|name>.groupRelayMultivalueDns
-#   flake.cardano-parts.cluster.group.<default|name>.groupRelaySubstring
-#   flake.cardano-parts.cluster.group.<default|name>.lib.cardanoLib
-#   flake.cardano-parts.cluster.group.<default|name>.lib.topologyLib
-#   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePort
-#   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePrometheusExporterPort
-#   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
-#   flake.cardano-parts.cluster.group.<default|name>.meta.domain
-#   flake.cardano-parts.cluster.group.<default|name>.meta.environmentName
-#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-cli
-#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node
-#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-node-pkgs
-#   flake.cardano-parts.cluster.group.<default|name>.pkgs.cardano-submit-api
+#   flake.cardano-parts.cluster.groups.<default|name>.groupBlockProducerSubstring
+#   flake.cardano-parts.cluster.groups.<default|name>.groupFlake
+#   flake.cardano-parts.cluster.groups.<default|name>.groupName
+#   flake.cardano-parts.cluster.groups.<default|name>.groupPrefix
+#   flake.cardano-parts.cluster.groups.<default|name>.groupRelayMultivalueDns
+#   flake.cardano-parts.cluster.groups.<default|name>.groupRelaySubstring
+#   flake.cardano-parts.cluster.groups.<default|name>.lib.cardanoLib
+#   flake.cardano-parts.cluster.groups.<default|name>.lib.topologyLib
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoDbSyncPrometheusExporterPort
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePort
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePrometheusExporterPort
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoSmashDelistedPools
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-db-sync-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-faucet-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-smash-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.domain
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.environmentName
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-cli
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync-pkgs
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-tool
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-faucet
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node-pkgs
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-smash
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-submit-api
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.cluster.<...>
@@ -38,7 +48,7 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf functionTo nullOr package port raw str submodule;
+  inherit (types) addCheck anything attrsOf functionTo listOf nullOr package port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -68,7 +78,7 @@ flake @ {
         default = {};
       };
 
-      group = mkOption {
+      groups = mkOption {
         type = attrsOf groupSubmodule;
         description = mdDoc "Cardano-parts cluster group submodule.";
         default = {};
@@ -266,6 +276,12 @@ flake @ {
 
   metaSubmodule = submodule {
     options = {
+      cardanoDbSyncPrometheusExporterPort = mkOption {
+        type = port;
+        description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
+        default = 8080;
+      };
+
       cardanoNodePort = mkOption {
         type = port;
         description = mdDoc "Cardano-parts cluster group cardanoNodePort.";
@@ -278,10 +294,34 @@ flake @ {
         default = 12798;
       };
 
+      cardanoSmashDelistedPools = mkOption {
+        type = listOf str;
+        description = mdDoc "Cardano-parts cluster group cardano-smash delisted pools.";
+        default = [];
+      };
+
+      cardano-db-sync-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
+        default = cfg.pkgs.special.cardano-db-sync-service;
+      };
+
+      cardano-faucet-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-faucet-service import path string.";
+        default = cfg.pkgs.special.cardano-faucet-service;
+      };
+
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
         default = cfg.pkgs.special.cardano-node-service;
+      };
+
+      cardano-smash-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-smash-service import path string.";
+        default = cfg.pkgs.special.cardano-smash-service;
       };
 
       domain = mkOption {
@@ -306,6 +346,34 @@ flake @ {
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli);
       };
 
+      cardano-db-sync = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-db-sync package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-sync);
+      };
+
+      cardano-db-sync-pkgs = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          Cardano-parts cluster group default cardano-db-sync-pkgs.
+
+          The definition must be a function of system.
+        '';
+        default = cfg.pkgs.special.cardano-db-sync-pkgs;
+      };
+
+      cardano-db-tool = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-db-tool package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-tool);
+      };
+
+      cardano-faucet = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-faucet package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-faucet);
+      };
+
       cardano-node = mkOption {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default cardano-node package.";
@@ -320,6 +388,12 @@ flake @ {
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardano-node-pkgs;
+      };
+
+      cardano-smash = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-smash package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-smash);
       };
 
       cardano-submit-api = mkOption {
@@ -340,7 +414,7 @@ in {
   config = {
     flake.cardano-parts.cluster = {
       infra.aws = mkDefault {};
-      group.default = mkDefault {};
+      groups.default = mkDefault {};
     };
   };
 }

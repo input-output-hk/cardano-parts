@@ -1,6 +1,6 @@
 {config, ...}: {
   flake.cloudFormation.terraformState = let
-    inherit (config.flake.cluster) domain bucketName;
+    inherit (config.flake.cardano-parts.cluster.infra.aws) domain bucketName;
   in {
     AWSTemplateFormatVersion = "2010-09-09";
     Description = "Terraform state handling";
@@ -12,6 +12,7 @@
     Resources = {
       kmsKey = {
         Type = "AWS::KMS::Key";
+        DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
           KeyPolicy."Fn::Sub" = builtins.toJSON {
             Version = "2012-10-17";
@@ -30,6 +31,7 @@
 
       kmsKeyAlias = {
         Type = "AWS::KMS::Alias";
+        DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
           # This name is used in various places, check before changing it.
           AliasName = "alias/kmsKey";
@@ -39,12 +41,13 @@
 
       DNSZone = {
         Type = "AWS::Route53::HostedZone";
+        DeletionPolicy = "RetainExceptOnCreate";
         Properties.Name = domain;
       };
 
       S3Bucket = {
         Type = "AWS::S3::Bucket";
-        DeletionPolicy = "Retain";
+        DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
           BucketName = bucketName;
           BucketEncryption.ServerSideEncryptionConfiguration = [
@@ -59,6 +62,7 @@
 
       DynamoDB = {
         Type = "AWS::DynamoDB::Table";
+        DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
           TableName = "terraform";
 

@@ -243,9 +243,11 @@ in
                   default = with pkgs; [
                     deadnix
                     fd
+                    # Need jq 1.7 for rc != 0 on empty file or stream key test
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.jq
                     just
                     moreutils
-                    nushell
+                    (nushell.override {additionalFeatures = p: p ++ ["dataframe"];})
                     ripgrep
                     statix
                     xxd
@@ -309,6 +311,7 @@ in
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
                         rain
                         sops
+                        ssh-config-json
                         ssh-to-age
                         terraform
                         wireguard-tools

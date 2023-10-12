@@ -7,7 +7,7 @@ flake @ {
 }:
 with builtins;
 with lib; let
-  inherit (config.flake.cardano-parts.cluster) group;
+  inherit (config.flake.cardano-parts.cluster) groups;
 
   cluster = config.flake.cardano-parts.cluster.infra.aws;
 
@@ -34,7 +34,7 @@ with lib; let
 
   # Generate a list of all multivalue dns resources tf needs to create
   multivalueDnsList = sort lessThan (unique (
-    filter (e: e != null) (map (g: getAttrFromPath [g "groupRelayMultivalueDns"] group) (attrNames group))
+    filter (e: e != null) (map (g: getAttrFromPath [g "groupRelayMultivalueDns"] groups) (attrNames groups))
   ));
 
   # Different groups can share the same multivalue dns resource.
@@ -42,8 +42,8 @@ with lib; let
   isMultivalueDnsMember = dns: g: n:
     if
       dns
-      == group.${g}.groupRelayMultivalueDns
-      && hasPrefix "${group.${g}.groupPrefix}${group.${g}.groupRelaySubstring}" n
+      == groups.${g}.groupRelayMultivalueDns
+      && hasPrefix "${groups.${g}.groupPrefix}${groups.${g}.groupRelaySubstring}" n
     then true
     else false;
 
@@ -55,7 +55,7 @@ with lib; let
           if (isMultivalueDnsMember dns g n)
           then n
           else null)
-        (attrNames nodes)) (attrNames group))));
+        (attrNames nodes)) (attrNames groups))));
     }) {}
   multivalueDnsList;
 in {
@@ -227,6 +227,16 @@ in {
                 lifecycle = [{create_before_destroy = true;}];
 
                 ingress = [
+                  (mkRule {
+                    description = "Allow HTTP";
+                    from_port = 80;
+                    to_port = 80;
+                  })
+                  (mkRule {
+                    description = "Allow HTTPS";
+                    from_port = 443;
+                    to_port = 443;
+                  })
                   (mkRule {
                     description = "Allow SSH";
                     from_port = 22;
