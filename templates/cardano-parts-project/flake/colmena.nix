@@ -14,6 +14,8 @@ in {
 
     # Instance defs:
     t3a-small.aws.instance.instance_type = "t3a.small";
+    t3a-medium.aws.instance.instance_type = "t3a.medium";
+    m5a-large.aws.instance.instance_type = "m5a.large";
 
     # Helper fns:
     ebs = size: {aws.instance.root_block_device.volume_size = lib.mkDefault size;};
@@ -22,29 +24,59 @@ in {
     # delete.aws.instance.count = 0;
 
     # Cardano group assignments:
-    preview1 = {cardano-parts.cluster.group = config.flake.cardano-parts.cluster.group.preview1;};
+    group = name: {cardano-parts.cluster.group = config.flake.cardano-parts.cluster.groups.${name};};
 
     # Cardano-node modules for group deployment
     node = {
       imports = [
         # Base cardano-node service
-        config.flake.cardano-parts.cluster.group.default.meta.cardano-node-service
+        config.flake.cardano-parts.cluster.groups.default.meta.cardano-node-service
 
         # Config for cardano-node group deployments
         inputs.cardano-parts.nixosModules.profile-cardano-node-group
-
-        # Default group deployment topology
-        topoSimple
       ];
     };
 
     # Profiles
     topoSimple = {imports = [inputs.cardano-parts.nixosModules.profile-topology-simple];};
-    # pre = {imports = [inputs.cardano-parts.nixosModules.profile-pre-release];};
+    pre = {imports = [inputs.cardano-parts.nixosModules.profile-pre-release];};
+
+    smash = {
+      imports = [
+        config.flake.cardano-parts.cluster.groups.default.meta.cardano-smash-service
+        inputs.cardano-parts.nixosModules.profile-cardano-smash
+        {services.cardano-smash.acmeEmail = "devops@iohk.io";}
+      ];
+    };
+
+    # Snapshots Profile: add this to a dbsync machine defn and deploy; remove once the snapshot is restored.
+    # Snapshots for mainnet can be found at: https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html#13.1/
+    # snapshot = {services.cardano-db-sync.restoreSnapshot = "$SNAPSHOT_URL";};
 
     # Roles
-    rel = {imports = [inputs.cardano-parts.nixosModules.role-relay];};
-    bp = {imports = [inputs.cardano-parts.nixosModules.role-block-producer];};
+    rel = {imports = [inputs.cardano-parts.nixosModules.role-relay topoSimple];};
+    bp = {imports = [inputs.cardano-parts.nixosModules.role-block-producer topoSimple];};
+
+    dbsync = {
+      imports = [
+        config.flake.cardano-parts.cluster.groups.default.meta.cardano-node-service
+        config.flake.cardano-parts.cluster.groups.default.meta.cardano-db-sync-service
+        inputs.cardano-parts.nixosModules.profile-cardano-db-sync
+        inputs.cardano-parts.nixosModules.profile-cardano-node-group
+        inputs.cardano-parts.nixosModules.profile-cardano-postgres
+      ];
+    };
+
+    faucet = {
+      imports = [
+        # TODO: Module import fixup for local services
+        # config.flake.cardano-parts.cluster.groups.default.meta.cardano-faucet-service
+        inputs.cardano-parts.nixosModules.service-cardano-faucet
+
+        inputs.cardano-parts.nixosModules.profile-cardano-faucet
+        {services.cardano-faucet.acmeEmail = "devops@iohk.io";}
+      ];
+    };
   in {
     meta = {
       nixpkgs = import inputs.nixpkgs {
@@ -83,9 +115,11 @@ in {
       nixosModules.common
     ];
 
-    preview1-bp-a-1 = {imports = [eu-central-1 t3a-small (ebs 40) preview1 node bp];};
-    preview1-rel-a-1 = {imports = [eu-central-1 t3a-small (ebs 40) preview1 node rel];};
-    preview1-rel-b-1 = {imports = [eu-west-1 t3a-small (ebs 40) preview1 node rel];};
-    preview1-rel-c-1 = {imports = [us-east-2 t3a-small (ebs 40) preview1 node rel];};
+    preview1-bp-a-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node bp];};
+    preview1-rel-a-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node rel];};
+    preview1-rel-b-1 = {imports = [eu-west-1 t3a-small (ebs 40) (group "preview1") node rel];};
+    preview1-rel-c-1 = {imports = [us-east-2 t3a-small (ebs 40) (group "preview1") node rel];};
+    preview1-dbsync-a-1 = {imports = [eu-central-1 m5a-large (ebs 40) (group "preview1") dbsync smash];};
+    preview1-faucet-a-1 = {imports = [eu-central-1 t3a-medium (ebs 40) (group "preview1") node faucet pre];};
   };
 }
