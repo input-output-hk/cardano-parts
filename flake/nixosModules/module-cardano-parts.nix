@@ -78,7 +78,7 @@ flake @ {moduleWithSystem, ...}: {
       options = {
         group = mkOption {
           type = attrsOf anything;
-          inherit (flake.config.flake.cardano-parts.cluster.group) default;
+          inherit (flake.config.flake.cardano-parts.cluster.groups) default;
           description = mdDoc "The cardano group to associate with the nixos node.";
         };
       };
