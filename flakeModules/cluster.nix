@@ -24,6 +24,7 @@
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoNodePrometheusExporterPort
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardanoSmashDelistedPools
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-db-sync-service
+#   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-faucet-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.cardano-smash-service
 #   flake.cardano-parts.cluster.group.<default|name>.meta.domain
@@ -303,6 +304,12 @@ flake @ {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
         default = cfg.pkgs.special.cardano-db-sync-service;
+      };
+
+      cardano-faucet-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-faucet-service import path string.";
+        default = cfg.pkgs.special.cardano-faucet-service;
       };
 
       cardano-node-service = mkOption {

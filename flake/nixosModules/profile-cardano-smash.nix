@@ -3,23 +3,25 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.cardano-smash.acmeEmail
+#   config.services.cardano-smash.acmeProd
 #   config.services.cardano-smash.enableAcme
-#   config.services.cardano-smash.extraFqdn
-#   config.services.cardano-smash.nginxVhostExporterPort
 #   config.services.cardano-smash.registeredRelaysExporterPort
+#   config.services.cardano-smash.serverAliases
+#   config.services.cardano-smash.serverName
 #   config.services.cardano-smash.varnishExporterPort
 #   config.services.cardano-smash.varnishFqdn
 #   config.services.cardano-smash.varnishRamAvailableMiB
 #   config.services.cardano-smash.varnishTtl
-#   config.nginx.vhostExporterAddress
-#   config.nginx.vhostExporterEnable
-#   config.nginx.vhostExporterPort
+#   config.services.nginx-vhost-exporter.address
+#   config.services.nginx-vhost-exporter.enable
+#   config.services.nginx-vhost-exporter.port
 #
 # Tips:
 #   * This is a cardano-smash add-on to the cardano-parts profile-cardano-db-sync nixos service module
 #   * This module provides cardano-smash and registered relays exporter services through nginx and varnish
 #   * The cardano-parts profile-cardano-db-sync nixos service module should still be imported separately
-{
+flake: {
   flake.nixosModules.profile-cardano-smash = {
     config,
     pkgs,
@@ -47,11 +49,18 @@
 
       cfg = config.services.cardano-smash;
       cfgDbsync = config.services.cardano-db-sync;
-      cfgNginx = config.services.nginx;
       cfgSmash = config.services.smash;
     in {
+      imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
+
       options = {
         services.cardano-smash = {
+          acmeEmail = mkOption {
+            type = str;
+            default = null;
+            description = "The default contact email to be used for ACME certificate aquisition.";
+          };
+
           acmeProd = mkOption {
             type = bool;
             default = true;
@@ -64,22 +73,28 @@
             description = "Whether to obtain an ACME TLS cert for serving smash server via nginx.";
           };
 
-          extraFqdn = mkOption {
-            type = listOf str;
-            default = [];
-            description = "Extra FQDNs to be added to the ACME TLS cert for serving smash server via nginx.";
-          };
-
           registeredRelaysExporterPort = mkOption {
             type = port;
             default = 8888;
             description = "The port for the registered relays metrics exporter to listen on.";
           };
 
+          serverAliases = mkOption {
+            type = listOf str;
+            default = [];
+            description = "Extra FQDN aliases to be added to the ACME TLS cert for serving smash server via nginx.";
+          };
+
+          serverName = mkOption {
+            type = str;
+            default = "${name}.${domain}";
+            description = "The default server name for serving smash server via nginx.";
+          };
+
           varnishExporterPort = mkOption {
             type = port;
             default = 9131;
-            description = "The port for the nginx vhost traffic status module to bind to on localhost.";
+            description = "The port for the varnish metrics exporter to listen on.";
           };
 
           varnishFqdn = mkOption {
@@ -98,26 +113,6 @@
             type = ints.positive;
             default = 30;
             description = "The number of days for smash server cache object TTL.";
-          };
-        };
-
-        services.nginx = {
-          vhostExporterEnable = mkOption {
-            type = bool;
-            default = true;
-            description = "Whether to enable nginx vts module vhost traffic export metrics.";
-          };
-
-          vhostExporterAddress = mkOption {
-            type = str;
-            default = "127.0.0.1";
-            description = "The listen address for the nginx vhost traffic status module to bind.";
-          };
-
-          vhostExporterPort = mkOption {
-            type = port;
-            default = 9113;
-            description = "The port for the nginx vhost traffic status module to bind.";
           };
         };
       };
@@ -427,12 +422,12 @@
           };
         };
 
-        networking.firewall.allowedTCPPorts = lib.mkIf cfg.enableAcme [80 443];
+        networking.firewall.allowedTCPPorts = mkIf cfg.enableAcme [80 443];
 
         security.acme = mkIf cfg.enableAcme {
           acceptTerms = true;
           defaults = {
-            email = lib.mkDefault "devops@iohk.io";
+            email = cfg.acmeEmail;
             server =
               if cfg.acmeProd
               then "https://acme-v02.api.letsencrypt.org/directory"
@@ -440,22 +435,12 @@
           };
         };
 
+        services.nginx-vhost-exporter.enable = true;
+
         services.nginx = {
           enable = true;
-          additionalModules = [pkgs.nginxModules.vts];
           eventsConfig = "worker_connections 4096;";
           appendConfig = "worker_rlimit_nofile 16384;";
-          appendHttpConfig = mkIf cfgNginx.vhostExporterEnable ''
-            # This config enables prom metrics exported to: /status/format/prometheus
-            vhost_traffic_status_zone;
-            server {
-              listen ${cfgNginx.vhostExporterAddress}:${toString cfgNginx.vhostExporterPort};
-              location /status {
-                vhost_traffic_status_display;
-                vhost_traffic_status_display_format html;
-              }
-            }
-          '';
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
           recommendedProxySettings = true;
@@ -497,9 +482,9 @@
 
           virtualHosts = {
             smash = {
+              inherit (cfg) serverAliases serverName;
+
               default = true;
-              serverName = "${name}.${domain}";
-              serverAliases = cfg.extraFqdn;
               enableACME = cfg.enableAcme;
               forceSSL = cfg.enableAcme;
               locations = let

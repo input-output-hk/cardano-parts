@@ -219,6 +219,7 @@
                     group = groupName;
                   };
                 in [
+                  # Metrics exporter: cardano-db-sync
                   (mkIf (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) {
                     job_name = "integrations/cardano-db-sync";
                     metrics_path = "/";
@@ -229,6 +230,8 @@
                       }
                     ];
                   })
+
+                  # Metrics exporter: cardano-node
                   (mkIf (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable) {
                     job_name = "integrations/cardano-node";
                     metrics_path = "/metrics";
@@ -239,6 +242,20 @@
                       }
                     ];
                   })
+
+                  # Metrics exporter: cardano-faucet
+                  (mkIf (cfgSvc ? cardano-faucet && cfgSvc.cardano-faucet.enable) {
+                    job_name = "integrations/cardano-faucet";
+                    metrics_path = "/metrics";
+                    static_configs = [
+                      {
+                        inherit labels;
+                        targets = ["127.0.0.1:${toString cfgSvc.cardano-faucet.faucetPort}"];
+                      }
+                    ];
+                  })
+
+                  # Metrics exporter: cardano-smash
                   (mkIf (cfgSvc ? cardano-smash) {
                     job_name = "integrations/cardano-smash";
                     metrics_path = "/";
@@ -249,16 +266,20 @@
                       }
                     ];
                   })
-                  (mkIf (cfgSvc.nginx ? vhostExporterEnable && cfgSvc.nginx.vhostExporterEnable) {
+
+                  # Metrics exporter: nginx vts
+                  (mkIf (cfgSvc ? nginx-vhost-exporter && cfgSvc.nginx-vhost-exporter.enable) {
                     job_name = "integrations/nginx-vts";
                     metrics_path = "/status/format/prometheus";
                     static_configs = [
                       {
                         inherit labels;
-                        targets = ["${cfgSvc.nginx.vhostExporterAddress}:${toString cfgSvc.nginx.vhostExporterPort}"];
+                        targets = ["${cfgSvc.nginx-vhost-exporter.address}:${toString cfgSvc.nginx-vhost-exporter.port}"];
                       }
                     ];
                   })
+
+                  # Metrics exporter: varnish
                   (mkIf (cfgSvc.prometheus.exporters ? varnish && cfgSvc.prometheus.exporters.varnish.enable) {
                     job_name = "integrations/varnish-cache";
                     metrics_path = cfgSvc.prometheus.exporters.varnish.telemetryPath;

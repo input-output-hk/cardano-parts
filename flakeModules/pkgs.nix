@@ -10,6 +10,7 @@
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-service
+#   flake.cardano-parts.pkgs.special.cardano-faucet-service
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
@@ -227,6 +228,14 @@
         default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/cardano-db-sync-service.nix";
       };
 
+      # TODO: Module import fixup for local services
+      cardano-faucet-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-faucet-service import path string.";
+        # default = localFlake.nixosModules.service-cardano-faucet;
+        default = "${localFlake}/flake/nixosModules/service-cardano-faucet.nix";
+      };
+
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-node-service import path string.";
@@ -346,7 +355,7 @@ in
             (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-exe-cardano-db-sync-13-1-1-3-input-output-hk-cardano-db-sync-sancho-1-1-0 // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-13-1-1-3)
             (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-exe-cardano-db-tool-13-1-1-3-input-output-hk-cardano-db-sync-sancho-1-1-0)
-            # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.${system}."cardano-faucet:exe:cardano-faucet")
+            (mkPkg "cardano-faucet" caPkgs.cardano-faucet-exe-cardano-faucet-8-3-input-output-hk-cardano-faucet-master)
             (mkPkg "cardano-faucet-ng" caPkgs.cardano-faucet-exe-cardano-faucet-8-3-input-output-hk-cardano-faucet-master)
             (mkPkg "cardano-node" (caPkgs.cardano-node-exe-cardano-node-8-1-2-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
             (mkPkg "cardano-node-ng" (caPkgs.cardano-node-exe-cardano-node-8-5-0-input-output-hk-cardano-node-8-5-0-pre // {version = "8.5.0-pre";}))
@@ -383,8 +392,6 @@ in
 
           packages = {
             # TODO:
-            # cardano-faucet
-            # cardano-smash
             # metadata-server
             # metadata-sync
             # metadata-validator-github
@@ -397,7 +404,9 @@ in
               cardano-cli
               cardano-db-sync
               cardano-db-tool
+              cardano-faucet
               cardano-node
+              cardano-smash
               cardano-submit-api
               cardano-tracer
               cardano-wallet
