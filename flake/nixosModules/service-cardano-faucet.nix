@@ -215,7 +215,15 @@
               default = true;
               enableACME = cfg.enableAcme;
               forceSSL = cfg.enableAcme;
-              locations."/".proxyPass = "http://127.0.0.1:${toString cfg.faucetPort}";
+              locations = let
+                publicPrefixes = [
+                  "/basic-faucet"
+                  "/delegate"
+                  "/get-site-key"
+                  "/send-money"
+                ];
+              in
+                genAttrs publicPrefixes (_: {proxyPass = "http://127.0.0.1:${toString cfg.faucetPort}";});
             };
           };
         };
