@@ -321,10 +321,11 @@ in
               fi
 
               # Preserve nixos bash and zsh command completions for the wrapped program
+              # Remove fd overrideAttrs mod to avoid mainProgram warn once nixpkgs >= 23.11
               if [ -d "${pkg}/share" ]; then
                 cp -r "${pkg}/share" $out
                 chmod -R +w $out/share
-                ${getExe fd} --type f . ${pkgName} $out/share --exec bash -c '
+                ${getExe (fd.overrideAttrs (_: {meta.mainProgram = "fd";}))} --type f . ${pkgName} $out/share --exec bash -c '
                   ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/ s#${pkgName}#${getExe pkg}#g" {}
                   ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/! s#${pkgName}#${pkgName}-ng#g" {}
                   mv {} {}-ng
