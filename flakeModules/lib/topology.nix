@@ -29,6 +29,8 @@ with lib; rec {
   };
 
   # Generate p2p edgeNodes from cardanoLib legacy provided edgeNodes
+  # Note: this won't work for mainnet as iohk-nix edgeNodes element type differs
+  # TODO: fix iohk-nix upstream once p2p is implemented
   p2pEdgeNodes = map (edgeNode: {
     accessPoints = [
       {
@@ -41,9 +43,18 @@ with lib; rec {
   # Shift a list by n
   shiftList = n: l: drop n l ++ (take n l);
 
-  # Generate p2p producers using a custom list of machineNames
-  topoCustom = nodes:
-    map (producer: mkProducer producer nodes);
+  # Generate p2p producers using groupMachines filtered for self and allowing allowList infixes
+  topoInfixFiltered = name: nodes: allowList:
+    map (producer: mkProducer producer nodes) (
+      filter (
+        n:
+          (n != name)
+          && any (b: b) (map (allow: hasInfix allow n) allowList)
+      ) (groupMachines nodes)
+    );
+
+  # Generate p2p producers using a list of machineNames which exist in nodes
+  topoList = nodes: map (producer: mkProducer producer nodes);
 
   # Generate p2p producers using groupMachines filtered for self
   topoSimple = name: nodes:
