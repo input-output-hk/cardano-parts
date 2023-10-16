@@ -38,7 +38,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:input-output-hk/cardano-db-sync/sancho-1-1-0";
+      url = "github:input-output-hk/cardano-db-sync/sancho-2-0-0";
       flake = false;
     };
 
