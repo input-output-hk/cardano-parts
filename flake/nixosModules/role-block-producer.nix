@@ -96,6 +96,7 @@
       services.cardano-node =
         serviceCfg.${Protocol}
         // {
+          # These are also set from the profile-cardano-node-topology nixos module when role == "bp"
           publicProducers = mkForce [];
           usePeersFromLedgerAfterSlot = -1;
         };
@@ -119,10 +120,18 @@
             --current
         '';
 
+        show-pool-hash = ''
+          cardano-cli \
+            stake-pool id \
+            --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+            --output-format hex
+        '';
+
         show-pool-id = ''
           cardano-cli \
             stake-pool id \
-            --cold-verification-key-file /run/secrets/cardano-node-cold-verification
+            --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+            --output-format bech32
         '';
 
         show-pool-stake-snapshot = ''

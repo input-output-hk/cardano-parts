@@ -52,7 +52,10 @@
 
         bp = {
           producers = topoInfixFiltered cfg.name cfg.nodes ["-rel-"];
-          publicProducers = topologyFns.edge;
+
+          # These are also set from the role-block-producer nixos module
+          publicProducers = mkForce [];
+          usePeersFromLedgerAfterSlot = -1;
         };
       };
 
@@ -162,6 +165,10 @@
             then roles.${cfg.role}.publicProducers
             else topologyFns.${cfg.publicProducerTopologyFn}
           );
+
+          usePeersFromLedgerAfterSlot =
+            mkIf (cfg.role == "bp")
+            roles.${cfg.role}.usePeersFromLedgerAfterSlot;
         };
       };
     };
