@@ -324,7 +324,7 @@ flake: {
               db_sync_epoch=$(psql -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
 
               if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then
-                >&2 echo "cardano-db-sync has not catch-up with current epoch yet. Skipping."
+                >&2 echo "cardano-db-sync has not caught up with current epoch yet. Skipping."
                 exit 0
               fi
 

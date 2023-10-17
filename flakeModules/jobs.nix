@@ -333,7 +333,7 @@ in {
 
               # Generate stake id
               "''${CARDANO_CLI[@]}" stake-pool id \
-                --cold-verification-key-file "$DEPLOY_FILE"-cold.vkey \
+                --cold-verification-key-file "$NO_DEPLOY_FILE"-cold.vkey \
                 --out-file "$NO_DEPLOY_FILE"-pool.id
 
               # Generate opcert
