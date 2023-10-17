@@ -365,6 +365,102 @@ in {
           '';
         };
 
+        packages.job-delegate-rewards-stake-key = writeShellApplication {
+          name = "job-delegate-rewards-stake-key";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ERA]
+            #   [$NO_DEPLOY_DIR]
+            #   $PAYMENT_KEY
+            #   [$POOL_DELEG_INDEX]
+            #   $POOL_NAMES
+            #   [$STAKE_POOL_DIR]
+            #   [$SUBMIT_TX]
+            #   [$UNSTABLE]
+            #   [$USE_DECRYPTION]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            elif [ -n "''${POOL_NAMES:-}" ]; then
+              read -r -a POOLS <<< "$POOL_NAMES"
+            fi
+
+            POOL_DELEG_INDEX=''${POOL_DELEG_INDEX:-"0"}
+            NUM_POOLS=$((''${#POOLS[@]}))
+            if ! { [ "$POOL_DELEG_INDEX" -ge "0" ] && [ "$POOL_DELEG_INDEX" -lt "$NUM_POOLS" ]; }; then
+              echo "The pool delegation must be the element index of the pool list and defaults to 0"
+              exit 1
+            fi
+
+            NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"
+            mkdir -p "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"
+
+            WITNESSES="3"
+            CHANGE_ADDRESS=$(
+              "''${CARDANO_CLI[@]}" address build \
+                --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
+                --testnet-magic "$TESTNET_MAGIC"
+            )
+
+            POOL_NAME="''${POOLS[$POOL_DELEG_INDEX]}"
+            NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
+
+            # Generate stake delegation certificate
+            "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
+              --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
+              --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+              --out-file "$POOL_NAME"-reward-delegation.cert
+
+            # Generate transaction
+            TXIN=$(
+              "''${CARDANO_CLI[@]}" query utxo \
+                --address "$CHANGE_ADDRESS" \
+                --testnet-magic "$TESTNET_MAGIC" \
+                --out-file /dev/stdout \
+              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
+            )
+
+            # Generate arrays needed for build/sign commands
+            BUILD_TX_ARGS=()
+            SIGN_TX_ARGS=()
+
+            # Generate arrays needed for build/sign commands
+            BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-reward-delegation.cert")
+            SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-reward-stake.skey")")
+            SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-cold.skey")")
+
+            "''${CARDANO_CLI[@]}" transaction build ''${ERA:+$ERA} \
+              --tx-in "$TXIN" \
+              --change-address "$CHANGE_ADDRESS" \
+              --witness-override "$WITNESSES" \
+              "''${BUILD_TX_ARGS[@]}" \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --out-file tx-pool-deleg.txbody
+
+            "''${CARDANO_CLI[@]}" transaction sign \
+              --tx-body-file tx-pool-deleg.txbody \
+              --out-file tx-pool-deleg.txsigned \
+              --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
+              "''${SIGN_TX_ARGS[@]}"
+
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
+              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-pool-deleg.txsigned
+            fi
+          '';
+        };
+
         packages.job-register-stake-pools = writeShellApplication {
           name = "job-register-stake-pools";
           runtimeInputs = stdPkgs;
@@ -433,14 +529,14 @@ in {
               fi
 
               "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
-                --cold-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-cold.vkey)" \
+                --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-delegation.cert
 
               # shellcheck disable=SC2031
               "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
                 --testnet-magic "$TESTNET_MAGIC" \
-                --cold-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-cold.vkey)" \
+                --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                 --pool-cost 500000000 \
                 --pool-margin 1 \
                 --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
