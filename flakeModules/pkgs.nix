@@ -373,12 +373,11 @@ in
             (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-1-2)
             (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-1-2)
             (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-5-0-pre)
-            # TODO: Add offchain-metadata-tools repo to capkgs
-            # (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
-            # (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
-            # (mkPkg "metadata-validator-github" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-validator-github)
-            # (mkPkg "metadata-webhook" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-webhook)
-            # (mkPkg "token-metadata-creator" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.token-metadata-creator)
+            (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
       in {
@@ -392,12 +391,6 @@ in
           cardano-parts = mkDefault {};
 
           packages = {
-            # TODO:
-            # metadata-server
-            # metadata-sync
-            # metadata-validator-github
-            # metadata-webhook
-            # token-metadata-creator
             inherit
               (cfgPkgs)
               bech32
@@ -414,6 +407,11 @@ in
               db-analyser
               db-synthesizer
               db-truncater
+              metadata-server
+              metadata-sync
+              metadata-validator-github
+              metadata-webhook
+              token-metadata-creator
               ;
 
             # The `-ng` variants provide wrapped derivations to avoid cli collision with their non-wrapped, non-ng counterparts.

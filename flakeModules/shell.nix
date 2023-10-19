@@ -290,10 +290,7 @@ in
                         self'.packages.cardano-cli-ng
                         self'.packages.cardano-node-ng
 
-                        # Until offchain-metadata-tools repo is added to capkgs
-                        # token-metadata-creator
-                        # TODO:
-                        # update-cabal-source-repo-checksums
+                        token-metadata-creator
                       ]);
                 };
               }
