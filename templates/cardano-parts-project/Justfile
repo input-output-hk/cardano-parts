@@ -3,14 +3,17 @@ set positional-arguments
 
 alias tf := terraform
 
+# Defaults
+defaultMagic := "-1"
+
 default:
   @just --list
 
 apply *ARGS:
   colmena apply --verbose --on {{ARGS}}
 
-apply-all:
-  colmena apply --verbose
+apply-all *ARGS:
+  colmena apply --verbose {{ARGS}}
 
 build-machine MACHINE *ARGS:
   nix build -L .#nixosConfigurations.{{MACHINE}}.config.system.build.toplevel {{ARGS}}
@@ -84,6 +87,35 @@ list-machines:
       | where machine != ""
   )
 
+query-tip ENV TESTNET_MAGIC=defaultMagic:
+  #!/usr/bin/env bash
+
+  if ! [[ "{{ENV}}" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
+    echo "Error: only node environments for demo, preprod, preview, sanchonet and shelley-qa are supported for query-tip recipe"
+    exit 1
+  fi
+
+  if [ "{{ENV}}" = "preprod" ]; then
+    MAGIC="1"
+  elif [ "{{ENV}}" = "preview" ]; then
+    MAGIC="2"
+  elif [ "{{ENV}}" = "shelley-qa" ]; then
+    MAGIC="3"
+  elif [ "{{ENV}}" = "sanchonet" ]; then
+    MAGIC="4"
+  elif [ "{{ENV}}" = "demo" ]; then
+    MAGIC="42"
+  fi
+
+  # Allow a magic override if the just recipe optional var is provided is provided
+  if [ "{{TESTNET_MAGIC}}" != "-1" ]; then
+    MAGIC="{{TESTNET_MAGIC}}"
+  fi
+
+  cardano-cli query tip \
+    --socket-path node-{{ENV}}.socket \
+    --testnet-magic "$MAGIC"
+
 save-bootstrap-ssh-key:
   #!/usr/bin/env nu
   print "Retrieving ssh key from terraform..."
@@ -108,11 +140,11 @@ show-nameservers:
   print $"Nameservers for domain: ($domain) \(hosted zone id: ($id)) are:"
   print ($ns | to text)
 
-sops-encrypt-binary FILE:
-  sops --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
-
 sops-decrypt-binary FILE:
   sops --input-type binary --output-type binary --decrypt {{FILE}}
+
+sops-encrypt-binary FILE:
+  sops --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
 ssh HOSTNAME *ARGS:
   #!/usr/bin/env nu
@@ -143,6 +175,150 @@ ssh-for-all *ARGS:
 
 ssh-for-each HOSTNAMES *ARGS:
   colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
+
+start-demo:
+  #!/usr/bin/env bash
+
+  just stop-node demo
+
+  echo "Cleaning state-demo..."
+  if [ -d state-demo ]; then
+    chmod -R +w state-demo
+    rm -rf state-demo
+  fi
+
+  echo "Generating state-demo config..."
+
+  export ENV=custom
+  export GENESIS_DIR=state-demo
+  export KEY_DIR=state-demo/envs/custom
+  export DATA_DIR=state-demo/rundir
+
+  export CARDANO_NODE_SOCKET_PATH=./node-demo.socket
+  export TESTNET_MAGIC=42
+
+  export NUM_GENESIS_KEYS=3
+  export POOL_NAMES="sp-1 sp-2 sp-3"
+  export STAKE_POOL_DIR=state-demo/groups/stake-pools
+
+  export BULK_CREDS=state-demo/bulk.creds.all.json
+  export PAYMENT_KEY=state-demo/envs/custom/utxo-keys/rich-utxo
+
+  export UNSTABLE=true
+  export UNSTABLE_LIB=true
+  export USE_ENCRYPTION=true
+  export USE_DECRYPTION=true
+  export DEBUG=1
+
+  SECURITY_PARAM=8 \
+    SLOT_LENGTH=200 \
+    START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds") \
+    nix run .#job-gen-custom-node-config
+
+  nix run .#job-create-stake-pool-keys
+
+  (
+    jq -r '.[]' < <(sops --input-type binary --output-type binary --decrypt "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
+    jq -r '.[]' < <(sops --input-type binary --output-type binary --decrypt "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+  ) | jq -s > "$BULK_CREDS"
+
+  echo "Start cardano-node in the background. Run \"just stop\" to stop"
+  NODE_CONFIG="$DATA_DIR/node-config.json" \
+    NODE_TOPOLOGY="$DATA_DIR/topology.json" \
+    SOCKET_PATH=./node-demo.socket \
+    nohup setsid nix run .#run-cardano-node &> node-demo.log & echo $! > node-demo.pid &
+  echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
+  sleep 30
+  echo
+
+  echo "Moving genesis utxo..."
+  BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
+    ERA="--alonzo-era" \
+    nix run .#job-move-genesis-utxo
+  echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
+  sleep 7
+  echo
+
+  echo "Registering stake pools..."
+  POOL_RELAY=demo.local \
+    POOL_RELAY_PORT=3001 \
+    ERA="--alonzo-era" \
+    nix run .#job-register-stake-pools
+  echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
+  sleep 7
+  echo
+
+  echo "Delegating rewards stake key..."
+  ERA="--alonzo-era" \
+    nix run .#job-delegate-rewards-stake-key
+  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
+  sleep 320
+  echo
+
+  echo "Forking to babbage..."
+  just query-tip demo
+  MAJOR_VERSION=7 \
+    ERA="--alonzo-era" \
+    nix run .#job-update-proposal-hard-fork
+  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
+  sleep 320
+  echo
+
+  echo "Forking to babbage (intra-era)..."
+  just query-tip demo
+  MAJOR_VERSION=8 \
+    ERA="--babbage-era" \
+    nix run .#job-update-proposal-hard-fork
+  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
+  sleep 320
+  echo
+
+  echo "Forking to conway..."
+  just query-tip demo
+  MAJOR_VERSION=9 \
+    ERA="--babbage-era" \
+    nix run .#job-update-proposal-hard-fork
+  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
+  sleep 320
+  echo
+
+  just query-tip demo
+  echo "Finished sequence..."
+  echo
+
+start-node ENV:
+  #!/usr/bin/env bash
+  if ! [[ "{{ENV}}" =~ preprod$|preview$|sanchonet$|shelley-qa ]]; then
+    echo "Error: only node environments for preprod, preview, sanchonet and shelley-qa are supported for start-node recipe"
+    exit 1
+  fi
+
+  # Stop any existing running node env for a clean restart
+  just stop-node {{ENV}}
+
+  if [[ "{{ENV}}" =~ preprod$|preview$ ]]; then
+    UNSTABLE=false
+    UNSTABLE_LIB=false
+  else
+    UNSTABLE=true
+    UNSTABLE_LIB=true
+  fi
+
+  # Set required entrypoint vars and run node in a new nohup background session
+  ENVIRONMENT="{{ENV}}" \
+  UNSTABLE="$UNSTABLE" \
+  UNSTABLE_LIB="$UNSTABLE_LIB" \
+  DATA_DIR=~/.local/share/playground \
+  SOCKET_PATH=$(pwd)/"node-{{ENV}}.socket" \
+  nohup setsid nix run .#run-cardano-node &> node-{{ENV}}.log & echo $! > node-{{ENV}}.pid &
+
+stop-node ENV:
+  #!/usr/bin/env bash
+  if [ -f "node-{{ENV}}.pid" ]; then
+    echo "Stopping cardano-node for envrionment {{ENV}}"
+    kill $(< "node-{{ENV}}.pid") 2> /dev/null
+    rm -f "node-{{ENV}}.pid" "node-{{ENV}}.socket"
+  fi
 
 terraform *ARGS:
   #!/usr/bin/env bash
