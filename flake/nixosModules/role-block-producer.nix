@@ -105,13 +105,13 @@
       users.users.cardano-node.extraGroups = ["keys"];
 
       environment.shellAliases = {
-        show-kes-period-info = ''
+        cardano-show-kes-period-info = ''
           cardano-cli \
             query kes-period-info \
             --op-cert-file /run/secrets/cardano-node-operational-cert
         '';
 
-        show-leadership-schedule = ''
+        cardano-show-leadership-schedule = ''
           cardano-cli \
             query leadership-schedule \
             --genesis ${ShelleyGenesisFile} \
@@ -120,14 +120,14 @@
             --current
         '';
 
-        show-pool-hash = ''
+        cardano-show-pool-hash = ''
           cardano-cli \
             stake-pool id \
             --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
             --output-format hex
         '';
 
-        show-pool-id = ''
+        cardnao-show-pool-id = ''
           cardano-cli \
             stake-pool id \
             --cold-verification-key-file /run/secrets/cardano-node-cold-verification \

@@ -69,6 +69,7 @@
       ncdu
       parted
       pciutils
+      procps
       ripgrep
       rsync
       ssh-to-age

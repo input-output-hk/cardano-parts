@@ -102,10 +102,19 @@
         config.cardano-parts.pkgs.db-synthesizer
       ];
 
-      environment.variables = {
-        CARDANO_NODE_NETWORK_ID = toString protocolMagic;
-        CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
-        TESTNET_MAGIC = toString protocolMagic;
+      environment = {
+        shellAliases = {
+          cardano-dump-p2p-conns = ''
+            pkill --echo --signal SIGUSR1 cardano-node
+              | sed 's/killed/signaled to dump p2p TrState info, check logs for details/g'
+          '';
+        };
+
+        variables = {
+          CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+          CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
+          TESTNET_MAGIC = toString protocolMagic;
+        };
       };
 
       # Leave firewall rules to role config
