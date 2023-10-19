@@ -87,9 +87,17 @@ list-machines:
       | where machine != ""
   )
 
+query-all:
+  #!/usr/bin/env bash
+  QUERIED=0
+  for i in preprod preview shelley-qa sanchonet demo; do
+    TIP=$(just query-tip $i 2>&1)
+    [ "$?" = "0" ] && { echo "Environment: $i"; echo "$TIP"; echo; QUERIED=$((QUERIED + 1)); }
+  done
+  [ "$QUERIED" = "0" ] && echo "No environments running." || true
+
 query-tip ENV TESTNET_MAGIC=defaultMagic:
   #!/usr/bin/env bash
-
   if ! [[ "{{ENV}}" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
     echo "Error: only node environments for demo, preprod, preview, sanchonet and shelley-qa are supported for query-tip recipe"
     exit 1
@@ -125,6 +133,9 @@ save-bootstrap-ssh-key:
   let key = ($tf.values.root_module.resources | where type == tls_private_key and name == bootstrap)
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
+
+set-default-node-socket ENV:
+  ln -sfv node-{{ENV}}.socket node.socket
 
 show-flake *ARGS:
   nix flake show --allow-import-from-derivation {{ARGS}}
@@ -178,7 +189,6 @@ ssh-for-each HOSTNAMES *ARGS:
 
 start-demo:
   #!/usr/bin/env bash
-
   just stop-node demo
 
   echo "Cleaning state-demo..."
@@ -295,6 +305,7 @@ start-node ENV:
 
   # Stop any existing running node env for a clean restart
   just stop-node {{ENV}}
+  echo "Starting cardano-node for envrionment {{ENV}}"
 
   if [[ "{{ENV}}" =~ preprod$|preview$ ]]; then
     UNSTABLE=false

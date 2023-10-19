@@ -3,8 +3,11 @@
 /.direnv
 /.envrc.local
 /.gcroots
+/*.log
+/*.pid
 /result*
 /*.skey
+/*.socket
 /.ssh_config
 /.ssh_key
 /.terraform*
