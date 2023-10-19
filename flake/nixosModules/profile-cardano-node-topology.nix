@@ -42,27 +42,34 @@
       roles = with topologyLib; {
         edge = {
           producers = [];
-          publicProducers = topologyFns.edge;
+          publicProducers = topologyFns.edge ++ extraPublicProducers;
         };
 
         relay = {
           producers = topoInfixFiltered cfg.name cfg.nodes ["-bp-" "-rel-"];
-          publicProducers = topologyFns.edge;
+          publicProducers = topologyFns.edge ++ extraPublicProducers;
         };
 
         bp = {
           producers = topoInfixFiltered cfg.name cfg.nodes ["-rel-"];
 
           # These are also set from the role-block-producer nixos module
-          publicProducers = mkForce [];
+          publicProducers = mkForce extraPublicProducers;
           usePeersFromLedgerAfterSlot = -1;
         };
       };
 
-      cfg = config.services.cardano-topology;
+      mkBasicProducers = producer: {
+        accessPoints = [{inherit (producer) address port;}];
+      };
+
+      extraProducers = map mkBasicProducers cfg.extraProducers;
+      extraPublicProducers = map mkBasicProducers cfg.extraPublicProducers;
+
+      cfg = config.services.cardano-node-topology;
     in {
       options = {
-        services.cardano-topology = {
+        services.cardano-node-topology = {
           allowList = mkOption {
             type = listOf str;
             default = [];
@@ -93,6 +100,42 @@
             type = bool;
             default = true;
             description = "Whether to enable public producers by default.";
+          };
+
+          extraProducers = mkOption {
+            type = listOf attrs;
+            default = [];
+            description = ''
+              Extra producers which will be added to any role or function.
+
+              Provided as list of attributes of:
+              {
+                address = "$ADDRESS";
+                port = $PORT;
+              }
+
+              This is intended to be a simple way to inject basic form extra producers.
+              If specifying valency or advertising, or custom grouping is required,
+              add the extra producers directly to the services.cardano-node.producers option.
+            '';
+          };
+
+          extraPublicProducers = mkOption {
+            type = listOf attrs;
+            default = [];
+            description = ''
+              Extra public producers which will be added to any role or function.
+
+              Provided as list of attributes of:
+              {
+                address = "$ADDRESS";
+                port = $PORT;
+              }
+
+              This is intended to be a simple way to inject basic form extra public producers.
+              If specifying valency or advertising, or custom grouping is required,
+              add the extra public producers directly to the services.cardano-node.publicProducers option.
+            '';
           };
 
           maxCount = mkOption {
@@ -156,14 +199,15 @@
         services.cardano-node = {
           producers = mkIf (cfg.role != null || cfg.enableProducers) (
             if cfg.role != null
-            then roles.${cfg.role}.producers
-            else topologyFns.${cfg.producerTopologyFn}
+            then roles.${cfg.role}.producers ++ extraProducers
+            else topologyFns.${cfg.producerTopologyFn} ++ extraProducers
           );
 
           publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
+            # Extra public producers for roles are included in the role defns due to selective mkForce use
             if cfg.role != null
             then roles.${cfg.role}.publicProducers
-            else topologyFns.${cfg.publicProducerTopologyFn}
+            else topologyFns.${cfg.publicProducerTopologyFn} ++ extraPublicProducers
           );
 
           usePeersFromLedgerAfterSlot =
