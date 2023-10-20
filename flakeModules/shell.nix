@@ -243,6 +243,9 @@ in
                   default = with pkgs; [
                     deadnix
                     fd
+                    gawk
+                    gnugrep
+                    gnused
                     # Need jq 1.7 for rc != 0 on empty file or stream key test
                     localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.jq
                     just
@@ -290,10 +293,8 @@ in
                         self'.packages.cardano-cli-ng
                         self'.packages.cardano-node-ng
 
-                        # Until offchain-metadata-tools repo is added to capkgs
-                        # token-metadata-creator
-                        # TODO:
-                        # update-cabal-source-repo-checksums
+                        gdb
+                        token-metadata-creator
                       ]);
                 };
               }

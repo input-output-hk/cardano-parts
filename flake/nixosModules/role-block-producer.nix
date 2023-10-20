@@ -96,6 +96,7 @@
       services.cardano-node =
         serviceCfg.${Protocol}
         // {
+          # These are also set from the profile-cardano-node-topology nixos module when role == "bp"
           publicProducers = mkForce [];
           usePeersFromLedgerAfterSlot = -1;
         };
@@ -104,13 +105,13 @@
       users.users.cardano-node.extraGroups = ["keys"];
 
       environment.shellAliases = {
-        show-kes-period-info = ''
+        cardano-show-kes-period-info = ''
           cardano-cli \
             query kes-period-info \
             --op-cert-file /run/secrets/cardano-node-operational-cert
         '';
 
-        show-leadership-schedule = ''
+        cardano-show-leadership-schedule = ''
           cardano-cli \
             query leadership-schedule \
             --genesis ${ShelleyGenesisFile} \
@@ -119,10 +120,18 @@
             --current
         '';
 
-        show-pool-id = ''
+        cardano-show-pool-hash = ''
           cardano-cli \
             stake-pool id \
-            --cold-verification-key-file /run/secrets/cardano-node-cold-verification
+            --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+            --output-format hex
+        '';
+
+        cardano-show-pool-id = ''
+          cardano-cli \
+            stake-pool id \
+            --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+            --output-format bech32
         '';
 
         show-pool-stake-snapshot = ''

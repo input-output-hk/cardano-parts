@@ -38,7 +38,6 @@ in {
     };
 
     # Profiles
-    topoSimple = {imports = [inputs.cardano-parts.nixosModules.profile-topology-simple];};
     pre = {imports = [inputs.cardano-parts.nixosModules.profile-pre-release];};
 
     smash = {
@@ -53,9 +52,14 @@ in {
     # Snapshots for mainnet can be found at: https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html#13.1/
     # snapshot = {services.cardano-db-sync.restoreSnapshot = "$SNAPSHOT_URL";};
 
+    # Topology profiles
+    # Note: not including a topology profile will default to edge topology if module profile-cardano-node-group is imported
+    topoBp = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-topology = {role = "bp";};}];};
+    topoRel = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-topology = {role = "relay";};}];};
+
     # Roles
-    rel = {imports = [inputs.cardano-parts.nixosModules.role-relay topoSimple];};
-    bp = {imports = [inputs.cardano-parts.nixosModules.role-block-producer topoSimple];};
+    bp = {imports = [inputs.cardano-parts.nixosModules.role-block-producer topoBp];};
+    rel = {imports = [inputs.cardano-parts.nixosModules.role-relay topoRel];};
 
     dbsync = {
       imports = [

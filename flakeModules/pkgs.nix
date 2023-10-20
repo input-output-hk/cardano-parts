@@ -321,10 +321,11 @@ in
               fi
 
               # Preserve nixos bash and zsh command completions for the wrapped program
+              # Remove fd overrideAttrs mod to avoid mainProgram warn once nixpkgs >= 23.11
               if [ -d "${pkg}/share" ]; then
                 cp -r "${pkg}/share" $out
                 chmod -R +w $out/share
-                ${getExe fd} --type f . ${pkgName} $out/share --exec bash -c '
+                ${getExe (fd.overrideAttrs (_: {meta.mainProgram = "fd";}))} --type f . ${pkgName} $out/share --exec bash -c '
                   ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/ s#${pkgName}#${getExe pkg}#g" {}
                   ${getExe gnused} -i "/\(COMPREPLY=\|completions=\)/! s#${pkgName}#${pkgName}-ng#g" {}
                   mv {} {}-ng
@@ -352,15 +353,15 @@ in
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
             (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-5-0-pre // {version = "8.12.0.0";}))
             (mkPkg "cardano-db-sync" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-13-1-1-3 // {exeName = "cardano-db-sync";}))
-            (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-sancho-1-1-0 // {exeName = "cardano-db-sync";}))
+            (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-sancho-2-0-0 // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-sancho-1-1-0)
+            (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-sancho-2-0-0)
             (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
             (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-5-0-pre // {version = "8.5.0-pre";}))
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-1-1-0)
+            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-2-0-0)
             (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-5-0-pre)
             (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-8-1-2)
@@ -372,12 +373,11 @@ in
             (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-1-2)
             (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-1-2)
             (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-5-0-pre)
-            # TODO: Add offchain-metadata-tools repo to capkgs
-            # (mkPkg "metadata-server" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-server)
-            # (mkPkg "metadata-sync" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-sync)
-            # (mkPkg "metadata-validator-github" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-validator-github)
-            # (mkPkg "metadata-webhook" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.metadata-webhook)
-            # (mkPkg "token-metadata-creator" localFlake.inputs.offchain-metadata-tools.${system}.app.packages.token-metadata-creator)
+            (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
+            (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
       in {
@@ -391,12 +391,6 @@ in
           cardano-parts = mkDefault {};
 
           packages = {
-            # TODO:
-            # metadata-server
-            # metadata-sync
-            # metadata-validator-github
-            # metadata-webhook
-            # token-metadata-creator
             inherit
               (cfgPkgs)
               bech32
@@ -413,6 +407,11 @@ in
               db-analyser
               db-synthesizer
               db-truncater
+              metadata-server
+              metadata-sync
+              metadata-validator-github
+              metadata-webhook
+              token-metadata-creator
               ;
 
             # The `-ng` variants provide wrapped derivations to avoid cli collision with their non-wrapped, non-ng counterparts.
