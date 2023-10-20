@@ -3,8 +3,35 @@ set positional-arguments
 
 alias tf := terraform
 
+checkEnv := '''
+  ENV="\${1:-}"
+  TESTNET_MAGIC="\${2:-""}"
+
+  if ! [[ "\$ENV" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
+    echo "Error: only node environments for demo, preprod, preview, sanchonet and shelley-qa are supported"
+    exit 1
+  fi
+
+  if [ "\$ENV" = "preprod" ]; then
+    MAGIC="1"
+  elif [ "\$ENV" = "preview" ]; then
+    MAGIC="2"
+  elif [ "\$ENV" = "shelley-qa" ]; then
+    MAGIC="3"
+  elif [ "\$ENV" = "sanchonet" ]; then
+    MAGIC="4"
+  elif [ "\$ENV" = "demo" ]; then
+    MAGIC="42"
+  fi
+
+  # Allow a magic override if the just recipe optional var is provided
+  if ! [ -z "\${TESTNET_MAGIC:-}" ]; then
+    MAGIC="\$TESTNET_MAGIC"
+  fi
+'''
+
 # Defaults
-defaultMagic := "-1"
+defaultMagic := ""
 
 default:
   @just --list
@@ -98,27 +125,7 @@ query-all:
 
 query-tip ENV TESTNET_MAGIC=defaultMagic:
   #!/usr/bin/env bash
-  if ! [[ "{{ENV}}" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
-    echo "Error: only node environments for demo, preprod, preview, sanchonet and shelley-qa are supported for query-tip recipe"
-    exit 1
-  fi
-
-  if [ "{{ENV}}" = "preprod" ]; then
-    MAGIC="1"
-  elif [ "{{ENV}}" = "preview" ]; then
-    MAGIC="2"
-  elif [ "{{ENV}}" = "shelley-qa" ]; then
-    MAGIC="3"
-  elif [ "{{ENV}}" = "sanchonet" ]; then
-    MAGIC="4"
-  elif [ "{{ENV}}" = "demo" ]; then
-    MAGIC="42"
-  fi
-
-  # Allow a magic override if the just recipe optional var is provided is provided
-  if [ "{{TESTNET_MAGIC}}" != "-1" ]; then
-    MAGIC="{{TESTNET_MAGIC}}"
-  fi
+  source <(echo "{{checkEnv}}")
 
   cardano-cli query tip \
     --socket-path node-{{ENV}}.socket \
@@ -134,8 +141,36 @@ save-bootstrap-ssh-key:
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
 
-set-default-node-socket ENV:
+set-default-cardano-env ENV TESTNET_MAGIC=defaultMagic:
+  #!/usr/bin/env bash
+  source <(echo "{{checkEnv}}")
+
+  echo -n "Linking: "
   ln -sfv node-{{ENV}}.socket node.socket
+
+  SHELLPID=$(cat /proc/$PPID/status | awk '/PPid/ {print $2}')
+  DEFAULT_PATH=$(pwd)/node.socket
+
+  echo "Updating shell env vars:"
+  echo "  CARDANO_NODE_SOCKET_PATH=$DEFAULT_PATH"
+  echo "  CARDANO_NODE_NETWORK_ID=$MAGIC"
+  echo "  TESTNET_MAGIC=$MAGIC"
+
+  # Modifying a parent shells env vars is generally not done
+  # This is a hacky way to accomplish it
+  gdb /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
+    call (int) setenv("CARDANO_NODE_SOCKET_PATH", "$DEFAULT_PATH", 1)
+    call (int) setenv("CARDANO_NODE_NETWORK_ID", "$MAGIC", 1)
+    call (int) setenv("TESTNET_MAGIC", "$MAGIC", 1)
+  END
+
+  # Zsh env vars get updated, but the shell doesn't reflect this
+  if [ $(cat /proc/$SHELLPID/comm) = "zsh" ]; then
+    echo
+    echo "Cardano env vars have been updated as seen by \`env\`, but zsh \`echo \$VAR\` will not reflect this."
+    echo "To sync zsh shell vars with env vars:"
+    echo "  source scripts/sync-env-vars.sh"
+  fi
 
 show-flake *ARGS:
   nix flake show --allow-import-from-derivation {{ARGS}}
