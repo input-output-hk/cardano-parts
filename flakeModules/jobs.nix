@@ -447,16 +447,16 @@ in {
               --witness-override "$WITNESSES" \
               "''${BUILD_TX_ARGS[@]}" \
               --testnet-magic "$TESTNET_MAGIC" \
-              --out-file tx-pool-deleg.txbody
+              --out-file "$POOL_NAME"-tx-pool-deleg.txbody
 
             "''${CARDANO_CLI[@]}" transaction sign \
-              --tx-body-file tx-pool-deleg.txbody \
-              --out-file tx-pool-deleg.txsigned \
+              --tx-body-file "$POOL_NAME"-tx-pool-deleg.txbody \
+              --out-file "$POOL_NAME"-tx-pool-deleg.txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               "''${SIGN_TX_ARGS[@]}"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-pool-deleg.txsigned
+              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "$POOL_NAME"-tx-pool-deleg.txsigned
             fi
           '';
         };
@@ -607,16 +607,16 @@ in {
               --witness-override "$WITNESSES" \
               "''${BUILD_TX_ARGS[@]}" \
               --testnet-magic "$TESTNET_MAGIC" \
-              --out-file tx-pool-reg.txbody
+              --out-file "''${POOLS[0]}"-tx-pool-reg.txbody
 
             "''${CARDANO_CLI[@]}" transaction sign \
-              --tx-body-file tx-pool-reg.txbody \
-              --out-file tx-pool-reg.txsigned \
+              --tx-body-file "''${POOLS[0]}"-tx-pool-reg.txbody \
+              --out-file "''${POOLS[0]}"-tx-pool-reg.txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               "''${SIGN_TX_ARGS[@]}"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-pool-reg.txsigned
+              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "''${POOLS[0]}"-tx-pool-reg.txsigned
             fi
           '';
         };

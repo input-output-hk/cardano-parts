@@ -127,7 +127,7 @@
             --output-format hex
         '';
 
-        cardnao-show-pool-id = ''
+        cardano-show-pool-id = ''
           cardano-cli \
             stake-pool id \
             --cold-verification-key-file /run/secrets/cardano-node-cold-verification \

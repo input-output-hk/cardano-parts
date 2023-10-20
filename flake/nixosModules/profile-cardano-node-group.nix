@@ -29,8 +29,9 @@
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
     inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node cardano-node-pkgs;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
-    inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
+    inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
+    inherit (fromJSON (readFile ShelleyGenesisFile)) slotsPerKESPeriod;
 
     mkTopology = env: let
       legacyTopology = mkEdgeTopology {
@@ -104,8 +105,12 @@
 
       environment = {
         shellAliases = {
-          cardano-dump-p2p-conns = ''
-            pkill --echo --signal SIGUSR1 cardano-node
+          cardano-show-kes-period = ''
+            echo "Current KES period for environment ${environmentName}: $(($(cardano-cli query tip | jq .slot) / ${toString slotsPerKESPeriod}))"
+          '';
+
+          cardano-show-p2p-conns = ''
+            pkill --echo --signal SIGUSR1 cardano-node \
               | sed 's/killed/signaled to dump p2p TrState info, check logs for details/g'
           '';
         };
