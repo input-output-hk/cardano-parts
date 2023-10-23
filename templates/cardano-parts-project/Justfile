@@ -1,37 +1,39 @@
-set shell := ["nu", "-c"]
+set shell := ["bash", "-uc"]
 set positional-arguments
-
 alias tf := terraform
 
-checkEnv := '''
-  ENV="\${1:-}"
-  TESTNET_MAGIC="\${2:-""}"
+# Defaults
+null := ""
+stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
+statePrefix := "~/.local/share"
 
-  if ! [[ "\$ENV" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
+# Common code
+checkEnv := '''
+  ENV="${1:-}"
+  TESTNET_MAGIC="${2:-""}"
+
+  if ! [[ "$ENV" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
     echo "Error: only node environments for demo, preprod, preview, sanchonet and shelley-qa are supported"
     exit 1
   fi
 
-  if [ "\$ENV" = "preprod" ]; then
+  if [ "$ENV" = "preprod" ]; then
     MAGIC="1"
-  elif [ "\$ENV" = "preview" ]; then
+  elif [ "$ENV" = "preview" ]; then
     MAGIC="2"
-  elif [ "\$ENV" = "shelley-qa" ]; then
+  elif [ "$ENV" = "shelley-qa" ]; then
     MAGIC="3"
-  elif [ "\$ENV" = "sanchonet" ]; then
+  elif [ "$ENV" = "sanchonet" ]; then
     MAGIC="4"
-  elif [ "\$ENV" = "demo" ]; then
+  elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
   fi
 
   # Allow a magic override if the just recipe optional var is provided
-  if ! [ -z "\${TESTNET_MAGIC:-}" ]; then
-    MAGIC="\$TESTNET_MAGIC"
+  if ! [ -z "${TESTNET_MAGIC:-}" ]; then
+    MAGIC="$TESTNET_MAGIC"
   fi
 '''
-
-# Defaults
-defaultMagic := ""
 
 default:
   @just --list
@@ -51,6 +53,7 @@ build-machines *ARGS:
   for node in $nodes { just build-machine $node {{ARGS}} }
 
 cf STACKNAME:
+  #!/usr/bin/env nu
   mkdir cloudFormation
   nix eval --json '.#cloudFormation.{{STACKNAME}}' | from json | save --force 'cloudFormation/{{STACKNAME}}.json'
   rain deploy --debug --termination-protection --yes ./cloudFormation/{{STACKNAME}}.json
@@ -114,7 +117,7 @@ list-machines:
       | where machine != ""
   )
 
-query-all:
+query-tip-all:
   #!/usr/bin/env bash
   QUERIED=0
   for i in preprod preview shelley-qa sanchonet demo; do
@@ -123,12 +126,12 @@ query-all:
   done
   [ "$QUERIED" = "0" ] && echo "No environments running." || true
 
-query-tip ENV TESTNET_MAGIC=defaultMagic:
+query-tip ENV TESTNET_MAGIC=null:
   #!/usr/bin/env bash
-  source <(echo "{{checkEnv}}")
-
+  {{checkEnv}}
+  {{stateDir}}
   cardano-cli query tip \
-    --socket-path node-{{ENV}}.socket \
+    --socket-path "$STATEDIR/node-{{ENV}}.socket" \
     --testnet-magic "$MAGIC"
 
 save-bootstrap-ssh-key:
@@ -141,14 +144,27 @@ save-bootstrap-ssh-key:
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
 
-set-default-cardano-env ENV TESTNET_MAGIC=defaultMagic:
+set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
   #!/usr/bin/env bash
-  source <(echo "{{checkEnv}}")
+  {{checkEnv}}
+  {{stateDir}}
+  # The log and socket file may not exist immediately upon node startup, so only check for the pid file
+  if ! [ -s "$STATEDIR/node-{{ENV}}.pid" ]; then
+    echo "Environment {{ENV}} does not appear to be running as $STATEDIR/node-{{ENV}}.pid does not exist"
+    exit 1
+  fi
 
-  echo -n "Linking: "
-  ln -sfv node-{{ENV}}.socket node.socket
+  echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.socket" node.socket)"
+  echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.log" node.log)"
+  echo
 
-  SHELLPID=$(cat /proc/$PPID/status | awk '/PPid/ {print $2}')
+  if [ -n "{{PPID}}" ]; then
+    PARENTID="{{PPID}}"
+  else
+    PARENTID="$PPID"
+  fi
+
+  SHELLPID=$(cat /proc/$PARENTID/status | awk '/PPid/ {print $2}')
   DEFAULT_PATH=$(pwd)/node.socket
 
   echo "Updating shell env vars:"
@@ -156,20 +172,30 @@ set-default-cardano-env ENV TESTNET_MAGIC=defaultMagic:
   echo "  CARDANO_NODE_NETWORK_ID=$MAGIC"
   echo "  TESTNET_MAGIC=$MAGIC"
 
-  # Modifying a parent shells env vars is generally not done
-  # This is a hacky way to accomplish it
-  gdb /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
-    call (int) setenv("CARDANO_NODE_SOCKET_PATH", "$DEFAULT_PATH", 1)
-    call (int) setenv("CARDANO_NODE_NETWORK_ID", "$MAGIC", 1)
-    call (int) setenv("TESTNET_MAGIC", "$MAGIC", 1)
+  SH=$(cat /proc/$SHELLPID/comm)
+  if [[ "$SH" =~ bash$|zsh$ ]]; then
+    # Modifying a parent shells env vars is generally not done
+    # This is a hacky way to accomplish it in bash and zsh
+    gdb /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
+      call (int) setenv("CARDANO_NODE_SOCKET_PATH", "$DEFAULT_PATH", 1)
+      call (int) setenv("CARDANO_NODE_NETWORK_ID", "$MAGIC", 1)
+      call (int) setenv("TESTNET_MAGIC", "$MAGIC", 1)
   END
 
-  # Zsh env vars get updated, but the shell doesn't reflect this
-  if [ $(cat /proc/$SHELLPID/comm) = "zsh" ]; then
+    # Zsh env vars get updated, but the shell doesn't reflect this
+    if [ "$SH" = "zsh" ]; then
+      echo
+      echo "Cardano env vars have been updated as seen by \`env\`, but zsh \`echo \$VAR\` will not reflect this."
+      echo "To sync zsh shell vars with env vars:"
+      echo "  source scripts/sync-env-vars.sh"
+    fi
+  else
     echo
-    echo "Cardano env vars have been updated as seen by \`env\`, but zsh \`echo \$VAR\` will not reflect this."
-    echo "To sync zsh shell vars with env vars:"
-    echo "  source scripts/sync-env-vars.sh"
+    echo "Unexpected shell: $SH"
+    echo "The following vars will need to be manually exported, or the equivalent operation for your shell:"
+    echo "  export CARDANO_NODE_SOCKET_PATH=$DEFAULT_PATH"
+    echo "  export CARDANO_NODE_NETWORK_ID=$MAGIC"
+    echo "  export TESTNET_MAGIC=$MAGIC"
   fi
 
 show-flake *ARGS:
@@ -226,6 +252,8 @@ start-demo:
   #!/usr/bin/env bash
   just stop-node demo
 
+  {{stateDir}}
+
   echo "Cleaning state-demo..."
   if [ -d state-demo ]; then
     chmod -R +w state-demo
@@ -239,7 +267,7 @@ start-demo:
   export KEY_DIR=state-demo/envs/custom
   export DATA_DIR=state-demo/rundir
 
-  export CARDANO_NODE_SOCKET_PATH=./node-demo.socket
+  export CARDANO_NODE_SOCKET_PATH="$STATEDIR/node-demo.socket"
   export TESTNET_MAGIC=42
 
   export NUM_GENESIS_KEYS=3
@@ -270,8 +298,9 @@ start-demo:
   echo "Start cardano-node in the background. Run \"just stop\" to stop"
   NODE_CONFIG="$DATA_DIR/node-config.json" \
     NODE_TOPOLOGY="$DATA_DIR/topology.json" \
-    SOCKET_PATH=./node-demo.socket \
-    nohup setsid nix run .#run-cardano-node &> node-demo.log & echo $! > node-demo.pid &
+    SOCKET_PATH="$STATEDIR/node-demo.socket" \
+    nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-demo.log" & echo $! > "$STATEDIR/node-demo.pid" &
+  just set-default-cardano-env demo "" "$PPID"
   echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
   sleep 30
   echo
@@ -333,6 +362,8 @@ start-demo:
 
 start-node ENV:
   #!/usr/bin/env bash
+  {{stateDir}}
+
   if ! [[ "{{ENV}}" =~ preprod$|preview$|sanchonet$|shelley-qa ]]; then
     echo "Error: only node environments for preprod, preview, sanchonet and shelley-qa are supported for start-node recipe"
     exit 1
@@ -354,16 +385,25 @@ start-node ENV:
   ENVIRONMENT="{{ENV}}" \
   UNSTABLE="$UNSTABLE" \
   UNSTABLE_LIB="$UNSTABLE_LIB" \
-  DATA_DIR=~/.local/share/playground \
-  SOCKET_PATH=$(pwd)/"node-{{ENV}}.socket" \
-  nohup setsid nix run .#run-cardano-node &> node-{{ENV}}.log & echo $! > node-{{ENV}}.pid &
+  DATA_DIR="$STATEDIR" \
+  SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
+  nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
+  just set-default-cardano-env {{ENV}} "" "$PPID"
+
+stop-all:
+  #!/usr/bin/env bash
+  for i in preprod preview shelley-qa sanchonet demo; do
+    just stop-node $i
+  done
 
 stop-node ENV:
   #!/usr/bin/env bash
-  if [ -f "node-{{ENV}}.pid" ]; then
+  {{stateDir}}
+
+  if [ -f "$STATEDIR/node-{{ENV}}.pid" ]; then
     echo "Stopping cardano-node for envrionment {{ENV}}"
-    kill $(< "node-{{ENV}}.pid") 2> /dev/null
-    rm -f "node-{{ENV}}.pid" "node-{{ENV}}.socket"
+    kill $(< "$STATEDIR/node-{{ENV}}.pid") 2> /dev/null
+    rm -f "$STATEDIR/node-{{ENV}}.pid" "$STATEDIR/node-{{ENV}}.socket"
   fi
 
 terraform *ARGS:
