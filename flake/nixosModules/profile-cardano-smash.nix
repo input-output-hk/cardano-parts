@@ -321,7 +321,7 @@ flake: {
 
             run() {
               epoch=$(cardano-cli query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
-              db_sync_epoch=$(psql -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
+              db_sync_epoch=$(psql -X -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
 
               if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then
                 >&2 echo "cardano-db-sync has not caught up with current epoch yet. Skipping."
@@ -333,7 +333,7 @@ flake: {
               rm -f *-relay.json
 
               i=0
-              for r in $(psql -U ${cfgSmash.postgres.user} -t < ${extract_relays_sql} | jq -c '.[]'); do
+              for r in $(psql -X -U ${cfgSmash.postgres.user} -t < ${extract_relays_sql} | jq -c '.[]'); do
                 addr=$(echo "$r" | jq -r '.addr')
                 port=$(echo "$r" | jq -r '.port')
                 resolved=$(dig +nocookie +short -q "$addr" A || :)
