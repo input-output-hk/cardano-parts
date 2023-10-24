@@ -54,7 +54,7 @@
         else floor f;
 
       psqlrc = ''
-        \timing
+        \timing on
 
         -- Set statements can't be multiline
         \set show_behind_by_time_of 'SELECT now () - MAX (time) AS behind_by FROM block;'
@@ -228,7 +228,6 @@
 
       config = {
         environment.etc."postgresql/psqlrc" = mkIf cfg.enablePsqlrc {text = cfg.psqlrc;};
-        environment.variables.PSQLRC = mkIf cfg.enablePsqlrc "/etc/postgresql/psqlrc";
 
         services.postgresql = {
           enable = true;
