@@ -53,7 +53,7 @@
         then ceil f
         else floor f;
 
-      psqlrc = ''
+      psqlrc = toFile "psqlrc" ''
         \timing on
 
         -- Set statements can't be multiline
@@ -63,115 +63,127 @@
         \set show_prepared_statements 'select * from pg_prepared_statements;'
         \set show_running_queries 'SELECT pid, age(clock_timestamp(), query_start), usename, query FROM pg_stat_activity WHERE query != \'<IDLE>\' AND query NOT ILIKE \'%pg_stat_activity%\' ORDER BY query_start desc;'
 
-        -- Prepared statements for longer queries and functions
-        DEALLOCATE ALL;
+        -- Prepared statements should only be executed if the schema has already migrated
+        -- This can be verified by checking stage_three of schema_version is non-zero
+        -- Ref: https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/schema.md#schema_version
+        DO $$
+        BEGIN
+          IF (select true from pg_tables where tablename = 'schema_version') THEN
+            IF (select stage_three from schema_version) > 0 THEN
+              -- Prepared statements for longer queries and functions
+              DEALLOCATE ALL;
 
-        -- Show the number of blocks made per epoch across all epochs by one pool
-        PREPARE show_pool_block_history_by_epoch_fn (varchar) AS
-          SELECT block.epoch_no, count (*) AS block_count FROM block
-            INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
-            INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
-            WHERE pool_hash.view = $1
-            GROUP BY block.epoch_no, pool_hash.view
-            ORDER BY epoch_no desc;
-
-        -- Show the blocks made in one epoch by one pool
-        PREPARE show_pool_block_history_in_epoch_fn (word31type, varchar) AS
-          SELECT block.block_no, block.epoch_no, pool_hash.view AS pool_view FROM block
-            INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
-            INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
-            WHERE block.epoch_no = $1
-            AND pool_hash.view = $2
-            ORDER BY block_no DESC;
-
-        -- Show the number of blocks made in one epoch by all pools
-        PREPARE show_pools_block_history_in_epoch_fn (word31type) AS
-          with
-            active_pools AS (
-              SELECT pool_hash.view, pool_hash.id FROM pool_update
-                INNER JOIN pool_hash ON pool_update.hash_id = pool_hash.id
-                WHERE registered_tx_id IN (SELECT MAX (registered_tx_id) FROM pool_update GROUP BY hash_id)
-                AND NOT EXISTS (
-                  SELECT * FROM pool_retire WHERE pool_retire.hash_id = pool_update.hash_id
-                  AND pool_retire.retiring_epoch <= $1
-                )
-              )
-            SELECT active_pools.view, (
-                SELECT COUNT (*) FROM block
+              -- Show the number of blocks made per epoch across all epochs by one pool
+              PREPARE show_pool_block_history_by_epoch_fn (varchar) AS
+                SELECT block.epoch_no, count (*) AS block_count FROM block
                   INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
                   INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
-                  WHERE pool_hash.id = active_pools.id
-                  AND block.epoch_no = $1
-              )
-              FROM active_pools
-              ORDER by view;
+                  WHERE pool_hash.view = $1
+                  GROUP BY block.epoch_no, pool_hash.view
+                  ORDER BY epoch_no desc;
 
-        -- Show pool networking information as of the most recent active epoch update; this includes retired pools)
-        PREPARE show_pool_network_info AS
-          WITH
-            recent_active AS (SELECT hash_id, MAX (active_epoch_no) FROM pool_update GROUP BY hash_id),
-            recent_info AS (
-              SELECT recent_active.hash_id, MAX (id) FROM pool_update
-                INNER JOIN recent_active ON (pool_update.active_epoch_no = recent_active.max AND pool_update.hash_id = recent_active.hash_id)
-                GROUP BY recent_active.hash_id
-            )
-          SELECT pool_hash.view, active_epoch_no, ticker_name, ipv4, ipv6, dns_name, port FROM recent_info
-            INNER JOIN pool_update ON recent_info.max = pool_update.id
-            INNER JOIN pool_hash ON pool_hash.id = pool_update.hash_id
-            INNER JOIN pool_relay ON pool_relay.update_id = recent_info.max
-            LEFT JOIN pool_offline_data ON pool_offline_data.pmr_id = pool_update.meta_id
-            ORDER BY pool_hash.view;
+              -- Show the blocks made in one epoch by one pool
+              PREPARE show_pool_block_history_in_epoch_fn (word31type, varchar) AS
+                SELECT block.block_no, block.epoch_no, pool_hash.view AS pool_view FROM block
+                  INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
+                  INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
+                  WHERE block.epoch_no = $1
+                  AND pool_hash.view = $2
+                  ORDER BY block_no DESC;
 
-        -- Show the pool stake distribution by epoch
-        PREPARE show_pool_stake_dist_fn (word31type) AS
-          SELECT pool_hash.view, SUM (amount) AS lovelace FROM epoch_stake
-            INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
-            WHERE epoch_no = $1 GROUP BY pool_hash.id ORDER BY view;
+              -- Show the number of blocks made in one epoch by all pools
+              PREPARE show_pools_block_history_in_epoch_fn (word31type) AS
+                with
+                  active_pools AS (
+                    SELECT pool_hash.view, pool_hash.id FROM pool_update
+                      INNER JOIN pool_hash ON pool_update.hash_id = pool_hash.id
+                      WHERE registered_tx_id IN (SELECT MAX (registered_tx_id) FROM pool_update GROUP BY hash_id)
+                      AND NOT EXISTS (
+                        SELECT * FROM pool_retire WHERE pool_retire.hash_id = pool_update.hash_id
+                        AND pool_retire.retiring_epoch <= $1
+                      )
+                    )
+                  SELECT active_pools.view, (
+                      SELECT COUNT (*) FROM block
+                        INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
+                        INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
+                        WHERE pool_hash.id = active_pools.id
+                        AND block.epoch_no = $1
+                    )
+                    FROM active_pools
+                    ORDER by view;
 
-        -- Show registered pools as of the current epoch
-        PREPARE show_registered_pools AS
-          SELECT pool_update.id, hash_id, pool_hash.view, cert_index, pledge, active_epoch_no, meta_id, margin, fixed_cost, registered_tx_id, reward_addr_id FROM pool_update
-            INNER JOIN pool_hash ON pool_update.hash_id = pool_hash.id
-            WHERE registered_tx_id IN (SELECT MAX (registered_tx_id) FROM pool_update GROUP BY hash_id)
-            AND NOT EXISTS (
-              SELECT * FROM pool_retire
-                WHERE pool_retire.hash_id = pool_update.hash_id
-                AND pool_retire.retiring_epoch <= (SELECT MAX (epoch_no) FROM block)
-            );
+              -- Show pool networking information as of the most recent active epoch update; this includes retired pools)
+              PREPARE show_pool_network_info AS
+                WITH
+                  recent_active AS (SELECT hash_id, MAX (active_epoch_no) FROM pool_update GROUP BY hash_id),
+                  recent_info AS (
+                    SELECT recent_active.hash_id, MAX (id) FROM pool_update
+                      INNER JOIN recent_active ON (pool_update.active_epoch_no = recent_active.max AND pool_update.hash_id = recent_active.hash_id)
+                      GROUP BY recent_active.hash_id
+                  )
+                SELECT pool_hash.view, active_epoch_no, ticker_name, ipv4, ipv6, dns_name, port FROM recent_info
+                  INNER JOIN pool_update ON recent_info.max = pool_update.id
+                  INNER JOIN pool_hash ON pool_hash.id = pool_update.hash_id
+                  INNER JOIN pool_relay ON pool_relay.update_id = recent_info.max
+                  LEFT JOIN pool_offline_data ON pool_offline_data.pmr_id = pool_update.meta_id
+                  ORDER BY pool_hash.view;
 
-        -- Show stake address delegation history
-        PREPARE show_stake_addr_deleg_history_fn (varchar) AS
-          SELECT delegation.active_epoch_no, pool_hash.view FROM delegation
-            INNER JOIN stake_address ON delegation.addr_id = stake_address.id
-            INNER JOIN pool_hash ON delegation.pool_hash_id = pool_hash.id
-            WHERE stake_address.view = $1
-            ORDER BY active_epoch_no ASC;
+              -- Show the pool stake distribution by epoch
+              PREPARE show_pool_stake_dist_fn (word31type) AS
+                SELECT pool_hash.view, SUM (amount) AS lovelace FROM epoch_stake
+                  INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
+                  WHERE epoch_no = $1 GROUP BY pool_hash.id ORDER BY view;
 
-        -- Show the stake address from a transaction paid with a payment+stake address
-        PREPARE show_stake_addr_from_payment_addr_fn (varchar) AS
-          SELECT stake_address.id AS stake_address_id, tx_out.tx_id, tx_out.address, stake_address.view AS stake_address FROM tx_out
-            INNER JOIN stake_address ON tx_out.stake_address_id = stake_address.id
-            WHERE address = $1;
+              -- Show registered pools as of the current epoch
+              PREPARE show_registered_pools AS
+                SELECT pool_update.id, hash_id, pool_hash.view, cert_index, pledge, active_epoch_no, meta_id, margin, fixed_cost, registered_tx_id, reward_addr_id FROM pool_update
+                  INNER JOIN pool_hash ON pool_update.hash_id = pool_hash.id
+                  WHERE registered_tx_id IN (SELECT MAX (registered_tx_id) FROM pool_update GROUP BY hash_id)
+                  AND NOT EXISTS (
+                    SELECT * FROM pool_retire
+                      WHERE pool_retire.hash_id = pool_update.hash_id
+                      AND pool_retire.retiring_epoch <= (SELECT MAX (epoch_no) FROM block)
+                  );
 
-        -- Show the stake address rewards history
-        PREPARE show_stake_addr_rewards_history_fn (varchar) AS
-          SELECT reward.earned_epoch, pool_hash.view AS delegated_pool, reward.amount AS lovelace FROM reward
-            INNER JOIN stake_address ON reward.addr_id = stake_address.id
-            INNER JOIN pool_hash ON reward.pool_id = pool_hash.id
-            WHERE stake_address.view = $1
-            ORDER BY earned_epoch DESC;
+              -- Show stake address delegation history
+              PREPARE show_stake_addr_deleg_history_fn (varchar) AS
+                SELECT delegation.active_epoch_no, pool_hash.view FROM delegation
+                  INNER JOIN stake_address ON delegation.addr_id = stake_address.id
+                  INNER JOIN pool_hash ON delegation.pool_hash_id = pool_hash.id
+                  WHERE stake_address.view = $1
+                  ORDER BY active_epoch_no ASC;
 
-        -- Show the percentage of sync completion
-        PREPARE show_sync_percent AS
-          SELECT 100 * (EXTRACT (epoch FROM (MAX (time) AT TIME ZONE 'UTC')) - EXTRACT (epoch FROM (MIN (time) AT TIME ZONE 'UTC')))
-            / (EXTRACT (epoch FROM (now () AT TIME ZONE 'UTC')) - EXTRACT (epoch FROM (MIN (time) AT TIME ZONE 'UTC')))
-            AS sync_percent FROM block;
+              -- Show the stake address from a transaction paid with a payment+stake address
+              PREPARE show_stake_addr_from_payment_addr_fn (varchar) AS
+                SELECT stake_address.id AS stake_address_id, tx_out.tx_id, tx_out.address, stake_address.view AS stake_address FROM tx_out
+                  INNER JOIN stake_address ON tx_out.stake_address_id = stake_address.id
+                  WHERE address = $1;
+
+              -- Show the stake address rewards history
+              PREPARE show_stake_addr_rewards_history_fn (varchar) AS
+                SELECT reward.earned_epoch, pool_hash.view AS delegated_pool, reward.amount AS lovelace FROM reward
+                  INNER JOIN stake_address ON reward.addr_id = stake_address.id
+                  INNER JOIN pool_hash ON reward.pool_id = pool_hash.id
+                  WHERE stake_address.view = $1
+                  ORDER BY earned_epoch DESC;
+
+              -- Show the percentage of sync completion
+              PREPARE show_sync_percent AS
+                SELECT 100 * (EXTRACT (epoch FROM (MAX (time) AT TIME ZONE 'UTC')) - EXTRACT (epoch FROM (MIN (time) AT TIME ZONE 'UTC')))
+                  / (EXTRACT (epoch FROM (now () AT TIME ZONE 'UTC')) - EXTRACT (epoch FROM (MIN (time) AT TIME ZONE 'UTC')))
+                  AS sync_percent FROM block;
+            END IF;
+          END IF;
+        END$$;
 
         \echo '\nWelcome:\n'
         \echo '  To see an auto-completion list of cardano specific set variables, enter: `:show_<tab><tab>`'
         \echo '  To see an auto-completion list of cardano specific prepared statements, enter: `execute show_<tab><tab>`'
         \echo '  To execute a cardano specific set variable, enter its name, starting with a colon'
         \echo '  To execute a prepared statement: `execute <NAME> (ARG1, ...);` (omit the args list if none)'
+        \echo
+        \echo 'Note: prepared statements will only become available after cardano-db-sync completes the initial synchronization'
         \echo '\n'
       '';
 
@@ -180,54 +192,61 @@
       options = {
         services.cardano-postgres = {
           dataDir = mkOption {
-            description = "The directory for postgresql data.  If null, this parameter is not configured.";
             type = nullOr str;
             default = null;
+            description = "The directory for postgresql data.  If null, this parameter is not configured.";
           };
 
           enablePsqlrc = mkOption {
-            description = "Whether to enable setting psqlrc file at /etc/postgresql/psqlrc.";
             type = bool;
             default = true;
+            description = "Whether to enable setting psqlrc file at /etc/postgresql/psqlrc.";
           };
 
           maxConnections = mkOption {
-            description = "The postgresql maximum number of connections to allow, between 20 and 9999";
             type = ints.between 20 9999;
             default = 200;
+            description = "The postgresql maximum number of connections to allow, between 20 and 9999";
           };
 
           psqlrc = mkOption {
-            description = "The psqlrc text.";
             type = str;
             default = psqlrc;
+            description = "The psqlrc text.";
+          };
+
+          psqlrcPath = mkOption {
+            type = str;
+            default = "${config.services.postgresql.dataDir}/psqlrc";
+            description = "The psqlrc target path.";
           };
 
           ramAvailableMiB = mkOption {
-            description = "The default RAM available for postgresql on the machine in MiB.";
             type = oneOf [ints.positive float];
             default = memMiB * 0.70;
+            description = "The default RAM available for postgresql on the machine in MiB.";
           };
 
           socketPath = mkOption {
-            description = "The postgresql socket path to use, typically `/run/postgresql`.";
             type = str;
             default = "/run/postgresql";
+            description = "The postgresql socket path to use, typically `/run/postgresql`.";
           };
 
           withPgStatStatements = mkOption {
+            type = bool;
+            default = true;
             description = ''
               Configure pg_stat_statements which allow performance tracking of queries.
               During non-IO bound runtime, this may impact performance up to ~10%.
             '';
-            type = bool;
-            default = true;
           };
         };
       };
 
       config = {
-        environment.etc."postgresql/psqlrc" = mkIf cfg.enablePsqlrc {text = cfg.psqlrc;};
+        environment.variables.PSQLRC = mkIf cfg.enablePsqlrc cfg.psqlrcPath;
+        systemd.services.postgresql.preStart = mkIf cfg.enablePsqlrc (mkAfter "ln -sfn ${psqlrc} ${cfg.psqlrcPath}");
 
         services.postgresql = {
           enable = true;
