@@ -247,6 +247,7 @@ flake: {
         in {
           wantedBy = ["multi-user.target"];
           after = ["network-online.target"];
+
           path = with pkgs; [
             config.services.postgresql.package
             cardano-node-pkgs.cardano-cli
@@ -256,7 +257,18 @@ flake: {
             jq
             netcat
           ];
+
           environment = config.environment.variables;
+
+          preStart = ''
+            set -uo pipefail
+            for x in {1..60}; do
+              nc -z localhost 5432 && sleep 2 && break
+              echo loop $x: waiting for postgresql 2 sec...
+              sleep 2
+            done
+          '';
+
           script = ''
             set -uo pipefail
 
