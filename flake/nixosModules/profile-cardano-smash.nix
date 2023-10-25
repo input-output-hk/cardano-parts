@@ -377,15 +377,18 @@ flake: {
               sleep 3600
             done
           '';
-          # 3 failures at max within 24h:
-          startLimitIntervalSec = 24 * 60 * 60;
+
+          # If the service gets caught in a runtime looping error,
+          # where it either never successfully starts but keeps trying,
+          # or starts successfully but never finishes,
+          # the alerts for registered-relays-exporter will catch it.
+          startLimitIntervalSec = 0;
           serviceConfig = {
             User = "registered-relays-dump";
             SupplementaryGroups = "cardano-node";
             StateDirectory = "registered-relays-dump";
             Restart = "always";
             RestartSec = "30s";
-            StartLimitBurst = 3;
           };
         };
 
