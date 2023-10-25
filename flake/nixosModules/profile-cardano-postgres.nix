@@ -113,8 +113,35 @@
                     FROM active_pools
                     ORDER by view;
 
-              -- Show pool networking information as of the most recent active epoch update; this includes retired pools)
-              PREPARE show_pool_network_info AS
+              -- Show pool info for a single pool, best viewed in extended view mode, \x
+              PREPARE show_pool_info_fn AS
+                SELECT
+                  ph.view AS pool_hash_view, ph.hash_raw AS pool_hash_hash_raw,
+                  pmr.url AS pool_metadata_ref_url, pmr.hash AS pool_metadata_ref_hash, pmr.registered_tx_id AS pool_metadata_ref_registered_tx_id,
+                  pr.ipv4 AS pool_relay_ipv4, pr.ipv6 AS pool_relay_ipv6, pr.dns_name AS pool_relay_dns_name, pr.dns_srv_name AS pool_relay_dns_srv_name, pr.port AS pool_relay_port,
+                  prt.cert_index AS pool_retire_cert_index, prt.announced_tx_id AS pool_retire_announced_tx_id, prt.retiring_epoch AS pool_retire_retiring_epoch,
+                  pu.id AS pool_update_id, pu.cert_index AS pool_update_cert_index, pu.vrf_key_hash AS pool_update_vrf_key_hash,
+                  pu.pledge AS pool_update_pledge, pu.active_epoch_no AS pool_update_active_epoch_no, pu.meta_id AS pool_update_meta_id,
+                  pu.margin AS pool_update_margin, pu.fixed_cost AS pool_update_fixed_cost, pu.registered_tx_id AS pool_update_registered_tx_id,
+                  sao.view AS stake_address_owner_view, sao.hash_raw AS stake_address_owner_hash_raw, sao.script_hash AS stake_address_owner_script_hash,
+                  sar.view AS stake_address_rewards_view, sar.hash_raw AS stake_address_rewards_hash_raw, sar.script_hash AS stake_address_rewards_script_hash,
+                  sro.cert_index AS stake_registration_owner_cert_index, sro.epoch_no AS stake_registration_owner_epoch_no, sro.tx_id AS stake_registration_owner_tx_id,
+                  srr.cert_index AS stake_registration_rewards_cert_index, srr.epoch_no AS stake_registration_rewards_epoch_no, srr.tx_id AS stake_registration_rewards_tx_id
+                FROM pool_update AS pu
+                  LEFT JOIN stake_address AS sar ON pu.reward_addr_id = sar.id
+                  LEFT JOIN stake_registration AS srr ON pu.reward_addr_id = srr.addr_id
+                  LEFT JOIN pool_relay AS pr ON pu.id = pr.update_id
+                  LEFT JOIN pool_hash AS ph ON pu.hash_id = ph.id
+                  LEFT JOIN pool_owner AS po ON pu.id = po.pool_update_id
+                  LEFT JOIN stake_address AS sao ON po.addr_id = sao.id
+                  LEFT JOIN stake_registration AS sro ON po.addr_id = sro.addr_id
+                  LEFT JOIN pool_metadata_ref AS pmr ON pu.meta_id = pmr.id
+                  LEFT JOIN pool_retire AS prt ON pu.hash_id = prt.hash_id
+                  WHERE ph.view = $1
+                  ORDER BY pu.id DESC;
+
+              -- Show pool networking information as of the most recent active epoch update; this includes retired pools
+              PREPARE show_pools_network_info AS
                 WITH
                   recent_active AS (SELECT hash_id, MAX (active_epoch_no) FROM pool_update GROUP BY hash_id),
                   recent_info AS (
