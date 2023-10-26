@@ -137,7 +137,7 @@
         cardano-show-pool-stake-snapshot = ''
           cardano-cli \
             query stake-snapshot \
-            --stake-pool-id "$(show-pool-id)"
+            --stake-pool-id "$(cardano-show-pool-id)"
         '';
       };
     };
