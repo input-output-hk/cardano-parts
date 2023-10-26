@@ -21,8 +21,8 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/2f3760f135616ebc477d3ed74eba9b63c22f83a0";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/migrate-to-play-legacy";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/migrate-to-play";
 
     # Cardano related inputs required for service config
     # Services offered from the nixosModules of this repo are directly assigned to

@@ -156,11 +156,11 @@
 
           nodeList = mkOption {
             type = listOf str;
-            default = attrNames nodes;
+            default = attrNames cfg.nodes;
             description = ''
               The node list for topology functions requiring it.
 
-              Applicable to topology functions: simpleMax.
+              Applicable to topology functions: list.
             '';
           };
 
