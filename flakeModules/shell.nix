@@ -425,7 +425,7 @@ in
                     selectScope id optionalString "enableHooks" "defaultHooks"
                     + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
                     + ''
-                      menu
+                      [ -z "$NOMENU" ] && menu
                     '';
                 }
                 # Add optional default shell environment variables
