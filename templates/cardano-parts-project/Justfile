@@ -35,6 +35,20 @@ checkEnv := '''
   fi
 '''
 
+checkSshConfig := '''
+  if not ('.ssh_config' | path exists) {
+    print "Please run terraform first to create the .ssh_config file"
+    exit 1
+  }
+'''
+
+checkSshKey := '''
+  if not ('.ssh_key' | path exists) {
+    just save-bootstrap-ssh-key
+  }
+'''
+
+
 default:
   @just --list
 
@@ -73,10 +87,7 @@ list-machines:
      exit 1
   }
 
-  if not ('.ssh_config' | path exists) {
-    print "Please run terraform first to create the .ssh_config file"
-    exit 1
-  }
+  {{checkSshConfig}}
 
   let sshNodes = (do -i { ^scj dump /dev/stdout -c .ssh_config } | complete)
   if $sshNodes.exit_code != 0 {
@@ -116,6 +127,79 @@ list-machines:
       | update cells { |v| if $v == null {"Missing"} else {$v}}
       | where machine != ""
   )
+
+dbsync-psql HOSTNAME:
+  #!/usr/bin/env bash
+  just ssh {{HOSTNAME}} -t 'psql -U cexplorer cexplorer'
+
+dbsync-pool-analyze HOSTNAME:
+  #!/usr/bin/env bash
+  echo "Pushing pool analysis sql command on {{HOSTNAME}}..."
+  just scp scripts/dbsync-pool-perf.sql {{HOSTNAME}}:/tmp/
+
+  echo
+  echo "Executing pool analysis sql command on host {{HOSTNAME}}..."
+  QUERY=$(just ssh {{HOSTNAME}} -t 'psql -P pager=off -xXU cexplorer cexplorer < /tmp/dbsync-pool-perf.sql')
+
+  echo
+  echo "Query output:"
+  echo "$QUERY" | tail -n +2
+  echo
+
+  JSON=$(grep -oP '^faucet_pool_summary_json[[:space:]]+\| \K{.*$' <<< "$QUERY" | jq .)
+  echo "$JSON"
+  echo
+
+  echo "Faucet pools to de-delegate are:"
+  jq '.faucet_to_dedelegate' <<< "$JSON"
+  echo
+
+  echo "The string of indexes of faucet pools to de-delegate from the JSON above are:"
+  jq '.faucet_to_dedelegate | to_entries | map(.key) | join(" ")' <<< "$JSON"
+  echo
+
+  MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
+  echo "The maximum percentage difference de-delegation of all these pools will make in chain density is: $MAX_SHIFT"
+
+dbsync-create-faucet-stake-keys-table ENV HOSTNAME:
+  #!/usr/bin/env bash
+  TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
+
+  echo "Creating stake key sql injection command for environment {{ENV}} (this will take a minute)..."
+  NOMENU=true \
+  scripts/setup-delegation-accounts.py \
+    --print-only \
+    --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
+    --num-accounts 500 \
+    > "$TMPFILE"
+
+  echo
+  echo "Pushing stake key sql injection command for environment {{ENV}}..."
+  just scp "$TMPFILE" {{HOSTNAME}}:"$TMPFILE"
+
+  echo
+  echo "Executing stake key sql injection command for environment {{ENV}}..."
+  just ssh {{HOSTNAME}} -t "psql -XU cexplorer cexplorer < \"$TMPFILE\""
+
+dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
+  #!/usr/bin/env bash
+  {{checkEnv}}
+  just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
+
+  echo
+  echo "Starting de-delegation of the following stake key indexes: {{STAKE_KEY_INDEXES}}"
+  for i in {{STAKE_KEY_INDEXES}}; do
+    echo "De-delegating index $i"
+    NOMENU=true scripts/restore-delegation-accounts.py \
+      --testnet-magic {{TESTNET_MAGIC}} \
+      --signing-key-file <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey) \
+      --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
+      --delegation-index "$i"
+    echo "Sleeping 2 minutes until $(date -d  @$(($(date +%s) + 120)))"
+    sleep 120
+    echo
+    echo
+  done
 
 query-tip-all:
   #!/usr/bin/env bash
@@ -218,27 +302,21 @@ sops-decrypt-binary FILE:
 sops-encrypt-binary FILE:
   sops --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
+scp *ARGS:
+  #!/usr/bin/env nu
+  {{checkSshConfig}}
+  scp -o LogLevel=ERROR -F .ssh_config {{ARGS}}
+
 ssh HOSTNAME *ARGS:
   #!/usr/bin/env nu
-  if not ('.ssh_config' | path exists) {
-    print "Please run terraform first to create the .ssh_config file"
-    exit 1
-  }
-
-  ssh -F .ssh_config {{HOSTNAME}} {{ARGS}}
+  {{checkSshConfig}}
+  ssh -o LogLevel=ERROR -F .ssh_config {{HOSTNAME}} {{ARGS}}
 
 ssh-bootstrap HOSTNAME *ARGS:
   #!/usr/bin/env nu
-  if not ('.ssh_config' | path exists) {
-    print "Please run terraform first to create the .ssh_config file"
-    exit 1
-  }
-
-  if not ('.ssh_key' | path exists) {
-    just save-bootstrap-ssh-key
-  }
-
-  ssh -F .ssh_config -i .ssh_key {{HOSTNAME}} {{ARGS}}
+  {{checkSshConfig}}
+  {{checkSshKey}}
+  ssh -o LogLevel=ERROR -F .ssh_config -i .ssh_key {{HOSTNAME}} {{ARGS}}
 
 ssh-for-all *ARGS:
   #!/usr/bin/env nu
