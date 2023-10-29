@@ -939,6 +939,14 @@ in {
             PROPOSAL_URL=''${PROPOSAL_URL:-"https://proposals.sancho.network/1"}
 
             WITNESSES=2
+            # TODO remove this hackery in 8.14 CLI hopefully
+            if [ "$ACTION" = "create-treasury-withdrawal" ]
+            then
+              DEPOSIT_STAKE_KEY_ARGS=("--deposit-return-stake-verification-key-file" "$(decrypt_check "$STAKE_KEY".vkey)")
+            else
+              DEPOSIT_STAKE_KEY_ARGS=("--stake-verification-key-file" "$(decrypt_check "$STAKE_KEY".vkey)")
+            fi
+
             CHANGE_ADDRESS=$(
               "''${CARDANO_CLI[@]}" address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
@@ -947,10 +955,10 @@ in {
 
             "''${CARDANO_CLI[@]}" conway governance action "$ACTION" \
               --testnet \
-              --stake-verification-key-file "$(decrypt_check "$STAKE_KEY".vkey)" \
+              "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
-              --proposal-url "$PROPOSAL_URL" \
-              --proposal-hash "$PROPOSAL_HASH" \
+              --proposal-anchor-url "$PROPOSAL_URL" \
+              --proposal-anchor-metadata-hash "$PROPOSAL_HASH" \
               "''${PROPOSAL_ARGS[@]}" \
               --out-file "$ACTION".action
 
