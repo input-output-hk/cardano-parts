@@ -326,6 +326,14 @@ ssh-for-all *ARGS:
 ssh-for-each HOSTNAMES *ARGS:
   colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
 
+ssh-list-ips HOSTNAME_REGEX_PATTERN:
+  #!/usr/bin/env nu
+  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | where Host =~ "{{HOSTNAME_REGEX_PATTERN}}" | get HostName | str join " "
+
+ssh-list-names HOSTNAME_REGEX_PATTERN:
+  #!/usr/bin/env nu
+  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | where Host =~ "{{HOSTNAME_REGEX_PATTERN}}" | get Host | str join " "
+
 start-demo:
   #!/usr/bin/env bash
   just stop-node demo
