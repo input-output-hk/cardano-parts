@@ -6,6 +6,7 @@ alias tf := terraform
 null := ""
 stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
 statePrefix := "~/.local/share"
+zero := "0"
 
 # Common code
 checkEnv := '''
@@ -66,69 +67,13 @@ build-machine MACHINE *ARGS:
 build-machines *ARGS:
   #!/usr/bin/env nu
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
-  for node in $nodes { just build-machine $node {{ARGS}} }
+  for node in $nodes {just build-machine $node {{ARGS}}}
 
 cf STACKNAME:
   #!/usr/bin/env nu
   mkdir cloudFormation
   nix eval --json '.#cloudFormation.{{STACKNAME}}' | from json | save --force 'cloudFormation/{{STACKNAME}}.json'
   rain deploy --debug --termination-protection --yes ./cloudFormation/{{STACKNAME}}.json
-
-lint:
-  deadnix -f
-  statix check
-
-list-machines:
-  #!/usr/bin/env nu
-  let nixosNodes = (do -i { ^nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames' } | complete)
-  if $nixosNodes.exit_code != 0 {
-     print "Nixos failed to evaluate the .#nixosConfigurations attribute."
-     print "The output was:"
-     print
-     print $nixosNodes
-     exit 1
-  }
-
-  {{checkSshConfig}}
-
-  let sshNodes = (do -i { ^scj dump /dev/stdout -c .ssh_config } | complete)
-  if $sshNodes.exit_code != 0 {
-     print "Ssh-config-json failed to evaluate the .ssh_config file."
-     print "The output was:"
-     print
-     print $sshNodes
-     exit 1
-  }
-
-  let nixosNodesDfr = (
-    let nodeList = ($nixosNodes.stdout | from json);
-    let sanitizedList = (if ($nodeList | is-empty) { $nodeList | insert 0 "" } else { $nodeList });
-    $sanitizedList
-      | insert 0 "machine"
-      | each {|i| [$i] | into record }
-      | headers
-      | each {|i| insert inNixosCfg {"yes"}}
-      | dfr into-df
-  )
-
-  let sshNodesDfr = (
-    let sshTable = ($sshNodes.stdout | from json | where ('HostName' in $it));
-    if ($sshTable | is-empty) {
-      [[Host IP]; ["" ""]] | dfr into-df
-    }
-    else {
-      $sshTable | rename Host IP | dfr into-df
-    }
-  )
-
-  (
-    $nixosNodesDfr
-      | dfr join -o $sshNodesDfr machine Host
-      | dfr sort-by machine
-      | dfr into-nu
-      | update cells { |v| if $v == null {"Missing"} else {$v}}
-      | where machine != ""
-  )
 
 dbsync-psql HOSTNAME:
   #!/usr/bin/env bash
@@ -202,6 +147,68 @@ dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
     echo
     echo
   done
+
+gen-payment-address-from-mnemonic MNEMONIC_FILE ADDRESS_OFFSET=zero:
+  cardano-address key from-recovery-phrase Shelley < {{MNEMONIC_FILE}} \
+    | cardano-address key child 1852H/1815H/0H/0/{{ADDRESS_OFFSET}} \
+    | cardano-address key public --with-chain-code \
+    | cardano-address address payment --network-tag testnet
+
+lint:
+  deadnix -f
+  statix check
+
+list-machines:
+  #!/usr/bin/env nu
+  let nixosNodes = (do -i { ^nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames' } | complete)
+  if $nixosNodes.exit_code != 0 {
+     print "Nixos failed to evaluate the .#nixosConfigurations attribute."
+     print "The output was:"
+     print
+     print $nixosNodes
+     exit 1
+  }
+
+  {{checkSshConfig}}
+
+  let sshNodes = (do -i { ^scj dump /dev/stdout -c .ssh_config } | complete)
+  if $sshNodes.exit_code != 0 {
+     print "Ssh-config-json failed to evaluate the .ssh_config file."
+     print "The output was:"
+     print
+     print $sshNodes
+     exit 1
+  }
+
+  let nixosNodesDfr = (
+    let nodeList = ($nixosNodes.stdout | from json);
+    let sanitizedList = (if ($nodeList | is-empty) {$nodeList | insert 0 ""} else {$nodeList});
+    $sanitizedList
+      | insert 0 "machine"
+      | each {|i| [$i] | into record}
+      | headers
+      | each {|i| insert inNixosCfg {"yes"}}
+      | dfr into-df
+  )
+
+  let sshNodesDfr = (
+    let sshTable = ($sshNodes.stdout | from json | where ('HostName' in $it));
+    if ($sshTable | is-empty) {
+      [[Host IP]; ["" ""]] | dfr into-df
+    }
+    else {
+      $sshTable | rename Host IP | dfr into-df
+    }
+  )
+
+  (
+    $nixosNodesDfr
+      | dfr join -o $sshNodesDfr machine Host
+      | dfr sort-by machine
+      | dfr into-nu
+      | update cells {|v| if $v == null {"Missing"} else {$v}}
+      | where machine != ""
+  )
 
 query-tip-all:
   #!/usr/bin/env bash
