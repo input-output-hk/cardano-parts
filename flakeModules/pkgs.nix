@@ -371,8 +371,11 @@ in
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
             (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "db-analyser-ng" caPkgs.db-analyser-input-output-hk-cardano-node-8-5-0-pre)
             (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-5-0-pre)
+            (mkPkg "db-synthesizer-ng" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-5-0-pre)
+            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-2-0-pre)
+            (mkPkg "db-truncater-ng" caPkgs.db-truncater-input-output-hk-cardano-node-8-5-0-pre)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
@@ -422,6 +425,9 @@ in
             cardano-node-ng = mkWrapper "cardano-node-ng" cfgPkgs.cardano-node-ng;
             cardano-smash-ng = mkWrapper "cardano-smash-ng" cfgPkgs.cardano-smash-ng;
             cardano-submit-api-ng = mkWrapper "cardano-submit-api-ng" cfgPkgs.cardano-submit-api-ng;
+            db-analyser-ng = mkWrapper "db-analyser-ng" cfgPkgs.db-analyser-ng;
+            db-synthesizer-ng = mkWrapper "db-synthesizer-ng" cfgPkgs.db-synthesizer-ng;
+            db-truncater-ng = mkWrapper "db-truncater-ng" cfgPkgs.db-truncater-ng;
           };
         };
       });
