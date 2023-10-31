@@ -53,6 +53,7 @@ flake: {
       systemd.services.cardano-faucet = {
         after = ["sops-secrets.service"];
         wants = ["sops-secrets.service"];
+        partOf = ["sops-secrets.service"];
       };
 
       sops.secrets = mkSopsSecret "cardano-faucet.json" "${name}-faucet.json";

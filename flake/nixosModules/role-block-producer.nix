@@ -91,6 +91,7 @@
       systemd.services.cardano-node = {
         after = ["sops-secrets.service"];
         wants = ["sops-secrets.service"];
+        partOf = ["sops-secrets.service"];
       };
 
       services.cardano-node =
