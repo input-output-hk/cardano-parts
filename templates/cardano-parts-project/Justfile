@@ -12,8 +12,8 @@ checkEnv := '''
   ENV="${1:-}"
   TESTNET_MAGIC="${2:-""}"
 
-  if ! [[ "$ENV" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
-    echo "Error: only node environments for demo, preprod, preview, sanchonet and shelley-qa are supported"
+  if ! [[ "$ENV" =~ preprod$|preview$|private$|sanchonet$|shelley-qa$|demo$ ]]; then
+    echo "Error: only node environments for demo, preprod, preview, private, sanchonet and shelley-qa are supported"
     exit 1
   fi
 
@@ -25,6 +25,8 @@ checkEnv := '''
     MAGIC="3"
   elif [ "$ENV" = "sanchonet" ]; then
     MAGIC="4"
+  elif [ "$ENV" = "private" ]; then
+    MAGIC="5"
   elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
   fi
@@ -204,7 +206,7 @@ dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
 query-tip-all:
   #!/usr/bin/env bash
   QUERIED=0
-  for i in preprod preview shelley-qa sanchonet demo; do
+  for i in preprod preview private shelley-qa sanchonet demo; do
     TIP=$(just query-tip $i 2>&1)
     [ "$?" = "0" ] && { echo "Environment: $i"; echo "$TIP"; echo; QUERIED=$((QUERIED + 1)); }
   done
@@ -450,8 +452,8 @@ start-node ENV:
   #!/usr/bin/env bash
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ preprod$|preview$|sanchonet$|shelley-qa ]]; then
-    echo "Error: only node environments for preprod, preview, sanchonet and shelley-qa are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ preprod$|preview$|private$|sanchonet$|shelley-qa ]]; then
+    echo "Error: only node environments for preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
     exit 1
   fi
 
