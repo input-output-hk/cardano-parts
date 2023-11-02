@@ -47,22 +47,24 @@ in {
 
       selectCardanoCli = ''
         # Inputs:
+        #   [$ERA_CMD]
         #   [$UNSTABLE]
         #   [$USE_SHELL_BINS]
 
         if [ "''${USE_SHELL_BINS:-}" = "true" ]; then
-          CARDANO_CLI=("eval" "cardano-cli")
+          CARDANO_CLI=("eval" "cardano-cli" "''${ERA_CMD:+$ERA_CMD}")
         elif [ "''${UNSTABLE:-}" = "true" ]; then
-          CARDANO_CLI=("eval" "${lib.getExe cfgPkgs.cardano-cli-ng}")
+          CARDANO_CLI=("eval" "${lib.getExe cfgPkgs.cardano-cli-ng}" "''${ERA_CMD:+$ERA_CMD}")
         else
-          CARDANO_CLI=("eval" "${lib.getExe cfgPkgs.cardano-cli}")
+          CARDANO_CLI=("eval" "${lib.getExe cfgPkgs.cardano-cli}" "''${ERA_CMD:+$ERA_CMD}")
         fi
       '';
 
       updateProposalTemplate = ''
         # Inputs:
         #   [$DEBUG]
-        #   [$ERA]
+        #   [$ERA] (deprecated `--$ERA-era` flag)
+        #   [$ERA_CMD]
         #   $KEY_DIR
         #   $NUM_GENESIS_KEYS
         #   $PAYMENT_KEY
@@ -143,6 +145,7 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   [$ENV]
+            #   [$ERA_CMD]
             #   [$GENESIS_DIR]
             #   [$NUM_GENESIS_KEYS]
             #   [$SECURITY_PARAM]
@@ -242,6 +245,7 @@ in {
             # Inputs:
             #   [$CURRENT_KES_PERIOD]
             #   [$DEBUG]
+            #   [$ERA_CMD]
             #   [$NO_DEPLOY_DIR]
             #   $POOL_NAMES
             #   $STAKE_POOL_DIR
@@ -371,7 +375,8 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
             #   [$POOL_DELEG_INDEX]
@@ -467,7 +472,8 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
             #   $POOL_NAMES
@@ -628,6 +634,7 @@ in {
             # Inputs:
             #   $CURRENT_KES_PERIOD
             #   [$DEBUG]
+            #   [$ERA_CMD]
             #   [$NO_DEPLOY_FILE]
             #   $POOL_NAMES
             #   $STAKE_POOL_DIR
@@ -700,7 +707,8 @@ in {
             # Inputs:
             #   $BYRON_SIGNING_KEY
             #   [$DEBUG]
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   $PAYMENT_KEY
             #   [$SUBMIT_TX]
             #   $TESTNET_MAGIC
@@ -758,7 +766,8 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   $KEY_DIR
             #   [$MAJOR_VERSION]
             #   $NUM_GENESIS_KEYS
@@ -792,7 +801,8 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   $D_VALUE
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   $KEY_DIR
             #   $NUM_GENESIS_KEYS
             #   $PAYMENT_KEY
@@ -820,7 +830,8 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   $KEY_DIR
             #   $MAJOR_VERSION
             #   $NUM_GENESIS_KEYS
@@ -851,7 +862,8 @@ in {
             # Inputs:
             #   $COST_MODEL
             #   [$DEBUG]
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   $KEY_DIR
             #   $NUM_GENESIS_KEYS
             #   $PAYMENT_KEY
@@ -880,7 +892,8 @@ in {
           text = ''
             # Inputs:
             #   [$DEBUG]
-            #   [$ERA]
+            #   [$ERA] (deprecated `--$ERA-era` flag)
+            #   [$ERA_CMD]
             #   $KEY_DIR
             #   $NUM_GENESIS_KEYS
             #   $PAYMENT_KEY
@@ -912,6 +925,7 @@ in {
             # Inputs:
             #   $ACTION
             #   [$DEBUG]
+            #   [$ERA_CMD]
             #   [$GOV_ACTION_DEPOSIT]
             #   $PAYMENT_KEY
             #   $PROPOSAL_ARGS
@@ -953,7 +967,7 @@ in {
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
-            "''${CARDANO_CLI[@]}" conway governance action "$ACTION" \
+            "''${CARDANO_CLI[@]}" governance action "$ACTION" \
               --testnet \
               "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
@@ -976,7 +990,7 @@ in {
             BUILD_TX_ARGS+=("--proposal-file" "$ACTION".action)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$STAKE_KEY".skey)")
 
-            "''${CARDANO_CLI[@]}" conway transaction build \
+            "''${CARDANO_CLI[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -1003,6 +1017,7 @@ in {
             # Inputs:
             #   $ACTION_TX_ID
             #   [$DEBUG]
+            #   [$ERA_CMD]
             #   $DECISION
             #   $PAYMENT_KEY
             #   $ROLE
@@ -1054,7 +1069,7 @@ in {
                 --testnet-magic "$TESTNET_MAGIC"
             )
             # TODO: make work with other actions than constitution
-            "''${CARDANO_CLI[@]}" conway governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
+            "''${CARDANO_CLI[@]}" governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
 
             # Generate transaction
             TXIN=$(
@@ -1069,7 +1084,7 @@ in {
             BUILD_TX_ARGS+=("--vote-file" "$ROLE".vote)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$VOTE_KEY".skey)")
 
-            "''${CARDANO_CLI[@]}" conway transaction build \
+            "''${CARDANO_CLI[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -1097,6 +1112,7 @@ in {
             #   [$DEBUG]
             #   [$DREP_DEPOSIT]
             #   $DREP_DIR
+            #   [$ERA_CMD]
             #   $INDEX
             #   $PAYMENT_KEY
             #   [$SUBMIT_TX]
@@ -1123,7 +1139,7 @@ in {
               --verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
 
-            "''${CARDANO_CLI[@]}" conway governance drep key-gen \
+            "''${CARDANO_CLI[@]}" governance drep key-gen \
               --verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/drep-"$INDEX".skey
 
@@ -1139,12 +1155,12 @@ in {
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --out-file drep-"$INDEX"-stake.cert
 
-            "''${CARDANO_CLI[@]}" conway governance drep registration-certificate \
+            "''${CARDANO_CLI[@]}" governance drep registration-certificate \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --key-reg-deposit-amt "$DREP_DEPOSIT" \
               --out-file drep-"$INDEX"-drep.cert
 
-            "''${CARDANO_CLI[@]}" conway stake-address vote-delegation-certificate \
+            "''${CARDANO_CLI[@]}" stake-address vote-delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file drep-"$INDEX"-delegation.cert
@@ -1165,7 +1181,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" conway transaction build \
+            "''${CARDANO_CLI[@]}" transaction build \
               --tx-in "$TXIN" \
               --tx-out "$DREP_ADDRESS"+"$VOTING_POWER" \
               --change-address "$CHANGE_ADDRESS" \
@@ -1197,6 +1213,7 @@ in {
             # Inputs:
             #   $CC_DIR
             #   [$DEBUG]
+            #   [$ERA_CMD]
             #   $INDEX
             #   $PAYMENT_KEY
             #   [$SUBMIT_TX]
@@ -1213,16 +1230,16 @@ in {
 
             mkdir -p "$CC_DIR"
 
-            "''${CARDANO_CLI[@]}" conway governance committee key-gen-cold \
+            "''${CARDANO_CLI[@]}" governance committee key-gen-cold \
               --verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
               --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
 
-            "''${CARDANO_CLI[@]}" conway governance committee key-gen-hot \
+            "''${CARDANO_CLI[@]}" governance committee key-gen-hot \
               --verification-key-file "$CC_DIR"/hot-"$INDEX".vkey \
               --signing-key-file "$CC_DIR"/hot-"$INDEX".skey
 
 
-            "''${CARDANO_CLI[@]}" conway governance committee create-hot-key-authorization-certificate \
+            "''${CARDANO_CLI[@]}" governance committee create-hot-key-authorization-certificate \
               --cold-verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
               --hot-key-file "$CC_DIR"/hot-"$INDEX".vkey \
               --out-file cc-"$INDEX"-reg.cert
@@ -1243,7 +1260,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" conway transaction build \
+            "''${CARDANO_CLI[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -1272,6 +1289,7 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   $DREP_KEY
+            #   [$ERA_CMD]
             #   $PAYMENT_KEY
             #   $STAKE_KEY
             #   [$SUBMIT_TX]
@@ -1285,7 +1303,7 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            "''${CARDANO_CLI[@]}" conway stake-address vote-delegation-certificate \
+            "''${CARDANO_CLI[@]}" stake-address vote-delegation-certificate \
               --stake-verification-key-file "$(decrypt_check "$STAKE_KEY".vkey)" \
               --drep-verification-key-file "$(decrypt_check "$DREP_KEY".vkey)" \
               --out-file drep-delegation.cert
@@ -1306,7 +1324,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" conway transaction build \
+            "''${CARDANO_CLI[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
