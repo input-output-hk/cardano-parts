@@ -6,7 +6,6 @@ alias tf := terraform
 null := ""
 stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
 statePrefix := "~/.local/share"
-zero := "0"
 
 # Common code
 checkEnv := '''
@@ -134,7 +133,7 @@ dbsync-pool-analyze HOSTNAME:
   MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
   echo "The maximum percentage difference de-delegation of all these pools will make in chain density is: $MAX_SHIFT"
 
-dbsync-create-faucet-stake-keys-table ENV HOSTNAME:
+dbsync-create-faucet-stake-keys-table ENV HOSTNAME NUM_ACCOUNTS="500":
   #!/usr/bin/env bash
   TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
 
@@ -143,7 +142,7 @@ dbsync-create-faucet-stake-keys-table ENV HOSTNAME:
   scripts/setup-delegation-accounts.py \
     --print-only \
     --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
-    --num-accounts 500 \
+    --num-accounts {{NUM_ACCOUNTS}} \
     > "$TMPFILE"
 
   echo
@@ -174,7 +173,7 @@ dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
     echo
   done
 
-gen-payment-address-from-mnemonic MNEMONIC_FILE ADDRESS_OFFSET=zero:
+gen-payment-address-from-mnemonic MNEMONIC_FILE ADDRESS_OFFSET="0":
   cardano-address key from-recovery-phrase Shelley < {{MNEMONIC_FILE}} \
     | cardano-address key child 1852H/1815H/0H/0/{{ADDRESS_OFFSET}} \
     | cardano-address key public --with-chain-code \
