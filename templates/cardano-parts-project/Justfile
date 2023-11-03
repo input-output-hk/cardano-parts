@@ -487,7 +487,7 @@ start-node ENV:
 
 stop-all:
   #!/usr/bin/env bash
-  for i in preprod preview shelley-qa sanchonet demo; do
+  for i in preprod preview private shelley-qa sanchonet demo; do
     just stop-node $i
   done
 

@@ -5,6 +5,7 @@
 /.gcroots
 /*.log
 /*.pid
+__pycache__
 /result*
 /*.skey
 /*.socket

@@ -266,10 +266,7 @@ else:
   print("Must specify wallet mnemonic")
   exit(1)
 
-# Read the signing key file to re-inject it with bash file substitution.
-# This allows for providing file substitution for input file arg inputs, to sops decrypt for example.
-# Otherwise, the first subprocess call will close the available fd and it won't
-# be usable for subsequent calls.
+# Convert the signing key to a str so sops decryption and file redirection can be used for the file input arg
 if not arguments["--print-only"]:
   with open(utxo_signing_key, "r") as file:
     utxo_signing_key_str = file.read()
