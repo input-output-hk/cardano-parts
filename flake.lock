@@ -852,16 +852,15 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1697587800,
-        "narHash": "sha256-PyEZ1spurwbn76XO0UGmailCSGvadnLse0Z/fRT3wOI=",
+        "lastModified": 1698746924,
+        "narHash": "sha256-8og+vqQPEoB2KLUtN5esGMDymT+2bT/rCHZt1NAe7y0=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "665eed098bf0fd980b9cf1639ba48400df3e602b",
+        "rev": "af551ca93d969d9715fa9bf86691d9a0a19e89d9",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "mig-sancho",
         "repo": "iohk-nix",
         "type": "github"
       }
