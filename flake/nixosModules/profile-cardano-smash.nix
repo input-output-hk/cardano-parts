@@ -50,6 +50,7 @@ flake: {
 
       cfg = config.services.cardano-smash;
       cfgDbsync = config.services.cardano-db-sync;
+      cfgNode = config.services.cardano-node;
       cfgSmash = config.services.smash;
     in {
       imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
@@ -254,6 +255,7 @@ flake: {
             coreutils
             curl
             dnsutils
+            findutils
             jq
             netcat
           ];
@@ -262,9 +264,26 @@ flake: {
 
           preStart = ''
             set -uo pipefail
-            for x in {1..60}; do
+            SOCKET="${cfgNode.socketPath 0}"
+
+            # Wait for postgres
+            while true; do
               nc -z localhost 5432 && sleep 2 && break
-              echo loop $x: waiting for postgresql 2 sec...
+              echo "Waiting for postgresql service availability for 2 seconds..."
+              sleep 2
+            done
+
+            # Wait for the node socket
+            while true; do
+              [ -S "$SOCKET" ] && sleep 2 && break
+              echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
+              sleep 2
+            done
+
+            # Wait for the node socket to become group writeable
+            while true; do
+              [ "$(find "$SOCKET" -type s -perm -g+w)" = "$SOCKET" ] && sleep 2 && break
+              echo "Waiting for cardano node socket group write permission at $SOCKET for 2 seconds..."
               sleep 2
             done
           '';
