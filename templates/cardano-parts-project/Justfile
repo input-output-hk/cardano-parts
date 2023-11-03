@@ -1,37 +1,56 @@
-set shell := ["nu", "-c"]
+set shell := ["bash", "-uc"]
 set positional-arguments
-
 alias tf := terraform
 
-checkEnv := '''
-  ENV="\${1:-}"
-  TESTNET_MAGIC="\${2:-""}"
+# Defaults
+null := ""
+stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
+statePrefix := "~/.local/share"
+zero := "0"
 
-  if ! [[ "\$ENV" =~ preprod$|preview$|sanchonet$|shelley-qa$|demo$ ]]; then
-    echo "Error: only node environments for demo, preprod, preview, sanchonet and shelley-qa are supported"
+# Common code
+checkEnv := '''
+  ENV="${1:-}"
+  TESTNET_MAGIC="${2:-""}"
+
+  if ! [[ "$ENV" =~ preprod$|preview$|private$|sanchonet$|shelley-qa$|demo$ ]]; then
+    echo "Error: only node environments for demo, preprod, preview, private, sanchonet and shelley-qa are supported"
     exit 1
   fi
 
-  if [ "\$ENV" = "preprod" ]; then
+  if [ "$ENV" = "preprod" ]; then
     MAGIC="1"
-  elif [ "\$ENV" = "preview" ]; then
+  elif [ "$ENV" = "preview" ]; then
     MAGIC="2"
-  elif [ "\$ENV" = "shelley-qa" ]; then
+  elif [ "$ENV" = "shelley-qa" ]; then
     MAGIC="3"
-  elif [ "\$ENV" = "sanchonet" ]; then
+  elif [ "$ENV" = "sanchonet" ]; then
     MAGIC="4"
-  elif [ "\$ENV" = "demo" ]; then
+  elif [ "$ENV" = "private" ]; then
+    MAGIC="5"
+  elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
   fi
 
   # Allow a magic override if the just recipe optional var is provided
-  if ! [ -z "\${TESTNET_MAGIC:-}" ]; then
-    MAGIC="\$TESTNET_MAGIC"
+  if ! [ -z "${TESTNET_MAGIC:-}" ]; then
+    MAGIC="$TESTNET_MAGIC"
   fi
 '''
 
-# Defaults
-defaultMagic := ""
+checkSshConfig := '''
+  if not ('.ssh_config' | path exists) {
+    print "Please run terraform first to create the .ssh_config file"
+    exit 1
+  }
+'''
+
+checkSshKey := '''
+  if not ('.ssh_key' | path exists) {
+    just save-bootstrap-ssh-key
+  }
+'''
+
 
 default:
   @just --list
@@ -48,12 +67,92 @@ build-machine MACHINE *ARGS:
 build-machines *ARGS:
   #!/usr/bin/env nu
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
-  for node in $nodes { just build-machine $node {{ARGS}} }
+  for node in $nodes {just build-machine $node {{ARGS}}}
 
 cf STACKNAME:
+  #!/usr/bin/env nu
   mkdir cloudFormation
   nix eval --json '.#cloudFormation.{{STACKNAME}}' | from json | save --force 'cloudFormation/{{STACKNAME}}.json'
   rain deploy --debug --termination-protection --yes ./cloudFormation/{{STACKNAME}}.json
+
+dbsync-psql HOSTNAME:
+  #!/usr/bin/env bash
+  just ssh {{HOSTNAME}} -t 'psql -U cexplorer cexplorer'
+
+dbsync-pool-analyze HOSTNAME:
+  #!/usr/bin/env bash
+  echo "Pushing pool analysis sql command on {{HOSTNAME}}..."
+  just scp scripts/dbsync-pool-perf.sql {{HOSTNAME}}:/tmp/
+
+  echo
+  echo "Executing pool analysis sql command on host {{HOSTNAME}}..."
+  QUERY=$(just ssh {{HOSTNAME}} -t 'psql -P pager=off -xXU cexplorer cexplorer < /tmp/dbsync-pool-perf.sql')
+
+  echo
+  echo "Query output:"
+  echo "$QUERY" | tail -n +2
+  echo
+
+  JSON=$(grep -oP '^faucet_pool_summary_json[[:space:]]+\| \K{.*$' <<< "$QUERY" | jq .)
+  echo "$JSON"
+  echo
+
+  echo "Faucet pools to de-delegate are:"
+  jq '.faucet_to_dedelegate' <<< "$JSON"
+  echo
+
+  echo "The string of indexes of faucet pools to de-delegate from the JSON above are:"
+  jq '.faucet_to_dedelegate | to_entries | map(.key) | join(" ")' <<< "$JSON"
+  echo
+
+  MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
+  echo "The maximum percentage difference de-delegation of all these pools will make in chain density is: $MAX_SHIFT"
+
+dbsync-create-faucet-stake-keys-table ENV HOSTNAME:
+  #!/usr/bin/env bash
+  TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
+
+  echo "Creating stake key sql injection command for environment {{ENV}} (this will take a minute)..."
+  NOMENU=true \
+  scripts/setup-delegation-accounts.py \
+    --print-only \
+    --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
+    --num-accounts 500 \
+    > "$TMPFILE"
+
+  echo
+  echo "Pushing stake key sql injection command for environment {{ENV}}..."
+  just scp "$TMPFILE" {{HOSTNAME}}:"$TMPFILE"
+
+  echo
+  echo "Executing stake key sql injection command for environment {{ENV}}..."
+  just ssh {{HOSTNAME}} -t "psql -XU cexplorer cexplorer < \"$TMPFILE\""
+
+dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
+  #!/usr/bin/env bash
+  {{checkEnv}}
+  just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
+
+  echo
+  echo "Starting de-delegation of the following stake key indexes: {{STAKE_KEY_INDEXES}}"
+  for i in {{STAKE_KEY_INDEXES}}; do
+    echo "De-delegating index $i"
+    NOMENU=true scripts/restore-delegation-accounts.py \
+      --testnet-magic {{TESTNET_MAGIC}} \
+      --signing-key-file <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey) \
+      --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
+      --delegation-index "$i"
+    echo "Sleeping 2 minutes until $(date -d  @$(($(date +%s) + 120)))"
+    sleep 120
+    echo
+    echo
+  done
+
+gen-payment-address-from-mnemonic MNEMONIC_FILE ADDRESS_OFFSET=zero:
+  cardano-address key from-recovery-phrase Shelley < {{MNEMONIC_FILE}} \
+    | cardano-address key child 1852H/1815H/0H/0/{{ADDRESS_OFFSET}} \
+    | cardano-address key public --with-chain-code \
+    | cardano-address address payment --network-tag testnet
 
 lint:
   deadnix -f
@@ -70,10 +169,7 @@ list-machines:
      exit 1
   }
 
-  if not ('.ssh_config' | path exists) {
-    print "Please run terraform first to create the .ssh_config file"
-    exit 1
-  }
+  {{checkSshConfig}}
 
   let sshNodes = (do -i { ^scj dump /dev/stdout -c .ssh_config } | complete)
   if $sshNodes.exit_code != 0 {
@@ -86,10 +182,10 @@ list-machines:
 
   let nixosNodesDfr = (
     let nodeList = ($nixosNodes.stdout | from json);
-    let sanitizedList = (if ($nodeList | is-empty) { $nodeList | insert 0 "" } else { $nodeList });
+    let sanitizedList = (if ($nodeList | is-empty) {$nodeList | insert 0 ""} else {$nodeList});
     $sanitizedList
       | insert 0 "machine"
-      | each {|i| [$i] | into record }
+      | each {|i| [$i] | into record}
       | headers
       | each {|i| insert inNixosCfg {"yes"}}
       | dfr into-df
@@ -110,25 +206,25 @@ list-machines:
       | dfr join -o $sshNodesDfr machine Host
       | dfr sort-by machine
       | dfr into-nu
-      | update cells { |v| if $v == null {"Missing"} else {$v}}
+      | update cells {|v| if $v == null {"Missing"} else {$v}}
       | where machine != ""
   )
 
-query-all:
+query-tip-all:
   #!/usr/bin/env bash
   QUERIED=0
-  for i in preprod preview shelley-qa sanchonet demo; do
+  for i in preprod preview private shelley-qa sanchonet demo; do
     TIP=$(just query-tip $i 2>&1)
     [ "$?" = "0" ] && { echo "Environment: $i"; echo "$TIP"; echo; QUERIED=$((QUERIED + 1)); }
   done
   [ "$QUERIED" = "0" ] && echo "No environments running." || true
 
-query-tip ENV TESTNET_MAGIC=defaultMagic:
+query-tip ENV TESTNET_MAGIC=null:
   #!/usr/bin/env bash
-  source <(echo "{{checkEnv}}")
-
+  {{checkEnv}}
+  {{stateDir}}
   cardano-cli query tip \
-    --socket-path node-{{ENV}}.socket \
+    --socket-path "$STATEDIR/node-{{ENV}}.socket" \
     --testnet-magic "$MAGIC"
 
 save-bootstrap-ssh-key:
@@ -141,14 +237,27 @@ save-bootstrap-ssh-key:
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
 
-set-default-cardano-env ENV TESTNET_MAGIC=defaultMagic:
+set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
   #!/usr/bin/env bash
-  source <(echo "{{checkEnv}}")
+  {{checkEnv}}
+  {{stateDir}}
+  # The log and socket file may not exist immediately upon node startup, so only check for the pid file
+  if ! [ -s "$STATEDIR/node-{{ENV}}.pid" ]; then
+    echo "Environment {{ENV}} does not appear to be running as $STATEDIR/node-{{ENV}}.pid does not exist"
+    exit 1
+  fi
 
-  echo -n "Linking: "
-  ln -sfv node-{{ENV}}.socket node.socket
+  echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.socket" node.socket)"
+  echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.log" node.log)"
+  echo
 
-  SHELLPID=$(cat /proc/$PPID/status | awk '/PPid/ {print $2}')
+  if [ -n "{{PPID}}" ]; then
+    PARENTID="{{PPID}}"
+  else
+    PARENTID="$PPID"
+  fi
+
+  SHELLPID=$(cat /proc/$PARENTID/status | awk '/PPid/ {print $2}')
   DEFAULT_PATH=$(pwd)/node.socket
 
   echo "Updating shell env vars:"
@@ -156,20 +265,30 @@ set-default-cardano-env ENV TESTNET_MAGIC=defaultMagic:
   echo "  CARDANO_NODE_NETWORK_ID=$MAGIC"
   echo "  TESTNET_MAGIC=$MAGIC"
 
-  # Modifying a parent shells env vars is generally not done
-  # This is a hacky way to accomplish it
-  gdb /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
-    call (int) setenv("CARDANO_NODE_SOCKET_PATH", "$DEFAULT_PATH", 1)
-    call (int) setenv("CARDANO_NODE_NETWORK_ID", "$MAGIC", 1)
-    call (int) setenv("TESTNET_MAGIC", "$MAGIC", 1)
+  SH=$(cat /proc/$SHELLPID/comm)
+  if [[ "$SH" =~ bash$|zsh$ ]]; then
+    # Modifying a parent shells env vars is generally not done
+    # This is a hacky way to accomplish it in bash and zsh
+    gdb /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
+      call (int) setenv("CARDANO_NODE_SOCKET_PATH", "$DEFAULT_PATH", 1)
+      call (int) setenv("CARDANO_NODE_NETWORK_ID", "$MAGIC", 1)
+      call (int) setenv("TESTNET_MAGIC", "$MAGIC", 1)
   END
 
-  # Zsh env vars get updated, but the shell doesn't reflect this
-  if [ $(cat /proc/$SHELLPID/comm) = "zsh" ]; then
+    # Zsh env vars get updated, but the shell doesn't reflect this
+    if [ "$SH" = "zsh" ]; then
+      echo
+      echo "Cardano env vars have been updated as seen by \`env\`, but zsh \`echo \$VAR\` will not reflect this."
+      echo "To sync zsh shell vars with env vars:"
+      echo "  source scripts/sync-env-vars.sh"
+    fi
+  else
     echo
-    echo "Cardano env vars have been updated as seen by \`env\`, but zsh \`echo \$VAR\` will not reflect this."
-    echo "To sync zsh shell vars with env vars:"
-    echo "  source scripts/sync-env-vars.sh"
+    echo "Unexpected shell: $SH"
+    echo "The following vars will need to be manually exported, or the equivalent operation for your shell:"
+    echo "  export CARDANO_NODE_SOCKET_PATH=$DEFAULT_PATH"
+    echo "  export CARDANO_NODE_NETWORK_ID=$MAGIC"
+    echo "  export TESTNET_MAGIC=$MAGIC"
   fi
 
 show-flake *ARGS:
@@ -192,27 +311,21 @@ sops-decrypt-binary FILE:
 sops-encrypt-binary FILE:
   sops --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
+scp *ARGS:
+  #!/usr/bin/env nu
+  {{checkSshConfig}}
+  scp -o LogLevel=ERROR -F .ssh_config {{ARGS}}
+
 ssh HOSTNAME *ARGS:
   #!/usr/bin/env nu
-  if not ('.ssh_config' | path exists) {
-    print "Please run terraform first to create the .ssh_config file"
-    exit 1
-  }
-
-  ssh -F .ssh_config {{HOSTNAME}} {{ARGS}}
+  {{checkSshConfig}}
+  ssh -o LogLevel=ERROR -F .ssh_config {{HOSTNAME}} {{ARGS}}
 
 ssh-bootstrap HOSTNAME *ARGS:
   #!/usr/bin/env nu
-  if not ('.ssh_config' | path exists) {
-    print "Please run terraform first to create the .ssh_config file"
-    exit 1
-  }
-
-  if not ('.ssh_key' | path exists) {
-    just save-bootstrap-ssh-key
-  }
-
-  ssh -F .ssh_config -i .ssh_key {{HOSTNAME}} {{ARGS}}
+  {{checkSshConfig}}
+  {{checkSshKey}}
+  ssh -o LogLevel=ERROR -F .ssh_config -i .ssh_key {{HOSTNAME}} {{ARGS}}
 
 ssh-for-all *ARGS:
   #!/usr/bin/env nu
@@ -222,9 +335,19 @@ ssh-for-all *ARGS:
 ssh-for-each HOSTNAMES *ARGS:
   colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
 
+ssh-list-ips HOSTNAME_REGEX_PATTERN:
+  #!/usr/bin/env nu
+  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | where Host =~ "{{HOSTNAME_REGEX_PATTERN}}" | get HostName | str join " "
+
+ssh-list-names HOSTNAME_REGEX_PATTERN:
+  #!/usr/bin/env nu
+  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | where Host =~ "{{HOSTNAME_REGEX_PATTERN}}" | get Host | str join " "
+
 start-demo:
   #!/usr/bin/env bash
   just stop-node demo
+
+  {{stateDir}}
 
   echo "Cleaning state-demo..."
   if [ -d state-demo ]; then
@@ -239,7 +362,7 @@ start-demo:
   export KEY_DIR=state-demo/envs/custom
   export DATA_DIR=state-demo/rundir
 
-  export CARDANO_NODE_SOCKET_PATH=./node-demo.socket
+  export CARDANO_NODE_SOCKET_PATH="$STATEDIR/node-demo.socket"
   export TESTNET_MAGIC=42
 
   export NUM_GENESIS_KEYS=3
@@ -270,8 +393,9 @@ start-demo:
   echo "Start cardano-node in the background. Run \"just stop\" to stop"
   NODE_CONFIG="$DATA_DIR/node-config.json" \
     NODE_TOPOLOGY="$DATA_DIR/topology.json" \
-    SOCKET_PATH=./node-demo.socket \
-    nohup setsid nix run .#run-cardano-node &> node-demo.log & echo $! > node-demo.pid &
+    SOCKET_PATH="$STATEDIR/node-demo.socket" \
+    nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-demo.log" & echo $! > "$STATEDIR/node-demo.pid" &
+  just set-default-cardano-env demo "" "$PPID"
   echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
   sleep 30
   echo
@@ -333,8 +457,10 @@ start-demo:
 
 start-node ENV:
   #!/usr/bin/env bash
-  if ! [[ "{{ENV}}" =~ preprod$|preview$|sanchonet$|shelley-qa ]]; then
-    echo "Error: only node environments for preprod, preview, sanchonet and shelley-qa are supported for start-node recipe"
+  {{stateDir}}
+
+  if ! [[ "{{ENV}}" =~ preprod$|preview$|private$|sanchonet$|shelley-qa ]]; then
+    echo "Error: only node environments for preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
     exit 1
   fi
 
@@ -354,16 +480,25 @@ start-node ENV:
   ENVIRONMENT="{{ENV}}" \
   UNSTABLE="$UNSTABLE" \
   UNSTABLE_LIB="$UNSTABLE_LIB" \
-  DATA_DIR=~/.local/share/playground \
-  SOCKET_PATH=$(pwd)/"node-{{ENV}}.socket" \
-  nohup setsid nix run .#run-cardano-node &> node-{{ENV}}.log & echo $! > node-{{ENV}}.pid &
+  DATA_DIR="$STATEDIR" \
+  SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
+  nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
+  just set-default-cardano-env {{ENV}} "" "$PPID"
+
+stop-all:
+  #!/usr/bin/env bash
+  for i in preprod preview private shelley-qa sanchonet demo; do
+    just stop-node $i
+  done
 
 stop-node ENV:
   #!/usr/bin/env bash
-  if [ -f "node-{{ENV}}.pid" ]; then
+  {{stateDir}}
+
+  if [ -f "$STATEDIR/node-{{ENV}}.pid" ]; then
     echo "Stopping cardano-node for envrionment {{ENV}}"
-    kill $(< "node-{{ENV}}.pid") 2> /dev/null
-    rm -f "node-{{ENV}}.pid" "node-{{ENV}}.socket"
+    kill $(< "$STATEDIR/node-{{ENV}}.pid") 2> /dev/null
+    rm -f "$STATEDIR/node-{{ENV}}.pid" "$STATEDIR/node-{{ENV}}.socket"
   fi
 
 terraform *ARGS:

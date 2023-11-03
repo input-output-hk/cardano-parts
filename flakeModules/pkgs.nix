@@ -351,19 +351,19 @@ in
             (mkPkg "bech32" caPkgs.bech32-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2023-07-18)
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
-            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-5-0-pre // {version = "8.12.0.0";}))
+            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-6-0-pre // {version = "8.13.0.0";}))
             (mkPkg "cardano-db-sync" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-13-1-1-3 // {exeName = "cardano-db-sync";}))
-            (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-sancho-2-0-0 // {exeName = "cardano-db-sync";}))
+            (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-sancho-2-2-0 // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-sancho-2-0-0)
+            (mkPkg "cardano-db-tool-ng" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-sancho-2-2-0)
             (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
-            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-5-0-pre // {version = "8.5.0-pre";}))
+            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-6-0-pre // {version = "8.6.0-pre";}))
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-1-1-3)
-            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-2-0-0)
+            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-2-2-0)
             (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-5-0-pre)
+            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-6-0-pre)
             (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2023-07-18
               // {
@@ -371,8 +371,11 @@ in
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
             (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-1-2)
+            (mkPkg "db-analyser-ng" caPkgs.db-analyser-input-output-hk-cardano-node-8-6-0-pre)
             (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-5-0-pre)
+            (mkPkg "db-synthesizer-ng" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-6-0-pre)
+            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-2-0-pre)
+            (mkPkg "db-truncater-ng" caPkgs.db-truncater-input-output-hk-cardano-node-8-6-0-pre)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
@@ -422,6 +425,9 @@ in
             cardano-node-ng = mkWrapper "cardano-node-ng" cfgPkgs.cardano-node-ng;
             cardano-smash-ng = mkWrapper "cardano-smash-ng" cfgPkgs.cardano-smash-ng;
             cardano-submit-api-ng = mkWrapper "cardano-submit-api-ng" cfgPkgs.cardano-submit-api-ng;
+            db-analyser-ng = mkWrapper "db-analyser-ng" cfgPkgs.db-analyser-ng;
+            db-synthesizer-ng = mkWrapper "db-synthesizer-ng" cfgPkgs.db-synthesizer-ng;
+            db-truncater-ng = mkWrapper "db-truncater-ng" cfgPkgs.db-truncater-ng;
           };
         };
       });

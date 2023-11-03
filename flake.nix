@@ -21,7 +21,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/2f3760f135616ebc477d3ed74eba9b63c22f83a0";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/migrate-to-play-legacy";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Cardano related inputs required for service config
@@ -38,7 +38,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:input-output-hk/cardano-db-sync/sancho-2-0-0";
+      url = "github:input-output-hk/cardano-db-sync/sancho-2-2-0";
       flake = false;
     };
 

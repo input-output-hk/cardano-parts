@@ -12,7 +12,11 @@
 #   * This module assists with group deployments
 #   * The upstream cardano-node nixos service module should still be imported separately
 {moduleWithSystem, ...}: {
-  flake.nixosModules.profile-cardano-node-group = moduleWithSystem ({config, ...}: nixos @ {
+  flake.nixosModules.profile-cardano-node-group = moduleWithSystem ({
+    config,
+    self',
+    ...
+  }: nixos @ {
     pkgs,
     lib,
     name,
@@ -99,8 +103,11 @@
         config.cardano-parts.pkgs.bech32
         cardano-node-pkgs.cardano-cli
         config.cardano-parts.pkgs.db-analyser
-        config.cardano-parts.pkgs.db-truncater
         config.cardano-parts.pkgs.db-synthesizer
+        config.cardano-parts.pkgs.db-truncater
+        self'.packages.db-analyser-ng
+        self'.packages.db-synthesizer-ng
+        self'.packages.db-truncater-ng
       ];
 
       environment = {

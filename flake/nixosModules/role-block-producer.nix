@@ -91,6 +91,7 @@
       systemd.services.cardano-node = {
         after = ["sops-secrets.service"];
         wants = ["sops-secrets.service"];
+        partOf = ["sops-secrets.service"];
       };
 
       services.cardano-node =
@@ -134,10 +135,10 @@
             --output-format bech32
         '';
 
-        show-pool-stake-snapshot = ''
+        cardano-show-pool-stake-snapshot = ''
           cardano-cli \
             query stake-snapshot \
-            --stake-pool-id "$(show-pool-id)"
+            --stake-pool-id "$(cardano-show-pool-id)"
         '';
       };
     };

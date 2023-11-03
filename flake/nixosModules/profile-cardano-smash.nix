@@ -247,6 +247,7 @@ flake: {
         in {
           wantedBy = ["multi-user.target"];
           after = ["network-online.target"];
+
           path = with pkgs; [
             config.services.postgresql.package
             cardano-node-pkgs.cardano-cli
@@ -256,7 +257,18 @@ flake: {
             jq
             netcat
           ];
+
           environment = config.environment.variables;
+
+          preStart = ''
+            set -uo pipefail
+            for x in {1..60}; do
+              nc -z localhost 5432 && sleep 2 && break
+              echo loop $x: waiting for postgresql 2 sec...
+              sleep 2
+            done
+          '';
+
           script = ''
             set -uo pipefail
 
@@ -321,7 +333,7 @@ flake: {
 
             run() {
               epoch=$(cardano-cli query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
-              db_sync_epoch=$(psql -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
+              db_sync_epoch=$(psql -X -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
 
               if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then
                 >&2 echo "cardano-db-sync has not caught up with current epoch yet. Skipping."
@@ -333,7 +345,7 @@ flake: {
               rm -f *-relay.json
 
               i=0
-              for r in $(psql -U ${cfgSmash.postgres.user} -t < ${extract_relays_sql} | jq -c '.[]'); do
+              for r in $(psql -X -U ${cfgSmash.postgres.user} -t < ${extract_relays_sql} | jq -c '.[]'); do
                 addr=$(echo "$r" | jq -r '.addr')
                 port=$(echo "$r" | jq -r '.port')
                 resolved=$(dig +nocookie +short -q "$addr" A || :)
@@ -377,15 +389,18 @@ flake: {
               sleep 3600
             done
           '';
-          # 3 failures at max within 24h:
-          startLimitIntervalSec = 24 * 60 * 60;
+
+          # If the service gets caught in a runtime looping error,
+          # where it either never successfully starts but keeps trying,
+          # or starts successfully but never finishes,
+          # the alerts for registered-relays-exporter will catch it.
+          startLimitIntervalSec = 0;
           serviceConfig = {
             User = "registered-relays-dump";
             SupplementaryGroups = "cardano-node";
             StateDirectory = "registered-relays-dump";
             Restart = "always";
             RestartSec = "30s";
-            StartLimitBurst = 3;
           };
         };
 

@@ -221,7 +221,10 @@
                   "/send-money"
                 ];
               in
-                genAttrs publicPrefixes (_: {proxyPass = "http://127.0.0.1:${toString cfg.faucetPort}";});
+                {
+                  "/".root = pkgs.runCommand "nginx-root-dir" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';
+                }
+                // genAttrs publicPrefixes (_: {proxyPass = "http://127.0.0.1:${toString cfg.faucetPort}";});
             };
           };
         };

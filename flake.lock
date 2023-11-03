@@ -194,11 +194,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1697751373,
-        "narHash": "sha256-sJZT0Cvh/bLAX4JsDRT4nURS46baG79ZCpMLf/2QUvg=",
+        "lastModified": 1698943572,
+        "narHash": "sha256-mvx8zrJ6swWXZg7Xdo1rQbJcCzCo4ElFWnT6JiJl6Os=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "b884014c67c72c86e81cd26dff766bc2cf92e79c",
+        "rev": "3eea399d8f4cc017add189672ea5950e3732c403",
         "type": "github"
       },
       "original": {
@@ -227,16 +227,16 @@
     "cardano-db-sync-schema-ng": {
       "flake": false,
       "locked": {
-        "lastModified": 1696880055,
-        "narHash": "sha256-DyXShZwnDMnAC8Op+gBbC52ybtorPTj2d00hZRditMo=",
+        "lastModified": 1698928502,
+        "narHash": "sha256-MUJPiw7tf5SVfkxLBWEeP0Uh5Adw86Mmjp/NI4cCU5c=",
         "owner": "input-output-hk",
         "repo": "cardano-db-sync",
-        "rev": "d2227a15d95a3bd24ee3b4aff6e25085091b279f",
+        "rev": "ffde876ad45ffacf644b985c8843a46596a28e77",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "sancho-2-0-0",
+        "ref": "sancho-2-2-0",
         "repo": "cardano-db-sync",
         "type": "github"
       }
@@ -830,17 +830,17 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1691469905,
-        "narHash": "sha256-TV0p1dFGYAMl1dLJEfe/tNFjxvV2H7VgHU1I43q+b84=",
+        "lastModified": 1698949862,
+        "narHash": "sha256-2Rx861l42Bs1EPho6MPK/DRb79gb2vIc4nT0o1GGgA4=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "2f3760f135616ebc477d3ed74eba9b63c22f83a0",
+        "rev": "7fb995172009efe003e80e478000c3781481ea95",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "migrate-to-play-legacy",
         "repo": "iohk-nix",
-        "rev": "2f3760f135616ebc477d3ed74eba9b63c22f83a0",
         "type": "github"
       }
     },
@@ -852,11 +852,11 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1698746924,
-        "narHash": "sha256-8og+vqQPEoB2KLUtN5esGMDymT+2bT/rCHZt1NAe7y0=",
+        "lastModified": 1698999258,
+        "narHash": "sha256-42D1BMbdyZD+lT+pWUzb5zDQyasNbMJtH/7stuPuPfE=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "af551ca93d969d9715fa9bf86691d9a0a19e89d9",
+        "rev": "73dc2bb45af6f20cfe1d962f1334eed5e84ae764",
         "type": "github"
       },
       "original": {

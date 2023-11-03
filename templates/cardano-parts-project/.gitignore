@@ -5,11 +5,13 @@
 /.gcroots
 /*.log
 /*.pid
+__pycache__
 /result*
 /*.skey
 /*.socket
 /.ssh_config
 /.ssh_key
+/state-demo/
 /.terraform*
 /terraform.tf.json
 /treefmt.toml

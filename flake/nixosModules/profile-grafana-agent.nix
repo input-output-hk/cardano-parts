@@ -37,6 +37,7 @@
       systemd.services.grafana-agent = {
         after = ["sops-secrets.service"];
         wants = ["sops-secrets.service"];
+        partOf = ["sops-secrets.service"];
       };
 
       sops.secrets =

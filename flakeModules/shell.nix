@@ -61,6 +61,7 @@ in
         withLocal = withSystem system;
         treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
         isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
+        nushellPkg = pkgs.nushell.override {additionalFeatures = p: p ++ ["dataframe"];};
 
         globalDefault = isGlobal: default:
           if isGlobal
@@ -250,7 +251,7 @@ in
                     localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.jq
                     just
                     moreutils
-                    (nushell.override {additionalFeatures = p: p ++ ["dataframe"];})
+                    nushellPkg
                     ripgrep
                     statix
                     xxd
@@ -292,6 +293,9 @@ in
                         # the wrapped binary to avoid cli name collision.
                         self'.packages.cardano-cli-ng
                         self'.packages.cardano-node-ng
+                        self'.packages.db-analyser-ng
+                        self'.packages.db-synthesizer-ng
+                        self'.packages.db-truncater-ng
 
                         gdb
                         token-metadata-creator
@@ -365,7 +369,7 @@ in
             (pkgs.writeShellApplication
               {
                 name = "menu-${id}";
-                runtimeInputs = with pkgs; [lolcat];
+                runtimeInputs = [nushellPkg];
 
                 text = let
                   minWidth =
@@ -376,7 +380,7 @@ in
                     )
                     + 4;
                 in ''
-                  echo "Cardano Parts DevShell Menu: ${id}" | lolcat
+                  nu -c '"Cardano-parts menu: ${id}" | ansi gradient --fgstart "0xffffff" --fgend "0xffffff" --bgstart "0x0000ff" --bgend "0xff0000"'
                   echo
                   echo "The following packages are available in the ${id} devShell:"
                   echo
@@ -424,7 +428,7 @@ in
                     selectScope id optionalString "enableHooks" "defaultHooks"
                     + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
                     + ''
-                      menu
+                      [ -z "$NOMENU" ] && menu
                     '';
                 }
                 # Add optional default shell environment variables

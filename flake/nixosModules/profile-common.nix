@@ -34,6 +34,7 @@
     #   systemd.services.<name> = {
     #     after = ["sops-secrets.service"];
     #     wants = ["sops-secrets.service"];
+    #     partOf = ["sops-secrets.service"];
     #   };
     #
     # Also, on boot SOPS runs in stage 2 without networking.
