@@ -51,6 +51,32 @@ checkSshKey := '''
   }
 '''
 
+sopsConfigSetup := '''
+  # To support searching for sops config files from the target path rather than cwd up,
+  # implement a userland solution until natively sops supported.
+  #
+  # This enables $NO_DEPLOY_DIR to be separate from the default $STAKE_POOL_DIR/no-deploy default location.
+  # Ref: https://github.com/getsops/sops/issues/242#issuecomment-999809670
+  function sops_config() {
+    # Suppress xtrace on this fn as the return string is observed from the caller's output
+    { SHOPTS="$-"; set +x; } 2> /dev/null
+
+    FILE="$1"
+    CONFIG_DIR=$(dirname "$(realpath "$FILE")")
+    while ! [ -f "$CONFIG_DIR/.sops.yaml" ]; do
+      if [ "$CONFIG_DIR" = "/" ]; then
+        >&2 echo "error: no .sops.yaml file was found while walking the directory structure upwards from the target file: \"$FILE\""
+        exit 1
+      fi
+      CONFIG_DIR=$(dirname "$CONFIG_DIR")
+      done
+
+    echo "$CONFIG_DIR/.sops.yaml"
+
+    # Reset the xtrace option to its state prior to suppression
+    [ -n "${SHOPTS//[^x]/}" ] && set -x
+  }
+'''
 
 default:
   @just --list
@@ -306,10 +332,22 @@ show-nameservers:
   print ($ns | to text)
 
 sops-decrypt-binary FILE:
-  sops --input-type binary --output-type binary --decrypt {{FILE}}
+  #!/usr/bin/env bash
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  # Default to stdout decrypted output.
+  # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
+  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
 
 sops-encrypt-binary FILE:
-  sops --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
+  #!/usr/bin/env bash
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  # Default to in-place encrypted output.
+  # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
+  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
 scp *ARGS:
   #!/usr/bin/env nu
@@ -386,8 +424,8 @@ start-demo:
   nix run .#job-create-stake-pool-keys
 
   (
-    jq -r '.[]' < <(sops --input-type binary --output-type binary --decrypt "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
-    jq -r '.[]' < <(sops --input-type binary --output-type binary --decrypt "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+    jq -r '.[]' < <(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
+    jq -r '.[]' < <(just sops-decrypt-binary "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
   ) | jq -s > "$BULK_CREDS"
 
   echo "Start cardano-node in the background. Run \"just stop\" to stop"
