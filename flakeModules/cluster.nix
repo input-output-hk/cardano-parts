@@ -11,6 +11,7 @@
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
 #   flake.cardano-parts.cluster.infra.grafana.stackName
+#   flake.cardano-parts.cluster.groups.<default|name>.bookRelayMultivalueDns
 #   flake.cardano-parts.cluster.groups.<default|name>.groupBlockProducerSubstring
 #   flake.cardano-parts.cluster.groups.<default|name>.groupFlake
 #   flake.cardano-parts.cluster.groups.<default|name>.groupName
@@ -213,11 +214,22 @@ flake @ {
         default = "";
       };
 
+      bookRelayMultivalueDns = mkOption {
+        type = nullOr str;
+        description = mdDoc ''
+          Cardano-parts cluster group(s) multivalue DNS.
+          Machines belonging to this group and in the relay role have their IP A address added to this multivalue DNS record.
+          This is intended to aggregate all group relays for a given environment to a single DNS for use as an upstream publicRoots.
+        '';
+        default = null;
+      };
+
       groupRelayMultivalueDns = mkOption {
         type = nullOr str;
         description = mdDoc ''
           Cardano-parts cluster group multivalue DNS.
           Machines belonging to this group and in the relay role have their IP A address added to this multivalue DNS record.
+          This is intended to aggregate all group relays for a given pool to a single DNS for use as registered pool relay DNS contact.
         '';
         default = null;
       };

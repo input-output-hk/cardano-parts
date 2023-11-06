@@ -661,7 +661,7 @@ in {
             #   $CURRENT_KES_PERIOD
             #   [$DEBUG]
             #   [$ERA_CMD]
-            #   [$NO_DEPLOY_FILE]
+            #   [$NO_DEPLOY_DIR]
             #   $POOL_NAMES
             #   $STAKE_POOL_DIR
             #   [$UNSTABLE]
