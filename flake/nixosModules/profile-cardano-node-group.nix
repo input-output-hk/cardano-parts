@@ -124,6 +124,8 @@
 
         variables = {
           CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+          CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://s3.ap-southeast-1.amazonaws.com/update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
+          CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://s3.ap-southeast-1.amazonaws.com/update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
           CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
           TESTNET_MAGIC = toString protocolMagic;
         };
