@@ -107,7 +107,7 @@ in {
         function create_proposal {
           TARGET_EPOCH="$1"
 
-          "''${CARDANO_CLI[@]}" governance create-update-proposal \
+          "''${CARDANO_CLI[@]}" governance action create-protocol-parameters-update \
             --epoch "$TARGET_EPOCH" \
             "''${PROPOSAL_ARGS[@]}" \
             "''${PROPOSAL_KEY_ARGS[@]}" \
@@ -423,7 +423,7 @@ in {
             NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
             # Generate stake delegation certificate
-            "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
+            "''${CARDANO_CLI[@]}" stake-address stake-delegation-certificate \
               --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
               --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
               --out-file "$POOL_NAME"-reward-delegation.cert
@@ -534,7 +534,7 @@ in {
                   --out-file "$POOL_NAME"-reward-registration.cert
               fi
 
-              "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
+              "''${CARDANO_CLI[@]}" stake-address stake-delegation-certificate \
                 --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-delegation.cert
@@ -1043,8 +1043,7 @@ in {
             elif [ "$ROLE" == "drep" ]; then
               VOTE_ARGS+=("--drep-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
             elif [ "$ROLE" == "cc" ]; then
-              echo "CC not supported yet"
-              exit 1
+              VOTE_ARGS+=("--cc-hot-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
             else
               echo "ROLE must be one of: spo, drep or cc"
               exit 1
@@ -1111,6 +1110,7 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   [$DREP_DEPOSIT]
+            #   [$STAKE_DEPOSIT]
             #   $DREP_DIR
             #   [$ERA_CMD]
             #   $INDEX
@@ -1152,6 +1152,7 @@ in {
             )
 
             "''${CARDANO_CLI[@]}" stake-address registration-certificate \
+              --key-reg-deposit-amt "$STAKE_DEPOSIT" \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --out-file drep-"$INDEX"-stake.cert
 
@@ -1228,17 +1229,6 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            mkdir -p "$CC_DIR"
-
-            "''${CARDANO_CLI[@]}" governance committee key-gen-cold \
-              --verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
-              --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
-
-            "''${CARDANO_CLI[@]}" governance committee key-gen-hot \
-              --verification-key-file "$CC_DIR"/hot-"$INDEX".vkey \
-              --signing-key-file "$CC_DIR"/hot-"$INDEX".skey
-
-
             "''${CARDANO_CLI[@]}" governance committee create-hot-key-authorization-certificate \
               --cold-verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
               --hot-key-file "$CC_DIR"/hot-"$INDEX".vkey \
@@ -1279,6 +1269,35 @@ in {
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-cc-"$INDEX".txsigned
             fi
+          '';
+        };
+        packages.job-gen-keys-cc = writeShellApplication {
+          name = "job-register-cc";
+          runtimeInputs = with pkgs; [coreutils jq];
+          text = ''
+            # Inputs:
+            #   $CC_DIR
+            #   [$DEBUG]
+            #   $INDEX
+            #   [$UNSTABLE]
+            #   [$USE_DECRYPTION]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            mkdir -p "$CC_DIR"
+
+            "''${CARDANO_CLI[@]}" governance committee key-gen-cold \
+              --verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
+              --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
+
+            "''${CARDANO_CLI[@]}" governance committee key-gen-hot \
+              --verification-key-file "$CC_DIR"/hot-"$INDEX".vkey \
+              --signing-key-file "$CC_DIR"/hot-"$INDEX".skey
           '';
         };
 
