@@ -151,7 +151,13 @@
               -- Show pool networking information as of the most recent active epoch update; this includes retired pools
               PREPARE show_pools_network_info AS
                 WITH
-                  recent_active AS (SELECT hash_id, MAX (active_epoch_no) FROM pool_update GROUP BY hash_id),
+                  recent_active AS (SELECT hash_id, MAX (active_epoch_no) FROM pool_update
+                    WHERE registered_tx_id IN (SELECT MAX(registered_tx_id) FROM pool_update GROUP BY hash_id)
+                    AND NOT EXISTS (
+                      SELECT * FROM pool_retire
+                        WHERE pool_retire.hash_id = pool_update.hash_id
+                        AND pool_retire.retiring_epoch <= (SELECT MAX (epoch_no) FROM block)
+                    ) GROUP BY hash_id),
                   recent_info AS (
                     SELECT recent_active.hash_id, MAX (id) FROM pool_update
                       INNER JOIN recent_active ON (pool_update.active_epoch_no = recent_active.max AND pool_update.hash_id = recent_active.hash_id)
