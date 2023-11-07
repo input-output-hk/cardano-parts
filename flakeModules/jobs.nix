@@ -1136,7 +1136,7 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   [$DREP_DEPOSIT]
-            #   [$STAKE_DEPOSIT]
+            #   $STAKE_DEPOSIT
             #   $DREP_DIR
             #   [$ERA_CMD]
             #   $INDEX
@@ -1297,6 +1297,7 @@ in {
             fi
           '';
         };
+
         packages.job-gen-keys-cc = writeShellApplication {
           name = "job-register-cc";
           runtimeInputs = with pkgs; [coreutils jq];

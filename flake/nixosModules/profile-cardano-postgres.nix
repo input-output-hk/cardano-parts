@@ -91,9 +91,9 @@
                   AND pool_hash.view = $2
                   ORDER BY block_no DESC;
 
-              -- Show the number of blocks made in one epoch by all pools
+              -- Show the number of blocks made in one epoch by all pools along with corresponding delegation amount
               PREPARE show_pools_block_history_in_epoch_fn (word31type) AS
-                with
+                WITH
                   active_pools AS (
                     SELECT pool_hash.view, pool_hash.id FROM pool_update
                       INNER JOIN pool_hash ON pool_update.hash_id = pool_hash.id
@@ -102,16 +102,24 @@
                         SELECT * FROM pool_retire WHERE pool_retire.hash_id = pool_update.hash_id
                         AND pool_retire.retiring_epoch <= $1
                       )
+                    ),
+                  pools_deleg_sum AS (
+                    SELECT pool_hash.view, SUM(amount) AS lovelace_delegated FROM epoch_stake
+                      INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
+                      WHERE epoch_no = $1 GROUP BY pool_hash.id
                     )
-                  SELECT active_pools.view, (
-                      SELECT COUNT (*) FROM block
-                        INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
-                        INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
-                        WHERE pool_hash.id = active_pools.id
-                        AND block.epoch_no = $1
-                    )
-                    FROM active_pools
-                    ORDER by view;
+                SELECT active_pools.view, (
+                  SELECT COUNT (*) FROM block
+                    INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
+                    INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
+                    WHERE pool_hash.id = active_pools.id
+                    AND block.epoch_no = $1
+                  ), (
+                    SELECT lovelace_delegated FROM pools_deleg_sum
+                    WHERE pools_deleg_sum.view = active_pools.view
+                  )
+                  FROM active_pools
+                  ORDER by view;
 
               -- Show pool info for a single pool, best viewed in extended view mode, \x
               PREPARE show_pool_info_fn AS
