@@ -78,6 +78,7 @@
       sysstat
       tcpdump
       tree
+      wget
     ];
 
     programs = {

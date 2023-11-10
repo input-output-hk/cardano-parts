@@ -42,19 +42,19 @@
       roles = with topologyLib; {
         edge = {
           producers = [];
-          publicProducers = topologyFns.edge ++ extraPublicProducers;
+          publicProducers = topologyFns.edge ++ extraNodeListPublicProducers ++ extraPublicProducers;
         };
 
         relay = {
-          producers = topoInfixFiltered cfg.name cfg.nodes ["-bp-" "-rel-"];
-          publicProducers = topologyFns.edge ++ extraPublicProducers;
+          producers = topoInfixFiltered cfg.name cfg.nodes cfg.infixProducersForRel;
+          publicProducers = topologyFns.edge ++ extraNodeListPublicProducers ++ extraPublicProducers;
         };
 
         bp = {
-          producers = topoInfixFiltered cfg.name cfg.nodes ["-rel-"];
+          producers = topoInfixFiltered cfg.name cfg.nodes cfg.infixProducersForBp;
 
           # These are also set from the role-block-producer nixos module
-          publicProducers = mkForce extraPublicProducers;
+          publicProducers = mkForce (extraNodeListProducers ++ extraPublicProducers);
           usePeersFromLedgerAfterSlot = -1;
         };
       };
@@ -62,6 +62,9 @@
       mkBasicProducers = producer: {
         accessPoints = [{inherit (producer) address port;}];
       };
+
+      extraNodeListProducers = topologyLib.topoList cfg.nodes cfg.extraNodeListProducers;
+      extraNodeListPublicProducers = topologyLib.topoList cfg.nodes cfg.extraNodeListPublicProducers;
 
       extraProducers = map mkBasicProducers cfg.extraProducers;
       extraPublicProducers = map mkBasicProducers cfg.extraPublicProducers;
@@ -102,6 +105,42 @@
             description = "Whether to enable public producers by default.";
           };
 
+          extraNodeListProducers = mkOption {
+            type = listOf str;
+            default = [];
+            description = ''
+              Extra producers which will be added to any role or function.
+
+              Provided as list of strings of Colmena machine names:
+              [
+                "$COLMENA_MACHINE_1"
+                "$COLMENA_MACHINE_2"
+              ]
+
+              This is intended to be a simple way to inject extra producers from relay node names.
+              If specifying valency or advertising, or custom grouping is required,
+              add the extra producers directly to the services.cardano-node.producers option.
+            '';
+          };
+
+          extraNodeListPublicProducers = mkOption {
+            type = listOf str;
+            default = [];
+            description = ''
+              Extra public producers which will be added to any role or function.
+
+              Provided as list of strings of Colmena machine names:
+              [
+                "$COLMENA_MACHINE_1"
+                "$COLMENA_MACHINE_2"
+              ]
+
+              This is intended to be a simple way to inject extra public producers from relay node names.
+              If specifying valency or advertising, or custom grouping is required,
+              add the extra public producers directly to the services.cardano-node.publicProducers option.
+            '';
+          };
+
           extraProducers = mkOption {
             type = listOf attrs;
             default = [];
@@ -135,6 +174,22 @@
               This is intended to be a simple way to inject basic form extra public producers.
               If specifying valency or advertising, or custom grouping is required,
               add the extra public producers directly to the services.cardano-node.publicProducers option.
+            '';
+          };
+
+          infixProducersForBp = mkOption {
+            type = listOf str;
+            default = ["-rel-"];
+            description = ''
+              The infix allow list for generating producers for the block producer role.
+            '';
+          };
+
+          infixProducersForRel = mkOption {
+            type = listOf str;
+            default = ["-bp-" "-rel-"];
+            description = ''
+              The infix allow list for generating producers for the relay role.
             '';
           };
 
@@ -199,15 +254,15 @@
         services.cardano-node = {
           producers = mkIf (cfg.role != null || cfg.enableProducers) (
             if cfg.role != null
-            then roles.${cfg.role}.producers ++ extraProducers
-            else topologyFns.${cfg.producerTopologyFn} ++ extraProducers
+            then roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers
+            else topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers
           );
 
           publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
-            # Extra public producers for roles are included in the role defns due to selective mkForce use
+            # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
             if cfg.role != null
             then roles.${cfg.role}.publicProducers
-            else topologyFns.${cfg.publicProducerTopologyFn} ++ extraPublicProducers
+            else topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers
           );
 
           usePeersFromLedgerAfterSlot =

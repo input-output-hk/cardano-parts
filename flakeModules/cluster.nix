@@ -238,7 +238,9 @@ flake @ {
         type = str;
         description = mdDoc ''
           Cardano-parts cluster group relay substring.
-          Machines belonging to this group and in the relay role will have Colmena names containing this substring.
+          Machines belonging to this group and having Colmena names containing this substring,
+          will be considered relays for the purposes of multivalue DNS generation via the
+          bookRelayMultivalueDns and groupRelayMultivalueDns options.
         '';
         default = "rel-";
       };
