@@ -11,7 +11,6 @@
 #   config.services.cardano-smash.serverAliases
 #   config.services.cardano-smash.serverName
 #   config.services.cardano-smash.varnishExporterPort
-#   config.services.cardano-smash.varnishFqdn
 #   config.services.cardano-smash.varnishRamAvailableMiB
 #   config.services.cardano-smash.varnishTtl
 #   config.services.nginx-vhost-exporter.address
@@ -105,12 +104,6 @@ flake: {
             description = "The port for the varnish metrics exporter to listen on.";
           };
 
-          varnishFqdn = mkOption {
-            type = str;
-            default = "${name}.${domain}";
-            description = "The FQDN to be used for configuring smash server as a varnish backend.";
-          };
-
           varnishRamAvailableMiB = mkOption {
             type = oneOf [ints.positive float];
             default = memMiB * 0.10;
@@ -158,10 +151,8 @@ flake: {
                   return(synth(405,"Not Allowed"));
                 }
 
-                # The host is included as part of the object hash
-                # We need to match the public FQDN for the purge to be successful
-                set req.http.host = "${cfg.varnishFqdn}";
-
+                # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
+                # along with an allow listed X-Real-Ip header.
                 return(purge);
               }
             }
@@ -540,7 +531,7 @@ flake: {
                   add_header 'Access-Control-Allow-Headers' 'User-Agent,X-Requested-With,Content-Type' always;
 
                   if ($request_method = OPTIONS) {
-                    add_header 'Access-Control-Max-Age' 1728000;
+                    add_header 'Access-Control-Max-Age' 86400;
                     add_header 'Content-Type' 'text/plain; charset=utf-8';
                     add_header 'Content-Length' 0;
                     return 204;
