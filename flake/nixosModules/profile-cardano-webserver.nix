@@ -104,6 +104,17 @@ flake: {
             description = "Whether to restart varnish any time that nginx is restarted.";
           };
 
+          varnishIgnoreCookies = mkOption {
+            type = bool;
+            default = true;
+            description = ''
+              By default, varnish will not return cached results for requests which contain cookies.
+
+              If vhost content does not use cookies, cache hit rate may be low due to unrelated or client injected cookies.
+              Setting this to true will cause varnish to return cached results even if the request contains cookies.
+            '';
+          };
+
           varnishTtl = mkOption {
             type = ints.positive;
             default = 30;
@@ -149,6 +160,8 @@ flake: {
 
             sub vcl_recv {
               unset req.http.x-cache;
+
+              ${optionalString cfg.varnishIgnoreCookies "unset req.http.cookie;"}
 
               # Allow PURGE from localhost
               if (req.method == "PURGE") {
