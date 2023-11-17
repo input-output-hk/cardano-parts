@@ -25,11 +25,14 @@
     nodes,
     ...
   }:
+    with builtins;
     with lib; let
       inherit (types) attrs bool enum ints listOf nullOr str;
       inherit (config.cardano-parts.cluster.group.meta) environmentName;
       inherit (config.cardano-parts.perNode.lib) cardanoLib topologyLib;
       inherit (cardanoLib.environments.${environmentName}) edgeNodes;
+
+      verboseTrace = desc: v: traceVerbose "${name}: is using ${desc} of: ${toJSON v}" v;
 
       topologyFns = with topologyLib; {
         edge = p2pEdgeNodes cfg.edgeNodes;
@@ -54,7 +57,7 @@
           producers = topoInfixFiltered cfg.name cfg.nodes cfg.infixProducersForBp;
 
           # These are also set from the role-block-producer nixos module
-          publicProducers = mkForce (extraNodeListProducers ++ extraPublicProducers);
+          publicProducers = mkForce (extraNodeListPublicProducers ++ extraPublicProducers);
           usePeersFromLedgerAfterSlot = -1;
         };
       };
@@ -254,15 +257,15 @@
         services.cardano-node = {
           producers = mkIf (cfg.role != null || cfg.enableProducers) (
             if cfg.role != null
-            then roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers
-            else topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers
+            then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
+            else verboseTrace "producers" (topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers)
           );
 
           publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
             # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
             if cfg.role != null
-            then roles.${cfg.role}.publicProducers
-            else topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers
+            then verboseTrace "publicProducers" roles.${cfg.role}.publicProducers
+            else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
           );
 
           usePeersFromLedgerAfterSlot =

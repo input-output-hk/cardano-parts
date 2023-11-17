@@ -261,11 +261,11 @@
     "cardano-node-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1700001842,
-        "narHash": "sha256-gBckYSt7I+tVyRL/T1Vy0tJGEhFjMgI0EouZzThyjA4=",
+        "lastModified": 1700233099,
+        "narHash": "sha256-B6XgPz3W54w7cF0BVpqSEyTpszCmB+pVlezazr349c4=",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "0251423dc695e11a79cd476db0486985581b100e",
+        "rev": "08934543454646d9bcd3e2c89ce10e74f693de20",
         "type": "github"
       },
       "original": {
