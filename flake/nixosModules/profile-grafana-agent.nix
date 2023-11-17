@@ -219,105 +219,112 @@
                     environment = environmentName;
                     group = groupName;
                   };
-                in [
-                  # Metrics exporter: cardano-db-sync
-                  (mkIf (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) {
-                    job_name = "integrations/cardano-db-sync";
-                    metrics_path = "/";
-                    static_configs = [
-                      {
-                        inherit labels;
-                        targets = ["${hostAddr}:${toString cardanoDbSyncPrometheusExporterPort}"];
-                      }
-                    ];
-                  })
+                in
+                  [
+                    # Metrics exporter: cardano-db-sync
+                    (mkIf (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) {
+                      job_name = "integrations/cardano-db-sync";
+                      metrics_path = "/";
+                      static_configs = [
+                        {
+                          inherit labels;
+                          targets = ["${hostAddr}:${toString cardanoDbSyncPrometheusExporterPort}"];
+                        }
+                      ];
+                    })
 
+                    # Metrics exporter: cardano-faucet
+                    (mkIf (cfgSvc ? cardano-faucet && cfgSvc.cardano-faucet.enable) {
+                      job_name = "integrations/cardano-faucet";
+                      metrics_path = "/metrics";
+                      static_configs = [
+                        {
+                          inherit labels;
+                          targets = ["127.0.0.1:${toString cfgSvc.cardano-faucet.faucetPort}"];
+                        }
+                      ];
+                    })
+
+                    # Metrics exporter: cardano-smash
+                    (mkIf (cfgSvc ? cardano-smash) {
+                      job_name = "integrations/cardano-smash";
+                      metrics_path = "/";
+                      static_configs = [
+                        {
+                          inherit labels;
+                          targets = ["${hostAddr}:${toString cfgSvc.cardano-smash.registeredRelaysExporterPort}"];
+                        }
+                      ];
+                    })
+
+                    # Metrics exporter: nginx vts
+                    (mkIf (cfgSvc ? nginx-vhost-exporter && cfgSvc.nginx-vhost-exporter.enable) {
+                      job_name = "integrations/nginx-vts";
+                      metrics_path = "/status/format/prometheus";
+                      static_configs = [
+                        {
+                          inherit labels;
+                          targets = ["${cfgSvc.nginx-vhost-exporter.address}:${toString cfgSvc.nginx-vhost-exporter.port}"];
+                        }
+                      ];
+                    })
+
+                    # Metrics exporter: varnish
+                    (mkIf (cfgSvc.prometheus.exporters ? varnish && cfgSvc.prometheus.exporters.varnish.enable) {
+                      job_name = "integrations/varnish-cache";
+                      metrics_path = cfgSvc.prometheus.exporters.varnish.telemetryPath;
+                      metric_relabel_configs = [
+                        {
+                          action = "keep";
+                          regex =
+                            "^"
+                            + concatMapStringsSep "|" (s: "(${s})") [
+                              "varnish_backend_beresp_(bodybytes|hdrbytes)"
+                              "varnish_main_backend_(busy|conn|recycle|req|reuse|unhealthy)"
+                              "varnish_main_cache_(hit|hitpass|miss)"
+                              "varnish_main_client_req"
+                              "varnish_main_n_expired"
+                              "varnish_main_n_lru_nuked"
+                              "varnish_main_pools"
+                              "varnish_main_s_resp_(bodybytes|hdrbytes)"
+                              "varnish_main_sessions"
+                              "varnish_main_sessions_total"
+                              "varnish_main_thread_queue_len"
+                              "varnish_main_threads"
+                              "varnish_main_threads_(created|failed|limited)"
+                              "varnish_sma_g_bytes"
+                              "varnish_sma_g_space"
+                            ]
+                            + "$";
+                          source_labels = ["__name__"];
+                        }
+                      ];
+                      static_configs = [
+                        {
+                          inherit labels;
+                          targets = ["${cfgSvc.prometheus.exporters.varnish.listenAddress}:${toString cfgSvc.prometheus.exporters.varnish.port}"];
+                        }
+                      ];
+                    })
+                    # ];
+                  ]
                   # Metrics exporter: cardano-node
-                  (mkIf (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable) {
-                    job_name = "integrations/cardano-node";
+                  ++ optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable)
+                  (map (i: {
+                    job_name = let
+                      serviceName = i:
+                        if i == 0
+                        then "cardano-node"
+                        else "cardano-node-${toString i}";
+                    in "integrations/${serviceName i}";
                     metrics_path = "/metrics";
                     static_configs = [
                       {
-                        inherit labels;
-                        targets = ["${hostAddr}:${toString cardanoNodePrometheusExporterPort}"];
+                        labels = labels // {instanceNum = i;};
+                        targets = ["${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"];
                       }
                     ];
-                  })
-
-                  # Metrics exporter: cardano-faucet
-                  (mkIf (cfgSvc ? cardano-faucet && cfgSvc.cardano-faucet.enable) {
-                    job_name = "integrations/cardano-faucet";
-                    metrics_path = "/metrics";
-                    static_configs = [
-                      {
-                        inherit labels;
-                        targets = ["127.0.0.1:${toString cfgSvc.cardano-faucet.faucetPort}"];
-                      }
-                    ];
-                  })
-
-                  # Metrics exporter: cardano-smash
-                  (mkIf (cfgSvc ? cardano-smash) {
-                    job_name = "integrations/cardano-smash";
-                    metrics_path = "/";
-                    static_configs = [
-                      {
-                        inherit labels;
-                        targets = ["${hostAddr}:${toString cfgSvc.cardano-smash.registeredRelaysExporterPort}"];
-                      }
-                    ];
-                  })
-
-                  # Metrics exporter: nginx vts
-                  (mkIf (cfgSvc ? nginx-vhost-exporter && cfgSvc.nginx-vhost-exporter.enable) {
-                    job_name = "integrations/nginx-vts";
-                    metrics_path = "/status/format/prometheus";
-                    static_configs = [
-                      {
-                        inherit labels;
-                        targets = ["${cfgSvc.nginx-vhost-exporter.address}:${toString cfgSvc.nginx-vhost-exporter.port}"];
-                      }
-                    ];
-                  })
-
-                  # Metrics exporter: varnish
-                  (mkIf (cfgSvc.prometheus.exporters ? varnish && cfgSvc.prometheus.exporters.varnish.enable) {
-                    job_name = "integrations/varnish-cache";
-                    metrics_path = cfgSvc.prometheus.exporters.varnish.telemetryPath;
-                    metric_relabel_configs = [
-                      {
-                        action = "keep";
-                        regex =
-                          "^"
-                          + concatMapStringsSep "|" (s: "(${s})") [
-                            "varnish_backend_beresp_(bodybytes|hdrbytes)"
-                            "varnish_main_backend_(busy|conn|recycle|req|reuse|unhealthy)"
-                            "varnish_main_cache_(hit|hitpass|miss)"
-                            "varnish_main_client_req"
-                            "varnish_main_n_expired"
-                            "varnish_main_n_lru_nuked"
-                            "varnish_main_pools"
-                            "varnish_main_s_resp_(bodybytes|hdrbytes)"
-                            "varnish_main_sessions"
-                            "varnish_main_sessions_total"
-                            "varnish_main_thread_queue_len"
-                            "varnish_main_threads"
-                            "varnish_main_threads_(created|failed|limited)"
-                            "varnish_sma_g_bytes"
-                            "varnish_sma_g_space"
-                          ]
-                          + "$";
-                        source_labels = ["__name__"];
-                      }
-                    ];
-                    static_configs = [
-                      {
-                        inherit labels;
-                        targets = ["${cfgSvc.prometheus.exporters.varnish.listenAddress}:${toString cfgSvc.prometheus.exporters.varnish.port}"];
-                      }
-                    ];
-                  })
-                ];
+                  }) (range 0 (cfgSvc.cardano-node.instances - 1)));
               }
             ];
             global.scrape_interval = "1m";

@@ -24,7 +24,7 @@
     ...
   }: let
     inherit (builtins) fromJSON readFile;
-    inherit (lib) min mkDefault mkIf mkOption types;
+    inherit (lib) flatten foldl' min mkDefault mkIf mkOption range recursiveUpdate types;
     inherit (types) bool float ints oneOf;
     inherit (nodeResources) cpuCount memMiB;
 
@@ -61,6 +61,8 @@
       if cfg.useNewTopology
       then p2pTopology
       else legacyTopology;
+
+    iRange = range 0 (cfg.instances - 1);
 
     cfg = nixos.config.services.cardano-node;
   in {
@@ -148,12 +150,13 @@
 
         # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
         useNewTopology = mkDefault true;
+        useSystemdReload = mkDefault true;
         topology = mkDefault (
           if
             (cfg.producers == [])
             && cfg.publicProducers == []
-            && cfg.instanceProducers 0 == []
-            && cfg.instancePublicProducers 0 == []
+            && (flatten (map cfg.instanceProducers iRange)) == []
+            && (flatten (map cfg.instancePublicProducers iRange)) == []
           then mkTopology cardanoLib.environments.${environmentName}
           else null
         );
@@ -209,34 +212,44 @@
         systemdSocketActivation = false;
       };
 
-      systemd.services.cardano-node = {
-        path = with pkgs; [gnutar gzip];
+      systemd.services = let
+        serviceName = i:
+          if cfg.instances == 1
+          then "cardano-node"
+          else "cardano-node-${toString i}";
+      in
+        foldl' (acc: i:
+          recursiveUpdate acc {
+            "${serviceName i}" = {
+              path = with pkgs; [gnutar gzip];
 
-        preStart = ''
-          cd $STATE_DIRECTORY
-          if [ -f db-restore.tar.gz ]; then
-            rm -rf db-${environmentName}*
-            tar xzf db-restore.tar.gz
-            rm db-restore.tar.gz
-          fi
-        '';
+              preStart = ''
+                cd $STATE_DIRECTORY
+                if [ -f db-restore.tar.gz ]; then
+                  rm -rf db-${environmentName}*
+                  tar xzf db-restore.tar.gz
+                  rm db-restore.tar.gz
+                fi
+              '';
 
-        postStart = ''
-          while true; do
-            # Allow other local services in the cardano-node group to use cardano-node socket
-            if [ -S ${nixos.config.services.cardano-node.socketPath 0} ]; then
-              chmod g+w ${nixos.config.services.cardano-node.socketPath 0}
-              exit 0
-            fi
-            sleep 5
-          done
-        '';
+              postStart = ''
+                while true; do
+                  # Allow other local services in the cardano-node group to use cardano-node socket
+                  if [ -S ${nixos.config.services.cardano-node.socketPath i} ]; then
+                    chmod g+w ${nixos.config.services.cardano-node.socketPath i}
+                    exit 0
+                  fi
+                  sleep 5
+                done
+              '';
 
-        serviceConfig = {
-          # Allow long ledger replays and/or db-restore ungzip, including on slow systems
-          TimeoutStartSec = "infinity";
-        };
-      };
+              serviceConfig = {
+                # Allow long ledger replays and/or db-restore ungzip, including on slow systems
+                TimeoutStartSec = "infinity";
+              };
+            };
+          }) {}
+        iRange;
 
       users.groups.cardano-node = {};
       users.users.cardano-node.group = "cardano-node";
