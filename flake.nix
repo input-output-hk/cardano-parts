@@ -43,7 +43,7 @@
     };
 
     cardano-node-service = {
-      url = "github:input-output-hk/cardano-node/8.1.2";
+      url = "github:input-output-hk/cardano-node/svc-topo-opt";
       flake = false;
     };
 
