@@ -6,10 +6,16 @@ in {
       config,
       pkgs,
       lib,
+      system,
       ...
     }: let
-      inherit (pkgs) writeShellApplication;
+      inherit (pkgs) runCommand writeShellApplication;
       inherit (cfgPkgs) cardano-address;
+      inherit (opsLib) generateStaticHTMLConfigs;
+
+      cardanoLib = localFlake.cardano-parts.pkgs.special.cardanoLib system;
+      cardanoLibNg = localFlake.cardano-parts.pkgs.special.cardanoLibNg system;
+      opsLib = localFlake.cardano-parts.lib.opsLib pkgs;
 
       cfgPkgs = config.cardano-parts.pkgs;
       stdPkgs = with pkgs; [age coreutils fd jq moreutils sops];
@@ -162,8 +168,31 @@ in {
           fi
         fi
       '';
+
+      envCfgs = cardanoLib: generateStaticHTMLConfigs pkgs cardanoLib cardanoLib.environments;
     in {
       config = {
+        packages.job-gen-env-config = let
+          configDir = runCommand "configDir" {} ''
+            mkdir -p $out
+            cp -r ${envCfgs cardanoLib} $out/environments
+            cp -r ${envCfgs cardanoLibNg} $out/environments-pre
+          '';
+        in
+          writeShellApplication {
+            name = "job-gen-custom-node-config";
+            runtimeInputs = stdPkgs;
+            text = ''
+              # Inputs:
+              #   [$DEBUG]
+
+              [ -n "''${DEBUG:-}" ] && set -x
+
+              ln -sfn ${configDir} result
+              echo "Release and pre-release environment configs can be found in result/"
+            '';
+          };
+
         packages.job-gen-custom-node-config = writeShellApplication {
           name = "job-gen-custom-node-config";
           runtimeInputs = stdPkgs;
