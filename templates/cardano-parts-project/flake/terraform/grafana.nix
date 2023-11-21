@@ -12,6 +12,7 @@ with lib; let
 
   alertFileList = parseDir ./grafana/alerts ".nix-import";
   dashboardFileList = parseDir ./grafana/dashboards ".json";
+  recordingRulesFileList = parseDir ./grafana/recording-rules ".nix-import";
 
   underscore = replaceStrings ["-"] ["_"];
   extractFileName = file: unsafeDiscardStringContext (head (splitString "." (last (splitString "/" file))));
@@ -182,6 +183,13 @@ in {
               ${underscore (extractFileName f)} = import f // {provider = "mimir.prometheus";};
             }) {}
           alertFileList;
+
+          # Recording rules
+          mimir_rule_group_recording = foldl' (acc: f:
+            recursiveUpdate acc {
+              ${underscore (extractFileName f)} = import f // {provider = "mimir.prometheus";};
+            }) {}
+          recordingRulesFileList;
         };
       }
     ];
