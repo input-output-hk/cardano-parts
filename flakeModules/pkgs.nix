@@ -11,6 +11,8 @@
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-service
 #   flake.cardano-parts.pkgs.special.cardano-faucet-service
+#   flake.cardano-parts.pkgs.special.cardano-metadata-pkgs
+#   flake.cardano-parts.pkgs.special.cardano-metadata-service
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
@@ -185,6 +187,22 @@
         default = "${localFlake.inputs.cardano-db-sync-schema-ng}/schema";
       };
 
+      cardano-metadata-pkgs = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          The cardano-parts default cardano-metadata-pkgs attrset.
+
+          The definition must be a function of system.
+        '';
+        default = system: {
+          metadata-server = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-server);
+          metadata-sync = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-sync);
+          metadata-validator-github = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-validator-github);
+          metadata-webhook = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-webhook);
+          token-metadata-creator = withSystem system ({config, ...}: config.cardano-parts.pkgs.token-metadata-creator);
+        };
+      };
+
       cardano-node-pkgs = mkOption {
         type = functionTo (attrsOf anything);
         description = mdDoc ''
@@ -234,6 +252,12 @@
         description = mdDoc "The cardano-parts default cardano-faucet-service import path string.";
         # default = localFlake.nixosModules.service-cardano-faucet;
         default = "${localFlake}/flake/nixosModules/service-cardano-faucet.nix";
+      };
+
+      cardano-metadata-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-metadata-service import path string.";
+        default = "${localFlake.inputs.cardano-metadata-service}/nix/nixos/default.nix";
       };
 
       cardano-node-service = mkOption {

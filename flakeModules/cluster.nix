@@ -26,6 +26,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoSmashDelistedPools
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-db-sync-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-faucet-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-metadata-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-smash-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.domain
@@ -35,6 +36,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync-pkgs
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-tool
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-faucet
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-metadata-pkgs
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node-pkgs
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-smash
@@ -326,6 +328,12 @@ flake @ {
         default = cfg.pkgs.special.cardano-faucet-service;
       };
 
+      cardano-metadata-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-metadata-service import path string.";
+        default = cfg.pkgs.special.cardano-metadata-service;
+      };
+
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
@@ -386,6 +394,16 @@ flake @ {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default cardano-faucet package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-faucet);
+      };
+
+      cardano-metadata-pkgs = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          Cardano-parts cluster group default cardano-metadata-pkgs.
+
+          The definition must be a function of system.
+        '';
+        default = cfg.pkgs.special.cardano-metadata-pkgs;
       };
 
       cardano-node = mkOption {

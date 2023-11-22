@@ -40,7 +40,7 @@
         services.grafana-agent = {
           systemdUnitInclude = mkOption {
             type = str;
-            default = "(^cardano.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
+            default = "(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
             description = ''
               Regexp of systemd units to include.
               Units must both match include and not match exclude to be collected.

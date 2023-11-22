@@ -52,8 +52,8 @@
       flake = false;
     };
 
-    offchain-metadata-tools-service = {
-      url = "github:input-output-hk/offchain-metadata-tools/feat-add-password-to-db-conn-string";
+    cardano-metadata-service = {
+      url = "github:input-output-hk/offchain-metadata-tools/svc-update";
       flake = false;
     };
 
