@@ -86,6 +86,9 @@ apply *ARGS:
 apply-all *ARGS:
   colmena apply --verbose {{ARGS}}
 
+build-book:
+  mdbook build docs/
+
 build-machine MACHINE *ARGS:
   nix build -L .#nixosConfigurations.{{MACHINE}}.config.system.build.toplevel {{ARGS}}
 
@@ -439,7 +442,7 @@ start-demo:
 
   echo "Moving genesis utxo..."
   BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
-    ERA="--alonzo-era" \
+    ERA_CMD="alonzo" \
     nix run .#job-move-genesis-utxo
   echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
   sleep 7
@@ -448,14 +451,14 @@ start-demo:
   echo "Registering stake pools..."
   POOL_RELAY=demo.local \
     POOL_RELAY_PORT=3001 \
-    ERA="--alonzo-era" \
+    ERA_CMD="alonzo" \
     nix run .#job-register-stake-pools
   echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
   sleep 7
   echo
 
   echo "Delegating rewards stake key..."
-  ERA="--alonzo-era" \
+  ERA_CMD="alonzo" \
     nix run .#job-delegate-rewards-stake-key
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320
@@ -464,7 +467,7 @@ start-demo:
   echo "Forking to babbage..."
   just query-tip demo
   MAJOR_VERSION=7 \
-    ERA="--alonzo-era" \
+    ERA_CMD="alonzo" \
     nix run .#job-update-proposal-hard-fork
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320
@@ -473,7 +476,7 @@ start-demo:
   echo "Forking to babbage (intra-era)..."
   just query-tip demo
   MAJOR_VERSION=8 \
-    ERA="--babbage-era" \
+    ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320
@@ -482,7 +485,7 @@ start-demo:
   echo "Forking to conway..."
   just query-tip demo
   MAJOR_VERSION=9 \
-    ERA="--babbage-era" \
+    ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320
