@@ -99,11 +99,7 @@
           ensureUsers = [
             {
               name = "cexplorer";
-              ensurePermissions = {
-                "DATABASE cexplorer" = "ALL PRIVILEGES";
-                "ALL TABLES IN SCHEMA information_schema" = "SELECT";
-                "ALL TABLES IN SCHEMA pg_catalog" = "SELECT";
-              };
+              ensurePermissions."DATABASE cexplorer" = "ALL PRIVILEGES";
             }
           ];
 

@@ -240,8 +240,8 @@
 
           enablePsqlrc = mkOption {
             type = bool;
-            default = true;
-            description = "Whether to enable setting psqlrc file at /etc/postgresql/psqlrc.";
+            default = false;
+            description = "Whether to enable a dbsync specific psqlrc file at cfg.psqlrcPath.";
           };
 
           maxConnections = mkOption {

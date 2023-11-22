@@ -12,7 +12,7 @@
 #   config.services.cardano-smash.serverName
 #   config.services.cardano-smash.varnishExporterPort
 #   config.services.cardano-smash.varnishRamAvailableMiB
-#   config.services.cardano-smash.varnishTtl
+#   config.services.cardano-smash.varnishTtlDays
 #   config.services.nginx-vhost-exporter.address
 #   config.services.nginx-vhost-exporter.enable
 #   config.services.nginx-vhost-exporter.port
@@ -110,7 +110,7 @@ flake: {
             description = "The max amount of RAM to allocate to for smash server varnish object memory backend store.";
           };
 
-          varnishTtl = mkOption {
+          varnishTtlDays = mkOption {
             type = ints.positive;
             default = 30;
             description = "The number of days for smash server cache object TTL.";
@@ -126,7 +126,7 @@ flake: {
 
         services.varnish = {
           enable = true;
-          extraCommandLine = "-t ${toString (cfg.varnishTtl * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
+          extraCommandLine = "-t ${toString (cfg.varnishTtlDays * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
           config = ''
             vcl 4.1;
 
@@ -472,9 +472,10 @@ flake: {
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
           recommendedProxySettings = true;
+
           commonHttpConfig = ''
             log_format x-fwd '$remote_addr - $remote_user [$time_local] '
-                             '"$request" "$http_accept_language" $status $body_bytes_sent '
+                             '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
                              '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
 
             access_log syslog:server=unix:/dev/log x-fwd;
@@ -515,6 +516,7 @@ flake: {
               default = true;
               enableACME = cfg.enableAcme;
               forceSSL = cfg.enableAcme;
+
               locations = let
                 apiKeyConfig = ''
                   if ($arg_apiKey = "") {

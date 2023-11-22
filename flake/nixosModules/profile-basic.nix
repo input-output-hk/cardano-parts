@@ -73,6 +73,7 @@
       procps
       ripgrep
       rsync
+      smem
       ssh-to-age
       sops
       sysstat
