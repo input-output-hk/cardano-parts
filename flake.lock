@@ -194,11 +194,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1699986148,
-        "narHash": "sha256-ACSbwCqhv1WmP/BdPvVKaPnV84KGFYZt8lSgNjwMJFY=",
+        "lastModified": 1700668518,
+        "narHash": "sha256-e8T5JZ6zyLuCgkp1bQXuGFvwGffNhk40qyOJgWDyk9Y=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "b07b4c771fb7d714fa4394b6f8c5072f95da2812",
+        "rev": "c90c485ecd97b7e76ed7bda3e7f98e355b555e13",
         "type": "github"
       },
       "original": {
@@ -261,11 +261,11 @@
     "cardano-metadata-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1700616090,
-        "narHash": "sha256-+FDs4798ldqGnmamkx+q5W3UN+eek07DH2Vo2VryAhU=",
+        "lastModified": 1700705180,
+        "narHash": "sha256-0s60IA6LTJSN3roqLn0h3BtN4Lw9vwd06gSPQrXa8r8=",
         "owner": "input-output-hk",
         "repo": "offchain-metadata-tools",
-        "rev": "75f8ab38744f6135759be10a0f60af29d9b898dd",
+        "rev": "bd59f783894c62ee853d2996bfc4e1c982b57fb9",
         "type": "github"
       },
       "original": {
