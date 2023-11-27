@@ -194,11 +194,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1700668518,
-        "narHash": "sha256-e8T5JZ6zyLuCgkp1bQXuGFvwGffNhk40qyOJgWDyk9Y=",
+        "lastModified": 1701107172,
+        "narHash": "sha256-HQgdVz9gthchAGdFepe3k6LoXZMVNLIth4xsam+ExL8=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "c90c485ecd97b7e76ed7bda3e7f98e355b555e13",
+        "rev": "5078d586f20777ccbed1cb3afed658928a0d7b38",
         "type": "github"
       },
       "original": {
@@ -261,16 +261,16 @@
     "cardano-metadata-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1700705180,
-        "narHash": "sha256-0s60IA6LTJSN3roqLn0h3BtN4Lw9vwd06gSPQrXa8r8=",
+        "lastModified": 1701101171,
+        "narHash": "sha256-v5FfQqtZ11yIjsMhm8s3OGjGBCf8tUaeIxmHOIPEvco=",
         "owner": "input-output-hk",
         "repo": "offchain-metadata-tools",
-        "rev": "bd59f783894c62ee853d2996bfc4e1c982b57fb9",
+        "rev": "f406c6da1c0792648f4b8ce67bd8c1f65ea1c602",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "svc-update",
+        "ref": "ops-1-0-0",
         "repo": "offchain-metadata-tools",
         "type": "github"
       }
@@ -278,16 +278,16 @@
     "cardano-node-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1700233099,
-        "narHash": "sha256-B6XgPz3W54w7cF0BVpqSEyTpszCmB+pVlezazr349c4=",
+        "lastModified": 1700615474,
+        "narHash": "sha256-pVUWfzVnM4RvpFlJNH2ZmWPZzmkGT1Ty8B1p7NFh69M=",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "08934543454646d9bcd3e2c89ce10e74f693de20",
+        "rev": "34d89af65439db92293b88967c299c20692abc1c",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "svc-topo-opt",
+        "ref": "8.7.0-pre",
         "repo": "cardano-node",
         "type": "github"
       }

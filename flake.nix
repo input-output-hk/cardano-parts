@@ -43,7 +43,7 @@
     };
 
     cardano-node-service = {
-      url = "github:input-output-hk/cardano-node/svc-topo-opt";
+      url = "github:input-output-hk/cardano-node/8.7.0-pre";
       flake = false;
     };
 
@@ -53,7 +53,7 @@
     };
 
     cardano-metadata-service = {
-      url = "github:input-output-hk/offchain-metadata-tools/svc-update";
+      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
       flake = false;
     };
 
