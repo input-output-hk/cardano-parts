@@ -125,15 +125,19 @@ flake: {
             type = str;
             default = "${groupFlake.self.outPath}/static";
             description = ''
-              The repo directory under which virtualHost subdirectories exist, with their contents.
+              The repo directory under which virtualHost subdirectories and/or symlinks exist, with their contents.
 
               Example:
                 ${cfg.vhostsDir}/site1.fqdn1.com/index.html
                 ${cfg.vhostsDir}/site2.fqdn2.com/index.html
+                ${cfg.vhostsDir}/site3.fqdn2.com -> ${cfg.vhostsDir}/site1.fqdn1.com/index.html
 
               In the example above, both site[12].fqdn[12].com will be automatically set up as nginx virtual hosts,
               TLS terminated at nginx, cached through varnish and the contents of those virtual host directories served
               through nginx to varnish.
+
+              Site3 is a symlink to site1 dir and so the FQDN for site3.fqdn2.com will be set up as a virtualhost with
+              the contents of site1.fqdn1.com.
             '';
           };
         };
@@ -281,7 +285,7 @@ flake: {
               then abort ''ABORT: virtualhost name: "${name}" is reserved.''
               else name);
 
-            vhostsDirList = attrNames (filterAttrs (_: v: v == "directory") (readDir cfg.vhostsDir));
+            vhostsDirList = attrNames (filterAttrs (_: v: v == "directory" || v == "symlink") (readDir cfg.vhostsDir));
 
             vhosts = foldl' (acc: vhostName:
               recursiveUpdate acc {
