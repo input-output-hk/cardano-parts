@@ -6,20 +6,51 @@ in {
       config,
       pkgs,
       lib,
+      system,
       ...
     }: let
-      inherit (pkgs) writeShellApplication;
+      inherit (pkgs) runCommand writeShellApplication;
       inherit (cfgPkgs) cardano-address;
+      inherit (opsLib) generateStaticHTMLConfigs;
+
+      cardanoLib = localFlake.cardano-parts.pkgs.special.cardanoLib system;
+      cardanoLibNg = localFlake.cardano-parts.pkgs.special.cardanoLibNg system;
+      opsLib = localFlake.cardano-parts.lib.opsLib pkgs;
 
       cfgPkgs = config.cardano-parts.pkgs;
       stdPkgs = with pkgs; [age coreutils fd jq moreutils sops];
 
+      # To support searching for sops config files from the target path rather than cwd up,
+      # implement a userland solution until natively sops supported.
+      #
+      # This enables $NO_DEPLOY_DIR to be separate from the default $STAKE_POOL_DIR/no-deploy default location.
+      # Ref: https://github.com/getsops/sops/issues/242#issuecomment-999809670
       secretsFns = ''
+        function sops_config {
+          # Suppress xtrace on this fn as the return string is observed from the caller's output
+          { SHOPTS="$-"; set +x; } 2> /dev/null
+
+          FILE="$1"
+          CONFIG_DIR=$(dirname "$(realpath "$FILE")")
+          while ! [ -f "$CONFIG_DIR/.sops.yaml" ]; do
+            if [ "$CONFIG_DIR" = "/" ]; then
+              >&2 echo "error: no .sops.yaml file was found while walking the directory structure upwards from the target file: \"$FILE\""
+              exit 1
+            fi
+            CONFIG_DIR=$(dirname "$CONFIG_DIR")
+            done
+
+          echo "$CONFIG_DIR/.sops.yaml"
+
+          # Reset the xtrace option to its state prior to suppression
+          [ -n "''${SHOPTS//[^x]/}" ] && set -x
+        }
+
         function decrypt_check {
           local FILE="$1"
 
           if [ "''${USE_DECRYPTION:-false}" = "true" ]; then
-            echo -n "<(sops --input-type binary --output-type binary --decrypt $FILE)"
+            echo -n "<(sops --config $(sops_config "$FILE") --input-type binary --output-type binary --decrypt $FILE)"
           else
             echo -n "$FILE"
           fi
@@ -32,7 +63,7 @@ in {
             if ! [ -L "$FILE" ]; then
               if ! jq -e 'has("sops") and has("data") and (.data | startswith("ENC["))' &> /dev/null < "$FILE"; then
                 echo "encrypting: file $FILE"
-                sops --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
+                sops --config "$(sops_config "$FILE")" --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
               else
                 echo "warning: file \"$FILE\" appears to already be binary encrypted, skipping"
               fi
@@ -43,6 +74,7 @@ in {
         }
 
         export -f encrypt_check
+        export -f sops_config
       '';
 
       selectCardanoCli = ''
@@ -136,8 +168,31 @@ in {
           fi
         fi
       '';
+
+      envCfgs = cardanoLib: generateStaticHTMLConfigs pkgs cardanoLib cardanoLib.environments;
     in {
       config = {
+        packages.job-gen-env-config = let
+          configDir = runCommand "configDir" {} ''
+            mkdir -p $out
+            cp -r ${envCfgs cardanoLib} $out/environments
+            cp -r ${envCfgs cardanoLibNg} $out/environments-pre
+          '';
+        in
+          writeShellApplication {
+            name = "job-gen-custom-node-config";
+            runtimeInputs = stdPkgs;
+            text = ''
+              # Inputs:
+              #   [$DEBUG]
+
+              [ -n "''${DEBUG:-}" ] && set -x
+
+              ln -sfn ${configDir} result
+              echo "Release and pre-release environment configs can be found in result/"
+            '';
+          };
+
         packages.job-gen-custom-node-config = writeShellApplication {
           name = "job-gen-custom-node-config";
           runtimeInputs = stdPkgs;
@@ -635,7 +690,7 @@ in {
             #   $CURRENT_KES_PERIOD
             #   [$DEBUG]
             #   [$ERA_CMD]
-            #   [$NO_DEPLOY_FILE]
+            #   [$NO_DEPLOY_DIR]
             #   $POOL_NAMES
             #   $STAKE_POOL_DIR
             #   [$UNSTABLE]
@@ -1110,7 +1165,7 @@ in {
             # Inputs:
             #   [$DEBUG]
             #   [$DREP_DEPOSIT]
-            #   [$STAKE_DEPOSIT]
+            #   $STAKE_DEPOSIT
             #   $DREP_DIR
             #   [$ERA_CMD]
             #   $INDEX
@@ -1271,6 +1326,7 @@ in {
             fi
           '';
         };
+
         packages.job-gen-keys-cc = writeShellApplication {
           name = "job-register-cc";
           runtimeInputs = with pkgs; [coreutils jq];

@@ -11,6 +11,8 @@
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-service
 #   flake.cardano-parts.pkgs.special.cardano-faucet-service
+#   flake.cardano-parts.pkgs.special.cardano-metadata-pkgs
+#   flake.cardano-parts.pkgs.special.cardano-metadata-service
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
@@ -185,6 +187,22 @@
         default = "${localFlake.inputs.cardano-db-sync-schema-ng}/schema";
       };
 
+      cardano-metadata-pkgs = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          The cardano-parts default cardano-metadata-pkgs attrset.
+
+          The definition must be a function of system.
+        '';
+        default = system: {
+          metadata-server = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-server);
+          metadata-sync = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-sync);
+          metadata-validator-github = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-validator-github);
+          metadata-webhook = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-webhook);
+          token-metadata-creator = withSystem system ({config, ...}: config.cardano-parts.pkgs.token-metadata-creator);
+        };
+      };
+
       cardano-node-pkgs = mkOption {
         type = functionTo (attrsOf anything);
         description = mdDoc ''
@@ -234,6 +252,12 @@
         description = mdDoc "The cardano-parts default cardano-faucet-service import path string.";
         # default = localFlake.nixosModules.service-cardano-faucet;
         default = "${localFlake}/flake/nixosModules/service-cardano-faucet.nix";
+      };
+
+      cardano-metadata-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-metadata-service import path string.";
+        default = "${localFlake.inputs.cardano-metadata-service}/nix/nixos/default.nix";
       };
 
       cardano-node-service = mkOption {
@@ -351,7 +375,7 @@ in
             (mkPkg "bech32" caPkgs.bech32-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2023-07-18)
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
-            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-6-0-pre // {version = "8.13.0.0";}))
+            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-7-0-pre // {version = "8.15.0.0";}))
             (mkPkg "cardano-db-sync" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-13-1-1-3 // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-sync-ng" (caPkgs.cardano-db-sync-input-output-hk-cardano-db-sync-sancho-2-2-0 // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs.cardano-db-tool-input-output-hk-cardano-db-sync-13-1-1-3)
@@ -359,11 +383,11 @@ in
             (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-8-1-2 // {version = "8.1.2";}))
-            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-6-0-pre // {version = "8.6.0-pre";}))
+            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-7-0-pre // {version = "8.7.0-pre";}))
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-1-1-3)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-2-2-0)
             (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-6-0-pre)
+            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-7-0-pre)
             (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-8-1-2)
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2023-07-18
               // {
@@ -371,16 +395,16 @@ in
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
             (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "db-analyser-ng" caPkgs.db-analyser-input-output-hk-cardano-node-8-6-0-pre)
+            (mkPkg "db-analyser-ng" caPkgs.db-analyser-input-output-hk-cardano-node-8-7-0-pre)
             (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-1-2)
-            (mkPkg "db-synthesizer-ng" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-6-0-pre)
+            (mkPkg "db-synthesizer-ng" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-7-0-pre)
             (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-2-0-pre)
-            (mkPkg "db-truncater-ng" caPkgs.db-truncater-input-output-hk-cardano-node-8-6-0-pre)
-            (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
-            (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
-            (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
-            (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string)
-            (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-feat-add-password-to-db-conn-string {meta.mainProgram = "token-metadata-creator";}))
+            (mkPkg "db-truncater-ng" caPkgs.db-truncater-input-output-hk-cardano-node-8-7-0-pre)
+            (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-ops-1-0-0)
+            (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0)
+            (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0)
+            (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0)
+            (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0 {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
       in {

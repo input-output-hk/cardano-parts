@@ -11,9 +11,8 @@
 #   config.services.cardano-smash.serverAliases
 #   config.services.cardano-smash.serverName
 #   config.services.cardano-smash.varnishExporterPort
-#   config.services.cardano-smash.varnishFqdn
 #   config.services.cardano-smash.varnishRamAvailableMiB
-#   config.services.cardano-smash.varnishTtl
+#   config.services.cardano-smash.varnishTtlDays
 #   config.services.nginx-vhost-exporter.address
 #   config.services.nginx-vhost-exporter.enable
 #   config.services.nginx-vhost-exporter.port
@@ -50,6 +49,7 @@ flake: {
 
       cfg = config.services.cardano-smash;
       cfgDbsync = config.services.cardano-db-sync;
+      cfgNode = config.services.cardano-node;
       cfgSmash = config.services.smash;
     in {
       imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
@@ -104,19 +104,13 @@ flake: {
             description = "The port for the varnish metrics exporter to listen on.";
           };
 
-          varnishFqdn = mkOption {
-            type = str;
-            default = "${name}.${domain}";
-            description = "The FQDN to be used for configuring smash server as a varnish backend.";
-          };
-
           varnishRamAvailableMiB = mkOption {
             type = oneOf [ints.positive float];
             default = memMiB * 0.10;
             description = "The max amount of RAM to allocate to for smash server varnish object memory backend store.";
           };
 
-          varnishTtl = mkOption {
+          varnishTtlDays = mkOption {
             type = ints.positive;
             default = 30;
             description = "The number of days for smash server cache object TTL.";
@@ -132,7 +126,7 @@ flake: {
 
         services.varnish = {
           enable = true;
-          extraCommandLine = "-t ${toString (cfg.varnishTtl * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
+          extraCommandLine = "-t ${toString (cfg.varnishTtlDays * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
           config = ''
             vcl 4.1;
 
@@ -157,10 +151,8 @@ flake: {
                   return(synth(405,"Not Allowed"));
                 }
 
-                # The host is included as part of the object hash
-                # We need to match the public FQDN for the purge to be successful
-                set req.http.host = "${cfg.varnishFqdn}";
-
+                # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
+                # along with an allow listed X-Real-Ip header.
                 return(purge);
               }
             }
@@ -254,6 +246,7 @@ flake: {
             coreutils
             curl
             dnsutils
+            findutils
             jq
             netcat
           ];
@@ -262,9 +255,26 @@ flake: {
 
           preStart = ''
             set -uo pipefail
-            for x in {1..60}; do
+            SOCKET="${cfgNode.socketPath 0}"
+
+            # Wait for postgres
+            while true; do
               nc -z localhost 5432 && sleep 2 && break
-              echo loop $x: waiting for postgresql 2 sec...
+              echo "Waiting for postgresql service availability for 2 seconds..."
+              sleep 2
+            done
+
+            # Wait for the node socket
+            while true; do
+              [ -S "$SOCKET" ] && sleep 2 && break
+              echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
+              sleep 2
+            done
+
+            # Wait for the node socket to become group writeable
+            while true; do
+              [ "$(find "$SOCKET" -type s -perm -g+w)" = "$SOCKET" ] && sleep 2 && break
+              echo "Waiting for cardano node socket group write permission at $SOCKET for 2 seconds..."
               sleep 2
             done
           '';
@@ -462,9 +472,10 @@ flake: {
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
           recommendedProxySettings = true;
+
           commonHttpConfig = ''
             log_format x-fwd '$remote_addr - $remote_user [$time_local] '
-                             '"$request" "$http_accept_language" $status $body_bytes_sent '
+                             '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
                              '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
 
             access_log syslog:server=unix:/dev/log x-fwd;
@@ -505,6 +516,7 @@ flake: {
               default = true;
               enableACME = cfg.enableAcme;
               forceSSL = cfg.enableAcme;
+
               locations = let
                 apiKeyConfig = ''
                   if ($arg_apiKey = "") {
@@ -521,7 +533,7 @@ flake: {
                   add_header 'Access-Control-Allow-Headers' 'User-Agent,X-Requested-With,Content-Type' always;
 
                   if ($request_method = OPTIONS) {
-                    add_header 'Access-Control-Max-Age' 1728000;
+                    add_header 'Access-Control-Max-Age' 86400;
                     add_header 'Content-Type' 'text/plain; charset=utf-8';
                     add_header 'Content-Length' 0;
                     return 204;

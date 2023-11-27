@@ -73,11 +73,13 @@
       procps
       ripgrep
       rsync
+      smem
       ssh-to-age
       sops
       sysstat
       tcpdump
       tree
+      wget
     ];
 
     programs = {

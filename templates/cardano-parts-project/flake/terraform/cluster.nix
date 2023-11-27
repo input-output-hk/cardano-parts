@@ -33,31 +33,55 @@ with lib; let
   mapRegions = f: foldl' recursiveUpdate {} (forEach regions f);
 
   # Generate a list of all multivalue dns resources tf needs to create
-  multivalueDnsList = sort lessThan (unique (
-    filter (e: e != null) (map (g: getAttrFromPath [g "groupRelayMultivalueDns"] groups) (attrNames groups))
-  ));
+  # This will generate a list for either mvDnsAttrName = "bookRelayMultivalueDns" || "groupRelayMultivalueDns"
+  mkMultivalueDnsList = mvDnsAttrName:
+    sort lessThan (unique (
+      filter (e: e != null) (map (g: getAttrFromPath [g mvDnsAttrName] groups) (attrNames groups))
+    ));
 
   # Different groups can share the same multivalue dns resource.
   # Is node `n` in group `g` a member of the multivalue fqdn `dns`?
-  isMultivalueDnsMember = dns: g: n:
+  isMultivalueDnsMember = mvDnsAttrName: dns: g: n:
     if
       dns
-      == groups.${g}.groupRelayMultivalueDns
+      == groups.${g}.${mvDnsAttrName}
       && hasPrefix "${groups.${g}.groupPrefix}${groups.${g}.groupRelaySubstring}" n
     then true
     else false;
 
   # Generate an attrset with attr names of multivalueDns fqdns and attr values of their member node names.
-  multivalueDnsAttrs = foldl' (acc: dns:
-    recursiveUpdate acc {
-      ${dns} = sort lessThan (filter (e: e != null) (flatten (map (g:
-        map (n:
-          if (isMultivalueDnsMember dns g n)
-          then n
-          else null)
-        (attrNames nodes)) (attrNames groups))));
-    }) {}
-  multivalueDnsList;
+  mkMultivalueDnsAttrs = mvDnsAttrName:
+    foldl' (acc: dns:
+      recursiveUpdate acc {
+        ${dns} = sort lessThan (filter (e: e != null) (flatten (map (g:
+          map (n:
+            if (isMultivalueDnsMember mvDnsAttrName dns g n)
+            then n
+            else null)
+          (attrNames nodes)) (attrNames groups))));
+      }) {};
+
+  mkMultivalueDnsResources = multivalueDnsAttrs:
+    foldl' (acc: dns:
+      recursiveUpdate acc (listToAttrs (map (nodeName: {
+          name = "${hyphen dns}-${nodeName}";
+          value = {
+            zone_id = "\${data.aws_route53_zone.selected.zone_id}";
+            name = dns;
+            type = "A";
+            ttl = "300";
+            records = ["\${aws_eip.${nodeName}[0].public_ip}"];
+            multivalue_answer_routing_policy = true;
+            set_identifier = "${hyphen dns}-${nodeName}";
+          };
+        })
+        multivalueDnsAttrs.${dns}))) {} (attrNames multivalueDnsAttrs);
+
+  bookMultivalueDnsList = mkMultivalueDnsList "bookRelayMultivalueDns";
+  groupMultivalueDnsList = mkMultivalueDnsList "groupRelayMultivalueDns";
+
+  bookMultivalueDnsAttrs = mkMultivalueDnsAttrs "bookRelayMultivalueDns" bookMultivalueDnsList;
+  groupMultivalueDnsAttrs = mkMultivalueDnsAttrs "groupRelayMultivalueDns" groupMultivalueDnsList;
 in {
   flake.terraform.cluster = inputs.cardano-parts.inputs.terranix.lib.terranixConfiguration {
     system = "x86_64-linux";
@@ -283,21 +307,8 @@ in {
                 records = ["\${aws_eip.${nodeName}[0].public_ip}"];
               }
             )
-            # Generate multivalue route53 records
-            // foldl' (acc: dns:
-              recursiveUpdate acc (listToAttrs (map (nodeName: {
-                  name = "${hyphen dns}-${nodeName}";
-                  value = {
-                    zone_id = "\${data.aws_route53_zone.selected.zone_id}";
-                    name = dns;
-                    type = "A";
-                    ttl = "300";
-                    records = ["\${aws_eip.${nodeName}[0].public_ip}"];
-                    multivalue_answer_routing_policy = true;
-                    set_identifier = "${hyphen dns}-${nodeName}";
-                  };
-                })
-                multivalueDnsAttrs.${dns}))) {} (attrNames multivalueDnsAttrs);
+            // mkMultivalueDnsResources bookMultivalueDnsAttrs
+            // mkMultivalueDnsResources groupMultivalueDnsAttrs;
 
           local_file.ssh_config = {
             filename = "\${path.module}/.ssh_config";

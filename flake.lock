@@ -194,11 +194,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1698943572,
-        "narHash": "sha256-mvx8zrJ6swWXZg7Xdo1rQbJcCzCo4ElFWnT6JiJl6Os=",
+        "lastModified": 1701107172,
+        "narHash": "sha256-HQgdVz9gthchAGdFepe3k6LoXZMVNLIth4xsam+ExL8=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "3eea399d8f4cc017add189672ea5950e3732c403",
+        "rev": "5078d586f20777ccbed1cb3afed658928a0d7b38",
         "type": "github"
       },
       "original": {
@@ -258,19 +258,36 @@
         "type": "github"
       }
     },
-    "cardano-node-service": {
+    "cardano-metadata-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1690209950,
-        "narHash": "sha256-d0V8N+y/OarYv6GQycGXnbPly7GeJRBEeE1017qj9eI=",
+        "lastModified": 1701101171,
+        "narHash": "sha256-v5FfQqtZ11yIjsMhm8s3OGjGBCf8tUaeIxmHOIPEvco=",
         "owner": "input-output-hk",
-        "repo": "cardano-node",
-        "rev": "d2d90b48c5577b4412d5c9c9968b55f8ab4b9767",
+        "repo": "offchain-metadata-tools",
+        "rev": "f406c6da1c0792648f4b8ce67bd8c1f65ea1c602",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "8.1.2",
+        "ref": "ops-1-0-0",
+        "repo": "offchain-metadata-tools",
+        "type": "github"
+      }
+    },
+    "cardano-node-service": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1700615474,
+        "narHash": "sha256-pVUWfzVnM4RvpFlJNH2ZmWPZzmkGT1Ty8B1p7NFh69M=",
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "34d89af65439db92293b88967c299c20692abc1c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "8.7.0-pre",
         "repo": "cardano-node",
         "type": "github"
       }
@@ -1396,23 +1413,6 @@
         "type": "github"
       }
     },
-    "offchain-metadata-tools-service": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1684160858,
-        "narHash": "sha256-2pu/T4uoXBxhI47PrOS6zHRZRwaSM6qA87HJySwwIBo=",
-        "owner": "input-output-hk",
-        "repo": "offchain-metadata-tools",
-        "rev": "a68c12b10fe5ed9802defb4a6ca80919b695d945",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "ref": "feat-add-password-to-db-conn-string",
-        "repo": "offchain-metadata-tools",
-        "type": "github"
-      }
-    },
     "old-ghc-nix": {
       "flake": false,
       "locked": {
@@ -1437,6 +1437,7 @@
         "cardano-db-sync-schema": "cardano-db-sync-schema",
         "cardano-db-sync-schema-ng": "cardano-db-sync-schema-ng",
         "cardano-db-sync-service": "cardano-db-sync-service",
+        "cardano-metadata-service": "cardano-metadata-service",
         "cardano-node-service": "cardano-node-service",
         "cardano-wallet-service": "cardano-wallet-service",
         "colmena": "colmena",
@@ -1449,7 +1450,6 @@
         "nix": "nix_2",
         "nixpkgs": "nixpkgs_9",
         "nixpkgs-unstable": "nixpkgs-unstable_2",
-        "offchain-metadata-tools-service": "offchain-metadata-tools-service",
         "sops-nix": "sops-nix",
         "terraform-providers": "terraform-providers",
         "terranix": "terranix",

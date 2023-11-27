@@ -6,7 +6,6 @@ alias tf := terraform
 null := ""
 stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
 statePrefix := "~/.local/share"
-zero := "0"
 
 # Common code
 checkEnv := '''
@@ -51,6 +50,32 @@ checkSshKey := '''
   }
 '''
 
+sopsConfigSetup := '''
+  # To support searching for sops config files from the target path rather than cwd up,
+  # implement a userland solution until natively sops supported.
+  #
+  # This enables $NO_DEPLOY_DIR to be separate from the default $STAKE_POOL_DIR/no-deploy default location.
+  # Ref: https://github.com/getsops/sops/issues/242#issuecomment-999809670
+  function sops_config() {
+    # Suppress xtrace on this fn as the return string is observed from the caller's output
+    { SHOPTS="$-"; set +x; } 2> /dev/null
+
+    FILE="$1"
+    CONFIG_DIR=$(dirname "$(realpath "$FILE")")
+    while ! [ -f "$CONFIG_DIR/.sops.yaml" ]; do
+      if [ "$CONFIG_DIR" = "/" ]; then
+        >&2 echo "error: no .sops.yaml file was found while walking the directory structure upwards from the target file: \"$FILE\""
+        exit 1
+      fi
+      CONFIG_DIR=$(dirname "$CONFIG_DIR")
+      done
+
+    echo "$CONFIG_DIR/.sops.yaml"
+
+    # Reset the xtrace option to its state prior to suppression
+    [ -n "${SHOPTS//[^x]/}" ] && set -x
+  }
+'''
 
 default:
   @just --list
@@ -60,6 +85,9 @@ apply *ARGS:
 
 apply-all *ARGS:
   colmena apply --verbose {{ARGS}}
+
+build-book:
+  mdbook build docs/
 
 build-machine MACHINE *ARGS:
   nix build -L .#nixosConfigurations.{{MACHINE}}.config.system.build.toplevel {{ARGS}}
@@ -108,7 +136,7 @@ dbsync-pool-analyze HOSTNAME:
   MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
   echo "The maximum percentage difference de-delegation of all these pools will make in chain density is: $MAX_SHIFT"
 
-dbsync-create-faucet-stake-keys-table ENV HOSTNAME:
+dbsync-create-faucet-stake-keys-table ENV HOSTNAME NUM_ACCOUNTS="500":
   #!/usr/bin/env bash
   TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
 
@@ -117,7 +145,7 @@ dbsync-create-faucet-stake-keys-table ENV HOSTNAME:
   scripts/setup-delegation-accounts.py \
     --print-only \
     --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
-    --num-accounts 500 \
+    --num-accounts {{NUM_ACCOUNTS}} \
     > "$TMPFILE"
 
   echo
@@ -148,7 +176,7 @@ dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
     echo
   done
 
-gen-payment-address-from-mnemonic MNEMONIC_FILE ADDRESS_OFFSET=zero:
+gen-payment-address-from-mnemonic MNEMONIC_FILE ADDRESS_OFFSET="0":
   cardano-address key from-recovery-phrase Shelley < {{MNEMONIC_FILE}} \
     | cardano-address key child 1852H/1815H/0H/0/{{ADDRESS_OFFSET}} \
     | cardano-address key public --with-chain-code \
@@ -306,10 +334,22 @@ show-nameservers:
   print ($ns | to text)
 
 sops-decrypt-binary FILE:
-  sops --input-type binary --output-type binary --decrypt {{FILE}}
+  #!/usr/bin/env bash
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  # Default to stdout decrypted output.
+  # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
+  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
 
 sops-encrypt-binary FILE:
-  sops --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
+  #!/usr/bin/env bash
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  # Default to in-place encrypted output.
+  # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
+  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
 scp *ARGS:
   #!/usr/bin/env nu
@@ -386,8 +426,8 @@ start-demo:
   nix run .#job-create-stake-pool-keys
 
   (
-    jq -r '.[]' < <(sops --input-type binary --output-type binary --decrypt "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
-    jq -r '.[]' < <(sops --input-type binary --output-type binary --decrypt "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+    jq -r '.[]' < <(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
+    jq -r '.[]' < <(just sops-decrypt-binary "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
   ) | jq -s > "$BULK_CREDS"
 
   echo "Start cardano-node in the background. Run \"just stop\" to stop"
@@ -402,7 +442,7 @@ start-demo:
 
   echo "Moving genesis utxo..."
   BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
-    ERA="--alonzo-era" \
+    ERA_CMD="alonzo" \
     nix run .#job-move-genesis-utxo
   echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
   sleep 7
@@ -411,14 +451,14 @@ start-demo:
   echo "Registering stake pools..."
   POOL_RELAY=demo.local \
     POOL_RELAY_PORT=3001 \
-    ERA="--alonzo-era" \
+    ERA_CMD="alonzo" \
     nix run .#job-register-stake-pools
   echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
   sleep 7
   echo
 
   echo "Delegating rewards stake key..."
-  ERA="--alonzo-era" \
+  ERA_CMD="alonzo" \
     nix run .#job-delegate-rewards-stake-key
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320
@@ -427,7 +467,7 @@ start-demo:
   echo "Forking to babbage..."
   just query-tip demo
   MAJOR_VERSION=7 \
-    ERA="--alonzo-era" \
+    ERA_CMD="alonzo" \
     nix run .#job-update-proposal-hard-fork
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320
@@ -436,7 +476,7 @@ start-demo:
   echo "Forking to babbage (intra-era)..."
   just query-tip demo
   MAJOR_VERSION=8 \
-    ERA="--babbage-era" \
+    ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320
@@ -445,7 +485,7 @@ start-demo:
   echo "Forking to conway..."
   just query-tip demo
   MAJOR_VERSION=9 \
-    ERA="--babbage-era" \
+    ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
   echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
   sleep 320

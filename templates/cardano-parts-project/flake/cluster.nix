@@ -34,7 +34,8 @@
       preview1 = {
         groupPrefix = "preview1-";
         meta.environmentName = "preview";
-        groupRelayMultivalueDns = "preview.${infra.aws.domain}";
+        bookRelayMultivalueDns = "preview-node.${infra.aws.domain}";
+        groupRelayMultivalueDns = "preview1-node.${infra.aws.domain}";
       };
     };
   };

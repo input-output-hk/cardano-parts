@@ -43,7 +43,7 @@
     };
 
     cardano-node-service = {
-      url = "github:input-output-hk/cardano-node/8.1.2";
+      url = "github:input-output-hk/cardano-node/8.7.0-pre";
       flake = false;
     };
 
@@ -52,8 +52,8 @@
       flake = false;
     };
 
-    offchain-metadata-tools-service = {
-      url = "github:input-output-hk/offchain-metadata-tools/feat-add-password-to-db-conn-string";
+    cardano-metadata-service = {
+      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
       flake = false;
     };
 

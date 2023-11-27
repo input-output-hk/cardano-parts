@@ -285,8 +285,8 @@ for i in range(0, num_accounts):
       printStr+=f'"{i}":"{stake_address}",'
     else:
       delegation_address = derive_delegation_address(payment_addr, stake_vkey_ext)
-      txin = createTx(txin, stake_vkey, delegation_address, payment_addr, utxo_signing_key,f"tx-deleg-account-{i}.txsigned")
-      print(f"setting up delegation for {i}")
+      txin = createTx(txin, stake_vkey, delegation_address, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{i}.txsigned")
+      print(f"Setting up delegation for {i} and submitting the transaction")
       sendTx(f"tx-deleg-account-{i}.txsigned")
 
 if arguments["--print-only"]:

@@ -12,6 +12,7 @@
 #   config.cardano-parts.perNode.meta.cardanoSmashDelistedPools
 #   config.cardano-parts.perNode.meta.cardano-db-sync-service
 #   config.cardano-parts.perNode.meta.cardano-faucet-service
+#   config.cardano-parts.perNode.meta.cardano-metadata-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
 #   config.cardano-parts.perNode.meta.hostAddr
@@ -21,6 +22,7 @@
 #   config.cardano-parts.perNode.pkgs.cardano-db-sync-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-db-tool
 #   config.cardano-parts.perNode.pkgs.cardano-faucet
+#   config.cardano-parts.perNode.pkgs.cardano-metadata-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-node
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-smash
@@ -157,6 +159,12 @@ flake @ {moduleWithSystem, ...}: {
           default = cfg.group.meta.cardano-faucet-service;
         };
 
+        cardano-metadata-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-metadata-service import path string.";
+          default = cfg.group.meta.cardano-metadata-service;
+        };
+
         cardano-node-service = mkOption {
           type = str;
           description = mdDoc "The cardano-node-service import path string.";
@@ -193,6 +201,7 @@ flake @ {moduleWithSystem, ...}: {
         (mkPkgOpt "cardano-smash" (cfg.group.pkgs.cardano-smash system))
         (mkPkgOpt "cardano-submit-api" (cfg.group.pkgs.cardano-submit-api system))
         (mkSpecialOpt "cardano-db-sync-pkgs" lib.types.attrs (cfg.group.pkgs.cardano-db-sync-pkgs system))
+        (mkSpecialOpt "cardano-metadata-pkgs" lib.types.attrs (cfg.group.pkgs.cardano-metadata-pkgs system))
         (mkSpecialOpt "cardano-node-pkgs" (attrsOf anything) (cfg.group.pkgs.cardano-node-pkgs system))
       ];
     };

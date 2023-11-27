@@ -27,6 +27,20 @@
 
   libSubmodule = submodule {
     options = {
+      opsLib = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc ''
+          The cardano-parts ops library.
+
+          A miscellaneous library for shared code used in various places
+          such as jobs, entrypoints and other ops related code.
+
+          Consumers of the default definition of this library
+          need to pass pkgs to initialize this library.
+        '';
+        default = import ./lib/ops.nix;
+      };
+
       topologyLib = mkOption {
         type = functionTo (attrsOf anything);
         description = mdDoc ''
