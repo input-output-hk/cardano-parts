@@ -53,6 +53,20 @@
         then ceil f
         else floor f;
 
+      offChainTable = let
+        # This approach will match both sancho tagged versions and release versions properly whereas using pkg.version won't
+        dbsyncPkgName = config.services.cardano-db-sync.package.name;
+        match' = match ''^[^[:d:]]+([[:d:]]+\.[[:d:]]+\.[[:d:]]+\.[[:d:]]+).*$'' dbsyncPkgName;
+        dbsyncVersion =
+          if isList match'
+          then head match'
+          else "0.0.0.0";
+        dbsyncLatest = versionAtLeast dbsyncVersion "13.2.0.0";
+      in
+        if config.services ? cardano-db-sync && dbsyncLatest
+        then "off_chain_pool_data"
+        else "pool_offline_data";
+
       psqlrc = toFile "psqlrc" ''
         \timing on
 
@@ -167,7 +181,7 @@
                   INNER JOIN pool_update ON recent_info.max = pool_update.id
                   INNER JOIN pool_hash ON pool_hash.id = pool_update.hash_id
                   INNER JOIN pool_relay ON pool_relay.update_id = recent_info.max
-                  LEFT JOIN pool_offline_data ON pool_offline_data.pmr_id = pool_update.meta_id
+                  LEFT JOIN ${offChainTable} ON ${offChainTable}.pmr_id = pool_update.meta_id
                   ORDER BY pool_hash.view;
 
               -- Show the pool stake distribution by epoch
