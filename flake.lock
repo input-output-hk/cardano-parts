@@ -847,11 +847,11 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1698949862,
-        "narHash": "sha256-2Rx861l42Bs1EPho6MPK/DRb79gb2vIc4nT0o1GGgA4=",
+        "lastModified": 1701181091,
+        "narHash": "sha256-UGYNgPdqJzFVENiLCV1wvbRHoaV6FMz1SvHfbEKVWT8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "7fb995172009efe003e80e478000c3781481ea95",
+        "rev": "310f8fa6d8ad99e8950c2aaf6f518a59d32f528c",
         "type": "github"
       },
       "original": {
@@ -869,15 +869,16 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1698999258,
-        "narHash": "sha256-42D1BMbdyZD+lT+pWUzb5zDQyasNbMJtH/7stuPuPfE=",
+        "lastModified": 1701180836,
+        "narHash": "sha256-k02Q+vuYHETqDMfnC4ORpHNKWUDpVWTeiETCmf7+gBA=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "73dc2bb45af6f20cfe1d962f1334eed5e84ae764",
+        "rev": "d8dae0b5558db304e4a69b7eb31e2e0bd4790379",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "sancho-respin-2023-11-28",
         "repo": "iohk-nix",
         "type": "github"
       }
