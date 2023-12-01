@@ -13,7 +13,7 @@ with lib; {
       cp "${cardano-deployment}/index.html" "$out/"
       cp "${cardano-deployment}/rest-config.json" "$out/"
 
-      ENVS=(${scapeShellArgs (attrNames environments)})
+      ENVS=(${escapeShellArgs (attrNames environments)})
       for ENV in "''${ENVS[@]}"; do
         # Migrate each env from a flat dir to an ENV subdir
         mkdir -p "$out/config/$ENV"
