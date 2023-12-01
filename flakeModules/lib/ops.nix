@@ -13,7 +13,7 @@ with lib; {
       cp "${cardano-deployment}/index.html" "$out/"
       cp "${cardano-deployment}/rest-config.json" "$out/"
 
-      ENVS=(${pkgs.lib.escapeShellArgs (attrNames environments)})
+      ENVS=(${scapeShellArgs (attrNames environments)})
       for ENV in "''${ENVS[@]}"; do
         # Migrate each env from a flat dir to an ENV subdir
         mkdir -p "$out/config/$ENV"
@@ -29,4 +29,23 @@ with lib; {
         sed -i "s|$ENV-|config/$ENV/|g" "$out/index.html"
       done
     '';
+
+  mkSopsSecret = {
+    secretName,
+    keyName,
+    groupOutPath,
+    groupName,
+    fileOwner,
+    fileGroup,
+    pathPrefix ? "${groupOutPath}/secrets/groups/${groupName}/deploy/",
+  }: let
+    trimStorePrefix = path: last (split "/nix/store/[^/]+/" path);
+    verboseTrace = keyName: traceVerbose ("${name}: using " + (trimStorePrefix keyName));
+  in {
+    ${secretName} = verboseTrace (pathPrefix + keyName) {
+      owner = fileOwner;
+      group = fileGroup;
+      sopsFile = pathPrefix + keyName;
+    };
+  };
 }
