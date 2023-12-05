@@ -67,7 +67,7 @@
       nano
       neovim
       ncdu
-      (nushell.override {additionalFeatures = p: p ++ ["dataframe"];})
+      nushellFull
       parted
       pciutils
       procps

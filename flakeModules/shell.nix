@@ -61,7 +61,6 @@ in
         withLocal = withSystem system;
         treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
         isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
-        nushellPkg = pkgs.nushell.override {additionalFeatures = p: p ++ ["dataframe"];};
 
         globalDefault = isGlobal: default:
           if isGlobal
@@ -251,7 +250,7 @@ in
                     localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.jq
                     just
                     moreutils
-                    nushellPkg
+                    nushellFull
                     ripgrep
                     statix
                     xxd
@@ -371,7 +370,7 @@ in
             (pkgs.writeShellApplication
               {
                 name = "menu-${id}";
-                runtimeInputs = [nushellPkg];
+                runtimeInputs = [pkgs.nushellFull];
 
                 text = let
                   minWidth =

@@ -9,8 +9,8 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
-    nix.url = "github:nixos/nix/2.17-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
+    nix.url = "github:nixos/nix/2.19-maintenance";
     sops-nix.url = "github:Mic92/sops-nix";
     terraform-providers.url = "github:nix-community/nixpkgs-terraform-providers-bin";
     terranix.url = "github:terranix/terranix";
