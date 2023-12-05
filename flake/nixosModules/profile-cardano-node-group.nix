@@ -114,6 +114,11 @@
 
       environment = {
         shellAliases = {
+          cardano-reload-topology = ''
+            pkill --echo --signal SIGHUP cardano-node \
+              | sed 's/killed/signaled to reload p2p topology, check logs for "Performing topology configuration update"/g'
+          '';
+
           cardano-show-kes-period = ''
             echo "Current KES period for environment ${environmentName}: $(($(cardano-cli query tip | jq .slot) / ${toString slotsPerKESPeriod}))"
           '';

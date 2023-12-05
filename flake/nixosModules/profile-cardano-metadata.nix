@@ -43,24 +43,13 @@ flake: {
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) domain;
       inherit (perNodeCfg.pkgs.cardano-metadata-pkgs) metadata-server metadata-sync metadata-webhook;
+      inherit (opsLib) mkSopsSecret;
 
       groupCfg = config.cardano-parts.cluster.group;
       perNodeCfg = config.cardano-parts.perNode;
+      opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
       groupOutPath = groupFlake.self.outPath;
-      pathPrefix = "${groupOutPath}/secrets/groups/${groupName}/deploy/";
-      trimStorePrefix = path: last (split "/nix/store/[^/]+/" path);
-      verboseTrace = key: traceVerbose ("${name}: using " + (trimStorePrefix key));
-
-      owner = "metadata-webhook";
-      group = "metadata-webhook";
-
-      mkSopsSecret = secretName: key: {
-        ${secretName} = verboseTrace (pathPrefix + key) {
-          inherit owner group;
-          sopsFile = pathPrefix + key;
-        };
-      };
 
       roundFloat = f:
         if f >= (floor f + 0.5)
@@ -543,7 +532,13 @@ flake: {
           partOf = ["sops-secrets.service"];
         };
 
-        sops.secrets = mkSopsSecret "cardano-metadata-webhook" "${name}-metadata-webhook";
+        sops.secrets = mkSopsSecret {
+          secretName = "cardano-metadata-webhook";
+          keyName = "${name}-metadata-webhook";
+          inherit groupOutPath groupName;
+          fileOwner = "metadata-webhook";
+          fileGroup = "metadata-webhook";
+        };
       };
     };
 }

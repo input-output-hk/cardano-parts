@@ -6,25 +6,27 @@
 #
 # Tips:
 #
-{
+flake: {
   flake.nixosModules.role-block-producer = {
     config,
-    name,
     lib,
+    name,
+    pkgs,
     ...
   }:
     with builtins; let
-      inherit (lib) last mkForce optionalAttrs;
+      inherit (lib) mkForce optionalAttrs;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
       inherit (perNodeCfg.lib) cardanoLib;
       inherit (cardanoLib.environments.${environmentName}.nodeConfig) Protocol ShelleyGenesisFile;
+      inherit (opsLib) mkSopsSecret;
 
       groupCfg = config.cardano-parts.cluster.group;
       perNodeCfg = config.cardano-parts.perNode;
       groupOutPath = groupFlake.self.outPath;
-      owner = "cardano-node";
-      group = "cardano-node";
+      opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
+
       pathPrefix = "${groupOutPath}/secrets/groups/${groupName}/deploy/";
 
       # Byron era secrets path definitions
@@ -39,14 +41,10 @@
       operationalCertificate = "${name}.opcert";
       bulkCredentials = "${name}-bulk.creds";
 
-      trimStorePrefix = path: last (split "/nix/store/[^/]+/" path);
-      verboseTrace = key: traceVerbose ("${name}: using " + (trimStorePrefix key));
-
-      mkSopsSecret = secretName: key: {
-        ${secretName} = verboseTrace (pathPrefix + key) {
-          inherit owner group;
-          sopsFile = pathPrefix + key;
-        };
+      mkSopsSecretParams = secretName: keyName: {
+        inherit groupOutPath groupName secretName keyName pathPrefix;
+        fileOwner = "cardano-node";
+        fileGroup = "cardano-node";
       };
 
       serviceCfg = rec {
@@ -71,19 +69,19 @@
 
       keysCfg = rec {
         RealPBFT =
-          (mkSopsSecret "cardano-node-signing" signingKey)
-          // (mkSopsSecret "cardano-node-delegation-cert" delegationCertificate);
+          (mkSopsSecret (mkSopsSecretParams "cardano-node-signing" signingKey))
+          // (mkSopsSecret (mkSopsSecretParams "cardano-node-delegation-cert" delegationCertificate));
 
         TPraos =
           if perNodeCfg.roles.isCardanoDensePool
           then
-            (mkSopsSecret "cardano-node-bulk-credentials" bulkCredentials)
-            // (mkSopsSecret "cardano-node-cold-verification" coldVerification)
+            (mkSopsSecret (mkSopsSecretParams "cardano-node-bulk-credentials" bulkCredentials))
+            // (mkSopsSecret (mkSopsSecretParams "cardano-node-cold-verification" coldVerification))
           else
-            (mkSopsSecret "cardano-node-vrf-signing" vrfKey)
-            // (mkSopsSecret "cardano-node-kes-signing" kesKey)
-            // (mkSopsSecret "cardano-node-cold-verification" coldVerification)
-            // (mkSopsSecret "cardano-node-operational-cert" operationalCertificate);
+            (mkSopsSecret (mkSopsSecretParams "cardano-node-vrf-signing" vrfKey))
+            // (mkSopsSecret (mkSopsSecretParams "cardano-node-kes-signing" kesKey))
+            // (mkSopsSecret (mkSopsSecretParams "cardano-node-cold-verification" coldVerification))
+            // (mkSopsSecret (mkSopsSecretParams "cardano-node-operational-cert" operationalCertificate));
 
         Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
       };

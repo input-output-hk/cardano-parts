@@ -6,11 +6,12 @@
 #
 # Tips:
 #   * This module provides a grafana-agent service and configures common application metrics hooks
-{
+flake: {
   flake.nixosModules.profile-grafana-agent = {
     config,
     lib,
     name,
+    pkgs,
     ...
   }:
     with builtins;
@@ -19,18 +20,19 @@
       inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
+      inherit (opsLib) mkSopsSecret;
 
       groupCfg = config.cardano-parts.cluster.group;
       groupOutPath = groupFlake.self.outPath;
+      opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
-      pathPrefix = "${groupOutPath}/secrets/monitoring/";
-      trimStorePrefix = path: last (split "/nix/store/[^/]+/" path);
-      verboseTrace = key: traceVerbose ("${name}: using " + (trimStorePrefix key));
-
-      mkSopsSecret = secretsFile: {
-        ${secretsFile} = verboseTrace (pathPrefix + secretsFile + ".enc") {
-          sopsFile = pathPrefix + secretsFile + ".enc";
-        };
+      mkSopsSecretParams = secretName: {
+        inherit groupOutPath groupName secretName;
+        keyName = secretName + ".enc";
+        # Setting grafana-agent service to a non-dynamic user allows constraining the secrets file to non-root ownership
+        fileOwner = "grafana-agent";
+        fileGroup = "grafana-agent";
+        pathPrefix = "${groupOutPath}/secrets/monitoring/";
       };
 
       cfgSvc = config.services;
@@ -96,9 +98,9 @@
         users.users.grafana-agent.isSystemUser = true;
 
         sops.secrets =
-          mkSopsSecret "grafana-agent-metrics-url"
-          // mkSopsSecret "grafana-agent-metrics-username"
-          // mkSopsSecret "grafana-agent-metrics-password";
+          mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-url")
+          // mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-username")
+          // mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-password");
 
         services.grafana-agent = {
           enable = true;
