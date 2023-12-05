@@ -1,6 +1,7 @@
 set shell := ["bash", "-uc"]
 set positional-arguments
-alias tf := terraform
+alias terraform := tofu
+alias tf := tofu
 
 # Defaults
 null := ""
@@ -39,7 +40,7 @@ checkEnv := '''
 
 checkSshConfig := '''
   if not ('.ssh_config' | path exists) {
-    print "Please run terraform first to create the .ssh_config file"
+    print "Please run tofu first to create the .ssh_config file"
     exit 1
   }
 '''
@@ -257,10 +258,10 @@ query-tip ENV TESTNET_MAGIC=null:
 
 save-bootstrap-ssh-key:
   #!/usr/bin/env nu
-  print "Retrieving ssh key from terraform..."
-  terraform workspace select -or-create cluster
-  terraform init -reconfigure
-  let tf = (terraform show -json | from json)
+  print "Retrieving ssh key from tofu..."
+  tofu workspace select -or-create cluster
+  tofu init -reconfigure
+  let tf = (tofu show -json | from json)
   let key = ($tf.values.root_module.resources | where type == tls_private_key and name == bootstrap)
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
@@ -541,7 +542,7 @@ stop-node ENV:
     rm -f "$STATEDIR/node-{{ENV}}.pid" "$STATEDIR/node-{{ENV}}.socket"
   fi
 
-terraform *ARGS:
+tofu *ARGS:
   #!/usr/bin/env bash
   IGREEN='\033[1;92m'
   IRED='\033[1;91m'
@@ -561,10 +562,10 @@ terraform *ARGS:
     VAR_FILE="secrets/tf/$WORKSPACE.tfvars"
   fi
 
-  echo -e "Running terraform in the ${IGREEN}$WORKSPACE${NC} workspace..."
+  echo -e "Running tofu in the ${IGREEN}$WORKSPACE${NC} workspace..."
   rm --force terraform.tf.json
   nix build ".#terraform.$WORKSPACE" --out-link terraform.tf.json
 
-  terraform workspace select -or-create "$WORKSPACE"
-  terraform init -reconfigure
-  terraform ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
+  tofu workspace select -or-create "$WORKSPACE"
+  tofu init -reconfigure
+  tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}

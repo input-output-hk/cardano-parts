@@ -246,8 +246,7 @@ in
                     gawk
                     gnugrep
                     gnused
-                    # Need jq 1.7 for rc != 0 on empty file or stream key test
-                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.jq
+                    jq
                     just
                     moreutils
                     nushellFull
@@ -278,7 +277,8 @@ in
                     ++ (with pkgs;
                       with cfgPkgs; [
                         b2sum
-                        haskellPackages.cbor-tool
+                        # Currently marked as broken in nixpkgs-23.11 and nixpkgs-unstable
+                        # haskellPackages.cbor-tool
                         bech32
                         cardano-address
                         cardano-cli
@@ -315,11 +315,11 @@ in
                         mdbook
                         mdbook-kroki-preprocessor
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
+                        opentofu
                         rain
                         sops
                         ssh-config-json
                         ssh-to-age
-                        terraform
                         wireguard-tools
                       ]);
                 };

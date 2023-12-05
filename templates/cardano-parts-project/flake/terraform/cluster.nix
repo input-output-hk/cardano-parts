@@ -89,10 +89,10 @@ in {
       {
         terraform = {
           required_providers = {
-            aws.source = "hashicorp/aws";
-            null.source = "hashicorp/null";
-            local.source = "hashicorp/local";
-            tls.source = "hashicorp/tls";
+            aws.source = "opentofu/aws";
+            null.source = "opentofu/null";
+            local.source = "opentofu/local";
+            tls.source = "opentofu/tls";
           };
 
           backend = {

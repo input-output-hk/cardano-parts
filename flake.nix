@@ -12,7 +12,10 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
     nix.url = "github:nixos/nix/2.19-maintenance";
     sops-nix.url = "github:Mic92/sops-nix";
-    terraform-providers.url = "github:nix-community/nixpkgs-terraform-providers-bin";
+    opentofu-registry = {
+      url = "github:opentofu/registry";
+      flake = false;
+    };
     terranix.url = "github:terranix/terranix";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
