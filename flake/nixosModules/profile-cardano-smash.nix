@@ -119,298 +119,331 @@ flake: {
       };
 
       config = {
-        services.cardano-db-sync.additionalDbUsers = [
-          "smash"
-          "registered-relays-dump"
-        ];
-
-        services.varnish = {
-          enable = true;
-          extraCommandLine = "-t ${toString (cfg.varnishTtlDays * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
-          config = ''
-            vcl 4.1;
-
-            import std;
-
-            backend default {
-              .host = "127.0.0.1";
-              .port = "${toString config.services.smash.port}";
-            }
-
-            acl purge {
-              "localhost";
-              "127.0.0.1";
-            }
-
-            sub vcl_recv {
-              unset req.http.x-cache;
-
-              # Allow PURGE from localhost
-              if (req.method == "PURGE") {
-                if (!std.ip(req.http.X-Real-Ip, "0.0.0.0") ~ purge) {
-                  return(synth(405,"Not Allowed"));
-                }
-
-                # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
-                # along with an allow listed X-Real-Ip header.
-                return(purge);
-              }
-            }
-
-            sub vcl_hit {
-              set req.http.x-cache = "hit";
-            }
-
-            sub vcl_miss {
-              set req.http.x-cache = "miss";
-            }
-
-            sub vcl_pass {
-              set req.http.x-cache = "pass";
-            }
-
-            sub vcl_pipe {
-              set req.http.x-cache = "pipe";
-            }
-
-            sub vcl_synth {
-              set req.http.x-cache = "synth synth";
-              set resp.http.x-cache = req.http.x-cache;
-            }
-
-            sub vcl_deliver {
-              if (obj.uncacheable) {
-                set req.http.x-cache = req.http.x-cache + " uncacheable";
-              }
-              else {
-                set req.http.x-cache = req.http.x-cache + " cached";
-              }
-              set resp.http.x-cache = req.http.x-cache;
-            }
-
-            sub vcl_backend_response {
-              if (bereq.uncacheable) {
-                return (deliver);
-              }
-              if (beresp.status == 404) {
-                set beresp.ttl = 1h;
-              }
-              call vcl_beresp_stale;
-              call vcl_beresp_cookie;
-              call vcl_beresp_control;
-              call vcl_beresp_vary;
-              return (deliver);
-            }
-          '';
-        };
-
-        services.smash = {
-          inherit environmentName;
-
-          enable = true;
-          package = cardano-smash;
-          dbSyncPkgs = cardano-db-sync-pkgs;
-          postgres = {inherit (cfgDbsync.postgres) database port user socketdir;};
-          delistedPools = cardanoSmashDelistedPools;
-        };
-
-        systemd.services.registered-relays-dump = let
-          # Deprecated exclusions
-          excludedPools = [];
-          relays_exclude_file = toFile "relays-exclude.txt" (concatStringsSep "\n" []);
-
-          extract_relays_sql = toFile "extract_relays.sql" ''
-            SELECT array_to_json(array_agg(row_to_json(t))) FROM (
-              SELECT COALESCE(ipv4, dns_name) AS addr, port FROM (
-                SELECT min(update_id) AS update_id, ipv4, dns_name, port
-                  FROM pool_relay
-                  INNER JOIN pool_update ON pool_update.id = pool_relay.update_id
-                  INNER JOIN pool_hash ON pool_update.hash_id = pool_hash.id
-                  WHERE ${optionalString (excludedPools != []) "pool_hash.view NOT IN (${excludedPools}) AND "}
-                  (
-                    (ipv4 IS NULL AND dns_name NOT LIKE '% %')
-                      OR
-                    ipv4 !~ '(^0\.)|(^10\.)|(^100\.6[4-9]\.)|(^100\.[7-9]\d\.)|(^100\.1[0-1]\d\.)|(^100\.12[0-7]\.)|(^127\.)|(^169\.254\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.0\.0\.)|(^192\.0\.2\.)|(^192\.88\.99\.)|(^192\.168\.)|(^198\.1[8-9]\.)|(^198\.51\.100\.)|(^203.0\.113\.)|(^22[4-9]\.)|(^23[0-9]\.)|(^24[0-9]\.)|(^25[0-5]\.)'
-                  )
-                  GROUP BY ipv4, dns_name, port ORDER BY update_id
-              ) t
-            ) t;
-          '';
-        in {
-          wantedBy = ["multi-user.target"];
-          after = ["network-online.target"];
-
-          path = with pkgs; [
-            config.services.postgresql.package
-            cardano-node-pkgs.cardano-cli
-            coreutils
-            curl
-            dnsutils
-            findutils
-            jq
-            netcat
+        services = {
+          cardano-db-sync.additionalDbUsers = [
+            "smash"
+            "registered-relays-dump"
           ];
 
-          environment = config.environment.variables;
+          varnish = {
+            enable = true;
+            extraCommandLine = "-t ${toString (cfg.varnishTtlDays * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
+            config = ''
+              vcl 4.1;
 
-          preStart = ''
-            set -uo pipefail
-            SOCKET="${cfgNode.socketPath 0}"
+              import std;
 
-            # Wait for postgres
-            while true; do
-              nc -z localhost 5432 && sleep 2 && break
-              echo "Waiting for postgresql service availability for 2 seconds..."
-              sleep 2
-            done
+              backend default {
+                .host = "127.0.0.1";
+                .port = "${toString config.services.smash.port}";
+              }
 
-            # Wait for the node socket
-            while true; do
-              [ -S "$SOCKET" ] && sleep 2 && break
-              echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
-              sleep 2
-            done
+              acl purge {
+                "localhost";
+                "127.0.0.1";
+              }
 
-            # Wait for the node socket to become group writeable
-            while true; do
-              [ "$(find "$SOCKET" -type s -perm -g+w)" = "$SOCKET" ] && sleep 2 && break
-              echo "Waiting for cardano node socket group write permission at $SOCKET for 2 seconds..."
-              sleep 2
-            done
-          '';
+              sub vcl_recv {
+                unset req.http.x-cache;
 
-          script = ''
-            set -uo pipefail
+                # Allow PURGE from localhost
+                if (req.method == "PURGE") {
+                  if (!std.ip(req.http.X-Real-Ip, "0.0.0.0") ~ purge) {
+                    return(synth(405,"Not Allowed"));
+                  }
 
-            pingAddr() {
-              index=$1
-              addr=$2
-              port=$3
-              allAddresses=$(dig +nocookie +short -q "$addr" A || :)
-              if [ -z "$allAddresses" ]; then
-                allAddresses=$addr
-              elif [ "$allAddresses" = ";; connection timed out; no servers could be reached" ]; then
-                allAddresses=$addr
-              fi
+                  # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
+                  # along with an allow listed X-Real-Ip header.
+                  return(purge);
+                }
+              }
 
-              while IFS= read -r ip; do
-                set +e
-                PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $CARDANO_NODE_NETWORK_ID -c 1 -q --json)"
-                res=$?
-                if [ $res -eq 0 ]; then
-                  echo $PING | jq -c > /dev/null 2>&1
-                  res=$?
-                fi
-                set -e
-                if [ $res -eq 0 ]; then
-                  >&2 echo "Successfully pinged $addr:$port (on ip: $ip)"
-                  set +e
-                  geoinfo=$(curl -s --retry 3 http://ip-api.com/json/$ip?fields=1105930)
-                  res=$?
-                  set -e
-                  if [ $res -eq 0 ]; then
-                    status=$(echo "$geoinfo" | jq -r '.status')
-                    if [ "$status" == "fail" ]; then
-                      message=$(echo "$geoinfo" | jq -r '.message')
-                      >&2 echo "Failed to retrieved goip info for $ip: $message"
-                      exit 1
-                    fi
-                    continent=$(echo "$geoinfo" | jq -r '.continent')
-                    country_code=$(echo "$geoinfo" | jq -r '.countryCode')
-                    if [ "$country_code" == "US" ]; then
-                      state=$(echo $geoinfo | jq -r '.regionName')
-                      if [ "$state" == "Washington, D.C." ]; then
-                        state="District of Columbia"
-                      fi
-                    else
-                      state=$country_code
-                    fi
-                    jq -c --arg addr "$addr" --arg port "$port" \
-                      --arg continent "$continent" --arg state "$state" \
-                      '{addr: $addr, port: $port|tonumber, continent: $continent, state: $state}' \
-                      <<< '{}' \
-                      > $index-relay.json
-                    break
-                  else
-                    >&2 echo "Failed to retrieved goip info for $ip"
-                    exit $res
-                  fi
-                else
-                  >&2 echo "failed to cardano-cli ping $addr:$port (on ip: $ip)"
-                fi
-              done <<< "$allAddresses"
-            }
+              sub vcl_hit {
+                set req.http.x-cache = "hit";
+              }
 
-            run() {
-              epoch=$(cardano-cli query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
-              db_sync_epoch=$(psql -X -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
+              sub vcl_miss {
+                set req.http.x-cache = "miss";
+              }
 
-              if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then
-                >&2 echo "cardano-db-sync has not caught up with current epoch yet. Skipping."
-                exit 0
-              fi
+              sub vcl_pass {
+                set req.http.x-cache = "pass";
+              }
 
-              excludeList="$(sort ${relays_exclude_file})"
-              cd $STATE_DIRECTORY
-              rm -f *-relay.json
+              sub vcl_pipe {
+                set req.http.x-cache = "pipe";
+              }
 
-              i=0
-              for r in $(psql -X -U ${cfgSmash.postgres.user} -t < ${extract_relays_sql} | jq -c '.[]'); do
-                addr=$(echo "$r" | jq -r '.addr')
-                port=$(echo "$r" | jq -r '.port')
-                resolved=$(dig +nocookie +short -q "$addr" A || :)
+              sub vcl_synth {
+                set req.http.x-cache = "synth synth";
+                set resp.http.x-cache = req.http.x-cache;
+              }
 
-                if [ "$resolved" = ";; connection timed out; no servers could be reached" ]; then
-                  sanitizedResolved=""
-                else
-                  sanitizedResolved="$resolved"
-                fi
+              sub vcl_deliver {
+                if (obj.uncacheable) {
+                  set req.http.x-cache = req.http.x-cache + " uncacheable";
+                }
+                else {
+                  set req.http.x-cache = req.http.x-cache + " cached";
+                }
+                set resp.http.x-cache = req.http.x-cache;
+              }
 
-                allAddresses=$addr$'\n'$sanitizedResolved
-                excludedAddresses=$(comm -12 <(echo -e "$allAddresses" | sort) <(echo "$excludeList"))
-                nbExcludedAddresses=$(echo $excludedAddresses | wc -w)
+              sub vcl_backend_response {
+                if (bereq.uncacheable) {
+                  return (deliver);
+                }
+                if (beresp.status == 404) {
+                  set beresp.ttl = 1h;
+                }
+                call vcl_beresp_stale;
+                call vcl_beresp_cookie;
+                call vcl_beresp_control;
+                call vcl_beresp_vary;
+                return (deliver);
+              }
+            '';
+          };
 
-                if [[ $nbExcludedAddresses == 0 ]]; then
-                  ((i+=1))
-                  pingAddr $i "$addr" "$port" &
-                  sleep 1.5 # Due to rate limiting on ip-api.com
-                else
-                  >&2 echo "$addr excluded due to dns name or IPs being in exclude list:\n$excludedAddresses"
-                fi
+          smash = {
+            inherit environmentName;
+
+            enable = true;
+            package = cardano-smash;
+            dbSyncPkgs = cardano-db-sync-pkgs;
+            postgres = {inherit (cfgDbsync.postgres) database port user socketdir;};
+            delistedPools = cardanoSmashDelistedPools;
+          };
+        };
+
+        systemd.services = {
+          registered-relays-dump = let
+            # Deprecated exclusions
+            excludedPools = [];
+            relays_exclude_file = toFile "relays-exclude.txt" (concatStringsSep "\n" []);
+
+            extract_relays_sql = toFile "extract_relays.sql" ''
+              SELECT array_to_json(array_agg(row_to_json(t))) FROM (
+                SELECT COALESCE(ipv4, dns_name) AS addr, port FROM (
+                  SELECT min(update_id) AS update_id, ipv4, dns_name, port
+                    FROM pool_relay
+                    INNER JOIN pool_update ON pool_update.id = pool_relay.update_id
+                    INNER JOIN pool_hash ON pool_update.hash_id = pool_hash.id
+                    WHERE ${optionalString (excludedPools != []) "pool_hash.view NOT IN (${excludedPools}) AND "}
+                    (
+                      (ipv4 IS NULL AND dns_name NOT LIKE '% %')
+                        OR
+                      ipv4 !~ '(^0\.)|(^10\.)|(^100\.6[4-9]\.)|(^100\.[7-9]\d\.)|(^100\.1[0-1]\d\.)|(^100\.12[0-7]\.)|(^127\.)|(^169\.254\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.0\.0\.)|(^192\.0\.2\.)|(^192\.88\.99\.)|(^192\.168\.)|(^198\.1[8-9]\.)|(^198\.51\.100\.)|(^203.0\.113\.)|(^22[4-9]\.)|(^23[0-9]\.)|(^24[0-9]\.)|(^25[0-5]\.)'
+                    )
+                    GROUP BY ipv4, dns_name, port ORDER BY update_id
+                ) t
+              ) t;
+            '';
+          in {
+            wantedBy = ["multi-user.target"];
+            after = ["network-online.target"];
+
+            path = with pkgs; [
+              config.services.postgresql.package
+              cardano-node-pkgs.cardano-cli
+              coreutils
+              curl
+              dnsutils
+              findutils
+              jq
+              netcat
+            ];
+
+            environment = config.environment.variables;
+
+            preStart = ''
+              set -uo pipefail
+              SOCKET="${cfgNode.socketPath 0}"
+
+              # Wait for postgres
+              while true; do
+                nc -z localhost 5432 && sleep 2 && break
+                echo "Waiting for postgresql service availability for 2 seconds..."
+                sleep 2
               done
 
-              wait
+              # Wait for the node socket
+              while true; do
+                [ -S "$SOCKET" ] && sleep 2 && break
+                echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
+                sleep 2
+              done
 
-              if test -n "$(find . -maxdepth 1 -name '*-relay.json' -print -quit)"; then
-                echo "Found a total of $(find . -name '*-relay.json' -printf '.' | wc -m) relays to include in topology.json"
-                find . -name '*-relay.json' -printf '%f\t%p\n' | sort -k1 -n | cut -d$'\t' -f2 | tr '\n' '\0' | xargs -r0 cat \
-                  | jq -n '. + [inputs]' | jq '{ Producers : . }' > topology.json
-                mkdir -p relays
-                mv topology.json relays/topology.json
-                rm *-relay.json
-              else
-                echo "No relays found!"
-              fi
-            }
+              # Wait for the node socket to become group writeable
+              while true; do
+                [ "$(find "$SOCKET" -type s -perm -g+w)" = "$SOCKET" ] && sleep 2 && break
+                echo "Waiting for cardano node socket group write permission at $SOCKET for 2 seconds..."
+                sleep 2
+              done
+            '';
 
-            while true
-            do
-              run
-              sleep 3600
-            done
-          '';
+            script = ''
+              set -uo pipefail
 
-          # If the service gets caught in a runtime looping error,
-          # where it either never successfully starts but keeps trying,
-          # or starts successfully but never finishes,
-          # the alerts for registered-relays-exporter will catch it.
-          startLimitIntervalSec = 0;
-          serviceConfig = {
-            User = "registered-relays-dump";
-            SupplementaryGroups = "cardano-node";
-            StateDirectory = "registered-relays-dump";
-            Restart = "always";
-            RestartSec = "30s";
+              pingAddr() {
+                index=$1
+                addr=$2
+                port=$3
+                allAddresses=$(dig +nocookie +short -q "$addr" A || :)
+                if [ -z "$allAddresses" ]; then
+                  allAddresses=$addr
+                elif [ "$allAddresses" = ";; connection timed out; no servers could be reached" ]; then
+                  allAddresses=$addr
+                fi
+
+                while IFS= read -r ip; do
+                  set +e
+                  PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $CARDANO_NODE_NETWORK_ID -c 1 -q --json)"
+                  res=$?
+                  if [ $res -eq 0 ]; then
+                    echo $PING | jq -c > /dev/null 2>&1
+                    res=$?
+                  fi
+                  set -e
+                  if [ $res -eq 0 ]; then
+                    >&2 echo "Successfully pinged $addr:$port (on ip: $ip)"
+                    set +e
+                    geoinfo=$(curl -s --retry 3 http://ip-api.com/json/$ip?fields=1105930)
+                    res=$?
+                    set -e
+                    if [ $res -eq 0 ]; then
+                      status=$(echo "$geoinfo" | jq -r '.status')
+                      if [ "$status" == "fail" ]; then
+                        message=$(echo "$geoinfo" | jq -r '.message')
+                        >&2 echo "Failed to retrieved goip info for $ip: $message"
+                        exit 1
+                      fi
+                      continent=$(echo "$geoinfo" | jq -r '.continent')
+                      country_code=$(echo "$geoinfo" | jq -r '.countryCode')
+                      if [ "$country_code" == "US" ]; then
+                        state=$(echo $geoinfo | jq -r '.regionName')
+                        if [ "$state" == "Washington, D.C." ]; then
+                          state="District of Columbia"
+                        fi
+                      else
+                        state=$country_code
+                      fi
+                      jq -c --arg addr "$addr" --arg port "$port" \
+                        --arg continent "$continent" --arg state "$state" \
+                        '{addr: $addr, port: $port|tonumber, continent: $continent, state: $state}' \
+                        <<< '{}' \
+                        > $index-relay.json
+                      break
+                    else
+                      >&2 echo "Failed to retrieved goip info for $ip"
+                      exit $res
+                    fi
+                  else
+                    >&2 echo "failed to cardano-cli ping $addr:$port (on ip: $ip)"
+                  fi
+                done <<< "$allAddresses"
+              }
+
+              run() {
+                epoch=$(cardano-cli query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
+                db_sync_epoch=$(psql -X -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
+
+                if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then
+                  >&2 echo "cardano-db-sync has not caught up with current epoch yet. Skipping."
+                  exit 0
+                fi
+
+                excludeList="$(sort ${relays_exclude_file})"
+                cd $STATE_DIRECTORY
+                rm -f *-relay.json
+
+                i=0
+                for r in $(psql -X -U ${cfgSmash.postgres.user} -t < ${extract_relays_sql} | jq -c '.[]'); do
+                  addr=$(echo "$r" | jq -r '.addr')
+                  port=$(echo "$r" | jq -r '.port')
+                  resolved=$(dig +nocookie +short -q "$addr" A || :)
+
+                  if [ "$resolved" = ";; connection timed out; no servers could be reached" ]; then
+                    sanitizedResolved=""
+                  else
+                    sanitizedResolved="$resolved"
+                  fi
+
+                  allAddresses=$addr$'\n'$sanitizedResolved
+                  excludedAddresses=$(comm -12 <(echo -e "$allAddresses" | sort) <(echo "$excludeList"))
+                  nbExcludedAddresses=$(echo $excludedAddresses | wc -w)
+
+                  if [[ $nbExcludedAddresses == 0 ]]; then
+                    ((i+=1))
+                    pingAddr $i "$addr" "$port" &
+                    sleep 1.5 # Due to rate limiting on ip-api.com
+                  else
+                    >&2 echo "$addr excluded due to dns name or IPs being in exclude list:\n$excludedAddresses"
+                  fi
+                done
+
+                wait
+
+                if test -n "$(find . -maxdepth 1 -name '*-relay.json' -print -quit)"; then
+                  echo "Found a total of $(find . -name '*-relay.json' -printf '.' | wc -m) relays to include in topology.json"
+                  find . -name '*-relay.json' -printf '%f\t%p\n' | sort -k1 -n | cut -d$'\t' -f2 | tr '\n' '\0' | xargs -r0 cat \
+                    | jq -n '. + [inputs]' | jq '{ Producers : . }' > topology.json
+                  mkdir -p relays
+                  mv topology.json relays/topology.json
+                  rm *-relay.json
+                else
+                  echo "No relays found!"
+                fi
+              }
+
+              while true
+              do
+                run
+                sleep 3600
+              done
+            '';
+
+            # If the service gets caught in a runtime looping error,
+            # where it either never successfully starts but keeps trying,
+            # or starts successfully but never finishes,
+            # the alerts for registered-relays-exporter will catch it.
+            startLimitIntervalSec = 0;
+            serviceConfig = {
+              User = "registered-relays-dump";
+              SupplementaryGroups = "cardano-node";
+              StateDirectory = "registered-relays-dump";
+              Restart = "always";
+              RestartSec = "30s";
+            };
+          };
+
+          registered-relays-exporter = {
+            wantedBy = ["multi-user.target"];
+            path = with pkgs; [coreutils netcat];
+            script = ''
+              IP="127.0.0.1"
+              PORT="${toString cfg.registeredRelaysExporterPort}"
+              FILE="/var/lib/registered-relays-dump/relays/topology.json"
+
+              echo "Serving registered relays dump metrics for file $FILE at $IP:$PORT..."
+
+              while true; do
+                MTIME=$(date -r "$FILE" +%s || echo -n "0")
+                BYTES=$(stat -c %s "$FILE" || echo -n "0")
+                MTIME_DESC="# TYPE registered_relays_dump_mtime gauge"
+                MTIME_SERIES="registered_relays_dump_mtime $MTIME"
+                SIZE_DESC="# TYPE registered_relays_dump_bytes gauge"
+                SIZE_SERIES="registered_relays_dump_bytes $BYTES"
+                echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\n\r\n$MTIME_DESC\n$MTIME_SERIES\n$SIZE_DESC\n$SIZE_SERIES" | nc -W 1 -l "$IP" "$PORT"
+                echo "$MTIME_SERIES"
+                echo "$SIZE_SERIES"
+              done
+            '';
+
+            serviceConfig = {
+              Restart = "always";
+              RestartSec = "30s";
+            };
           };
         };
 
@@ -420,35 +453,6 @@ flake: {
         };
 
         users.groups.registered-relays-dump = {};
-
-        systemd.services.registered-relays-exporter = {
-          wantedBy = ["multi-user.target"];
-          path = with pkgs; [coreutils netcat];
-          script = ''
-            IP="127.0.0.1"
-            PORT="${toString cfg.registeredRelaysExporterPort}"
-            FILE="/var/lib/registered-relays-dump/relays/topology.json"
-
-            echo "Serving registered relays dump metrics for file $FILE at $IP:$PORT..."
-
-            while true; do
-              MTIME=$(date -r "$FILE" +%s || echo -n "0")
-              BYTES=$(stat -c %s "$FILE" || echo -n "0")
-              MTIME_DESC="# TYPE registered_relays_dump_mtime gauge"
-              MTIME_SERIES="registered_relays_dump_mtime $MTIME"
-              SIZE_DESC="# TYPE registered_relays_dump_bytes gauge"
-              SIZE_SERIES="registered_relays_dump_bytes $BYTES"
-              echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\n\r\n$MTIME_DESC\n$MTIME_SERIES\n$SIZE_DESC\n$SIZE_SERIES" | nc -W 1 -l "$IP" "$PORT"
-              echo "$MTIME_SERIES"
-              echo "$SIZE_SERIES"
-            done
-          '';
-
-          serviceConfig = {
-            Restart = "always";
-            RestartSec = "30s";
-          };
-        };
 
         networking.firewall.allowedTCPPorts = mkIf cfg.openFirewallNginx [80 443];
 

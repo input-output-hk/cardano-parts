@@ -114,29 +114,35 @@
           '';
         };
 
-        # Profile cardano-postgres is tuned for 70% of RAM, leaving ~20% for node
-        # and 10% for other services (dbsync smash) and overhead.
-        services.cardano-node.totalMaxHeapSizeMiB = cfg.nodeRamAvailableMiB;
-        services.cardano-postgres.ramAvailableMiB = cfg.postgresRamAvailableMiB;
+        services = {
+          # Profile cardano-postgres is tuned for 70% of RAM, leaving ~20% for node
+          # and 10% for other services (dbsync smash) and overhead.
+          cardano-node.totalMaxHeapSizeMiB = cfg.nodeRamAvailableMiB;
+          cardano-postgres.ramAvailableMiB = cfg.postgresRamAvailableMiB;
 
-        services.cardano-db-sync = {
-          enable = true;
-          package = cardano-db-sync;
-          dbSyncPkgs = cardano-db-sync-pkgs;
+          cardano-db-sync = {
+            enable = true;
+            package = cardano-db-sync;
+            dbSyncPkgs = cardano-db-sync-pkgs;
 
-          cluster = environmentName;
-          environment = environmentConfig;
-          socketPath = nodeCfg.socketPath 0;
-          explorerConfig = environmentConfig.dbSyncConfig // {PrometheusPort = cardanoDbSyncPrometheusExporterPort;};
-          logConfig = {};
-          postgres.database = "cexplorer";
+            cluster = environmentName;
+            environment = environmentConfig;
+            socketPath = nodeCfg.socketPath 0;
+            explorerConfig = environmentConfig.dbSyncConfig // {PrometheusPort = cardanoDbSyncPrometheusExporterPort;};
+            logConfig = {};
+            postgres.database = "cexplorer";
+          };
         };
 
         # Ensure access to the cardano-node socket
-        users.groups.cardano-db-sync = {};
-        users.users.cardano-db-sync.extraGroups = ["cardano-node"];
-        users.users.cardano-db-sync.group = "cardano-db-sync";
-        users.users.cardano-db-sync.isSystemUser = true;
+        users = {
+          groups.cardano-db-sync = {};
+          users.cardano-db-sync = {
+            extraGroups = ["cardano-node"];
+            group = "cardano-db-sync";
+            isSystemUser = true;
+          };
+        };
       };
     });
 }

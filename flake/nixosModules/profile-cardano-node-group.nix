@@ -256,9 +256,13 @@
           }) {}
         iRange;
 
-      users.groups.cardano-node = {};
-      users.users.cardano-node.group = "cardano-node";
-      users.users.cardano-node.isSystemUser = true;
+      users = {
+        groups.cardano-node = {};
+        users.cardano-node = {
+          group = "cardano-node";
+          isSystemUser = true;
+        };
+      };
 
       assertions = [
         {

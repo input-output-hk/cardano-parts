@@ -204,76 +204,95 @@ flake: {
       };
 
       config = {
-        systemd.services.postgresql.postStart = mkAfter ''
-          # For postgres >= 15
-          $PSQL -tA ${cfgSrv.postgres.database} -c 'GRANT ALL ON SCHEMA public TO ${cfgSrv.postgres.user}'
-        '';
-
-        services.postgresql = {
-          ensureDatabases = ["${cfgSrv.postgres.database}"];
-          ensureUsers = [
-            {
-              name = "${cfgSrv.postgres.user}";
-              ensurePermissions."DATABASE ${cfgSrv.postgres.database}" = "ALL PRIVILEGES";
-            }
-          ];
-          identMap = ''
-            metadata-users root ${cfgSrv.postgres.user}
-            metadata-users ${cfgSrv.user} ${cfgSrv.postgres.user}
-            metadata-users ${cfgHook.user} ${cfgSrv.postgres.user}
-            metadata-users ${cfgSync.user} ${cfgSrv.postgres.user}
-            metadata-users postgres postgres
+        systemd.services = {
+          postgresql.postStart = mkAfter ''
+            # For postgres >= 15
+            $PSQL -tA ${cfgSrv.postgres.database} -c 'GRANT ALL ON SCHEMA public TO ${cfgSrv.postgres.user}'
           '';
-          authentication = ''
-            local all all ident map=metadata-users
-          '';
-        };
 
-        # Tune the amount of ram available to postgres
-        services.cardano-postgres.ramAvailableMiB = cfg.postgresRamAvailableMiB;
+          # Disallow metadata-server to restart more than 3 times within a 30 minute window
+          # This ensures the service stops and an alert will get sent if there is a persistent restart issue
+          # This also allows for some additional startup time before failure and restart
+          #
+          # If metadata-server fails and the service needs to be restarted manually before the 30 min window ends, run:
+          # systemctl reset-failed metadata-server && systemctl start metadata-server
+          metadata-server = {
+            environment.GHCRTS = "-M${toString (roundFloat cfg.metadataRamAvailableMiB)}M";
+            startLimitIntervalSec = 1800;
+            startLimitBurst = 3;
 
-        # Disallow metadata-server to restart more than 3 times within a 30 minute window
-        # This ensures the service stops and an alert will get sent if there is a persistent restart issue
-        # This also allows for some additional startup time before failure and restart
-        #
-        # If metadata-server fails and the service needs to be restarted manually before the 30 min window ends, run:
-        # systemctl reset-failed metadata-server && systemctl start metadata-server
-        systemd.services.metadata-server = {
-          environment.GHCRTS = "-M${toString (roundFloat cfg.metadataRamAvailableMiB)}M";
-          startLimitIntervalSec = 1800;
-          startLimitBurst = 3;
+            serviceConfig = {
+              Restart = "always";
+              RestartSec = "30s";
 
-          serviceConfig = {
-            Restart = "always";
-            RestartSec = "30s";
+              # Limit memory and runtime until a memory leak is addressed
+              MemoryMax = "${toString (128 + (roundFloat cfg.metadataRamAvailableMiB))}M";
+              RuntimeMaxSec = mkIf (cfg.metadataRuntimeMaxSec != null) cfg.metadataRuntimeMaxSec;
+            };
+          };
 
-            # Limit memory and runtime until a memory leak is addressed
-            MemoryMax = "${toString (128 + (roundFloat cfg.metadataRamAvailableMiB))}M";
-            RuntimeMaxSec = mkIf (cfg.metadataRuntimeMaxSec != null) cfg.metadataRuntimeMaxSec;
+          # See comment above for metadata-server regarding restarts; same applies for metadata-webhook service
+          metadata-webhook = {
+            startLimitIntervalSec = 1800;
+            startLimitBurst = 3;
+
+            serviceConfig = {
+              Restart = "always";
+              RestartSec = "30s";
+            };
+          };
+
+          nginx.serviceConfig = {
+            LimitNOFILE = 65535;
+            LogNamespace = "nginx";
+          };
+
+          metadata-webhook = {
+            after = ["sops-secrets.service"];
+            wants = ["sops-secrets.service"];
+            partOf = ["sops-secrets.service"];
           };
         };
 
-        services.metadata-server = {
-          enable = true;
-          package = metadata-server;
-          port = cfg.metadataServerPort;
-          postgres.numConnections = cpuCount;
+        services = {
+          postgresql = {
+            ensureDatabases = ["${cfgSrv.postgres.database}"];
+            ensureUsers = [
+              {
+                name = "${cfgSrv.postgres.user}";
+                ensurePermissions."DATABASE ${cfgSrv.postgres.database}" = "ALL PRIVILEGES";
+              }
+            ];
+            identMap = ''
+              metadata-users root ${cfgSrv.postgres.user}
+              metadata-users ${cfgSrv.user} ${cfgSrv.postgres.user}
+              metadata-users ${cfgHook.user} ${cfgSrv.postgres.user}
+              metadata-users ${cfgSync.user} ${cfgSrv.postgres.user}
+              metadata-users postgres postgres
+            '';
+            authentication = ''
+              local all all ident map=metadata-users
+            '';
+          };
+
+          # Tune the amount of ram available to postgres
+          cardano-postgres.ramAvailableMiB = cfg.postgresRamAvailableMiB;
+
+          metadata-server = {
+            enable = true;
+            package = metadata-server;
+            port = cfg.metadataServerPort;
+            postgres.numConnections = cpuCount;
+          };
         };
 
         # For the webhook service, a non-dynamic user is required for user and group file assignment to the sops secret,
         # which gets created before a dynamic user and group is available:
-        users.groups.metadata-webhook = {};
-        users.users.metadata-webhook.group = "metadata-webhook";
-        users.users.metadata-webhook.isSystemUser = true;
-
-        # See comment above for metadata-server regarding restarts; same applies for metadata-webhook service
-        systemd.services.metadata-webhook = {
-          startLimitIntervalSec = 1800;
-          startLimitBurst = 3;
-
-          serviceConfig = {
-            Restart = "always";
-            RestartSec = "30s";
+        users = {
+          groups.metadata-webhook = {};
+          users.metadata-webhook = {
+            group = "metadata-webhook";
+            isSystemUser = true;
           };
         };
 
@@ -512,11 +531,6 @@ flake: {
           };
         };
 
-        systemd.services.nginx.serviceConfig = {
-          LimitNOFILE = 65535;
-          LogNamespace = "nginx";
-        };
-
         services.prometheus.exporters = {
           varnish = {
             enable = true;
@@ -524,12 +538,6 @@ flake: {
             port = cfg.varnishExporterPort;
             group = "varnish";
           };
-        };
-
-        systemd.services.metadata-webhook = {
-          after = ["sops-secrets.service"];
-          wants = ["sops-secrets.service"];
-          partOf = ["sops-secrets.service"];
         };
 
         sops.secrets = mkSopsSecret {

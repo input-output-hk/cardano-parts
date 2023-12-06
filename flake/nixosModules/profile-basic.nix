@@ -94,11 +94,7 @@
     };
 
     services = {
-      chrony = {
-        enable = true;
-        extraConfig = "rtcsync";
-      };
-
+      chrony.enable = true;
       cron.enable = true;
       fail2ban.enable = true;
       openssh = {

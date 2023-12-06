@@ -171,8 +171,8 @@ in {
 
       envCfgs = cardanoLib: generateStaticHTMLConfigs pkgs cardanoLib cardanoLib.environments;
     in {
-      config = {
-        packages.job-gen-env-config = let
+      config.packages = {
+        job-gen-env-config = let
           configDir = runCommand "configDir" {} ''
             mkdir -p $out
             cp -r ${envCfgs cardanoLib} $out/environments
@@ -193,7 +193,7 @@ in {
             '';
           };
 
-        packages.job-gen-custom-node-config = writeShellApplication {
+        job-gen-custom-node-config = writeShellApplication {
           name = "job-gen-custom-node-config";
           runtimeInputs = stdPkgs;
           text = ''
@@ -293,7 +293,7 @@ in {
           '';
         };
 
-        packages.job-create-stake-pool-keys = writeShellApplication {
+        job-create-stake-pool-keys = writeShellApplication {
           name = "job-create-stake-pools";
           runtimeInputs = stdPkgs ++ [cardano-address];
           text = ''
@@ -424,7 +424,7 @@ in {
           '';
         };
 
-        packages.job-delegate-rewards-stake-key = writeShellApplication {
+        job-delegate-rewards-stake-key = writeShellApplication {
           name = "job-delegate-rewards-stake-key";
           runtimeInputs = stdPkgs;
           text = ''
@@ -521,7 +521,7 @@ in {
           '';
         };
 
-        packages.job-register-stake-pools = writeShellApplication {
+        job-register-stake-pools = writeShellApplication {
           name = "job-register-stake-pools";
           runtimeInputs = stdPkgs;
           text = ''
@@ -682,7 +682,7 @@ in {
           '';
         };
 
-        packages.job-rotate-kes-pools = writeShellApplication {
+        job-rotate-kes-pools = writeShellApplication {
           name = "job-rotate-kes-pools";
           runtimeInputs = stdPkgs;
           text = ''
@@ -755,7 +755,7 @@ in {
           '';
         };
 
-        packages.job-move-genesis-utxo = writeShellApplication {
+        job-move-genesis-utxo = writeShellApplication {
           name = "job-move-genesis-utxo";
           runtimeInputs = stdPkgs;
           text = ''
@@ -815,7 +815,7 @@ in {
           '';
         };
 
-        packages.job-update-proposal-generic = writeShellApplication {
+        job-update-proposal-generic = writeShellApplication {
           name = "job-update-proposal-generic";
           runtimeInputs = stdPkgs;
           text = ''
@@ -849,7 +849,7 @@ in {
           '';
         };
 
-        packages.job-update-proposal-d = writeShellApplication {
+        job-update-proposal-d = writeShellApplication {
           name = "job-update-proposal-d";
           runtimeInputs = stdPkgs;
           text = ''
@@ -879,7 +879,7 @@ in {
           '';
         };
 
-        packages.job-update-proposal-hard-fork = writeShellApplication {
+        job-update-proposal-hard-fork = writeShellApplication {
           name = "job-update-proposal-hard-fork";
           runtimeInputs = stdPkgs;
           text = ''
@@ -910,7 +910,7 @@ in {
           '';
         };
 
-        packages.job-update-proposal-cost-model = writeShellApplication {
+        job-update-proposal-cost-model = writeShellApplication {
           name = "job-update-proposal-cost-model";
           runtimeInputs = stdPkgs;
           text = ''
@@ -941,7 +941,7 @@ in {
           '';
         };
 
-        packages.job-update-proposal-mainnet-params = writeShellApplication {
+        job-update-proposal-mainnet-params = writeShellApplication {
           name = "job-update-proposal-mainnet-params";
           runtimeInputs = stdPkgs;
           text = ''
@@ -973,7 +973,7 @@ in {
           '';
         };
 
-        packages.job-submit-gov-action = writeShellApplication {
+        job-submit-gov-action = writeShellApplication {
           name = "job-submit-gov-action";
           runtimeInputs = stdPkgs;
           text = ''
@@ -1065,7 +1065,7 @@ in {
           '';
         };
 
-        packages.job-submit-vote = writeShellApplication {
+        job-submit-vote = writeShellApplication {
           name = "job-submit-vote";
           runtimeInputs = stdPkgs;
           text = ''
@@ -1158,7 +1158,7 @@ in {
           '';
         };
 
-        packages.job-register-drep = writeShellApplication {
+        job-register-drep = writeShellApplication {
           name = "job-register-drep";
           runtimeInputs = stdPkgs;
           text = ''
@@ -1262,7 +1262,7 @@ in {
           '';
         };
 
-        packages.job-register-cc = writeShellApplication {
+        job-register-cc = writeShellApplication {
           name = "job-register-cc";
           runtimeInputs = with pkgs; [coreutils jq];
           text = ''
@@ -1327,7 +1327,7 @@ in {
           '';
         };
 
-        packages.job-gen-keys-cc = writeShellApplication {
+        job-gen-keys-cc = writeShellApplication {
           name = "job-register-cc";
           runtimeInputs = with pkgs; [coreutils jq];
           text = ''
@@ -1357,7 +1357,7 @@ in {
           '';
         };
 
-        packages.job-delegate-drep = writeShellApplication {
+        job-delegate-drep = writeShellApplication {
           name = "job-delegate-drep";
           runtimeInputs = stdPkgs;
           text = ''

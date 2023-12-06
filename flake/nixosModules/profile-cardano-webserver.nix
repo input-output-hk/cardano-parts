@@ -144,86 +144,171 @@ flake: {
       };
 
       config = {
-        services.varnish = {
-          enable = true;
-          extraCommandLine = "-t ${toString (cfg.varnishTtl * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
-          config = ''
-            vcl 4.1;
+        services = {
+          varnish = {
+            enable = true;
+            extraCommandLine = "-t ${toString (cfg.varnishTtl * 24 * 3600)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
+            config = ''
+              vcl 4.1;
 
-            import std;
+              import std;
 
-            backend default {
-              .host = "127.0.0.1";
-              .port = "8080";
-            }
+              backend default {
+                .host = "127.0.0.1";
+                .port = "8080";
+              }
 
-            acl purge {
-              "localhost";
-              "127.0.0.1";
-            }
+              acl purge {
+                "localhost";
+                "127.0.0.1";
+              }
 
-            sub vcl_recv {
-              unset req.http.x-cache;
+              sub vcl_recv {
+                unset req.http.x-cache;
 
-              ${optionalString cfg.varnishIgnoreCookies "unset req.http.cookie;"}
+                ${optionalString cfg.varnishIgnoreCookies "unset req.http.cookie;"}
 
-              # Allow PURGE from localhost
-              if (req.method == "PURGE") {
-                if (!std.ip(req.http.X-Real-Ip, "0.0.0.0") ~ purge) {
-                  return(synth(405,"Not Allowed"));
+                # Allow PURGE from localhost
+                if (req.method == "PURGE") {
+                  if (!std.ip(req.http.X-Real-Ip, "0.0.0.0") ~ purge) {
+                    return(synth(405,"Not Allowed"));
+                  }
+
+                  # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
+                  # along with an allow listed X-Real-Ip header.
+                  return(purge);
                 }
-
-                # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
-                # along with an allow listed X-Real-Ip header.
-                return(purge);
               }
-            }
 
-            sub vcl_hit {
-              set req.http.x-cache = "hit";
-            }
-
-            sub vcl_miss {
-              set req.http.x-cache = "miss";
-            }
-
-            sub vcl_pass {
-              set req.http.x-cache = "pass";
-            }
-
-            sub vcl_pipe {
-              set req.http.x-cache = "pipe";
-            }
-
-            sub vcl_synth {
-              set req.http.x-cache = "synth synth";
-              set resp.http.x-cache = req.http.x-cache;
-            }
-
-            sub vcl_deliver {
-              if (obj.uncacheable) {
-                set req.http.x-cache = req.http.x-cache + " uncacheable";
+              sub vcl_hit {
+                set req.http.x-cache = "hit";
               }
-              else {
-                set req.http.x-cache = req.http.x-cache + " cached";
-              }
-              set resp.http.x-cache = req.http.x-cache;
-            }
 
-            sub vcl_backend_response {
-              if (bereq.uncacheable) {
+              sub vcl_miss {
+                set req.http.x-cache = "miss";
+              }
+
+              sub vcl_pass {
+                set req.http.x-cache = "pass";
+              }
+
+              sub vcl_pipe {
+                set req.http.x-cache = "pipe";
+              }
+
+              sub vcl_synth {
+                set req.http.x-cache = "synth synth";
+                set resp.http.x-cache = req.http.x-cache;
+              }
+
+              sub vcl_deliver {
+                if (obj.uncacheable) {
+                  set req.http.x-cache = req.http.x-cache + " uncacheable";
+                }
+                else {
+                  set req.http.x-cache = req.http.x-cache + " cached";
+                }
+                set resp.http.x-cache = req.http.x-cache;
+              }
+
+              sub vcl_backend_response {
+                if (bereq.uncacheable) {
+                  return (deliver);
+                }
+                if (beresp.status == 404) {
+                  set beresp.ttl = 1h;
+                }
+                call vcl_beresp_stale;
+                call vcl_beresp_cookie;
+                call vcl_beresp_control;
+                call vcl_beresp_vary;
                 return (deliver);
               }
-              if (beresp.status == 404) {
-                set beresp.ttl = 1h;
+            '';
+          };
+
+          nginx-vhost-exporter.enable = true;
+
+          nginx = {
+            enable = true;
+            eventsConfig = "worker_connections 4096;";
+            appendConfig = "worker_rlimit_nofile 16384;";
+            recommendedGzipSettings = true;
+            recommendedOptimisation = true;
+            recommendedProxySettings = true;
+            commonHttpConfig = ''
+              log_format x-fwd '$remote_addr - $remote_user [$time_local] '
+                               '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
+                               '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+
+              access_log syslog:server=unix:/dev/log x-fwd;
+              limit_req_zone $binary_remote_addr zone=perIP:100m rate=1r/s;
+              limit_req_status 429;
+
+              map $http_accept_language $lang {
+                      default en;
+                      ~de de;
+                      ~ja ja;
               }
-              call vcl_beresp_stale;
-              call vcl_beresp_cookie;
-              call vcl_beresp_control;
-              call vcl_beresp_vary;
-              return (deliver);
-            }
-          '';
+            '';
+
+            virtualHosts = let
+              backendListen = [
+                {
+                  addr = "127.0.0.1";
+                  port = 8080;
+                }
+              ];
+
+              extraVhostConfig = {
+                locations."/favicon.ico".extraConfig = ''
+                  return 204;
+                  access_log off;
+                  log_not_found off;
+                '';
+              };
+
+              nameCheck = map (name:
+                if elem name ["healthCheck" "tlsTerminator"]
+                then abort ''ABORT: virtualhost name: "${name}" is reserved.''
+                else name);
+
+              vhostsDirList = attrNames (filterAttrs (_: v: v == "directory" || v == "symlink") (readDir cfg.vhostsDir));
+
+              vhosts = foldl' (acc: vhostName:
+                recursiveUpdate acc {
+                  ${vhostName} =
+                    recursiveUpdate {
+                      listen = backendListen;
+                      locations."/".root = pkgs.runCommand vhostName {} "mkdir $out; cp -LR ${cfg.vhostsDir}/${vhostName}/* $out/";
+                    }
+                    extraVhostConfig;
+                }) {}
+              (nameCheck vhostsDirList);
+            in
+              {
+                tlsTerminator =
+                  recursiveUpdate {
+                    inherit (cfg) serverName;
+                    serverAliases = cfg.serverAliases ++ (unique (sort (a: b: a < b) vhostsDirList));
+
+                    default = true;
+                    enableACME = cfg.enableAcme;
+                    forceSSL = cfg.enableAcme;
+                    locations."/".proxyPass = "http://127.0.0.1:6081";
+                  }
+                  extraVhostConfig;
+
+                healthCheck =
+                  recursiveUpdate {
+                    listen = backendListen;
+                    default = true;
+                    locations."/".root = pkgs.runCommand "health-check" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';
+                  }
+                  extraVhostConfig;
+              }
+              // vhosts;
+          };
         };
 
         networking.firewall.allowedTCPPorts = mkIf cfg.openFirewallNginx [80 443];
@@ -237,89 +322,6 @@ flake: {
               then "https://acme-v02.api.letsencrypt.org/directory"
               else "https://acme-staging-v02.api.letsencrypt.org/directory";
           };
-        };
-
-        services.nginx-vhost-exporter.enable = true;
-
-        services.nginx = {
-          enable = true;
-          eventsConfig = "worker_connections 4096;";
-          appendConfig = "worker_rlimit_nofile 16384;";
-          recommendedGzipSettings = true;
-          recommendedOptimisation = true;
-          recommendedProxySettings = true;
-          commonHttpConfig = ''
-            log_format x-fwd '$remote_addr - $remote_user [$time_local] '
-                             '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
-                             '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
-
-            access_log syslog:server=unix:/dev/log x-fwd;
-            limit_req_zone $binary_remote_addr zone=perIP:100m rate=1r/s;
-            limit_req_status 429;
-
-            map $http_accept_language $lang {
-                    default en;
-                    ~de de;
-                    ~ja ja;
-            }
-          '';
-
-          virtualHosts = let
-            backendListen = [
-              {
-                addr = "127.0.0.1";
-                port = 8080;
-              }
-            ];
-
-            extraVhostConfig = {
-              locations."/favicon.ico".extraConfig = ''
-                return 204;
-                access_log off;
-                log_not_found off;
-              '';
-            };
-
-            nameCheck = map (name:
-              if elem name ["healthCheck" "tlsTerminator"]
-              then abort ''ABORT: virtualhost name: "${name}" is reserved.''
-              else name);
-
-            vhostsDirList = attrNames (filterAttrs (_: v: v == "directory" || v == "symlink") (readDir cfg.vhostsDir));
-
-            vhosts = foldl' (acc: vhostName:
-              recursiveUpdate acc {
-                ${vhostName} =
-                  recursiveUpdate {
-                    listen = backendListen;
-                    locations."/".root = pkgs.runCommand vhostName {} "mkdir $out; cp -LR ${cfg.vhostsDir}/${vhostName}/* $out/";
-                  }
-                  extraVhostConfig;
-              }) {}
-            (nameCheck vhostsDirList);
-          in
-            {
-              tlsTerminator =
-                recursiveUpdate {
-                  inherit (cfg) serverName;
-                  serverAliases = cfg.serverAliases ++ (unique (sort (a: b: a < b) vhostsDirList));
-
-                  default = true;
-                  enableACME = cfg.enableAcme;
-                  forceSSL = cfg.enableAcme;
-                  locations."/".proxyPass = "http://127.0.0.1:6081";
-                }
-                extraVhostConfig;
-
-              healthCheck =
-                recursiveUpdate {
-                  listen = backendListen;
-                  default = true;
-                  locations."/".root = pkgs.runCommand "health-check" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';
-                }
-                extraVhostConfig;
-            }
-            // vhosts;
         };
 
         systemd.services.nginx.serviceConfig = {
