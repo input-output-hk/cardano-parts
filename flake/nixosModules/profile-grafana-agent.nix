@@ -93,9 +93,13 @@ flake: {
           };
         };
 
-        users.groups.grafana-agent = {};
-        users.users.grafana-agent.group = "grafana-agent";
-        users.users.grafana-agent.isSystemUser = true;
+        users = {
+          groups.grafana-agent = {};
+          users.grafana-agent = {
+            group = "grafana-agent";
+            isSystemUser = true;
+          };
+        };
 
         sops.secrets =
           mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-url")

@@ -61,7 +61,6 @@ in
         withLocal = withSystem system;
         treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
         isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
-        nushellPkg = pkgs.nushell.override {additionalFeatures = p: p ++ ["dataframe"];};
 
         globalDefault = isGlobal: default:
           if isGlobal
@@ -247,11 +246,13 @@ in
                     gawk
                     gnugrep
                     gnused
-                    # Need jq 1.7 for rc != 0 on empty file or stream key test
-                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.jq
+                    # Ensure we use jq 1.7 for rc != 0 on empty file or stream test
+                    # if the downstream repo is pinned to a nixpkgs <= 23.05
+                    localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
                     just
                     moreutils
-                    nushellPkg
+                    # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a non-existent pkg failure
+                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellFull
                     ripgrep
                     statix
                     xxd
@@ -279,7 +280,8 @@ in
                     ++ (with pkgs;
                       with cfgPkgs; [
                         b2sum
-                        haskellPackages.cbor-tool
+                        # Currently marked as broken in nixpkgs-23.11 and nixpkgs-unstable
+                        # haskellPackages.cbor-tool
                         bech32
                         cardano-address
                         cardano-cli
@@ -316,11 +318,11 @@ in
                         mdbook
                         mdbook-kroki-preprocessor
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
+                        opentofu
                         rain
                         sops
                         ssh-config-json
                         ssh-to-age
-                        terraform
                         wireguard-tools
                       ]);
                 };
@@ -371,7 +373,7 @@ in
             (pkgs.writeShellApplication
               {
                 name = "menu-${id}";
-                runtimeInputs = [nushellPkg];
+                runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellFull];
 
                 text = let
                   minWidth =

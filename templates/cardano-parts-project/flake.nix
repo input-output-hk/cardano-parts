@@ -2,9 +2,9 @@
   description = "Cardano New Parts Project";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
+    nixpkgs.follows = "cardano-parts/nixpkgs";
+    nixpkgs-unstable.follows = "cardano-parts/nixpkgs-unstable";
+    flake-parts.follows = "cardano-parts/flake-parts";
     cardano-parts.url = "github:input-output-hk/cardano-parts";
   };
 
@@ -35,6 +35,6 @@
   nixConfig = {
     extra-substituters = ["https://cache.iog.io"];
     extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
-    allow-import-from-derivation = "true";
+    allow-import-from-derivation = true;
   };
 }

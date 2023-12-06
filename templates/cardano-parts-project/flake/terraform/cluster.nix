@@ -89,10 +89,10 @@ in {
       {
         terraform = {
           required_providers = {
-            aws.source = "hashicorp/aws";
-            null.source = "hashicorp/null";
-            local.source = "hashicorp/local";
-            tls.source = "hashicorp/tls";
+            aws.source = "opentofu/aws";
+            null.source = "opentofu/null";
+            local.source = "opentofu/local";
+            tls.source = "opentofu/tls";
           };
 
           backend = {
@@ -111,11 +111,11 @@ in {
         });
 
         # Common parameters:
-        #   data.aws_caller_identity.current.account_id
-        #   data.aws_region.current.name
-        data.aws_caller_identity.current = {};
-        data.aws_region.current = {};
-        data.aws_route53_zone.selected.name = "${cluster.domain}.";
+        data = {
+          aws_caller_identity.current = {};
+          aws_region.current = {};
+          aws_route53_zone.selected.name = "${cluster.domain}.";
+        };
 
         resource = {
           aws_instance = mapNodes (

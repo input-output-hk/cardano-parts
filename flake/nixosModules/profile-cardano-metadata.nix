@@ -204,211 +204,331 @@ flake: {
       };
 
       config = {
-        systemd.services.postgresql.postStart = mkAfter ''
-          # For postgres >= 15
-          $PSQL -tA ${cfgSrv.postgres.database} -c 'GRANT ALL ON SCHEMA public TO ${cfgSrv.postgres.user}'
-        '';
+        systemd.services = {
+          # Disallow metadata-server to restart more than 3 times within a 30 minute window
+          # This ensures the service stops and an alert will get sent if there is a persistent restart issue
+          # This also allows for some additional startup time before failure and restart
+          #
+          # If metadata-server fails and the service needs to be restarted manually before the 30 min window ends, run:
+          # systemctl reset-failed metadata-server && systemctl start metadata-server
+          metadata-server = {
+            environment.GHCRTS = "-M${toString (roundFloat cfg.metadataRamAvailableMiB)}M";
+            startLimitIntervalSec = 1800;
+            startLimitBurst = 3;
 
-        services.postgresql = {
-          ensureDatabases = ["${cfgSrv.postgres.database}"];
-          ensureUsers = [
-            {
-              name = "${cfgSrv.postgres.user}";
-              ensurePermissions."DATABASE ${cfgSrv.postgres.database}" = "ALL PRIVILEGES";
-            }
-          ];
-          identMap = ''
-            metadata-users root ${cfgSrv.postgres.user}
-            metadata-users ${cfgSrv.user} ${cfgSrv.postgres.user}
-            metadata-users ${cfgHook.user} ${cfgSrv.postgres.user}
-            metadata-users ${cfgSync.user} ${cfgSrv.postgres.user}
-            metadata-users postgres postgres
-          '';
-          authentication = ''
-            local all all ident map=metadata-users
-          '';
-        };
+            serviceConfig = {
+              Restart = "always";
+              RestartSec = "30s";
 
-        # Tune the amount of ram available to postgres
-        services.cardano-postgres.ramAvailableMiB = cfg.postgresRamAvailableMiB;
+              # Limit memory and runtime until a memory leak is addressed
+              MemoryMax = "${toString (128 + (roundFloat cfg.metadataRamAvailableMiB))}M";
+              RuntimeMaxSec = mkIf (cfg.metadataRuntimeMaxSec != null) cfg.metadataRuntimeMaxSec;
+            };
+          };
 
-        # Disallow metadata-server to restart more than 3 times within a 30 minute window
-        # This ensures the service stops and an alert will get sent if there is a persistent restart issue
-        # This also allows for some additional startup time before failure and restart
-        #
-        # If metadata-server fails and the service needs to be restarted manually before the 30 min window ends, run:
-        # systemctl reset-failed metadata-server && systemctl start metadata-server
-        systemd.services.metadata-server = {
-          environment.GHCRTS = "-M${toString (roundFloat cfg.metadataRamAvailableMiB)}M";
-          startLimitIntervalSec = 1800;
-          startLimitBurst = 3;
+          # See comment above for metadata-server regarding restarts; same applies for metadata-webhook service
+          metadata-webhook = {
+            startLimitIntervalSec = 1800;
+            startLimitBurst = 3;
 
-          serviceConfig = {
-            Restart = "always";
-            RestartSec = "30s";
+            serviceConfig = {
+              Restart = "always";
+              RestartSec = "30s";
+            };
+          };
 
-            # Limit memory and runtime until a memory leak is addressed
-            MemoryMax = "${toString (128 + (roundFloat cfg.metadataRamAvailableMiB))}M";
-            RuntimeMaxSec = mkIf (cfg.metadataRuntimeMaxSec != null) cfg.metadataRuntimeMaxSec;
+          nginx.serviceConfig = {
+            LimitNOFILE = 65535;
+            LogNamespace = "nginx";
+          };
+
+          metadata-webhook = {
+            after = ["sops-secrets.service"];
+            wants = ["sops-secrets.service"];
+            partOf = ["sops-secrets.service"];
           };
         };
 
-        services.metadata-server = {
-          enable = true;
-          package = metadata-server;
-          port = cfg.metadataServerPort;
-          postgres.numConnections = cpuCount;
-        };
-
-        # For the webhook service, a non-dynamic user is required for user and group file assignment to the sops secret,
-        # which gets created before a dynamic user and group is available:
-        users.groups.metadata-webhook = {};
-        users.users.metadata-webhook.group = "metadata-webhook";
-        users.users.metadata-webhook.isSystemUser = true;
-
-        # See comment above for metadata-server regarding restarts; same applies for metadata-webhook service
-        systemd.services.metadata-webhook = {
-          startLimitIntervalSec = 1800;
-          startLimitBurst = 3;
-
-          serviceConfig = {
-            Restart = "always";
-            RestartSec = "30s";
+        services = {
+          postgresql = {
+            ensureDatabases = ["${cfgSrv.postgres.database}"];
+            ensureUsers = [
+              {
+                name = "${cfgSrv.postgres.user}";
+                ensureDBOwnership = true;
+              }
+            ];
+            identMap = ''
+              metadata-users root ${cfgSrv.postgres.user}
+              metadata-users ${cfgSrv.user} ${cfgSrv.postgres.user}
+              metadata-users ${cfgHook.user} ${cfgSrv.postgres.user}
+              metadata-users ${cfgSync.user} ${cfgSrv.postgres.user}
+              metadata-users postgres postgres
+            '';
+            authentication = ''
+              local all all ident map=metadata-users
+            '';
           };
-        };
 
-        services.metadata-webhook = {
-          enable = true;
-          package = metadata-webhook;
-          user = "metadata-webhook";
-          port = cfg.metadataWebhookPort;
-          environmentFile = "/run/secrets/cardano-metadata-webhook";
-          postgres = {inherit (cfgSrv.postgres) socketdir port database table user numConnections;};
-        };
+          # Tune the amount of ram available to postgres
+          cardano-postgres.ramAvailableMiB = cfg.postgresRamAvailableMiB;
 
-        services.metadata-sync = {
-          enable = true;
-          package = metadata-sync;
+          metadata-server = {
+            enable = true;
+            package = metadata-server;
+            port = cfg.metadataServerPort;
 
-          postgres = {inherit (cfgSrv.postgres) socketdir port database table user numConnections;};
-
-          git = {
-            repositoryUrl = cfg.metadataSyncGitUrl;
-            metadataFolder = cfg.metadataSyncGitMetadataFolder;
+            postgres = {
+              # To utilize ensureDBOwnership in >= nixpkgs 23.11, the database and username must the same.
+              database = "metadata";
+              user = "metadata";
+              numConnections = cpuCount;
+            };
           };
-        };
 
-        services.varnish = {
-          enable = true;
-          extraModules = [pkgs.varnishPackages.modules];
-          extraCommandLine = "-t ${toString (cfg.varnishTtlMinutes * 60)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
-          config = ''
-            vcl 4.1;
+          metadata-webhook = {
+            enable = true;
+            package = metadata-webhook;
+            user = "metadata-webhook";
+            port = cfg.metadataWebhookPort;
+            environmentFile = "/run/secrets/cardano-metadata-webhook";
+            postgres = {inherit (cfgSrv.postgres) socketdir port database table user numConnections;};
+          };
 
-            import std;
-            import bodyaccess;
+          metadata-sync = {
+            enable = true;
+            package = metadata-sync;
 
-            backend default {
-              .host = "127.0.0.1";
-              .port = "${toString cfg.metadataServerPort}";
-            }
+            postgres = {inherit (cfgSrv.postgres) socketdir port database table user numConnections;};
 
-            acl purge {
-              "localhost";
-              "127.0.0.1";
-            }
+            git = {
+              repositoryUrl = cfg.metadataSyncGitUrl;
+              metadataFolder = cfg.metadataSyncGitMetadataFolder;
+            };
+          };
 
-            sub vcl_recv {
-              unset req.http.X-Body-Len;
-              unset req.http.x-cache;
+          varnish = {
+            enable = true;
+            extraModules = [pkgs.varnishPackages.modules];
+            extraCommandLine = "-t ${toString (cfg.varnishTtlMinutes * 60)} -s malloc,${toString (roundFloat cfg.varnishRamAvailableMiB)}M";
+            config = ''
+              vcl 4.1;
 
-              # Allow PURGE from localhost
-              if (req.method == "PURGE") {
-                if (!std.ip(req.http.X-Real-Ip, "0.0.0.0") ~ purge) {
-                  return(synth(405,"Not Allowed"));
-                }
+              import std;
+              import bodyaccess;
 
-                # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
-                # along with an allow listed X-Real-Ip header.
+              backend default {
+                .host = "127.0.0.1";
+                .port = "${toString cfg.metadataServerPort}";
               }
 
-              # Allow POST caching
-              # PURGE also needs to hash the body to obtain a correct object hash to purge
-              if (req.method == "POST" || req.method == "PURGE") {
-                # Caches the body which enables POST retries if needed
-                std.cache_req_body(${toString cfg.varnishMaxPostSizeCachableKiB}KB);
-                set req.http.X-Body-Len = bodyaccess.len_req_body();
+              acl purge {
+                "localhost";
+                "127.0.0.1";
+              }
 
-                if ((std.integer(req.http.X-Body-Len, ${toString (1024 * cfg.varnishMaxPostSizeCachableKiB)}) > ${toString (1024 * cfg.varnishMaxPostSizeBodyKiB)}) ||
-                    (req.http.X-Body-Len == "-1")) {
-                  return(synth(413, "Payload Too Large"));
-                }
+              sub vcl_recv {
+                unset req.http.X-Body-Len;
+                unset req.http.x-cache;
 
+                # Allow PURGE from localhost
                 if (req.method == "PURGE") {
-                  return(purge);
+                  if (!std.ip(req.http.X-Real-Ip, "0.0.0.0") ~ purge) {
+                    return(synth(405,"Not Allowed"));
+                  }
+
+                  # If needed, host can be passed in the curl purge request with -H "Host: $HOST"
+                  # along with an allow listed X-Real-Ip header.
                 }
-                return(hash);
+
+                # Allow POST caching
+                # PURGE also needs to hash the body to obtain a correct object hash to purge
+                if (req.method == "POST" || req.method == "PURGE") {
+                  # Caches the body which enables POST retries if needed
+                  std.cache_req_body(${toString cfg.varnishMaxPostSizeCachableKiB}KB);
+                  set req.http.X-Body-Len = bodyaccess.len_req_body();
+
+                  if ((std.integer(req.http.X-Body-Len, ${toString (1024 * cfg.varnishMaxPostSizeCachableKiB)}) > ${toString (1024 * cfg.varnishMaxPostSizeBodyKiB)}) ||
+                      (req.http.X-Body-Len == "-1")) {
+                    return(synth(413, "Payload Too Large"));
+                  }
+
+                  if (req.method == "PURGE") {
+                    return(purge);
+                  }
+                  return(hash);
+                }
               }
-            }
 
-            sub vcl_hash {
-              # For caching POSTs, hash the body also
-              if (req.http.X-Body-Len) {
-                bodyaccess.hash_req_body();
+              sub vcl_hash {
+                # For caching POSTs, hash the body also
+                if (req.http.X-Body-Len) {
+                  bodyaccess.hash_req_body();
+                }
+                else {
+                  hash_data("");
+                }
               }
-              else {
-                hash_data("");
+
+              sub vcl_hit {
+                set req.http.x-cache = "hit";
               }
-            }
 
-            sub vcl_hit {
-              set req.http.x-cache = "hit";
-            }
-
-            sub vcl_miss {
-              set req.http.x-cache = "miss";
-            }
-
-            sub vcl_pass {
-              set req.http.x-cache = "pass";
-            }
-
-            sub vcl_pipe {
-              set req.http.x-cache = "pipe";
-            }
-
-            sub vcl_synth {
-              set req.http.x-cache = "synth synth";
-              set resp.http.x-cache = req.http.x-cache;
-            }
-
-            sub vcl_deliver {
-              if (obj.uncacheable) {
-                set req.http.x-cache = req.http.x-cache + " uncacheable";
+              sub vcl_miss {
+                set req.http.x-cache = "miss";
               }
-              else {
-                set req.http.x-cache = req.http.x-cache + " cached";
-              }
-              set resp.http.x-cache = req.http.x-cache;
-            }
 
-            sub vcl_backend_fetch {
-              if (bereq.http.X-Body-Len) {
-                set bereq.method = "POST";
+              sub vcl_pass {
+                set req.http.x-cache = "pass";
               }
-            }
 
-            sub vcl_backend_response {
-              if (beresp.status == 404) {
-                set beresp.ttl = ${toString (2 * cfg.varnishTtlMinutes / 3)}m;
+              sub vcl_pipe {
+                set req.http.x-cache = "pipe";
               }
-              call vcl_builtin_backend_response;
-              return (deliver);
-            }
-          '';
+
+              sub vcl_synth {
+                set req.http.x-cache = "synth synth";
+                set resp.http.x-cache = req.http.x-cache;
+              }
+
+              sub vcl_deliver {
+                if (obj.uncacheable) {
+                  set req.http.x-cache = req.http.x-cache + " uncacheable";
+                }
+                else {
+                  set req.http.x-cache = req.http.x-cache + " cached";
+                }
+                set resp.http.x-cache = req.http.x-cache;
+              }
+
+              sub vcl_backend_fetch {
+                if (bereq.http.X-Body-Len) {
+                  set bereq.method = "POST";
+                }
+              }
+
+              sub vcl_backend_response {
+                if (beresp.status == 404) {
+                  set beresp.ttl = ${toString (2 * cfg.varnishTtlMinutes / 3)}m;
+                }
+                call vcl_builtin_backend_response;
+                return (deliver);
+              }
+            '';
+          };
+
+          nginx-vhost-exporter.enable = true;
+
+          nginx = {
+            enable = true;
+            eventsConfig = "worker_connections 8192;";
+            recommendedGzipSettings = true;
+            recommendedOptimisation = true;
+            recommendedProxySettings = true;
+
+            commonHttpConfig = ''
+              log_format x-fwd '$remote_addr - $remote_user $sent_http_x_cache [$time_local] '
+                               '"$scheme://$host" "$request" $status $body_bytes_sent '
+                               '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+
+              access_log syslog:server=unix:/dev/log x-fwd if=$loggable;
+
+              limit_req_zone $binary_remote_addr zone=metadataQueryPerIP:100m rate=10r/s;
+              limit_req_status 429;
+              server_names_hash_bucket_size 128;
+
+              map $sent_http_x_cache $loggable_varnish {
+                default 1;
+                "hit cached" 0;
+              }
+
+              map $request_uri $loggable {
+                /status/format/prometheus 0;
+                default $loggable_varnish;
+              }
+
+              map $request_method $upstream_location {
+                GET     127.0.0.1:6081;
+                default 127.0.0.1:${toString cfg.metadataServerPort};
+              }
+            '';
+
+            virtualHosts = {
+              metadata = {
+                inherit (cfg) serverAliases serverName;
+
+                default = true;
+                enableACME = cfg.enableAcme;
+                forceSSL = cfg.enableAcme;
+
+                locations = let
+                  corsConfig = ''
+                    add_header 'Vary' 'Origin' always;
+                    add_header 'Access-Control-Allow-Methods' 'GET, PATCH, OPTIONS' always;
+                    add_header 'Access-Control-Allow-Headers' 'User-Agent,X-Requested-With,Content-Type' always;
+
+                    if ($request_method = OPTIONS) {
+                      add_header 'Access-Control-Max-Age' 86400;
+                      add_header 'Content-Type' 'text/plain; charset=utf-8';
+                      add_header 'Content-Length' 0;
+                      return 204;
+                    }
+                  '';
+                  serverEndpoints = [
+                    "/metadata/query"
+                    "/metadata"
+                  ];
+                  webhookEndpoints = [
+                    "/webhook"
+                  ];
+                in
+                  {
+                    "/".root = pkgs.runCommand "nginx-root-dir" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';
+                  }
+                  // (recursiveUpdate (genAttrs serverEndpoints (_: {
+                      proxyPass = "http://$upstream_location";
+                      extraConfig = corsConfig;
+                    })) {
+                      # Uncomment to add varnish caching for all request on `/metadata/query` endpoint:
+                      # "/metadata/query".proxyPass = "http://127.0.0.1:6081";
+                      "/metadata/query".extraConfig = ''
+                        limit_req zone=metadataQueryPerIP burst=20 nodelay;
+                        ${corsConfig}
+                      '';
+                      "/metadata/healthcheck".extraConfig = ''
+                        add_header Content-Type text/plain;
+                        return 200 'OK';
+                      '';
+                    })
+                  // (genAttrs webhookEndpoints (p: {
+                    proxyPass = "http://127.0.0.1:${toString cfg.metadataWebhookPort}${p}";
+                    extraConfig = corsConfig;
+                  }));
+              };
+            };
+          };
+
+          prometheus.exporters = {
+            varnish = {
+              enable = true;
+              listenAddress = "127.0.0.1";
+              port = cfg.varnishExporterPort;
+              group = "varnish";
+            };
+          };
         };
 
         networking.firewall.allowedTCPPorts = mkIf cfg.openFirewallNginx [80 443];
+
+        # For the webhook service, a non-dynamic user is required for user and group file assignment to the sops secret,
+        # which gets created before a dynamic user and group is available:
+        users = {
+          groups.metadata-webhook = {};
+          users.metadata-webhook = {
+            group = "metadata-webhook";
+            isSystemUser = true;
+          };
+        };
 
         security.acme = mkIf cfg.enableAcme {
           acceptTerms = true;
@@ -419,117 +539,6 @@ flake: {
               then "https://acme-v02.api.letsencrypt.org/directory"
               else "https://acme-staging-v02.api.letsencrypt.org/directory";
           };
-        };
-
-        services.nginx-vhost-exporter.enable = true;
-
-        services.nginx = {
-          enable = true;
-          eventsConfig = "worker_connections 8192;";
-          recommendedGzipSettings = true;
-          recommendedOptimisation = true;
-          recommendedProxySettings = true;
-
-          commonHttpConfig = ''
-            log_format x-fwd '$remote_addr - $remote_user $sent_http_x_cache [$time_local] '
-                             '"$scheme://$host" "$request" $status $body_bytes_sent '
-                             '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
-
-            access_log syslog:server=unix:/dev/log x-fwd if=$loggable;
-
-            limit_req_zone $binary_remote_addr zone=metadataQueryPerIP:100m rate=10r/s;
-            limit_req_status 429;
-            server_names_hash_bucket_size 128;
-
-            map $sent_http_x_cache $loggable_varnish {
-              default 1;
-              "hit cached" 0;
-            }
-
-            map $request_uri $loggable {
-              /status/format/prometheus 0;
-              default $loggable_varnish;
-            }
-
-            map $request_method $upstream_location {
-              GET     127.0.0.1:6081;
-              default 127.0.0.1:${toString cfg.metadataServerPort};
-            }
-          '';
-
-          virtualHosts = {
-            metadata = {
-              inherit (cfg) serverAliases serverName;
-
-              default = true;
-              enableACME = cfg.enableAcme;
-              forceSSL = cfg.enableAcme;
-
-              locations = let
-                corsConfig = ''
-                  add_header 'Vary' 'Origin' always;
-                  add_header 'Access-Control-Allow-Methods' 'GET, PATCH, OPTIONS' always;
-                  add_header 'Access-Control-Allow-Headers' 'User-Agent,X-Requested-With,Content-Type' always;
-
-                  if ($request_method = OPTIONS) {
-                    add_header 'Access-Control-Max-Age' 86400;
-                    add_header 'Content-Type' 'text/plain; charset=utf-8';
-                    add_header 'Content-Length' 0;
-                    return 204;
-                  }
-                '';
-                serverEndpoints = [
-                  "/metadata/query"
-                  "/metadata"
-                ];
-                webhookEndpoints = [
-                  "/webhook"
-                ];
-              in
-                {
-                  "/".root = pkgs.runCommand "nginx-root-dir" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';
-                }
-                // (recursiveUpdate (genAttrs serverEndpoints (_: {
-                    proxyPass = "http://$upstream_location";
-                    extraConfig = corsConfig;
-                  })) {
-                    # Uncomment to add varnish caching for all request on `/metadata/query` endpoint:
-                    # "/metadata/query".proxyPass = "http://127.0.0.1:6081";
-                    "/metadata/query".extraConfig = ''
-                      limit_req zone=metadataQueryPerIP burst=20 nodelay;
-                      ${corsConfig}
-                    '';
-                    "/metadata/healthcheck".extraConfig = ''
-                      add_header Content-Type text/plain;
-                      return 200 'OK';
-                    '';
-                  })
-                // (genAttrs webhookEndpoints (p: {
-                  proxyPass = "http://127.0.0.1:${toString cfg.metadataWebhookPort}${p}";
-                  extraConfig = corsConfig;
-                }));
-            };
-          };
-        };
-
-        systemd.services.nginx.serviceConfig = {
-          LimitNOFILE = 65535;
-          LogNamespace = "nginx";
-        };
-
-        services.prometheus.exporters = {
-          varnish = {
-            enable = true;
-            listenAddress = "127.0.0.1";
-            port = cfg.varnishExporterPort;
-            group = "varnish";
-          };
-        };
-
-        systemd.services.metadata-webhook = {
-          after = ["sops-secrets.service"];
-          wants = ["sops-secrets.service"];
-          partOf = ["sops-secrets.service"];
         };
 
         sops.secrets = mkSopsSecret {
