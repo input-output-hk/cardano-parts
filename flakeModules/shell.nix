@@ -246,10 +246,13 @@ in
                     gawk
                     gnugrep
                     gnused
-                    jq
+                    # Ensure we use jq 1.7 for rc != 0 on empty file or stream test
+                    # if the downstream repo is pinned to a nixpkgs <= 23.05
+                    localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
                     just
                     moreutils
-                    nushellFull
+                    # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a non-existent pkg failure
+                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellFull
                     ripgrep
                     statix
                     xxd
@@ -370,7 +373,7 @@ in
             (pkgs.writeShellApplication
               {
                 name = "menu-${id}";
-                runtimeInputs = [pkgs.nushellFull];
+                runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellFull];
 
                 text = let
                   minWidth =

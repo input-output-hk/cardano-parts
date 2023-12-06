@@ -67,7 +67,8 @@
       nano
       neovim
       ncdu
-      nushellFull
+      # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a non-existent pkg failure
+      inputs.nixpkgs.legacyPackages.${system}.nushellFull
       parted
       pciutils
       procps
