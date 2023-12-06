@@ -89,17 +89,12 @@
       config = {
         environment.systemPackages = [cardano-db-tool];
 
-        systemd.services.postgresql.postStart = mkAfter ''
-          # For postgres >= 15
-          $PSQL -tA cexplorer -c 'GRANT ALL ON SCHEMA public TO cexplorer'
-        '';
-
         services.postgresql = {
           ensureDatabases = ["cexplorer"];
           ensureUsers = [
             {
               name = "cexplorer";
-              ensurePermissions."DATABASE cexplorer" = "ALL PRIVILEGES";
+              ensureDBOwnership = true;
             }
           ];
 
