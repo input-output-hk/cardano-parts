@@ -177,6 +177,10 @@ in {
             mkdir -p $out
             cp -r ${envCfgs cardanoLib} $out/environments
             cp -r ${envCfgs cardanoLibNg} $out/environments-pre
+
+            chmod +w $out/{environments,environments-pre}/config
+            mv $out/environments/config/shelley_qa $out/environments/config/shelley-qa
+            mv $out/environments-pre/config/shelley_qa $out/environments-pre/config/shelley-qa
           '';
         in
           writeShellApplication {
