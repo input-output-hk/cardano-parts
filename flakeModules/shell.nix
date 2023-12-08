@@ -300,6 +300,7 @@ in
                         self'.packages.db-truncater-ng
 
                         gdb
+                        process-compose
                         token-metadata-creator
                       ]);
                 };

@@ -11,11 +11,12 @@
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
     nix.url = "github:nixos/nix/2.19-maintenance";
-    sops-nix.url = "github:Mic92/sops-nix";
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
     };
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    sops-nix.url = "github:Mic92/sops-nix";
     terranix.url = "github:terranix/terranix";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -101,6 +102,7 @@
           fmPkgs
           fmShell
           inputs.inputs-check.flakeModule
+          inputs.process-compose-flake.flakeModule
         ];
 
       systems = ["x86_64-linux"];

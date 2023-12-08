@@ -1430,6 +1430,21 @@
         "type": "github"
       }
     },
+    "process-compose-flake": {
+      "locked": {
+        "lastModified": 1701368682,
+        "narHash": "sha256-YkZbzfOkv68YOX4fK6VQvNHpysyZ/x3gePL3wbo8giA=",
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "rev": "8edcd4de7c631eac2ce5f8e2a0782e0ca606da9b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "auth-keys-hub": "auth-keys-hub",
@@ -1451,6 +1466,7 @@
         "nixpkgs": "nixpkgs_9",
         "nixpkgs-unstable": "nixpkgs-unstable_2",
         "opentofu-registry": "opentofu-registry",
+        "process-compose-flake": "process-compose-flake",
         "sops-nix": "sops-nix",
         "terranix": "terranix",
         "treefmt-nix": "treefmt-nix_2"
