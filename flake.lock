@@ -194,11 +194,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1701987138,
-        "narHash": "sha256-aoVBfGPusUYcwFKUUSFU9w/HoqGWLmSopvM3UeAupTA=",
+        "lastModified": 1702051493,
+        "narHash": "sha256-aT0WSNzwrQDv8zyVAbZ/saB1jk2B8a8MF9fTAgtzEIM=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "dfae9e84465acacc040cd827063051765b48cfad",
+        "rev": "baacf880d9c762e6243590ec5ce9f6ecb6ed3f8a",
         "type": "github"
       },
       "original": {
@@ -847,16 +847,15 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1701181091,
-        "narHash": "sha256-UGYNgPdqJzFVENiLCV1wvbRHoaV6FMz1SvHfbEKVWT8=",
+        "lastModified": 1702057058,
+        "narHash": "sha256-+0RP5JWOt56+rFgh5k1fggmDfm3i0L1LfUOf/mhrUz8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "310f8fa6d8ad99e8950c2aaf6f518a59d32f528c",
+        "rev": "fbae4705ec10ed056146956f9ca94fac3a169c69",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "migrate-to-play-legacy",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -869,11 +868,11 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1701223254,
-        "narHash": "sha256-k02Q+vuYHETqDMfnC4ORpHNKWUDpVWTeiETCmf7+gBA=",
+        "lastModified": 1702057058,
+        "narHash": "sha256-+0RP5JWOt56+rFgh5k1fggmDfm3i0L1LfUOf/mhrUz8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "ac6932d5f18c6f249a392fe4edbc2ca15257a512",
+        "rev": "fbae4705ec10ed056146956f9ca94fac3a169c69",
         "type": "github"
       },
       "original": {
