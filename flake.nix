@@ -11,11 +11,12 @@
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
     nix.url = "github:nixos/nix/2.19-maintenance";
-    sops-nix.url = "github:Mic92/sops-nix";
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
     };
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    sops-nix.url = "github:Mic92/sops-nix";
     terranix.url = "github:terranix/terranix";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -24,7 +25,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/migrate-to-play-legacy";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Cardano related inputs required for service config
@@ -87,6 +88,7 @@
       fmJobs = passLocalFlake ./flakeModules/jobs.nix {};
       fmLib = ./flakeModules/lib.nix;
       fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
+      fmProcessCompose = passLocalFlake ./flakeModules/process-compose.nix {};
       fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
     in {
       imports =
@@ -101,6 +103,7 @@
           fmPkgs
           fmShell
           inputs.inputs-check.flakeModule
+          inputs.process-compose-flake.flakeModule
         ];
 
       systems = ["x86_64-linux"];
@@ -113,6 +116,7 @@
           jobs = fmJobs;
           lib = fmLib;
           pkgs = fmPkgs;
+          process-compose = fmProcessCompose;
           shell = fmShell;
         };
       };

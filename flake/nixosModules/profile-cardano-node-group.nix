@@ -45,16 +45,7 @@
       };
 
       p2pTopology = mkEdgeTopologyP2P {
-        edgeNodes =
-          # Mainnet is only configured for legacy topology in iohk-nix edgeNodes
-          if environmentName == "mainnet"
-          then [
-            {
-              addr = env.relaysNew;
-              port = env.edgePort;
-            }
-          ]
-          else env.edgeNodes;
+        inherit (env) edgeNodes;
         useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
       };
     in
@@ -193,9 +184,6 @@
           ];
 
           defaultScribes = [["JournalSK" "cardano"]];
-
-          # TraceMempool makes cpu usage x3
-          TraceMempool = false;
         };
 
         extraServiceConfig = _: {
