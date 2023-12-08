@@ -88,6 +88,7 @@
       fmJobs = passLocalFlake ./flakeModules/jobs.nix {};
       fmLib = ./flakeModules/lib.nix;
       fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
+      fmProcessCompose = passLocalFlake ./flakeModules/process-compose.nix {};
       fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
     in {
       imports =
@@ -115,6 +116,7 @@
           jobs = fmJobs;
           lib = fmLib;
           pkgs = fmPkgs;
+          process-compose = fmProcessCompose;
           shell = fmShell;
         };
       };
