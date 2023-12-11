@@ -722,6 +722,9 @@ in {
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
               NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
+              # The cardano-cli cmd for node 8.7.2 will append to the skey if the file already exists
+              rm "$DEPLOY_FILE"-kes.{skey,vkey}
+
               "''${CARDANO_CLI[@]}" node key-gen-KES \
                 --signing-key-file "$DEPLOY_FILE"-kes.skey \
                 --verification-key-file "$DEPLOY_FILE"-kes.vkey
@@ -739,7 +742,7 @@ in {
 
               # Generate bulk creds file for single pool use
               (for FILE in "$DEPLOY_FILE"{.opcert,-vrf.skey,-kes.skey}; do
-                cat "$(decrypt_check "$FILE")"
+                eval cat "$(decrypt_check "$FILE")"
               done) \
                 | jq -s \
                 | jq -s \
@@ -751,7 +754,7 @@ in {
             # Generate bulk creds for all pools in the pool names
             (for ((i=0; i < ''${#POOLS[@]}; i++)); do
               (for FILE in "$STAKE_POOL_DIR/deploy/''${POOLS[$i]}"{.opcert,-vrf.skey,-kes.skey}; do
-                cat "$(decrypt_check "$FILE")"
+                eval cat "$(decrypt_check "$FILE")"
               done) | jq -s
             done) | jq -s > "$NO_DEPLOY_DIR/bulk.creds.pools.json"
 
