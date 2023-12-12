@@ -736,6 +736,8 @@ in {
                 --kes-period "$CURRENT_KES_PERIOD" \
                 --out-file "$DEPLOY_FILE".opcert
 
+              chmod 0600 "$DEPLOY_FILE"{.opcert,-kes.skey,-kes.vkey}
+
               encrypt_check "$DEPLOY_FILE"-kes.skey
               encrypt_check "$DEPLOY_FILE"-kes.vkey
               encrypt_check "$DEPLOY_FILE".opcert
