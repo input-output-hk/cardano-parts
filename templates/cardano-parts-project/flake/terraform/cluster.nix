@@ -127,7 +127,7 @@ in {
               {
                 inherit (node.aws.instance) count instance_type;
                 provider = awsProviderFor node.aws.region;
-                ami = amis.${node.system.stateVersion}.${node.aws.region}.hvm-ebs;
+                ami = node.aws.instance.ami or amis.${node.system.stateVersion}.${node.aws.region}.hvm-ebs;
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
                 monitoring = true;
                 key_name = "\${aws_key_pair.bootstrap_${underscore node.aws.region}[0].key_name}";
