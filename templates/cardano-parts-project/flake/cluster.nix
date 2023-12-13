@@ -26,6 +26,16 @@
       # bucketName = "${profile}-terraform";
     };
 
+    infra.generic = {
+      # Update basic info about the cluster here.
+      # This will be used for generic resource tagging where possible.
+
+      # organization = "iog";
+      # tribe = "coretech";
+      # function = "cardano-parts";
+      # repo = "https://github.com/input-output-hk/UPDATE_ME";
+    };
+
     # If using grafana cloud stack based monitoring.
     # infra.grafana.stackName = "UPDATE_ME";
 

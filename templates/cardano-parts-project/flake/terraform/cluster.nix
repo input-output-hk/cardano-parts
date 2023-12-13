@@ -7,9 +7,9 @@ flake @ {
 }:
 with builtins;
 with lib; let
-  inherit (config.flake.cardano-parts.cluster) groups;
+  inherit (config.flake.cardano-parts.cluster) infra groups;
 
-  cluster = config.flake.cardano-parts.cluster.infra.aws;
+  cluster = infra.aws;
 
   amis = import "${inputs.nixpkgs}/nixos/modules/virtualisation/ec2-amis.nix";
   awsProviderFor = region: "aws.${underscore region}";
@@ -108,6 +108,10 @@ in {
         provider.aws = forEach (attrNames cluster.regions) (region: {
           inherit region;
           alias = underscore region;
+          default_tags.tags = {
+            inherit (infra.generic) organization tribe function repo;
+            environment = "generic";
+          };
         });
 
         # Common parameters:
@@ -130,13 +134,14 @@ in {
                 vpc_security_group_ids = [
                   "\${aws_security_group.common_${underscore node.aws.region}[0].id}"
                 ];
-                tags = node.aws.instance.tags or {Name = name;};
+                tags = {Name = name;} // node.aws.instance.tags or {};
 
                 root_block_device = {
                   inherit (node.aws.instance.root_block_device) volume_size;
                   volume_type = "gp3";
                   iops = 3000;
                   delete_on_termination = true;
+                  tags = {Name = name;} // node.aws.instance.tags or {};
                 };
 
                 metadata_options = {
@@ -222,7 +227,7 @@ in {
             inherit (node.aws.instance) count;
             provider = awsProviderFor node.aws.region;
             instance = "\${aws_instance.${name}[0].id}";
-            tags.Name = name;
+            tags = {Name = name;} // node.aws.instance.tags or {};
           });
 
           aws_eip_association = mapNodes (name: node: {

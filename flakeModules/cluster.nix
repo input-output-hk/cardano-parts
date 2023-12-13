@@ -10,6 +10,10 @@
 #   flake.cardano-parts.cluster.infra.aws.profile
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
+#   flake.cardano-parts.cluster.infra.generic.function
+#   flake.cardano-parts.cluster.infra.generic.organization
+#   flake.cardano-parts.cluster.infra.generic.repo
+#   flake.cardano-parts.cluster.infra.generic.tribe
 #   flake.cardano-parts.cluster.infra.grafana.stackName
 #   flake.cardano-parts.cluster.groups.<default|name>.bookRelayMultivalueDns
 #   flake.cardano-parts.cluster.groups.<default|name>.groupBlockProducerSubstring
@@ -102,6 +106,12 @@ flake @ {
         description = mdDoc "Cardano-parts cluster infra grafana submodule.";
         default = {};
       };
+
+      generic = mkOption {
+        type = genericSubmodule;
+        description = mdDoc "Cardano-parts cluster infra generic submodule.";
+        default = {};
+      };
     };
   };
 
@@ -165,6 +175,38 @@ flake @ {
       stackName = mkOption {
         type = optionCheck "string" "infra.grafana.stackName" "str";
         description = mdDoc "The cardano-parts cluster infra grafana cloud stack name.";
+        default = null;
+      };
+    };
+  };
+
+  genericSubmodule = submodule {
+    options = {
+      function = mkOption {
+        type = optionCheck "string" "infra.generic.function" "str";
+        description = mdDoc "The cardano-parts cluster infra generic function.";
+        example = "cardano-parts";
+        default = null;
+      };
+
+      organization = mkOption {
+        type = optionCheck "string" "infra.generic.organization" "str";
+        description = mdDoc "The cardano-parts cluster infra generic organization.";
+        example = "iog";
+        default = null;
+      };
+
+      repo = mkOption {
+        type = optionCheck "string" "infra.generic.repo" "str";
+        description = mdDoc "The cardano-parts cluster infra generic repo.";
+        example = "https://github.com/input-output-hk/cardano-playground";
+        default = null;
+      };
+
+      tribe = mkOption {
+        type = optionCheck "string" "infra.generic.tribe" "str";
+        description = mdDoc "The cardano-parts cluster infra generic tribe.";
+        example = "coretech";
         default = null;
       };
     };
@@ -446,6 +488,7 @@ in {
   config = {
     flake.cardano-parts.cluster = {
       infra.aws = mkDefault {};
+      infra.generic = mkDefault {};
       groups.default = mkDefault {};
     };
   };
