@@ -23,6 +23,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.groupRelayMultivalueDns
 #   flake.cardano-parts.cluster.groups.<default|name>.groupRelaySubstring
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.cardanoLib
+#   flake.cardano-parts.cluster.groups.<default|name>.lib.opsLib
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoDbSyncPrometheusExporterPort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePort
@@ -322,6 +323,12 @@ flake @ {
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardanoLib;
+      };
+
+      opsLib = mkOption {
+        type = functionTo (attrsOf anything);
+        description = mdDoc "Cardano-parts cluster group opsLib.";
+        default = cfg.lib.opsLib;
       };
 
       topologyLib = mkOption {

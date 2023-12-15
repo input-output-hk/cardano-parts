@@ -5,6 +5,7 @@
 # Attributes available on nixos module import:
 #   config.cardano-parts.cluster.group.<...>                             # Inherited from flakeModule cluster.group assignment
 #   config.cardano-parts.perNode.lib.cardanoLib
+#   config.cardano-parts.perNode.lib.opsLib
 #   config.cardano-parts.perNode.lib.topologyLib
 #   config.cardano-parts.perNode.meta.cardanoDbSyncPrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardanoNodePort
@@ -32,6 +33,7 @@ flake @ {moduleWithSystem, ...}: {
   flake.nixosModules.module-cardano-parts = moduleWithSystem ({system}: {
     config,
     lib,
+    pkgs,
     ...
   }: let
     inherit (lib) foldl' mdDoc mkOption recursiveUpdate types;
@@ -117,6 +119,7 @@ flake @ {moduleWithSystem, ...}: {
     libSubmodule = submodule {
       options = foldl' recursiveUpdate {} [
         (mkSpecialOpt "cardanoLib" (attrsOf anything) (cfg.group.lib.cardanoLib system))
+        (mkSpecialOpt "opsLib" (attrsOf anything) (cfg.group.lib.opsLib pkgs))
         (mkSpecialOpt "topologyLib" (attrsOf anything) (cfg.group.lib.topologyLib cfg.group))
       ];
     };
