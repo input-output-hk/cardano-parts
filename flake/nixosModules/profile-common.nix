@@ -59,8 +59,17 @@
 
       programs = {
         auth-keys-hub = {
-          enable = lib.mkDefault true;
+          enable = mkDefault true;
           package = inputs.auth-keys-hub.packages.${system}.auth-keys-hub;
+
+          # Avoid loss of access edge cases associated with use of ephemeral authorized_keys storage
+          # Edge case example:
+          #   * Both auth-keys-hub state and github token default to the /run ephemeral state dir or subdirs for default secrets storage
+          #   * Only a github team is declared for auth-keys-hub access
+          #   * The machine is rebooted
+          #   * Auth keys hub state is now gone and a github token is required to pull new authorized key state, but that's gone too
+          #   * Machine lockout occurs
+          dataDir = "/var/lib/auth-keys-hub";
         };
       };
 
