@@ -488,8 +488,7 @@
           ]
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(faucet_utxo, environment)",
         "hide": 0,
@@ -515,8 +514,7 @@
           "value": "$__all"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(faucet_delegation_rewards, index)",
         "hide": 0,

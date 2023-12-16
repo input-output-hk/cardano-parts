@@ -31,8 +31,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -116,8 +115,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -135,8 +133,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -220,8 +217,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -238,8 +234,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -324,8 +319,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -344,8 +338,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -429,8 +422,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -446,8 +438,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "description": "Calculated at a 1 hr averaging window",
       "fieldConfig": {
@@ -533,8 +524,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -546,8 +536,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -563,8 +552,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -650,8 +638,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -667,8 +654,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -752,8 +738,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -769,8 +754,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -852,8 +836,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -870,8 +853,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -954,8 +936,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -972,8 +953,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1081,8 +1061,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1099,8 +1078,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1183,8 +1161,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1198,8 +1175,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1213,8 +1189,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1228,8 +1203,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1243,8 +1217,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1262,8 +1235,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "description": "Remaining faucet funds in ADA",
       "fieldConfig": {
@@ -1348,8 +1320,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1365,8 +1336,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1430,8 +1400,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1447,8 +1416,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1532,8 +1500,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1549,8 +1516,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1633,8 +1599,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1650,8 +1615,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "description": "KES periods remaining",
       "fieldConfig": {
@@ -1736,8 +1700,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1753,8 +1716,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "description": "Counts only memory that is physically free",
       "fieldConfig": {
@@ -1838,8 +1800,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1855,8 +1816,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1939,8 +1899,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1967,8 +1926,7 @@
           "value": "sanchonet"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(cardano_node_metrics_blockNum_int,environment)",
         "hide": 0,
