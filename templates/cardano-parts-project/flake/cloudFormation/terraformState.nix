@@ -1,6 +1,26 @@
-{config, ...}: {
+{
+  config,
+  lib,
+  ...
+}:
+with lib; {
   flake.cloudFormation.terraformState = let
     inherit (config.flake.cardano-parts.cluster.infra.aws) domain bucketName;
+
+    tagWith = name:
+      (mapAttrsToList (n: v: {
+          Key = n;
+          Value = v;
+        }) {
+          inherit (config.flake.cardano-parts.cluster.infra.generic) organization tribe function repo;
+          environment = "generic";
+        })
+      ++ [
+        {
+          Key = "Name";
+          Value = name;
+        }
+      ];
   in {
     AWSTemplateFormatVersion = "2010-09-09";
     Description = "Terraform state handling";
@@ -14,6 +34,7 @@
         Type = "AWS::KMS::Key";
         DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
+          Tags = tagWith "kmsKey";
           KeyPolicy."Fn::Sub" = builtins.toJSON {
             Version = "2012-10-17";
             Statement = [
@@ -34,6 +55,7 @@
         DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
           # This name is used in various places, check before changing it.
+          # KMS aliases do not accept tags
           AliasName = "alias/kmsKey";
           TargetKeyId.Ref = "kmsKey";
         };
@@ -42,13 +64,17 @@
       DNSZone = {
         Type = "AWS::Route53::HostedZone";
         DeletionPolicy = "RetainExceptOnCreate";
-        Properties.Name = domain;
+        Properties = {
+          HostedZoneTags = tagWith domain;
+          Name = domain;
+        };
       };
 
       S3Bucket = {
         Type = "AWS::S3::Bucket";
         DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
+          Tags = tagWith bucketName;
           BucketName = bucketName;
           BucketEncryption.ServerSideEncryptionConfiguration = [
             {
@@ -64,6 +90,7 @@
         Type = "AWS::DynamoDB::Table";
         DeletionPolicy = "RetainExceptOnCreate";
         Properties = {
+          Tags = tagWith "terraform-DynamoDB";
           TableName = "terraform";
 
           KeySchema = [

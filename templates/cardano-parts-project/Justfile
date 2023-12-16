@@ -87,7 +87,18 @@ apply *ARGS:
 apply-all *ARGS:
   colmena apply --verbose {{ARGS}}
 
-build-book:
+build-book-prod:
+  #!/usr/bin/env bash
+  cd docs
+  ln -sf book-prod.toml book.toml
+  cd -
+  mdbook build docs/
+
+build-book-staging:
+  #!/usr/bin/env bash
+  cd docs
+  ln -sf book-staging.toml book.toml
+  cd -
   mdbook build docs/
 
 build-machine MACHINE *ARGS:
@@ -239,6 +250,39 @@ list-machines:
       | where machine != ""
   )
 
+mimir-alertmanager-bootstrap:
+  #!/usr/bin/env bash
+  echo "Enter the mimir admin username: "
+  read -s MIMIR_USER
+  echo
+
+  echo "Enter the mimir admin token: "
+  read -s MIMIR_TOKEN
+  echo
+
+  echo "Enter the mimir base monitoring fqdn without the HTTPS:// scheme: "
+  read URL
+  echo
+
+  echo "Obtaining current mimir alertmanager config:"
+  echo "-----------"
+  mimirtool alertmanager get --address "https://$MIMIR_USER:$MIMIR_TOKEN@$URL/mimir" --id 1
+  echo "-----------"
+
+  echo
+  echo "If the output between the dashed lines above is blank, you may need to preload an initial alertmanager ruleset"
+  echo "for the mimir TF plugin to succeed, where the command to preload alertmanager is:"
+  echo
+  echo "mimirtool alertmanager load --address \"https://\$MIMIR_USER:\$MIMIR_TOKEN@$URL/mimir\" --id 1 alertmanager-bootstrap-config.yaml"
+  echo
+  echo "The contents of alertmanager-bootstrap-config.yaml can be:"
+  echo
+  echo "route:"
+  echo "  group_wait: 0s"
+  echo "  receiver: empty-receiver"
+  echo "receivers:"
+  echo "  - name: 'empty-receiver'"
+
 query-tip-all:
   #!/usr/bin/env bash
   QUERIED=0
@@ -298,7 +342,7 @@ set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
   if [[ "$SH" =~ bash$|zsh$ ]]; then
     # Modifying a parent shells env vars is generally not done
     # This is a hacky way to accomplish it in bash and zsh
-    gdb /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
+    gdb -iex "set auto-load no" /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
       call (int) setenv("CARDANO_NODE_SOCKET_PATH", "$DEFAULT_PATH", 1)
       call (int) setenv("CARDANO_NODE_NETWORK_ID", "$MAGIC", 1)
       call (int) setenv("TESTNET_MAGIC", "$MAGIC", 1)

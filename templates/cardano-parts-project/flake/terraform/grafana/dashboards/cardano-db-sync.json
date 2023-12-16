@@ -692,8 +692,7 @@
           "value": "preprod"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(environment)",
         "hide": 0,

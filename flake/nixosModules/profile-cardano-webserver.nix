@@ -44,6 +44,8 @@ flake: {
         then ceil f
         else floor f;
 
+      vhostsDirList = attrNames (filterAttrs (_: v: v == "directory" || v == "symlink") (readDir cfg.vhostsDir));
+
       cfg = config.services.cardano-webserver;
     in {
       imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
@@ -84,6 +86,26 @@ flake: {
             type = str;
             default = "${name}.${domain}";
             description = "The default server name for nginx.";
+          };
+
+          varnishAllowedHosts = mkOption {
+            type = listOf str;
+            default = cfg.serverAliases ++ (unique (sort (a: b: a < b) vhostsDirList));
+            description = ''
+              Requests to varnish containing any FQDNs in this option list will not be excluded from further processing.
+
+              This option can be used to restrict requests to certain hostnames, thereby cutting down on cache miss metrics.
+            '';
+          };
+
+          varnishAllowedUrls = mkOption {
+            type = str;
+            default = ".*";
+            description = ''
+              Requests to varnish containing a URL matching this url regex will not be excluded from further processing.
+
+              This option can be used to restrict requests to certain urls, thereby cutting down on cache miss metrics.
+            '';
           };
 
           varnishExporterPort = mkOption {
@@ -165,6 +187,16 @@ flake: {
 
               sub vcl_recv {
                 unset req.http.x-cache;
+
+                # Eliminate unexpected host requests which contribute to cache misses
+                if (req.http.host !~ "${concatMapStringsSep "|" (s: "^" + s + "$") cfg.varnishAllowedHosts}") {
+                  return (synth (404, "Not found"));
+                }
+
+                # Eliminate unexpected url requests which contribute to cache misses
+                if (req.url !~ "${cfg.varnishAllowedUrls}") {
+                  return (synth (404, "Not found"));
+                }
 
                 ${optionalString cfg.varnishIgnoreCookies "unset req.http.cookie;"}
 
@@ -272,8 +304,6 @@ flake: {
                 if elem name ["healthCheck" "tlsTerminator"]
                 then abort ''ABORT: virtualhost name: "${name}" is reserved.''
                 else name);
-
-              vhostsDirList = attrNames (filterAttrs (_: v: v == "directory" || v == "symlink") (readDir cfg.vhostsDir));
 
               vhosts = foldl' (acc: vhostName:
                 recursiveUpdate acc {

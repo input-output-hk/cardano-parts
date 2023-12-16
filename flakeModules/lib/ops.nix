@@ -3,7 +3,7 @@ pkgs:
 #   flake.cardano-parts.lib.ops
 with builtins;
 with pkgs;
-with lib; {
+with lib; rec {
   # Use the iohk-nix mkConfigHtml attr and transform the output to what mdbook expects
   generateStaticHTMLConfigs = pkgs: cardanoLib: environments: let
     cardano-deployment = cardanoLib.mkConfigHtml environments;
@@ -30,6 +30,17 @@ with lib; {
       done
     '';
 
+  mkCardanoLib = system: nixpkgs: flakeRef:
+  # Remove the dead testnet environment until it is removed from iohk-nix
+    removeByPath ["environments" "testnet"]
+    (import nixpkgs {
+      inherit system;
+      overlays = map (
+        overlay: flakeRef.overlays.${overlay}
+      ) (builtins.attrNames flakeRef.overlays);
+    })
+    .cardanoLib;
+
   mkSopsSecret = {
     secretName,
     keyName,
@@ -48,4 +59,12 @@ with lib; {
       sopsFile = pathPrefix + keyName;
     };
   };
+
+  removeByPath = pathList:
+    updateManyAttrsByPath [
+      {
+        path = init pathList;
+        update = filterAttrs (n: _: n != (last pathList));
+      }
+    ];
 }

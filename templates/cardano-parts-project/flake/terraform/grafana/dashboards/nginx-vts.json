@@ -120,8 +120,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -183,8 +182,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_main_connections{status=\"active\"}[2m]))",
@@ -200,8 +198,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -263,8 +260,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_main_connections{status=\"writing\"}[2m]))",
@@ -280,8 +276,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -343,8 +338,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_main_connections{status=\"reading\"}[2m]))",
@@ -360,8 +354,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -423,8 +416,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_main_connections{status=\"waiting\"}[2m]))",
@@ -627,8 +619,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -715,8 +706,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_upstream_requests_total{backend=~\"$Backend\", instance=~\"$Instance\", code!=\"total\"} [2m])) by (code)",
@@ -733,8 +723,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -821,8 +810,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_filter_requests_total{filter=~\"country::$Host\", filter_name=~\"$Country\", instance=~\"$Instance\", direction!=\"total\"} [2m])) by (direction)",
@@ -839,8 +827,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -974,8 +961,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_filter_request_seconds{filter=~\"country::$Host\", filter_name=~\"$Country\", instance=~\"$Instance\"} [2m])) by (filter_name) * 1000",
@@ -991,8 +977,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "grafanacloud-prom"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1078,8 +1063,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "grafanacloud-prom"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum(irate(nginx_vts_filter_bytes_total{filter=~\"country::$Host\", filter_name=~\"$Country\", instance=~\"$Instance\"} [2m])) by (direction)",
@@ -1484,8 +1468,7 @@
           ]
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "nginx_vts_filter_bytes_total",
         "hide": 0,
@@ -1513,8 +1496,7 @@
           "value": "$__all"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(nginx_vts_server_bytes_total, instance)",
         "hide": 0,
@@ -1542,8 +1524,7 @@
           "value": "$__all"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(nginx_vts_server_requests_total{instance=~\"$Instance\"}, host)",
         "hide": 0,
@@ -1572,8 +1553,7 @@
           "value": "$__all"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(nginx_vts_upstream_requests_total{instance=~\"$Instance\"}, upstream)",
         "hide": 0,
@@ -1602,8 +1582,7 @@
           "value": "$__all"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
+          "type": "prometheus"
         },
         "definition": "label_values(nginx_vts_upstream_requests_total{instance=~\"$Instance\", upstream=~\"$Upstream\"}, backend)",
         "hide": 0,

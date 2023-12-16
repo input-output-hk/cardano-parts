@@ -7,9 +7,9 @@ flake @ {
 }:
 with builtins;
 with lib; let
-  inherit (config.flake.cardano-parts.cluster) groups;
+  inherit (config.flake.cardano-parts.cluster) infra groups;
 
-  cluster = config.flake.cardano-parts.cluster.infra.aws;
+  cluster = infra.aws;
 
   amis = import "${inputs.nixpkgs}/nixos/modules/virtualisation/ec2-amis.nix";
   awsProviderFor = region: "aws.${underscore region}";
@@ -82,6 +82,8 @@ with lib; let
 
   bookMultivalueDnsAttrs = mkMultivalueDnsAttrs "bookRelayMultivalueDns" bookMultivalueDnsList;
   groupMultivalueDnsAttrs = mkMultivalueDnsAttrs "groupRelayMultivalueDns" groupMultivalueDnsList;
+
+  mkCustomRoute53Records = import ./cluster/route53.nix-import;
 in {
   flake.terraform.cluster = inputs.cardano-parts.inputs.terranix.lib.terranixConfiguration {
     system = "x86_64-linux";
@@ -108,6 +110,10 @@ in {
         provider.aws = forEach (attrNames cluster.regions) (region: {
           inherit region;
           alias = underscore region;
+          default_tags.tags = {
+            inherit (infra.generic) organization tribe function repo;
+            environment = "generic";
+          };
         });
 
         # Common parameters:
@@ -123,20 +129,21 @@ in {
               {
                 inherit (node.aws.instance) count instance_type;
                 provider = awsProviderFor node.aws.region;
-                ami = amis.${node.system.stateVersion}.${node.aws.region}.hvm-ebs;
+                ami = node.aws.instance.ami or amis.${node.system.stateVersion}.${node.aws.region}.hvm-ebs;
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
                 monitoring = true;
                 key_name = "\${aws_key_pair.bootstrap_${underscore node.aws.region}[0].key_name}";
                 vpc_security_group_ids = [
                   "\${aws_security_group.common_${underscore node.aws.region}[0].id}"
                 ];
-                tags = node.aws.instance.tags or {Name = name;};
+                tags = {Name = name;} // node.aws.instance.tags or {};
 
                 root_block_device = {
                   inherit (node.aws.instance.root_block_device) volume_size;
                   volume_type = "gp3";
                   iops = 3000;
                   delete_on_termination = true;
+                  tags = {Name = name;} // node.aws.instance.tags or {};
                 };
 
                 metadata_options = {
@@ -222,7 +229,7 @@ in {
             inherit (node.aws.instance) count;
             provider = awsProviderFor node.aws.region;
             instance = "\${aws_instance.${name}[0].id}";
-            tags.Name = name;
+            tags = {Name = name;} // node.aws.instance.tags or {};
           });
 
           aws_eip_association = mapNodes (name: node: {
@@ -308,7 +315,8 @@ in {
               }
             )
             // mkMultivalueDnsResources bookMultivalueDnsAttrs
-            // mkMultivalueDnsResources groupMultivalueDnsAttrs;
+            // mkMultivalueDnsResources groupMultivalueDnsAttrs
+            // mkCustomRoute53Records;
 
           local_file.ssh_config = {
             filename = "\${path.module}/.ssh_config";

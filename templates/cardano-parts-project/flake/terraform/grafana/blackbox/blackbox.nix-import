@@ -1,0 +1,5 @@
+# Endpoint in this list will be blackbox probed by the monitoring server
+# deployed from https://github.com/input-output-hk/cardano-monitoring
+[
+  "https://example.fqdn/endpoint"
+]

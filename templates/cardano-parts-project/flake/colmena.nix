@@ -24,7 +24,16 @@ in {
     # delete.aws.instance.count = 0;
 
     # Cardano group assignments:
-    group = name: {cardano-parts.cluster.group = config.flake.cardano-parts.cluster.groups.${name};};
+    group = name: {
+      cardano-parts.cluster.group = config.flake.cardano-parts.cluster.groups.${name};
+
+      # Since all machines are assigned a group, this is a good place to include default aws instance tags
+      aws.instance.tags = {
+        inherit (config.flake.cardano-parts.cluster.infra.generic) organization tribe function repo;
+        environment = config.flake.cardano-parts.cluster.groups.${name}.meta.environmentName;
+        group = name;
+      };
+    };
 
     # Cardano-node modules for group deployment
     node = {
