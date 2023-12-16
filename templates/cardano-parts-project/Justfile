@@ -250,6 +250,39 @@ list-machines:
       | where machine != ""
   )
 
+mimir-alertmanager-bootstrap:
+  #!/usr/bin/env bash
+  echo "Enter the mimir admin username: "
+  read -s MIMIR_USER
+  echo
+
+  echo "Enter the mimir admin token: "
+  read -s MIMIR_TOKEN
+  echo
+
+  echo "Enter the mimir base monitoring fqdn without the HTTPS:// scheme: "
+  read URL
+  echo
+
+  echo "Obtaining current mimir alertmanager config:"
+  echo "-----------"
+  mimirtool alertmanager get --address "https://$MIMIR_USER:$MIMIR_TOKEN@$URL/mimir" --id 1
+  echo "-----------"
+
+  echo
+  echo "If the output between the dashed lines above is blank, you may need to preload an initial alertmanager ruleset"
+  echo "for the mimir TF plugin to succeed, where the command to preload alertmanager is:"
+  echo
+  echo "mimirtool alertmanager load --address \"https://\$MIMIR_USER:\$MIMIR_TOKEN@$URL/mimir\" --id 1 alertmanager-bootstrap-config.yaml"
+  echo
+  echo "The contents of alertmanager-bootstrap-config.yaml can be:"
+  echo
+  echo "route:"
+  echo "  group_wait: 0s"
+  echo "  receiver: empty-receiver"
+  echo "receivers:"
+  echo "  - name: 'empty-receiver'"
+
 query-tip-all:
   #!/usr/bin/env bash
   QUERIED=0
