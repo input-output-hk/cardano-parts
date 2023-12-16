@@ -82,6 +82,8 @@ with lib; let
 
   bookMultivalueDnsAttrs = mkMultivalueDnsAttrs "bookRelayMultivalueDns" bookMultivalueDnsList;
   groupMultivalueDnsAttrs = mkMultivalueDnsAttrs "groupRelayMultivalueDns" groupMultivalueDnsList;
+
+  mkCustomRoute53Records = import ./cluster/route53.nix-import;
 in {
   flake.terraform.cluster = inputs.cardano-parts.inputs.terranix.lib.terranixConfiguration {
     system = "x86_64-linux";
@@ -313,7 +315,8 @@ in {
               }
             )
             // mkMultivalueDnsResources bookMultivalueDnsAttrs
-            // mkMultivalueDnsResources groupMultivalueDnsAttrs;
+            // mkMultivalueDnsResources groupMultivalueDnsAttrs
+            // mkCustomRoute53Records;
 
           local_file.ssh_config = {
             filename = "\${path.module}/.ssh_config";

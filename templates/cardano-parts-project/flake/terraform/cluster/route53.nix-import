@@ -1,0 +1,26 @@
+let
+  domain = "\${data.aws_route53_zone.selected.name}";
+
+  mkResource = {
+    name,
+    records ? [],
+    ttl ? "300",
+    type ? "CNAME",
+    zone_id ? "\${data.aws_route53_zone.selected.zone_id}"
+  }: {
+    inherit
+      name
+      records
+      ttl
+      type
+      zone_id;
+  };
+in {
+  # Resource attribute names must be unique for route53 resources in the cluster and therefore
+  # should not be named after machines or book or group multivalue DNS names.
+  #
+  # Prefixing the resource attribute with the record type will avoid any namespace issues.
+
+  # Example
+  # cname_foo = mkResource {name = "foo.${domain}"; records = ["bar.${domain}"];};
+}
