@@ -326,7 +326,6 @@ in {
                 User root
                 UserKnownHostsFile /dev/null
                 StrictHostKeyChecking no
-                IdentityFile .ssh_key
                 ServerAliveCountMax 2
                 ServerAliveInterval 60
 
