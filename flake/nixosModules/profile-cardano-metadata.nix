@@ -241,12 +241,6 @@ flake: {
             LimitNOFILE = 65535;
             LogNamespace = "nginx";
           };
-
-          metadata-webhook = {
-            after = ["sops-secrets.service"];
-            wants = ["sops-secrets.service"];
-            partOf = ["sops-secrets.service"];
-          };
         };
 
         services = {
@@ -547,6 +541,7 @@ flake: {
           inherit groupOutPath groupName;
           fileOwner = "metadata-webhook";
           fileGroup = "metadata-webhook";
+          restartUnits = ["metadata-webhook.service"];
         };
       };
     };

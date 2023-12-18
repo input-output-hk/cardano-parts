@@ -33,6 +33,7 @@ flake: {
         fileOwner = "grafana-agent";
         fileGroup = "grafana-agent";
         pathPrefix = "${groupOutPath}/secrets/monitoring/";
+        restartUnits = ["grafana-agent.service"];
       };
 
       cfgSvc = config.services;
@@ -80,10 +81,6 @@ flake: {
 
       config = {
         systemd.services.grafana-agent = {
-          after = ["sops-secrets.service"];
-          wants = ["sops-secrets.service"];
-          partOf = ["sops-secrets.service"];
-
           # A non-dynamic user is required for collecting systemd metrics, else the collector errors with:
           # "/run/dbus/system_bus_socket: recvmsg: connection reset by peer"
           serviceConfig = {

@@ -15,7 +15,7 @@ flake: {
     ...
   }:
     with builtins; let
-      inherit (lib) mkForce optionalAttrs;
+      inherit (lib) mkIf mkForce optionalAttrs;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
       inherit (perNodeCfg.lib) cardanoLib;
@@ -23,6 +23,7 @@ flake: {
       inherit (opsLib) mkSopsSecret;
 
       groupCfg = config.cardano-parts.cluster.group;
+      nodeCfg = config.services.cardano-node;
       perNodeCfg = config.cardano-parts.perNode;
       groupOutPath = groupFlake.self.outPath;
       opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
@@ -45,6 +46,8 @@ flake: {
         inherit groupOutPath groupName secretName keyName pathPrefix;
         fileOwner = "cardano-node";
         fileGroup = "cardano-node";
+        reloadUnits = mkIf (nodeCfg.useSystemdReload && nodeCfg.useNewTopology) ["cardano-node.service"];
+        restartUnits = mkIf (!nodeCfg.useSystemdReload || !nodeCfg.useNewTopology) ["cardano-node.service"];
       };
 
       serviceCfg = rec {
@@ -86,12 +89,6 @@ flake: {
         Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
       };
     in {
-      systemd.services.cardano-node = {
-        after = ["sops-secrets.service"];
-        wants = ["sops-secrets.service"];
-        partOf = ["sops-secrets.service"];
-      };
-
       services.cardano-node =
         serviceCfg.${Protocol}
         // {
