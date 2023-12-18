@@ -176,13 +176,13 @@
       "locked": {
         "lastModified": 1688568916,
         "narHash": "sha256-XTGTi3PzCcbLL+63JSXTe7mQmGKB0YgEoW1VpqdX2d0=",
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
         "rev": "6e69a80797f2d68423b25ca7787e81533b367e42",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "ref": "13.1.1.3",
         "repo": "cardano-db-sync",
         "type": "github"
@@ -193,13 +193,13 @@
       "locked": {
         "lastModified": 1701131841,
         "narHash": "sha256-mDKE/HqNvDxQ/mQU9j/jthw0NMcTiKHmgswzp0ZHdzM=",
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
         "rev": "0edff13a734a0ae02a6d7a99d0f77d27413f3421",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "ref": "sancho-2-3-0",
         "repo": "cardano-db-sync",
         "type": "github"
@@ -210,13 +210,13 @@
       "locked": {
         "lastModified": 1688568916,
         "narHash": "sha256-XTGTi3PzCcbLL+63JSXTe7mQmGKB0YgEoW1VpqdX2d0=",
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
         "rev": "6e69a80797f2d68423b25ca7787e81533b367e42",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "ref": "13.1.1.3",
         "repo": "cardano-db-sync",
         "type": "github"
@@ -244,13 +244,13 @@
       "locked": {
         "lastModified": 1700615474,
         "narHash": "sha256-pVUWfzVnM4RvpFlJNH2ZmWPZzmkGT1Ty8B1p7NFh69M=",
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "repo": "cardano-node",
         "rev": "34d89af65439db92293b88967c299c20692abc1c",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "ref": "8.7.0-pre",
         "repo": "cardano-node",
         "type": "github"

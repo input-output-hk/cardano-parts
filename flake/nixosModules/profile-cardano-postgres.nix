@@ -79,7 +79,7 @@
 
         -- Prepared statements should only be executed if the schema has already migrated
         -- This can be verified by checking stage_three of schema_version is non-zero
-        -- Ref: https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/schema.md#schema_version
+        -- Ref: https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#schema_version
         DO $$
         BEGIN
           IF (select true from pg_tables where tablename = 'schema_version') THEN
