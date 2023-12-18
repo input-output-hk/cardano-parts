@@ -101,8 +101,18 @@
             };
           };
 
-          # Sops-secrets service provides a systemd hook for other services
-          # needing to be restarted after new secrets are pushed.
+          # On boot SOPS runs in stage 2 without networking.
+          # For repositories using KMS sops secrets, this prevent KMS from working,
+          # so we repeat the activation script until decryption succeeds.
+          #
+          # Sops-nix module does provide a systemd restart and reload hook for
+          # associated secrets changes with the option:
+          #
+          #   sops.secrets.<name>.<restartUnits|reloadUnits>
+          #
+          # Although the sops-nix restart or reload options are preferred,
+          # sops-secrets service can also act as a generic systemd hook
+          # for services needing to be restarted after new sops secrets are pushed.
           #
           # Example usage:
           #   systemd.services.<name> = {
@@ -111,9 +121,6 @@
           #     partOf = ["sops-secrets.service"];
           #   };
           #
-          # Also, on boot SOPS runs in stage 2 without networking.
-          # For repositories using KMS sops secrets, this prevent KMS from working,
-          # so we repeat the activation script until decryption succeeds.
           sops-secrets = {
             wantedBy = ["multi-user.target"];
             after = ["network-online.target"];
