@@ -108,7 +108,6 @@
           "expr": "cardano_node_metrics_connectionManager_duplexConns{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -199,7 +198,6 @@
           "expr": "cardano_node_metrics_peerSelection_hot{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -290,7 +288,6 @@
           "expr": "cardano_node_metrics_inboundGovernor_hot{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -381,7 +378,6 @@
           "expr": "cardano_node_metrics_connectionManager_unidirectionalConns{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -472,7 +468,6 @@
           "expr": "cardano_node_metrics_peerSelection_warm{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -563,7 +558,6 @@
           "expr": "cardano_node_metrics_inboundGovernor_warm{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -654,7 +648,6 @@
           "expr": "cardano_node_metrics_connectionManager_incomingConns{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -745,7 +738,6 @@
           "expr": "cardano_node_metrics_peerSelection_cold{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -836,7 +828,6 @@
           "expr": "rate(cardano_node_metrics_served_block_latest_count_int{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\"}[1h])",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -927,7 +918,6 @@
           "expr": "cardano_node_metrics_connectionManager_outgoingConns{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -1018,7 +1008,6 @@
           "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfOne{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -1111,7 +1100,6 @@
           "expr": "avg(quantile_over_time(0.5,cardano_node_metrics_blockfetchclient_blockdelay_s{environment=\"$environment\"}[15m]))",
           "interval": "",
           "legendFormat": "P50",
-          "queryType": "randomWalk",
           "refId": "A"
         },
         {
@@ -1120,7 +1108,6 @@
           "hide": false,
           "interval": "",
           "legendFormat": "P95",
-          "queryType": "randomWalk",
           "refId": "B"
         }
       ],
@@ -1211,7 +1198,6 @@
           "expr": "cardano_node_metrics_connectionManager_prunableConns{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -1302,7 +1288,6 @@
           "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfThree{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -1393,7 +1378,6 @@
           "expr": "rate(cardano_node_metrics_blockfetchclient_lateblocks{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\"}[1h])",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
@@ -1484,7 +1468,6 @@
           "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfFive{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],

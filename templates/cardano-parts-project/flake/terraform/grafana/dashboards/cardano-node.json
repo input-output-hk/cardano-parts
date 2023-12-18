@@ -842,8 +842,7 @@
           "exemplar": true,
           "expr": "rate(cardano_node_metrics_slotsMissedNum_int{environment=\"$environment\"}[1h]) * 3600",
           "interval": "",
-          "legendFormat": "{{environment}}",
-          "queryType": "randomWalk",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
@@ -1183,7 +1182,6 @@
           "hide": false,
           "interval": "",
           "legendFormat": "15 min average",
-          "queryType": "randomWalk",
           "range": true,
           "refId": "A"
         },
