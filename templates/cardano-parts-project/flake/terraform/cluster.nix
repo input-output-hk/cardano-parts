@@ -141,7 +141,8 @@ in {
                 root_block_device = {
                   inherit (node.aws.instance.root_block_device) volume_size;
                   volume_type = "gp3";
-                  iops = 3000;
+                  iops = node.aws.instance.root_block_device.iops or 3000;
+                  throughput = node.aws.instance.root_block_device.throughput or 125;
                   delete_on_termination = true;
                   tags = {Name = name;} // node.aws.instance.tags or {};
                 };
