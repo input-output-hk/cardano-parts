@@ -26,16 +26,15 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1702939833,
-        "narHash": "sha256-1ay7Lo2tKRyV/DV8lsSraZvyCurr19FJtqaAkwGZ5zc=",
+        "lastModified": 1703018934,
+        "narHash": "sha256-7h6XsWczUzsxID0H5QX0+bJks22pijAxnSJ2RYTyswQ=",
         "owner": "input-output-hk",
         "repo": "auth-keys-hub",
-        "rev": "2bc614b16d3bfd782563cb05c0e8331d0ebcb1a9",
+        "rev": "31f8d4e404bf64d559516abfd6610bb7f4cabee2",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "more-assertions",
         "repo": "auth-keys-hub",
         "type": "github"
       }
