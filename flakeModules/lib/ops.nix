@@ -49,15 +49,20 @@ with lib; rec {
     fileOwner,
     fileGroup,
     pathPrefix ? "${groupOutPath}/secrets/groups/${groupName}/deploy/",
+    restartUnits ? [],
+    reloadUnits ? [],
+    extraCfg ? {},
   }: let
     trimStorePrefix = path: last (split "/nix/store/[^/]+/" path);
     verboseTrace = keyName: traceVerbose ("${name}: using " + (trimStorePrefix keyName));
   in {
-    ${secretName} = verboseTrace (pathPrefix + keyName) {
-      owner = fileOwner;
-      group = fileGroup;
-      sopsFile = pathPrefix + keyName;
-    };
+    ${secretName} = verboseTrace (pathPrefix + keyName) ({
+        inherit restartUnits reloadUnits;
+        owner = fileOwner;
+        group = fileGroup;
+        sopsFile = pathPrefix + keyName;
+      }
+      // extraCfg);
   };
 
   removeByPath = pathList:

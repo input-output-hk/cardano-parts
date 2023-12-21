@@ -33,7 +33,7 @@
       perNodeCfg = nixos.config.cardano-parts.perNode;
 
       # Required since db-sync still requires legacy byron application parameters as of 13.1.1.3.
-      # Issue: https://github.com/input-output-hk/cardano-db-sync/issues/1473
+      # Issue: https://github.com/IntersectMBO/cardano-db-sync/issues/1473
       #
       # environmentConfig = environments.${environmentName}.nodeConfig;
       environmentConfig = let

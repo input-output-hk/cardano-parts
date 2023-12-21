@@ -32,22 +32,22 @@
     # Services offered from the nixosModules of this repo are directly assigned to
     # the flake.cardano-parts.pkgs.special.*-service flakeModule options.
     cardano-db-sync-service = {
-      url = "github:input-output-hk/cardano-db-sync/13.1.1.3";
+      url = "github:IntersectMBO/cardano-db-sync/13.1.1.3";
       flake = false;
     };
 
     cardano-db-sync-schema = {
-      url = "github:input-output-hk/cardano-db-sync/13.1.1.3";
+      url = "github:IntersectMBO/cardano-db-sync/13.1.1.3";
       flake = false;
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:input-output-hk/cardano-db-sync/sancho-2-3-0";
+      url = "github:IntersectMBO/cardano-db-sync/sancho-2-3-0";
       flake = false;
     };
 
     cardano-node-service = {
-      url = "github:input-output-hk/cardano-node/8.7.0-pre";
+      url = "github:IntersectMBO/cardano-node/8.7.0-pre";
       flake = false;
     };
 

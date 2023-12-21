@@ -610,6 +610,6 @@ tofu *ARGS:
   rm --force terraform.tf.json
   nix build ".#terraform.$WORKSPACE" --out-link terraform.tf.json
 
-  tofu workspace select -or-create "$WORKSPACE"
   tofu init -reconfigure
+  tofu workspace select -or-create "$WORKSPACE"
   tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}

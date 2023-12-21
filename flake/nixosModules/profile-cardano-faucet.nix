@@ -37,18 +37,13 @@ flake: {
       nginx-vhost-exporter.enable = true;
     };
 
-    systemd.services.cardano-faucet = {
-      after = ["sops-secrets.service"];
-      wants = ["sops-secrets.service"];
-      partOf = ["sops-secrets.service"];
-    };
-
     sops.secrets = mkSopsSecret {
       secretName = "cardano-faucet.json";
       keyName = "${name}-faucet.json";
       inherit groupOutPath groupName;
       fileOwner = "cardano-faucet";
       fileGroup = "cardano-faucet";
+      restartUnits = ["cardano-faucet.service"];
     };
   };
 }
