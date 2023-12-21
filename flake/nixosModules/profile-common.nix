@@ -83,6 +83,12 @@
                       exit
                     fi
 
+                    # Ensure at least 1 ssh key is declared outside of auth-keys-hub
+                    if ! grep -q -E '^ssh-' /etc/ssh/authorized_keys.d/root &> /dev/null; then
+                      echo "You must declare at least 1 authorized key via users.users.root.openssh.authorizedKeys attribute before the bootstrap key will be removed"
+                      exit
+                    fi
+
                     # Allow 1 week of bootstrap key use before removing it
                     if fd --quiet --changed-within 7d authorized_keys /root/.ssh; then
                       echo "The root authorized_keys file has been changed within the past week; waiting a little longer before removing the bootstrap key"
@@ -96,8 +102,6 @@
                   fi
                 '';
               });
-
-              RemainAfterExit = true;
             };
           };
 
@@ -136,8 +140,18 @@
           };
         };
 
-        # Enforce accurate 10 second sysstat sampling intervals
-        timers.sysstat-collect.timerConfig.AccuracySec = "1us";
+        timers = {
+          remove-ssh-bootstrap-key = {
+            wantedBy = ["timers.target"];
+            timerConfig = {
+              OnCalendar = "daily";
+              Unit = "remove-ssh-bootstrap-key.service";
+            };
+          };
+
+          # Enforce accurate 10 second sysstat sampling intervals
+          sysstat-collect.timerConfig.AccuracySec = "1us";
+        };
       };
 
       sops.defaultSopsFormat = "binary";
