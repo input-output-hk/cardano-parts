@@ -187,9 +187,16 @@
         };
 
         extraServiceConfig = _: {
+          # Ensure service restarts are continuous
+          startLimitIntervalSec = 0;
+
           serviceConfig = {
             MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
             LimitNOFILE = "65535";
+
+            # Ensure quick restarts on any condition
+            Restart = "always";
+            RestartSec = 1;
           };
         };
 
