@@ -24,7 +24,7 @@
     ...
   }: let
     inherit (builtins) fromJSON readFile;
-    inherit (lib) flatten foldl' min mkDefault mkIf mkOption range recursiveUpdate types;
+    inherit (lib) flatten foldl' getExe min mkDefault mkIf mkOption range recursiveUpdate types;
     inherit (types) bool float ints oneOf;
     inherit (nodeResources) cpuCount memMiB;
 
@@ -86,6 +86,15 @@
             Should instances on same machine share ipv6 address.
             Default: true, sets ipv6HostAddr equal to ::1.
             If false use address increments starting from instance index + 1.
+          '';
+        };
+
+        shareNodeSocket = mkOption {
+          type = bool;
+          default = false;
+          description = ''
+            Makes the node socket for instance 0 only group writeable.
+            This is done using an inotifywait service to avoid long systemd job startups using postStart.
           '';
         };
       };
@@ -218,7 +227,46 @@
           then "cardano-node"
           else "cardano-node-${toString i}";
       in
-        foldl' (acc: i:
+        {
+          cardano-node-socket-share = mkIf cfg.shareNodeSocket {
+            after = ["cardano-node.service"];
+            wants = ["cardano-node.service"];
+            partOf = ["cardano-node.service"];
+            wantedBy = ["cardano-node.service"];
+
+            startLimitIntervalSec = 0;
+
+            serviceConfig = {
+              ExecStart = getExe (pkgs.writeShellApplication {
+                name = "cardano-node-socket-share";
+                runtimeInputs = with pkgs; [inotify-tools];
+                text = ''
+                  TARGET="${cfg.socketPath 0}"
+                  NAME=$(basename "$TARGET")
+                  DIR=$(dirname "$TARGET")
+
+                  MK_SOCKET_WRITABLE() {
+                    if [ -S "$TARGET" ]; then
+                      chmod g+w "$TARGET"
+                      echo "Cardano-node socket file for instance 0 at $TARGET has been made group writeable"
+                    fi
+                  }
+
+                  # For the case the socket already exists when this service starts
+                  MK_SOCKET_WRITABLE
+
+                  while inotifywait --include "$NAME" "$DIR"; do
+                    MK_SOCKET_WRITABLE
+                  done
+                '';
+              });
+
+              Restart = "always";
+              RestartSec = 1;
+            };
+          };
+        }
+        // foldl' (acc: i:
           recursiveUpdate acc {
             "${serviceName i}" = {
               path = with pkgs; [gnutar gzip];
@@ -232,19 +280,8 @@
                 fi
               '';
 
-              postStart = ''
-                while true; do
-                  # Allow other local services in the cardano-node group to use cardano-node socket
-                  if [ -S ${nixos.config.services.cardano-node.socketPath i} ]; then
-                    chmod g+w ${nixos.config.services.cardano-node.socketPath i}
-                    exit 0
-                  fi
-                  sleep 5
-                done
-              '';
-
               serviceConfig = {
-                # Allow long ledger replays and/or db-restore ungzip, including on slow systems
+                # Allow long ledger replays and/or db-restore gunzip, including on slow systems
                 TimeoutStartSec = "infinity";
               };
             };
