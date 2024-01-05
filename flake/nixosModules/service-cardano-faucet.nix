@@ -145,6 +145,8 @@
           after = ["network-online.target"];
           wantedBy = ["multi-user.target"];
 
+          startLimitIntervalSec = 0;
+
           environment = {
             CONFIG_FILE = cfg.configFile;
             CARDANO_NODE_SOCKET_PATH = cfg.socketPath;
