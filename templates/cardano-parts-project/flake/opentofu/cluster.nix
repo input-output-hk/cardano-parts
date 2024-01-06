@@ -85,7 +85,7 @@ with lib; let
 
   mkCustomRoute53Records = import ./cluster/route53.nix-import;
 in {
-  flake.terraform.cluster = inputs.cardano-parts.inputs.terranix.lib.terranixConfiguration {
+  flake.opentofu.cluster = inputs.cardano-parts.inputs.terranix.lib.terranixConfiguration {
     system = "x86_64-linux";
     modules = [
       {

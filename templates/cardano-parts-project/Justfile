@@ -310,6 +310,16 @@ save-bootstrap-ssh-key:
   $key.values.private_key_openssh | save .ssh_key
   chmod 0600 .ssh_key
 
+save-ssh-config:
+  #!/usr/bin/env nu
+  print "Retrieving ssh config from tofu..."
+  tofu workspace select -or-create cluster
+  tofu init -reconfigure
+  let tf = (tofu show -json | from json)
+  let key = ($tf.values.root_module.resources | where type == local_file and name == ssh_config)
+  $key.values.content | save --force .ssh_config
+  chmod 0600 .ssh_config
+
 set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
   #!/usr/bin/env bash
   {{checkEnv}}
@@ -608,7 +618,7 @@ tofu *ARGS:
 
   echo -e "Running tofu in the ${IGREEN}$WORKSPACE${NC} workspace..."
   rm --force terraform.tf.json
-  nix build ".#terraform.$WORKSPACE" --out-link terraform.tf.json
+  nix build ".#opentofu.$WORKSPACE" --out-link terraform.tf.json
 
   tofu init -reconfigure
   tofu workspace select -or-create "$WORKSPACE"
