@@ -10,7 +10,11 @@
         For new cardano clusters which will leverage the shared flake and nixOS modules of cardano-parts.
 
         ## More info
-        - Bootstrap Wiki: [https://kb.devx.iog.io/doc/new-parts-clusters-GGx9b0zMYL](https://kb.devx.iog.io/doc/new-parts-clusters-GGx9b0zMYL)
+
+        See the following READMEs:
+
+        * cardano-parts: [https://github.com/input-output-hk/cardano-parts/blob/main/README.md](https://github.com/input-output-hk/cardano-parts/blob/main/README.md)
+        * The new cardano-parts project default README at flake/README.md
       '';
     };
   };

@@ -13,6 +13,7 @@ It is the first blockchain platform to evolve out of a scientific philosophy and
 # Cardano $REPO
 
 The $REPO project serves as ...
+
 It utilizes [flake-parts](https://flake.parts/) and re-usable
 nixosModules and flakeModules from [cardano-parts](https://github.com/input-output-hk/cardano-parts).
 
@@ -51,9 +52,15 @@ an `./.ssh_config` using:
     just save-ssh-config
 
 With that you can then get started with:
-* list machines: `just list-machines`
-* ssh to machines: `just ssh $MACHINE`
-* finding other operations recipes to use: `just --list`
+
+    # Listing machines
+    just list-machines
+
+    # Ssh to machines
+    just ssh $MACHINE
+
+    # Finding other operations recipes to use
+    just --list
 
 ## Cloudformation
 
@@ -70,6 +77,10 @@ We use [Rain](https://github.com/aws-cloudformation/rain) to apply the
 configuration. There is a wrapper that evaluates the config and deploys it:
 
     just cf terraformState
+
+When arranging DNS zone delegation, the nameservers to delegate to are shown with:
+
+    just show-nameservers
 
 ## OpenTofu
 
