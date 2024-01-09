@@ -26,11 +26,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1703018934,
-        "narHash": "sha256-7h6XsWczUzsxID0H5QX0+bJks22pijAxnSJ2RYTyswQ=",
+        "lastModified": 1703692836,
+        "narHash": "sha256-Vn/OBdQYKcHlKMToSlKkDCboSi06puC40ZskzxI5Usk=",
         "owner": "input-output-hk",
         "repo": "auth-keys-hub",
-        "rev": "31f8d4e404bf64d559516abfd6610bb7f4cabee2",
+        "rev": "a6b002e81fa401efa5ce182a34c7794c330920f6",
         "type": "github"
       },
       "original": {
@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1702324933,
-        "narHash": "sha256-eQn38tM31iu/EJezJLAq/r+y8S07m//4HbaiUe24RF4=",
+        "lastModified": 1703702592,
+        "narHash": "sha256-fIEncfDhs+00keB7nfntt8A5DDcG2lIg/zD+mJZv/fE=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "7649113d691c544fe89f4528e40b681894fbf8d7",
+        "rev": "8b229173763074bf6d5acdbb6ae3768883af7970",
         "type": "github"
       },
       "original": {
@@ -191,16 +191,16 @@
     "cardano-db-sync-schema-ng": {
       "flake": false,
       "locked": {
-        "lastModified": 1701131841,
-        "narHash": "sha256-mDKE/HqNvDxQ/mQU9j/jthw0NMcTiKHmgswzp0ZHdzM=",
+        "lastModified": 1703088747,
+        "narHash": "sha256-vC2T7RPIXHEIcrzs3IvS3mFrhV42fN3k8NbglDKPQG8=",
         "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
-        "rev": "0edff13a734a0ae02a6d7a99d0f77d27413f3421",
+        "rev": "738c5988f24127733e5a6c98e40410604b5a16c9",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "sancho-2-3-0",
+        "ref": "sancho-3-0-0",
         "repo": "cardano-db-sync",
         "type": "github"
       }
@@ -275,16 +275,16 @@
     "cardano-wallet-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1689751896,
-        "narHash": "sha256-ijflgIw+1FpLoxM4Rksf4MJvNqnEPAv3gNWE8zMuefU=",
+        "lastModified": 1702897013,
+        "narHash": "sha256-b0aSAVU1YrP/rWTG2si0dq5lVwkXYHb5m9VTFcdxtPQ=",
         "owner": "cardano-foundation",
         "repo": "cardano-wallet",
-        "rev": "3f0d2f3abe706958fab8cdc528184068bd0453c9",
+        "rev": "6130be741a412e503fa1b83432d11a049a03a3bc",
         "type": "github"
       },
       "original": {
         "owner": "cardano-foundation",
-        "ref": "v2023-07-18",
+        "ref": "v2023-12-18",
         "repo": "cardano-wallet",
         "type": "github"
       }

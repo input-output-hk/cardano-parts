@@ -155,11 +155,17 @@ with
       where epoch_no = (select * from current_epoch)
       and pool_hash.view in (select view from pools_not_perf) group by pool_hash.id),
 
-  -- Table for active pool constraint
+  -- Table for active pool constraint registration debugging
   stake_reg_most_recent AS (
     select distinct on (addr_id) id, addr_id, cert_index, epoch_no, tx_id
     from stake_registration
-    order by addr_id, cert_index desc),
+    order by addr_id, tx_id desc, cert_index desc),
+
+  -- Table for active pool constraint, deregistration
+  stake_dereg_most_recent AS (
+    select distinct on (addr_id) id, addr_id, cert_index, epoch_no, tx_id
+    from stake_deregistration
+    order by addr_id, tx_id desc, cert_index desc),
 
   -- Most recent faucet pool delegations per stake address
   -- This query uses the faucet_stake_addr table which is a custom added static table of: key as faucet_delegation_index, value as stake_address
@@ -171,9 +177,10 @@ with
         inner join stake_address on delegation.addr_id = stake_address.id
         inner join pool_hash on delegation.pool_hash_id = pool_hash.id
         inner join stake_reg_most_recent on delegation.addr_id = stake_reg_most_recent.addr_id
+        left join stake_dereg_most_recent on delegation.addr_id = stake_dereg_most_recent.addr_id
         where stake_address.view = value
-        and stake_reg_most_recent.tx_id <= delegation.tx_id
-        order by active_epoch_no desc limit 1) as view
+        and (stake_dereg_most_recent.tx_id is null or stake_dereg_most_recent.tx_id < delegation.tx_id)
+        order by delegation.tx_id desc limit 1) as view
       from faucet_stake_addr),
 
   -- Faucet active pool delegations without considering contraints

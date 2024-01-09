@@ -42,7 +42,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/sancho-2-3-0";
+      url = "github:IntersectMBO/cardano-db-sync/sancho-3-0-0";
       flake = false;
     };
 
@@ -52,7 +52,7 @@
     };
 
     cardano-wallet-service = {
-      url = "github:cardano-foundation/cardano-wallet/v2023-07-18";
+      url = "github:cardano-foundation/cardano-wallet/v2023-12-18";
       flake = false;
     };
 
