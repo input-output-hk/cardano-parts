@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1703702592,
-        "narHash": "sha256-fIEncfDhs+00keB7nfntt8A5DDcG2lIg/zD+mJZv/fE=",
+        "lastModified": 1704896812,
+        "narHash": "sha256-RqU75BEtDZ7fEmQi9o9tAo7xuRcWf06AusvNNl2hoL8=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "8b229173763074bf6d5acdbb6ae3768883af7970",
+        "rev": "11f5152084797dd1bd363b20ed81bb10e61a0b47",
         "type": "github"
       },
       "original": {
