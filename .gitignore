@@ -1,4 +1,5 @@
-/.envrc.local
 /.direnv
-/treefmt.toml
+/.envrc.local
 result*
+/.run
+/treefmt.toml

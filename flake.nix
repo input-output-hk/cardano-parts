@@ -15,11 +15,14 @@
       url = "github:opentofu/registry";
       flake = false;
     };
-    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     sops-nix.url = "github:Mic92/sops-nix";
     terranix.url = "github:terranix/terranix";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    # Process compose related
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    services-flake.url = "github:johnalotoski/services-flake/pgsocket";
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
