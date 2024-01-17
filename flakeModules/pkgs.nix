@@ -400,7 +400,7 @@ in
             (mkPkg "db-synthesizer-ng" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-7-2)
             (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-7-2)
             (mkPkg "db-truncater-ng" caPkgs.db-truncater-input-output-hk-cardano-node-8-7-2)
-            (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v0-77-8)
+            (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v0-80-0)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0)
