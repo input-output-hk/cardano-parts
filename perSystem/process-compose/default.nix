@@ -12,8 +12,8 @@ flake @ {
     system,
     ...
   }: let
-    inherit (builtins) fromJSON readFile;
-    inherit (lib) mkForce replaceStrings;
+    inherit (builtins) attrNames fromJSON readFile;
+    inherit (lib) foldl' mkForce recursiveUpdate replaceStrings;
     inherit (cardanoLib) environments;
     inherit (opsLib) generateStaticHTMLConfigs;
 
@@ -59,24 +59,96 @@ flake @ {
       then "-ng"
       else "";
 
+    toHyphen = s: replaceStrings ["_"] ["-"] s;
+    toUnderscore = s: replaceStrings ["-"] ["_"] s;
+
+    # The common state dir will be generic and relative since
+    # we may run this from any consuming repository stored at
+    # any path.
+    #
+    # We may wish to align this better with Justfile's handling
+    # of node state at ${XDG_DATA_HOME:=$HOME/.local/share}/$REPO
+    # in the future
+    stateDir = "./.run";
+    commonLogDir = "/tmp/process-compose/";
+
+    mkNodeProcess = env: namespace: {
+      inherit namespace;
+      log_location = "${stateDir}/${env}/cardano-node/node.log";
+      command = ''
+        ${config.cardano-parts.pkgs."cardano-node${envVer env "isNodeNg"}"}/bin/cardano-node run +RTS -N -RTS \
+        --topology ${envCfgs}/config/${toUnderscore env}/topology.json \
+        --database-path ${stateDir}/${env}/cardano-node/db \
+        --socket-path ${stateDir}/${env}/cardano-node/node.socket \
+        --config ${envCfgs}/config/${toUnderscore env}/config.json
+      '';
+    };
+
+    mkCliProcess = env: namespace: let
+      testnetMagic = toString (fromJSON (readFile environments.${toUnderscore env}.nodeConfig.ByronGenesisFile)).protocolConsts.protocolMagic;
+    in {
+      inherit namespace;
+      log_location = "${stateDir}/${env}/cardano-node/cli.log";
+      command = pkgs.writeShellApplication {
+        name = "cardano-cli-${env}${envVer env "isNodeNg"}";
+        text = ''
+          CLI="${config.cardano-parts.pkgs."cardano-cli${envVer env "isNodeNg"}"}/bin/cardano-cli"
+          SOCKET="${stateDir}/${env}/cardano-node/node.socket"
+
+          while ! [ -S "$SOCKET" ]; do
+            echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for a node socket at $SOCKET"
+            sleep 5
+          done
+
+          while ! "$CLI" ping -c 1 -u "$SOCKET" -m "${testnetMagic}" &> /dev/null; do
+            echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for the socket to become active at $SOCKET"
+            sleep 5
+          done
+
+          while true; do
+            date -u --rfc-3339=seconds
+            "$CLI" query tip
+            echo
+            sleep 10
+          done
+        '';
+      };
+      environment = {
+        CARDANO_NODE_NETWORK_ID = testnetMagic;
+        CARDANO_NODE_SOCKET_PATH = "${stateDir}/${env}/cardano-node/node.socket";
+      };
+    };
+
+    mkNodeStack = {
+      imports = [
+        inputs.services-flake.processComposeModules.default
+      ];
+
+      apiServer = false;
+      package = self'.packages.process-compose;
+      tui = true;
+
+      settings = {
+        log_location = "${commonLogDir}/node-stack.log";
+        processes =
+          foldl' (acc: env:
+            recursiveUpdate acc
+            {
+              "cardano-node-${env}${envVer env "isNodeNg"}" = mkNodeProcess env env // {disabled = true;};
+              "cardano-cli-${env}${envVer env "isNodeNg"}" = mkCliProcess env env // {disabled = true;};
+            }) {} (attrNames envBinCfgs)
+          // {tui-keepalive.command = "while true; do sleep 60; done";};
+      };
+    };
+
     mkDbsyncStack = env: let
       # To accomodate legacy shelley_qa env naming in iohk-nix
-      env' = replaceStrings ["_"] ["-"] env;
-
-      # The common state dir will be generic and relative since
-      # we may run this from any consuming repository stored at
-      # any path.
-      #
-      # We may wish to align this better with Justfile's handling
-      # of node state at ${XDG_DATA_HOME:=$HOME/.local/share}/$REPO
-      # in the future
-      stateDir = "./.run";
+      env' = toHyphen env;
 
       # It would be nice to set this to "${TMPDIR:=/tmp}/..."
       # but the process-compose bin doesn't currently allow for
       # shell interpolation in the probe commands
       socketDir = "/tmp/process-compose/${env'}";
-      commonLogDir = "/tmp/process-compose/${env'}";
     in {
       imports = [
         inputs.services-flake.processComposeModules.default
@@ -85,6 +157,13 @@ flake @ {
       apiServer = false;
       package = self'.packages.process-compose;
       tui = true;
+
+      preHook = ''
+        if ! [ -d /tmp ] || ! [ -w /tmp ]; then
+          echo "This process-compose stack requires that /tmp exists and is writable by the current user"
+          exit 1
+        fi
+      '';
 
       services.postgres."postgres-${env'}" = {
         inherit socketDir;
@@ -98,7 +177,7 @@ flake @ {
       };
 
       settings = {
-        log_location = "${commonLogDir}/${env'}.log";
+        log_location = "${commonLogDir}/${env'}/dbsync-${env'}.log";
         processes = {
           "postgres-${env'}" = {
             namespace = mkForce "postgresql";
@@ -110,58 +189,16 @@ flake @ {
             log_location = "${stateDir}/${env'}/cardano-db-sync/postgres-init.log";
           };
 
-          "cardano-node-${env'}${envVer env' "isNodeNg"}" = {
-            namespace = "cardano-node";
-            log_location = "${stateDir}/${env'}/cardano-node/node.log";
-            command = ''
-              ${config.cardano-parts.pkgs."cardano-node${envVer env' "isNodeNg"}"}/bin/cardano-node run +RTS -N -RTS \
-              --topology ${envCfgs}/config/${env}/topology.json \
-              --database-path ${stateDir}/${env'}/cardano-node/db \
-              --socket-path ${stateDir}/${env'}/cardano-node/node.socket \
-              --config ${envCfgs}/config/${env}/config.json
-            '';
-          };
+          "cardano-node-${env'}${envVer env' "isNodeNg"}" = mkNodeProcess env' "cardano-node";
 
-          "cardano-cli-${env'}${envVer env' "isNodeNg"}" = let
-            testnetMagic = toString (fromJSON (readFile environments.${env}.nodeConfig.ByronGenesisFile)).protocolConsts.protocolMagic;
-          in {
-            namespace = "cardano-node";
-            log_location = "${stateDir}/${env'}/cardano-node/cli.log";
-            command = pkgs.writeShellApplication {
-              name = "cardano-cli-${env'}${envVer env' "isNodeNg"}";
-              text = ''
-                CLI="${config.cardano-parts.pkgs."cardano-cli${envVer env' "isNodeNg"}"}/bin/cardano-cli"
-                SOCKET="${stateDir}/${env'}/cardano-node/node.socket"
-
-                while ! [ -S "$SOCKET" ]; do
-                  echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for a node socket at $SOCKET"
-                  sleep 5
-                done
-
-                while ! "$CLI" ping -c 1 -u "$SOCKET" -m "${testnetMagic}" &> /dev/null; do
-                  echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for the socket to become active at $SOCKET"
-                  sleep 5
-                done
-
-                while true; do
-                  date -u --rfc-3339=seconds
-                  "$CLI" query tip
-                  echo
-                  sleep 10
-                done
-              '';
-            };
-            environment = {
-              CARDANO_NODE_NETWORK_ID = testnetMagic;
-              CARDANO_NODE_SOCKET_PATH = "${stateDir}/${env'}/cardano-node/node.socket";
-            };
-          };
+          "cardano-cli-${env'}${envVer env' "isNodeNg"}" = mkCliProcess env' "cardano-node";
 
           "cardano-db-sync-${env'}${envVer env' "isDbsyncNg"}" = {
             namespace = "cardano-db-sync";
             log_location = "${stateDir}/${env'}/cardano-db-sync/dbsync.log";
             command = pkgs.writeShellApplication {
               name = "cardano-db-sync-${env'}${envVer env' "isDbsyncNg"}";
+              runtimeInputs = [pkgs.postgresql];
               text = ''
                 ${config.cardano-parts.pkgs."cardano-db-sync${envVer env' "isDbsyncNg"}"}/bin/cardano-db-sync \
                   --config ${envCfgs}/config/${env}/db-sync-config.json \
@@ -184,6 +221,7 @@ flake @ {
       run-process-compose-dbsync-private = mkDbsyncStack "private";
       run-process-compose-dbsync-sanchonet = mkDbsyncStack "sanchonet";
       run-process-compose-dbsync-shelley-qa = mkDbsyncStack "shelley_qa";
+      run-process-compose-node-stack = mkNodeStack;
     };
   };
 }

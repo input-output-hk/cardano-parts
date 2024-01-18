@@ -16,6 +16,7 @@ in {
           run-process-compose-dbsync-private
           run-process-compose-dbsync-sanchonet
           run-process-compose-dbsync-shelley-qa
+          run-process-compose-node-stack
           ;
       };
     });
