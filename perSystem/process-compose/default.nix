@@ -12,13 +12,15 @@ flake @ {
     system,
     ...
   }: let
+    inherit (builtins) fromJSON readFile;
     inherit (lib) mkForce replaceStrings;
+    inherit (cardanoLib) environments;
     inherit (opsLib) generateStaticHTMLConfigs;
 
     cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
     opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
-    envCfgs = generateStaticHTMLConfigs pkgs cardanoLib cardanoLib.environments;
+    envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
 
     # Node and dbsync versioning for local development testing
     #
@@ -120,11 +122,46 @@ flake @ {
             '';
           };
 
+          "cardano-cli-${env'}${envVer env' "isNodeNg"}" = let
+            testnetMagic = toString (fromJSON (readFile environments.${env}.nodeConfig.ByronGenesisFile)).protocolConsts.protocolMagic;
+          in {
+            namespace = "cardano-node";
+            log_location = "${stateDir}/${env'}/cardano-node/cli.log";
+            command = pkgs.writeShellApplication {
+              name = "cardano-cli-${env'}${envVer env' "isNodeNg"}";
+              text = ''
+                CLI="${config.cardano-parts.pkgs."cardano-cli${envVer env' "isNodeNg"}"}/bin/cardano-cli"
+                SOCKET="${stateDir}/${env'}/cardano-node/node.socket"
+
+                while ! [ -S "$SOCKET" ]; do
+                  echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for a node socket at $SOCKET"
+                  sleep 5
+                done
+
+                while ! "$CLI" ping -c 1 -u "$SOCKET" -m "${testnetMagic}" &> /dev/null; do
+                  echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for the socket to become active at $SOCKET"
+                  sleep 5
+                done
+
+                while true; do
+                  date -u --rfc-3339=seconds
+                  "$CLI" query tip
+                  echo
+                  sleep 10
+                done
+              '';
+            };
+            environment = {
+              CARDANO_NODE_NETWORK_ID = testnetMagic;
+              CARDANO_NODE_SOCKET_PATH = "${stateDir}/${env'}/cardano-node/node.socket";
+            };
+          };
+
           "cardano-db-sync-${env'}${envVer env' "isDbsyncNg"}" = {
             namespace = "cardano-db-sync";
             log_location = "${stateDir}/${env'}/cardano-db-sync/dbsync.log";
             command = pkgs.writeShellApplication {
-              name = "cardano-db-sync-${env'}";
+              name = "cardano-db-sync-${env'}${envVer env' "isDbsyncNg"}";
               text = ''
                 ${config.cardano-parts.pkgs."cardano-db-sync${envVer env' "isDbsyncNg"}"}/bin/cardano-db-sync \
                   --config ${envCfgs}/config/${env}/db-sync-config.json \
