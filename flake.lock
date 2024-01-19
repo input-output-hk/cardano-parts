@@ -1208,16 +1208,15 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1705607892,
-        "narHash": "sha256-3kCswNKbiMVX6DGP2wogFvQSLiBlP240uEa4J28l57U=",
-        "owner": "johnalotoski",
+        "lastModified": 1705650762,
+        "narHash": "sha256-kSLMsz0tXc1N5Jx8ghEXhLmK4X3Bktt3S4ttXJXCzCo=",
+        "owner": "Platonic-systems",
         "repo": "process-compose-flake",
-        "rev": "2316693e8883e0e4400f5b47cefc8d9c88e30067",
+        "rev": "c8942208e7c7122aef4811a606f7c12ad0753a98",
         "type": "github"
       },
       "original": {
-        "owner": "johnalotoski",
-        "ref": "pre-and-post-hook",
+        "owner": "Platonic-systems",
         "repo": "process-compose-flake",
         "type": "github"
       }
@@ -1286,16 +1285,15 @@
     },
     "services-flake": {
       "locked": {
-        "lastModified": 1705619808,
-        "narHash": "sha256-THLPYlcSOLF43zTNA2fNw4zHXvVQyQfpQlUyPU7/dSc=",
-        "owner": "johnalotoski",
+        "lastModified": 1705690208,
+        "narHash": "sha256-BB2TgKi9ZwLWAfjeVIiYgUGciUcqTb9lsIaMNx6/oI4=",
+        "owner": "juspay",
         "repo": "services-flake",
-        "rev": "96790f8dab1bc24e115b46d75807740e166ea8bf",
+        "rev": "eb8361b9ab6d8f81a9dfb065cc68053839578753",
         "type": "github"
       },
       "original": {
-        "owner": "johnalotoski",
-        "ref": "pg-socket-path-creation",
+        "owner": "juspay",
         "repo": "services-flake",
         "type": "github"
       }

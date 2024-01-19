@@ -1,11 +1,6 @@
-flake @ {
-  # self,
-  inputs,
-  ...
-}: {
+flake @ {inputs, ...}: {
   perSystem = {
     config,
-    # inputs',
     self',
     lib,
     pkgs,
