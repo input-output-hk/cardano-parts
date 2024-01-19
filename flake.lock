@@ -1286,15 +1286,16 @@
     },
     "services-flake": {
       "locked": {
-        "lastModified": 1705599616,
-        "narHash": "sha256-VmXMc00fn3FF5Ak+Ai64UHylJSq3hT/wBIIrb3pGANo=",
-        "owner": "juspay",
+        "lastModified": 1705619808,
+        "narHash": "sha256-THLPYlcSOLF43zTNA2fNw4zHXvVQyQfpQlUyPU7/dSc=",
+        "owner": "johnalotoski",
         "repo": "services-flake",
-        "rev": "1a3f2d1936ee3c96e8d30bcf9c99d2507c9bc624",
+        "rev": "96790f8dab1bc24e115b46d75807740e166ea8bf",
         "type": "github"
       },
       "original": {
-        "owner": "juspay",
+        "owner": "johnalotoski",
+        "ref": "pg-socket-path-creation",
         "repo": "services-flake",
         "type": "github"
       }

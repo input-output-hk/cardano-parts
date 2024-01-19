@@ -22,7 +22,7 @@
 
     # Process compose related
     process-compose-flake.url = "github:johnalotoski/process-compose-flake/pre-and-post-hook";
-    services-flake.url = "github:juspay/services-flake";
+    services-flake.url = "github:johnalotoski/services-flake/pg-socket-path-creation";
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
