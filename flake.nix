@@ -24,6 +24,10 @@
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
 
+    # Temp:
+    blockperf.url = "github:johnalotoski/blockperf/nix-flake";
+    # blockperf.url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/nix-flake";
+
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";

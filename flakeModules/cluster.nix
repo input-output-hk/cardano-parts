@@ -36,6 +36,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-smash-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.domain
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.environmentName
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.blockperf
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-cli
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync-pkgs
@@ -411,6 +412,12 @@ flake @ {
 
   pkgsSubmodule = submodule {
     options = {
+      blockperf = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default blockperf package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockperf);
+      };
+
       cardano-cli = mkOption {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default cardano-cli package.";
