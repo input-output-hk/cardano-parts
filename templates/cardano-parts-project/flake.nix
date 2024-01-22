@@ -25,6 +25,7 @@
           inputs.cardano-parts.flakeModules.jobs
           inputs.cardano-parts.flakeModules.lib
           inputs.cardano-parts.flakeModules.pkgs
+          inputs.cardano-parts.flakeModules.process-compose
           inputs.cardano-parts.flakeModules.shell
           {options.flake.opentofu = mkOption {type = types.attrs;};}
         ];

@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1703702592,
-        "narHash": "sha256-fIEncfDhs+00keB7nfntt8A5DDcG2lIg/zD+mJZv/fE=",
+        "lastModified": 1705328573,
+        "narHash": "sha256-phIUmokqg/3fdhyIJqRee5INFgbwsgq/PZKZzGwQQC0=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "8b229173763074bf6d5acdbb6ae3768883af7970",
+        "rev": "6681de94bef5409203984fcf0d07fb882fc58988",
         "type": "github"
       },
       "original": {
@@ -1208,15 +1208,15 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1701368682,
-        "narHash": "sha256-YkZbzfOkv68YOX4fK6VQvNHpysyZ/x3gePL3wbo8giA=",
-        "owner": "Platonic-Systems",
+        "lastModified": 1705650762,
+        "narHash": "sha256-kSLMsz0tXc1N5Jx8ghEXhLmK4X3Bktt3S4ttXJXCzCo=",
+        "owner": "Platonic-systems",
         "repo": "process-compose-flake",
-        "rev": "8edcd4de7c631eac2ce5f8e2a0782e0ca606da9b",
+        "rev": "c8942208e7c7122aef4811a606f7c12ad0753a98",
         "type": "github"
       },
       "original": {
-        "owner": "Platonic-Systems",
+        "owner": "Platonic-systems",
         "repo": "process-compose-flake",
         "type": "github"
       }
@@ -1243,6 +1243,7 @@
         "nixpkgs-unstable": "nixpkgs-unstable_2",
         "opentofu-registry": "opentofu-registry",
         "process-compose-flake": "process-compose-flake",
+        "services-flake": "services-flake",
         "sops-nix": "sops-nix",
         "terranix": "terranix",
         "treefmt-nix": "treefmt-nix_2"
@@ -1279,6 +1280,21 @@
         "owner": "bitcoin-core",
         "ref": "v0.3.2",
         "repo": "secp256k1",
+        "type": "github"
+      }
+    },
+    "services-flake": {
+      "locked": {
+        "lastModified": 1705690208,
+        "narHash": "sha256-BB2TgKi9ZwLWAfjeVIiYgUGciUcqTb9lsIaMNx6/oI4=",
+        "owner": "juspay",
+        "repo": "services-flake",
+        "rev": "eb8361b9ab6d8f81a9dfb065cc68053839578753",
+        "type": "github"
+      },
+      "original": {
+        "owner": "juspay",
+        "repo": "services-flake",
         "type": "github"
       }
     },

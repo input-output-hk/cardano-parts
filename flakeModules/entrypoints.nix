@@ -72,7 +72,7 @@ in
               if [ -n "''${ENVIRONMENT:-}" ]; then
                 echo "Using the preset environment $ENVIRONMENT ..." >&2
 
-                # Subst hypgen for underscore as iohk-nix envs historically use the former while cardano-world uses the later
+                # Subst hyphen for underscore as iohk-nix envs historically use the former while cardano-world uses the later
                 NODE_CONFIG="$DATA_DIR/config/''${ENVIRONMENT/-/_}/config.json"
                 NODE_TOPOLOGY="''${NODE_TOPOLOGY:-$DATA_DIR/config/''${ENVIRONMENT/-/_}/topology.json}"
               else

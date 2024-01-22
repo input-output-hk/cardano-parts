@@ -320,6 +320,7 @@ in
                         mdbook-kroki-preprocessor
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
                         opentofu
+                        postgresql
                         rain
                         sops
                         ssh-config-json
