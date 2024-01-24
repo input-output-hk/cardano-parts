@@ -205,7 +205,7 @@
 
             # Ensure quick restarts on any condition
             Restart = "always";
-            RestartSec = 1;
+            RestartSec = 10;
           };
         };
 
@@ -262,7 +262,7 @@
               });
 
               Restart = "always";
-              RestartSec = 1;
+              RestartSec = 10;
             };
           };
         }
