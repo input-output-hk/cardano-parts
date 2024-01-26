@@ -196,8 +196,10 @@
         };
 
         extraServiceConfig = _: {
-          # Ensure service restarts are continuous
-          startLimitIntervalSec = 0;
+          # Allow up to 10 failures with 30 second restarts in a 15 minute window
+          # before entering failure state and alerting
+          startLimitBurst = 10;
+          startLimitIntervalSec = 900;
 
           serviceConfig = {
             MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
@@ -205,7 +207,7 @@
 
             # Ensure quick restarts on any condition
             Restart = "always";
-            RestartSec = 10;
+            RestartSec = 30;
           };
         };
 
@@ -234,7 +236,10 @@
             partOf = ["cardano-node.service"];
             wantedBy = ["cardano-node.service"];
 
-            startLimitIntervalSec = 0;
+            # Allow up to 10 failures with 30 second restarts in a 15 minute window
+            # before entering failure state and alerting
+            startLimitBurst = 10;
+            startLimitIntervalSec = 900;
 
             serviceConfig = {
               ExecStart = getExe (pkgs.writeShellApplication {
@@ -262,7 +267,7 @@
               });
 
               Restart = "always";
-              RestartSec = 10;
+              RestartSec = 30;
             };
           };
         }

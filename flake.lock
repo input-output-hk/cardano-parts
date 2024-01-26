@@ -77,11 +77,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1706114615,
-        "narHash": "sha256-g6aAJ27ngZ7zjzjaC75uHpCwQDKP7Z/xk7Nz8PsJm6c=",
+        "lastModified": 1706221215,
+        "narHash": "sha256-VRc2nGwfIFSU9a4oITrKZMyxVEY67k6hWAmeYnLfCS4=",
         "owner": "johnalotoski",
         "repo": "blockperf",
-        "rev": "a0f8103d8b0f237d069934c28e50f61501805c26",
+        "rev": "9548fa338f3e2b1bfa5b7e86d9637951b680d0d7",
         "type": "github"
       },
       "original": {

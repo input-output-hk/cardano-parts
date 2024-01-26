@@ -15,8 +15,9 @@ flake: {
     pkgs,
     ...
   }: let
-    inherit (lib) hasSuffix mkOption;
-    inherit (lib.types) int package str;
+    inherit (builtins) concatStringsSep;
+    inherit (lib) escapeShellArgs hasSuffix getExe mkOption;
+    inherit (lib.types) int listOf package str;
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
 
@@ -41,29 +42,54 @@ flake: {
     cfgNode = config.services.cardano-node;
   in {
     options.services.blockperf = {
-      blockperfName = mkOption {
+      name = mkOption {
         type = str;
         default = null;
         description = "The blockperf client identifier provided by Cardano Foundation.";
       };
 
-      blockperfClientCert = mkOption {
+      clientCert = mkOption {
         type = str;
         default = null;
         description = "The filename of the local encrypted client certificate.";
       };
 
-      blockperfClientKey = mkOption {
+      clientKey = mkOption {
         type = str;
         default = null;
         description = "The filename of the local encrypted client key.";
       };
 
-      blockperfAmazonCA = mkOption {
+      maskedDnsList = mkOption {
+        type = listOf str;
+        default = [];
+        description = ''
+          The blockperf client DNS name list to be masked.
+
+          The DNS names in this list will first be resolved to IPs
+          and then prevented from being leaked in the blockperf service.
+
+          Add block producer DNS to this list if the IPs are not available to declare.
+        '';
+      };
+
+      maskedIpList = mkOption {
+        type = listOf str;
+        default = [];
+        description = ''
+          The blockperf client IP address list to be masked.
+
+          This will prevent these IPs from being leaked in the blockperf service.
+
+          Add block producer IPs to this list.
+        '';
+      };
+
+      amazonCa = mkOption {
         type = str;
         default = "blockperf-amazon-ca.pem.enc";
         description = ''
-          The filename of the local encrypte amazon CA in PEM format
+          The filename of the local encrypte amazon CA in PEM format.
 
           Path to the Amazon CA file in PEM format, sourced from:
             https://www.amazontrust.com/repository/AmazonRootCA1.pem
@@ -76,13 +102,13 @@ flake: {
         description = "The default blockperf package";
       };
 
-      nodeLogFile = mkOption {
+      logFile = mkOption {
         type = str;
         default = "${cfgNode.stateDir 0}/blockperf/node.json";
         description = "The full path and file name of the node log file which blockperf consumes.";
       };
 
-      nodeLogLimitBytes = mkOption {
+      logLimitBytes = mkOption {
         type = int;
         default = 5 * 1024 * 1024;
         description = ''
@@ -91,7 +117,7 @@ flake: {
         '';
       };
 
-      nodeLogKeepFilesNum = mkOption {
+      logKeepFilesNum = mkOption {
         type = int;
         default = 10;
         description = ''
@@ -100,7 +126,7 @@ flake: {
         '';
       };
 
-      nodeLogMaxAgeHours = mkOption {
+      logMaxAgeHours = mkOption {
         type = int;
         default = 24;
         description = ''
@@ -133,7 +159,7 @@ flake: {
             ["JournalSK" "cardano"]
 
             # Blockperf required
-            ["FileSK" cfg.nodeLogFile]
+            ["FileSK" cfg.logFile]
           ];
 
           setupScribes = [
@@ -148,11 +174,11 @@ flake: {
             {
               scFormat = "ScJson";
               scKind = "FileSK";
-              scName = cfg.nodeLogFile;
+              scName = cfg.logFile;
               scRotation = {
-                rpLogLimitBytes = cfg.nodeLogLimitBytes;
-                rpKeepFilesNum = cfg.nodeLogKeepFilesNum;
-                rpMaxAgeHours = cfg.nodeLogMaxAgeHours;
+                rpLogLimitBytes = cfg.logLimitBytes;
+                rpKeepFilesNum = cfg.logKeepFilesNum;
+                rpMaxAgeHours = cfg.logMaxAgeHours;
               };
             }
           ];
@@ -167,17 +193,17 @@ flake: {
         partOf = ["cardano-node.service"];
         wantedBy = ["cardano-node.service"];
 
-        # Ensure service restarts are continuous
-        startLimitIntervalSec = 0;
-
-        path = with pkgs; [cfg.package dig gnugrep];
+        # Allow up to 10 failures with 30 second restarts in a 15 minute window
+        # before entering failure state and alerting
+        startLimitBurst = 10;
+        startLimitIntervalSec = 900;
 
         environment = {
           # Path to the cardano-node blockperf log file
-          BLOCKPERF_NODE_LOGFILE = cfg.nodeLogFile;
+          BLOCKPERF_NODE_LOGFILE = cfg.logFile;
 
           # The client identifier; will be given to you with the certificates
-          BLOCKPERF_NAME = cfg.blockperfName;
+          BLOCKPERF_NAME = cfg.name;
 
           # Path to the client certificate file
           BLOCKPERF_CLIENT_CERT = sopsPath "blockperf-client-cert.pem";
@@ -190,33 +216,60 @@ flake: {
           BLOCKPERF_AMAZON_CA = sopsPath "blockperf-amazon-ca.pem";
         };
 
-        script = ''
-          set -euo pipefail
-
-          # Set the node config path
-          #
-          # The nixos service does not make the config file accessible,
-          # so we either need to regenerate it completely, or parse it
-          # out of the systemd unit
-          START_SCRIPT=$(grep -oP "ExecStart=\K.*" /etc/systemd/system/cardano-node.service)
-          NODE_CONFIG=$(grep -oP '   echo "--config \K(.*).json' $(echo "$START_SCRIPT"))
-          export BLOCKPERF_NODE_CONFIG="$NODE_CONFIG"
-
-          # Set our public IP using a generic resolver that is cloud/platform independent
-          PUBLIC_IP=$(dig +short @resolver1.opendns.com myip.opendns.com)
-          export BLOCKPERF_RELAY_PUBLIC_IP="$PUBLIC_IP";
-
-          echo "Blockperf machine Amazon CA: $BLOCKPERF_AMAZON_CA"
-          echo "Blockperf machine client cert: $BLOCKPERF_CLIENT_CERT"
-          echo "Blockperf machine client key: $BLOCKPERF_CLIENT_KEY"
-          echo "Starting blockperf..."
-          blockperf run
-        '';
-
         serviceConfig = {
+          ExecStart = getExe (pkgs.writeShellApplication {
+            # Must not be named `blockperf` for the same reason the systemd service name cannot
+            name = "blockPerf";
+            runtimeInputs = with pkgs; [cfg.package dig gnugrep];
+            text = ''
+              set -euo pipefail
+
+              [ -n "''${DEBUG:-}" ] && set -x
+
+              # Set the node config path
+              #
+              # The nixos service does not make the config file accessible,
+              # so we either need to regenerate it completely, or parse it
+              # out of the systemd unit
+              START_SCRIPT=$(grep -oP "ExecStart=\K([^ ]+)" /etc/systemd/system/cardano-node.service)
+              NODE_CONFIG=$(grep -oP '   echo "--config \K(.*\.json)' "$START_SCRIPT")
+              export BLOCKPERF_NODE_CONFIG="$NODE_CONFIG"
+
+              # Set our public IP using a generic resolver that is cloud/platform independent
+              PUBLIC_IP=$(dig +short @resolver1.opendns.com myip.opendns.com)
+              export BLOCKPERF_RELAY_PUBLIC_IP="$PUBLIC_IP"
+
+              MASKED="${concatStringsSep "," cfg.maskedIpList}"
+              for DNS in ${escapeShellArgs cfg.maskedDnsList}; do
+                IP=$(dig +short "$DNS")
+                if [ "$IP" != "" ]; then
+                  MASKED+=",$IP"
+                else
+                  echo "ERROR: Unable to resolve masked dns address: $DNS"
+                  exit 1
+                fi
+              done
+
+              # Remove a leading comma if present
+              MASKED="''${MASKED/#,}"
+
+              BLOCKPERF_MASKED_ADDRESSES="$MASKED"
+              export BLOCKPERF_MASKED_ADDRESSES
+
+              echo "Blockperf machine Amazon CA: $BLOCKPERF_AMAZON_CA"
+              echo "Blockperf machine client cert: $BLOCKPERF_CLIENT_CERT"
+              echo "Blockperf machine client key: $BLOCKPERF_CLIENT_KEY"
+              echo -e "Blockperf machine masked ips:\n  ${concatStringsSep "\n  " cfg.maskedIpList}\n"
+              echo -e "Blockperf machine masked dns (to be resolved):\n  ${concatStringsSep "\n  " cfg.maskedDnsList}\n"
+              echo -e "Blockperf machine masked addresses string (resolved):\n  $BLOCKPERF_MASKED_ADDRESSES"
+              echo "Starting blockperf..."
+              blockperf run
+            '';
+          });
+
           # Ensure quick restarts on any condition
           Restart = "always";
-          RestartSec = 10;
+          RestartSec = 30;
           KillSignal = "SIGINT";
         };
       };
@@ -224,9 +277,9 @@ flake: {
       users.users.cardano-node.extraGroups = ["keys"];
 
       sops.secrets =
-        mkSopsSecret (mkSopsSecretParams "blockperf-client-cert.pem" cfg.blockperfClientCert)
-        // mkSopsSecret (mkSopsSecretParams "blockperf-client.key" cfg.blockperfClientKey)
-        // mkSopsSecret (mkSopsSecretParams "blockperf-amazon-ca.pem" cfg.blockperfAmazonCA);
+        mkSopsSecret (mkSopsSecretParams "blockperf-client-cert.pem" cfg.clientCert)
+        // mkSopsSecret (mkSopsSecretParams "blockperf-client.key" cfg.clientKey)
+        // mkSopsSecret (mkSopsSecretParams "blockperf-amazon-ca.pem" cfg.amazonCa);
 
       assertions = [
         {

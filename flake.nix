@@ -24,7 +24,7 @@
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
 
-    # Temp:
+    # Move this to capkgs once the flake is stable and merged upstream:
     blockperf.url = "github:johnalotoski/blockperf/nix-flake";
     # blockperf.url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/nix-flake";
 
