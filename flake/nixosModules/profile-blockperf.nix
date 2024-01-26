@@ -3,6 +3,18 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.blockperf.amazonCa
+#   config.services.blockperf.clientCert
+#   config.services.blockperf.clientKey
+#   config.services.blockperf.logFile
+#   config.services.blockperf.logKeepFilesNum
+#   config.services.blockperf.logLimitBytes
+#   config.services.blockperf.logMaxAgeHours
+#   config.services.blockperf.maskedDnsList
+#   config.services.blockperf.maskedIpList
+#   config.services.blockperf.name
+#   config.services.blockperf.package
+#   config.services.blockperf.secretsPathPrefix
 #
 # Tips:
 #   * This is an add-on to the profile-cardano-node-group nixos service module

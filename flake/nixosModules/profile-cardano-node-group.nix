@@ -3,9 +3,9 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.cardano-node.shareIpv6Address
-#   config.cardano-node.totalMaxHeapSizeMiB
-#   config.cardano-node.totalCpuCores
+#   config.services.cardano-node.shareIpv6Address
+#   config.services.cardano-node.totalMaxHeapSizeMiB
+#   config.services.cardano-node.totalCpuCores
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
