@@ -42,6 +42,8 @@
 #   perSystem.cardano-parts.pkgs.metadata-sync
 #   perSystem.cardano-parts.pkgs.metadata-validator-github
 #   perSystem.cardano-parts.pkgs.metadata-webhook
+#   perSystem.cardano-parts.pkgs.mithril-client-cli
+#   perSystem.cardano-parts.pkgs.mithril-signer
 #   perSystem.cardano-parts.pkgs.token-metadata-creator
 #
 # Tips:
@@ -407,6 +409,8 @@ in
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0)
+            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2403-1-pre {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2403-1-pre {meta.mainProgram = "mithril-signer";}))
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0 {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
@@ -443,6 +447,8 @@ in
               metadata-sync
               metadata-validator-github
               metadata-webhook
+              mithril-client-cli
+              mithril-signer
               token-metadata-creator
               ;
 

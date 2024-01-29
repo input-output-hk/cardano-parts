@@ -47,6 +47,8 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node-pkgs
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-smash
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-submit-api
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.mithril-client-cli
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.signer
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.cluster.<...>
@@ -488,6 +490,18 @@ flake @ {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default cardano-submit-api package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api);
+      };
+
+      mithril-client-cli = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default mithril-client-cli package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-client-cli);
+      };
+
+      mithril-signer = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default mithril-signer package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-signer);
       };
     };
   };

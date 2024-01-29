@@ -290,6 +290,7 @@ in
                         db-analyser
                         db-synthesizer
                         db-truncater
+                        mithril-client-cli
 
                         # The packages derivations of the `-ng` pkgs provide
                         # the wrapped binary to avoid cli name collision.
