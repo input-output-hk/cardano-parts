@@ -71,7 +71,7 @@
       services.cardano-node = {
         enableMithrilClient = mkOption {
           type = bool;
-          default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl;
+          default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && environmentName != "mainnet";
           description = "Allow mithril-client to bootstrap cardano-node chain state.";
         };
 

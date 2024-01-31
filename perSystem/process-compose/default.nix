@@ -8,14 +8,16 @@ flake @ {inputs, ...}: {
     ...
   }: let
     inherit (builtins) attrNames fromJSON readFile;
-    inherit (lib) concatMapStringsSep foldl' mkForce recursiveUpdate replaceStrings;
+    inherit (lib) concatMapStringsSep foldl' mkForce optionalString recursiveUpdate replaceStrings;
     inherit (cardanoLib) environments;
     inherit (opsLib) generateStaticHTMLConfigs;
 
     cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
+    cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
     opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
     envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
+    envCfgsNg = generateStaticHTMLConfigs pkgs cardanoLibNg environments;
 
     # Node and dbsync versioning for local development testing
     #
@@ -24,33 +26,39 @@ flake @ {inputs, ...}: {
     # the deprecated `ApplicationName` key to be set in the environment config
     envBinCfgs = {
       mainnet = {
-        isNodeNg = false;
+        isCardanoLibNg = false;
         isDbsyncNg = true;
+        isNodeNg = false;
         magic = getMagic "mainnet";
       };
       preprod = {
-        isNodeNg = false;
+        isCardanoLibNg = false;
         isDbsyncNg = true;
+        isNodeNg = false;
         magic = getMagic "preprod";
       };
       preview = {
-        isNodeNg = false;
+        isCardanoLibNg = false;
         isDbsyncNg = true;
+        isNodeNg = false;
         magic = getMagic "preview";
       };
       private = {
-        isNodeNg = true;
+        isCardanoLibNg = true;
         isDbsyncNg = true;
+        isNodeNg = true;
         magic = getMagic "private";
       };
       sanchonet = {
-        isNodeNg = true;
+        isCardanoLibNg = true;
         isDbsyncNg = true;
+        isNodeNg = true;
         magic = getMagic "sanchonet";
       };
       shelley-qa = {
-        isNodeNg = true;
+        isCardanoLibNg = false;
         isDbsyncNg = true;
+        isNodeNg = true;
         magic = getMagic "shelley-qa";
       };
     };
@@ -59,6 +67,11 @@ flake @ {inputs, ...}: {
       if envBinCfgs.${env}.${binCfg}
       then "-ng"
       else "";
+
+    envCfgs' = env:
+      if envBinCfgs.${env}.isCardanoLibNg
+      then envCfgsNg
+      else envCfgs;
 
     toHyphen = s: replaceStrings ["_"] ["-"] s;
     toUnderscore = s: replaceStrings ["-"] ["_"] s;
@@ -92,16 +105,51 @@ flake @ {inputs, ...}: {
       fi
     '';
 
+    mithril-client-bootstrap = env: let
+      inherit (environments.${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
+      isMithrilEnv = environments.${toUnderscore env} ? mithrilAggregatorEndpointUrl && env != "mainnet";
+    in
+      optionalString isMithrilEnv ''
+        if [ -z "''${MITHRIL_DISABLE:-}" ] && [ -z "''${MITHRIL_DISABLE_${env}:-}" ]; then
+          MITHRIL_CLIENT="${config.cardano-parts.pkgs.mithril-client-cli}/bin/mithril-client"
+          DB_DIR="${stateDir}/${env}/cardano-node/db"
+          TMPSTATE="''${DB_DIR}-mithril"
+          rm -rf "$TMPSTATE"
+          if ! [ -d "$DB_DIR" ]; then
+            echo "Bootstrapping cardano-node state from mithril"
+            echo "To disable mithril syncing, set MITHRIL_DISABLE or MITHRIL_DISABLE_${env} env vars"
+            "$MITHRIL_CLIENT" \
+              -vvv \
+              --aggregator-endpoint "${mithrilAggregatorEndpointUrl}" \
+              snapshot \
+              download \
+              "latest" \
+              --download-dir "$TMPSTATE" \
+              --genesis-verification-key "${mithrilGenesisVerificationKey}"
+            mv "$TMPSTATE/db" "$DB_DIR"
+            rm -rf "$TMPSTATE"
+            echo "Mithril bootstrap complete for $DB_DIR"
+          fi
+        fi
+      '';
+
     mkNodeProcess = env: namespace: {
       inherit namespace;
       log_location = "${stateDir}/${env}/cardano-node/node.log";
-      command = ''
-        ${config.cardano-parts.pkgs."cardano-node${envVer env "isNodeNg"}"}/bin/cardano-node run +RTS -N -RTS \
-        --topology ${envCfgs}/config/${toUnderscore env}/topology.json \
-        --database-path ${stateDir}/${env}/cardano-node/db \
-        --socket-path ${stateDir}/${env}/cardano-node/node.socket \
-        --config ${envCfgs}/config/${toUnderscore env}/config.json
-      '';
+      command = pkgs.writeShellApplication {
+        name = "cardano-node-${env}${envVer env "isNodeNg"}";
+        text = ''
+          # Mithril bootstrap code will follow if the environment supports mithril.
+          # This can be disabled set setting either MITHRIL_DISABLE or MITRHIL_DISABLE_${env} env vars.
+          ${mithril-client-bootstrap env}
+
+          ${config.cardano-parts.pkgs."cardano-node${envVer env "isNodeNg"}"}/bin/cardano-node run +RTS -N -RTS \
+          --topology ${envCfgs' env}/config/${toUnderscore env}/topology.json \
+          --database-path ${stateDir}/${env}/cardano-node/db \
+          --socket-path ${stateDir}/${env}/cardano-node/node.socket \
+          --config ${envCfgs' env}/config/${toUnderscore env}/config.json
+        '';
+      };
     };
 
     mkCliProcess = env: namespace: {
@@ -172,6 +220,9 @@ flake @ {inputs, ...}: {
                   echo "If you don't have an \"ops\" devShell handy, you can enter one with:"
                   echo
                   echo "  nix develop github:input-output-hk/cardano-parts#devShells.x86_64-linux.ops"
+                  echo
+                  echo "If an environment supports Mithril, it will be used to sync client state."
+                  echo "Mithril syncing can be disabled by setting either of MITHRIL_DISABLE or MITRHIL_DISABLE_\$ENV env vars."
                   echo
                   echo "Connection parameters for each environment are:"
                   echo
@@ -272,7 +323,7 @@ flake @ {inputs, ...}: {
                 chmod 0600 "$PGPASSFILE"
 
                 ${config.cardano-parts.pkgs."cardano-db-sync${envVer env' "isDbsyncNg"}"}/bin/cardano-db-sync \
-                  --config ${envCfgs}/config/${env}/db-sync-config.json \
+                  --config ${envCfgs' env}/config/${env}/db-sync-config.json \
                   --socket-path ${stateDir}/${env'}/cardano-node/node.socket \
                   --state-dir ${stateDir}/${env'}/cardano-db-sync/ledger-state \
                   --schema-dir ${flake.config.flake.cardano-parts.pkgs.special."cardano-db-sync-schema${envVer env' "isDbsyncNg"}"}
