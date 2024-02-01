@@ -374,7 +374,7 @@ in
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
             (mkPkg "bech32" caPkgs.bech32-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "blockperf" localFlake.inputs.blockperf.packages.${system}.blockperf)
+            (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2023-07-18)
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-7-3 // {version = "8.17.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-7-3 // {version = "8.17.0.0";}))
