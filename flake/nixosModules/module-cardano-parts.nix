@@ -29,6 +29,8 @@
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-smash
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
+#   config.cardano-parts.perNode.pkgs.mithril-client-cli
+#   config.cardano-parts.perNode.pkgs.mithril-signer
 #   config.cardano-parts.perNode.roles.isCardanoDensePool
 flake @ {moduleWithSystem, ...}: {
   flake.nixosModules.module-cardano-parts = moduleWithSystem ({system}: {
@@ -205,6 +207,8 @@ flake @ {moduleWithSystem, ...}: {
         (mkPkgOpt "cardano-node" (cfg.group.pkgs.cardano-node system))
         (mkPkgOpt "cardano-smash" (cfg.group.pkgs.cardano-smash system))
         (mkPkgOpt "cardano-submit-api" (cfg.group.pkgs.cardano-submit-api system))
+        (mkPkgOpt "mithril-client-cli" (cfg.group.pkgs.mithril-client-cli system))
+        (mkPkgOpt "mithril-signer" (cfg.group.pkgs.mithril-signer system))
         (mkSpecialOpt "cardano-db-sync-pkgs" lib.types.attrs (cfg.group.pkgs.cardano-db-sync-pkgs system))
         (mkSpecialOpt "cardano-metadata-pkgs" lib.types.attrs (cfg.group.pkgs.cardano-metadata-pkgs system))
         (mkSpecialOpt "cardano-node-pkgs" (attrsOf anything) (cfg.group.pkgs.cardano-node-pkgs system))

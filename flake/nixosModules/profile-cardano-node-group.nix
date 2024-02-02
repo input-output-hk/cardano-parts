@@ -3,9 +3,13 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.cardano-node.enableMithrilClient
+#   config.services.cardano-node.mithrilAggregatorEndpointUrl
+#   config.services.cardano-node.mithrilGenesisVerificationKey
+#   config.services.cardano-node.mithrilSnapshotDigest
 #   config.services.cardano-node.shareIpv6Address
-#   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.cardano-node.totalCpuCores
+#   config.services.cardano-node.totalMaxHeapSizeMiB
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
@@ -24,14 +28,14 @@
     ...
   }: let
     inherit (builtins) fromJSON readFile;
-    inherit (lib) flatten foldl' getExe min mkDefault mkIf mkOption range recursiveUpdate types;
-    inherit (types) bool float ints oneOf;
+    inherit (lib) flatten foldl' getExe min mkDefault mkIf mkOption optionalString range recursiveUpdate types;
+    inherit (types) bool float ints oneOf str;
     inherit (nodeResources) cpuCount memMiB;
 
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
-    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node cardano-node-pkgs;
+    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node cardano-node-pkgs mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
@@ -69,14 +73,28 @@
 
     options = {
       services.cardano-node = {
-        totalMaxHeapSizeMiB = mkOption {
-          type = oneOf [ints.positive float];
-          default = memMiB * 0.790;
+        enableMithrilClient = mkOption {
+          type = bool;
+          default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && environmentName != "mainnet";
+          description = "Allow mithril-client to bootstrap cardano-node chain state.";
         };
 
-        totalCpuCount = mkOption {
-          type = ints.positive;
-          default = min cpuCount (2 * cfg.instances);
+        mithrilAggregatorEndpointUrl = mkOption {
+          type = str;
+          default = cfg.environments.${environmentName}.mithrilAggregatorEndpointUrl or "";
+          description = "The mithril aggregator endpoint url.";
+        };
+
+        mithrilGenesisVerificationKey = mkOption {
+          type = str;
+          default = cfg.environments.${environmentName}.mithrilGenesisVerificationKey or "";
+          description = "The mithril genesis verification key.";
+        };
+
+        mithrilSnapshotDigest = mkOption {
+          type = str;
+          default = "latest";
+          description = "The mithril snapshot digest id or `latest` for the most recently taken snapshot.";
         };
 
         shareIpv6Address = mkOption {
@@ -97,6 +115,16 @@
             This is done using an inotifywait service to avoid long systemd job startups using postStart.
           '';
         };
+
+        totalCpuCount = mkOption {
+          type = ints.positive;
+          default = min cpuCount (2 * cfg.instances);
+        };
+
+        totalMaxHeapSizeMiB = mkOption {
+          type = oneOf [ints.positive float];
+          default = memMiB * 0.790;
+        };
       };
     };
 
@@ -110,6 +138,7 @@
         self'.packages.db-analyser-ng
         self'.packages.db-synthesizer-ng
         self'.packages.db-truncater-ng
+        mithril-client-cli
       ];
 
       environment = {
@@ -134,6 +163,8 @@
           CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
           CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
           CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
+          AGGREGATOR_ENDPOINT = mkIf cfg.enableMithrilClient cfg.mithrilAggregatorEndpointUrl;
+          GENESIS_VERIFICATION_KEY = mkIf cfg.enableMithrilClient cfg.mithrilGenesisVerificationKey;
           TESTNET_MAGIC = toString protocolMagic;
         };
       };
@@ -274,18 +305,51 @@
         // foldl' (acc: i:
           recursiveUpdate acc {
             "${serviceName i}" = {
-              path = with pkgs; [gnutar gzip];
-
-              preStart = ''
-                cd $STATE_DIRECTORY
-                if [ -f db-restore.tar.gz ]; then
-                  rm -rf db-${environmentName}*
-                  tar xzf db-restore.tar.gz
-                  rm db-restore.tar.gz
-                fi
-              '';
-
               serviceConfig = {
+                ExecStartPre = getExe (pkgs.writeShellApplication {
+                  name = "cardano-node-pre-start";
+                  runtimeInputs = with pkgs; [gnutar gzip];
+                  text = let
+                    mithril-client-bootstrap = optionalString cfg.enableMithrilClient ''
+                      TMPSTATE="''${DB_DIR}-mithril"
+                      rm -rf "$TMPSTATE"
+                      if ! [ -d "$DB_DIR" ]; then
+                        echo "Bootstrapping cardano-node-${toString i} state from mithril"
+                        ${getExe mithril-client-cli} \
+                          -vvv \
+                          --aggregator-endpoint "${cfg.mithrilAggregatorEndpointUrl}" \
+                          snapshot \
+                          download \
+                          "${cfg.mithrilSnapshotDigest}" \
+                          --download-dir "$TMPSTATE" \
+                          --genesis-verification-key "${cfg.mithrilGenesisVerificationKey}"
+                        mv "$TMPSTATE/db" "$DB_DIR"
+                        rm -rf "$TMPSTATE"
+                        echo "Mithril bootstrap complete for $DB_DIR"
+                      fi
+                    '';
+                  in ''
+                    INSTANCE="${toString i}"
+                    DB_DIR="${
+                      if i == 0
+                      then "db-${environmentName}"
+                      else "db-${environmentName}-${toString i}"
+                    }"
+                    cd "$STATE_DIRECTORY"
+
+                    # Legacy: if a db-restore.tar.gz file exists, use it to replace state of the first node instance
+                    if [ -f db-restore.tar.gz ] && [ "$INSTANCE" == "0" ]; then
+                      echo "Restoring database from db-restore.tar.gz to $DB_DIR"
+                      rm -rf "$DB_DIR"
+                      tar xzf db-restore.tar.gz
+                      rm db-restore.tar.gz
+                    fi
+
+                    # Mithril-client bootstrap code will follow if nixos option service.cardano-node.enableMithrilClient is true
+                    ${mithril-client-bootstrap}
+                  '';
+                });
+
                 # Allow long ledger replays and/or db-restore gunzip, including on slow systems
                 TimeoutStartSec = "infinity";
               };
