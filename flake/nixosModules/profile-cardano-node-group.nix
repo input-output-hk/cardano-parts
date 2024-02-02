@@ -3,13 +3,13 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.services.cardano-node.enableMithrilClient
-#   config.services.cardano-node.mithrilAggregatorEndpointUrl
-#   config.services.cardano-node.mithrilGenesisVerificationKey
-#   config.services.cardano-node.mithrilSnapshotDigest
 #   config.services.cardano-node.shareIpv6Address
 #   config.services.cardano-node.totalCpuCores
 #   config.services.cardano-node.totalMaxHeapSizeMiB
+#   config.services.mithril-client.enable
+#   config.services.mithril-client.aggregatorEndpointUrl
+#   config.services.mithril-client.genesisVerificationKey
+#   config.services.mithril-client.snapshotDigest
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
@@ -60,6 +60,7 @@
     iRange = range 0 (cfg.instances - 1);
 
     cfg = nixos.config.services.cardano-node;
+    cfgMithril = nixos.config.services.mithril-client;
   in {
     # Leave the import of the upstream cardano-node service for
     # cardano-parts consuming repos so that service import can be customized.
@@ -72,58 +73,62 @@
     # ];
 
     options = {
-      services.cardano-node = {
-        enableMithrilClient = mkOption {
-          type = bool;
-          default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && environmentName != "mainnet";
-          description = "Allow mithril-client to bootstrap cardano-node chain state.";
+      services = {
+        cardano-node = {
+          shareIpv6Address = mkOption {
+            type = bool;
+            default = true;
+            description = ''
+              Should instances on same machine share ipv6 address.
+              Default: true, sets ipv6HostAddr equal to ::1.
+              If false use address increments starting from instance index + 1.
+            '';
+          };
+
+          shareNodeSocket = mkOption {
+            type = bool;
+            default = false;
+            description = ''
+              Makes the node socket for instance 0 only group writeable.
+              This is done using an inotifywait service to avoid long systemd job startups using postStart.
+            '';
+          };
+
+          totalCpuCount = mkOption {
+            type = ints.positive;
+            default = min cpuCount (2 * cfg.instances);
+          };
+
+          totalMaxHeapSizeMiB = mkOption {
+            type = oneOf [ints.positive float];
+            default = memMiB * 0.790;
+          };
         };
 
-        mithrilAggregatorEndpointUrl = mkOption {
-          type = str;
-          default = cfg.environments.${environmentName}.mithrilAggregatorEndpointUrl or "";
-          description = "The mithril aggregator endpoint url.";
-        };
+        mithril-client = {
+          enable = mkOption {
+            type = bool;
+            default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && environmentName != "mainnet";
+            description = "Allow mithril-client to bootstrap cardano-node chain state.";
+          };
 
-        mithrilGenesisVerificationKey = mkOption {
-          type = str;
-          default = cfg.environments.${environmentName}.mithrilGenesisVerificationKey or "";
-          description = "The mithril genesis verification key.";
-        };
+          aggregatorEndpointUrl = mkOption {
+            type = str;
+            default = cfg.environments.${environmentName}.mithrilAggregatorEndpointUrl or "";
+            description = "The mithril aggregator endpoint url.";
+          };
 
-        mithrilSnapshotDigest = mkOption {
-          type = str;
-          default = "latest";
-          description = "The mithril snapshot digest id or `latest` for the most recently taken snapshot.";
-        };
+          genesisVerificationKey = mkOption {
+            type = str;
+            default = cfg.environments.${environmentName}.mithrilGenesisVerificationKey or "";
+            description = "The mithril genesis verification key.";
+          };
 
-        shareIpv6Address = mkOption {
-          type = bool;
-          default = true;
-          description = ''
-            Should instances on same machine share ipv6 address.
-            Default: true, sets ipv6HostAddr equal to ::1.
-            If false use address increments starting from instance index + 1.
-          '';
-        };
-
-        shareNodeSocket = mkOption {
-          type = bool;
-          default = false;
-          description = ''
-            Makes the node socket for instance 0 only group writeable.
-            This is done using an inotifywait service to avoid long systemd job startups using postStart.
-          '';
-        };
-
-        totalCpuCount = mkOption {
-          type = ints.positive;
-          default = min cpuCount (2 * cfg.instances);
-        };
-
-        totalMaxHeapSizeMiB = mkOption {
-          type = oneOf [ints.positive float];
-          default = memMiB * 0.790;
+          snapshotDigest = mkOption {
+            type = str;
+            default = "latest";
+            description = "The mithril snapshot digest id or `latest` for the most recently taken snapshot.";
+          };
         };
       };
     };
@@ -163,8 +168,8 @@
           CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
           CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
           CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
-          AGGREGATOR_ENDPOINT = mkIf cfg.enableMithrilClient cfg.mithrilAggregatorEndpointUrl;
-          GENESIS_VERIFICATION_KEY = mkIf cfg.enableMithrilClient cfg.mithrilGenesisVerificationKey;
+          AGGREGATOR_ENDPOINT = mkIf cfgMithril.enable cfgMithril.aggregatorEndpointUrl;
+          GENESIS_VERIFICATION_KEY = mkIf cfgMithril.enable cfgMithril.genesisVerificationKey;
           TESTNET_MAGIC = toString protocolMagic;
         };
       };
@@ -310,19 +315,19 @@
                   name = "cardano-node-pre-start";
                   runtimeInputs = with pkgs; [gnutar gzip];
                   text = let
-                    mithril-client-bootstrap = optionalString cfg.enableMithrilClient ''
+                    mithril-client-bootstrap = optionalString cfgMithril.enable ''
                       TMPSTATE="''${DB_DIR}-mithril"
                       rm -rf "$TMPSTATE"
                       if ! [ -d "$DB_DIR" ]; then
                         echo "Bootstrapping cardano-node-${toString i} state from mithril"
                         ${getExe mithril-client-cli} \
                           -vvv \
-                          --aggregator-endpoint "${cfg.mithrilAggregatorEndpointUrl}" \
+                          --aggregator-endpoint "${cfgMithril.aggregatorEndpointUrl}" \
                           snapshot \
                           download \
-                          "${cfg.mithrilSnapshotDigest}" \
+                          "${cfgMithril.snapshotDigest}" \
                           --download-dir "$TMPSTATE" \
-                          --genesis-verification-key "${cfg.mithrilGenesisVerificationKey}"
+                          --genesis-verification-key "${cfgMithril.genesisVerificationKey}"
                         mv "$TMPSTATE/db" "$DB_DIR"
                         rm -rf "$TMPSTATE"
                         echo "Mithril bootstrap complete for $DB_DIR"
@@ -345,7 +350,7 @@
                       rm db-restore.tar.gz
                     fi
 
-                    # Mithril-client bootstrap code will follow if nixos option service.cardano-node.enableMithrilClient is true
+                    # Mithril-client bootstrap code will follow if nixos option service.mithril-client.enable is true
                     ${mithril-client-bootstrap}
                   '';
                 });
