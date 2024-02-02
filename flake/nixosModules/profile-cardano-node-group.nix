@@ -3,9 +3,9 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.cardano-node.shareIpv6Address
-#   config.cardano-node.totalMaxHeapSizeMiB
-#   config.cardano-node.totalCpuCores
+#   config.services.cardano-node.shareIpv6Address
+#   config.services.cardano-node.totalMaxHeapSizeMiB
+#   config.services.cardano-node.totalCpuCores
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
@@ -196,8 +196,10 @@
         };
 
         extraServiceConfig = _: {
-          # Ensure service restarts are continuous
-          startLimitIntervalSec = 0;
+          # Allow up to 10 failures with 30 second restarts in a 15 minute window
+          # before entering failure state and alerting
+          startLimitBurst = 10;
+          startLimitIntervalSec = 900;
 
           serviceConfig = {
             MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
@@ -205,7 +207,7 @@
 
             # Ensure quick restarts on any condition
             Restart = "always";
-            RestartSec = 1;
+            RestartSec = 30;
           };
         };
 
@@ -234,7 +236,10 @@
             partOf = ["cardano-node.service"];
             wantedBy = ["cardano-node.service"];
 
-            startLimitIntervalSec = 0;
+            # Allow up to 10 failures with 30 second restarts in a 15 minute window
+            # before entering failure state and alerting
+            startLimitBurst = 10;
+            startLimitIntervalSec = 900;
 
             serviceConfig = {
               ExecStart = getExe (pkgs.writeShellApplication {
@@ -262,7 +267,7 @@
               });
 
               Restart = "always";
-              RestartSec = 1;
+              RestartSec = 30;
             };
           };
         }

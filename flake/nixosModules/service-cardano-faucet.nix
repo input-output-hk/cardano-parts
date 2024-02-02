@@ -145,7 +145,10 @@
           after = ["network-online.target"];
           wantedBy = ["multi-user.target"];
 
-          startLimitIntervalSec = 0;
+          # Allow up to 10 failures with 30 second restarts in a 15 minute window
+          # before entering failure state and alerting
+          startLimitBurst = 10;
+          startLimitIntervalSec = 900;
 
           environment = {
             CONFIG_FILE = cfg.configFile;

@@ -89,6 +89,7 @@ apply-all *ARGS:
 
 build-book-prod:
   #!/usr/bin/env bash
+  set -e
   cd docs
   ln -sf book-prod.toml book.toml
   cd -
@@ -96,6 +97,7 @@ build-book-prod:
 
 build-book-staging:
   #!/usr/bin/env bash
+  set -e
   cd docs
   ln -sf book-staging.toml book.toml
   cd -
@@ -121,6 +123,7 @@ dbsync-psql HOSTNAME:
 
 dbsync-pool-analyze HOSTNAME:
   #!/usr/bin/env bash
+  set -euo pipefail
   echo "Pushing pool analysis sql command on {{HOSTNAME}}..."
   just scp scripts/dbsync-pool-perf.sql {{HOSTNAME}}:/tmp/
 
@@ -150,6 +153,7 @@ dbsync-pool-analyze HOSTNAME:
 
 dbsync-create-faucet-stake-keys-table ENV HOSTNAME NUM_ACCOUNTS="500":
   #!/usr/bin/env bash
+  set -euo pipefail
   TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
 
   echo "Creating stake key sql injection command for environment {{ENV}} (this will take a minute)..."
@@ -170,6 +174,7 @@ dbsync-create-faucet-stake-keys-table ENV HOSTNAME NUM_ACCOUNTS="500":
 
 dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
   #!/usr/bin/env bash
+  set -euo pipefail
   {{checkEnv}}
   just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
 
@@ -252,6 +257,7 @@ list-machines:
 
 mimir-alertmanager-bootstrap:
   #!/usr/bin/env bash
+  set -euo pipefail
   echo "Enter the mimir admin username: "
   read -s MIMIR_USER
   echo
@@ -285,15 +291,21 @@ mimir-alertmanager-bootstrap:
 
 query-tip-all:
   #!/usr/bin/env bash
+  set -euo pipefail
   QUERIED=0
   for i in preprod preview private shelley-qa sanchonet demo; do
-    TIP=$(just query-tip $i 2>&1)
-    [ "$?" = "0" ] && { echo "Environment: $i"; echo "$TIP"; echo; QUERIED=$((QUERIED + 1)); }
+    TIP=$(just query-tip $i 2>&1) && {
+      echo "Environment: $i"
+      echo "$TIP"
+      echo
+      QUERIED=$((QUERIED + 1))
+    }
   done
   [ "$QUERIED" = "0" ] && echo "No environments running." || true
 
 query-tip ENV TESTNET_MAGIC=null:
   #!/usr/bin/env bash
+  set -euo pipefail
   {{checkEnv}}
   {{stateDir}}
   cardano-cli query tip \
@@ -313,8 +325,9 @@ save-bootstrap-ssh-key:
 save-ssh-config:
   #!/usr/bin/env nu
   print "Retrieving ssh config from tofu..."
-  tofu workspace select -or-create cluster
+  nix build ".#opentofu.cluster" --out-link terraform.tf.json
   tofu init -reconfigure
+  tofu workspace select -or-create cluster
   let tf = (tofu show -json | from json)
   let key = ($tf.values.root_module.resources | where type == local_file and name == ssh_config)
   $key.values.content | save --force .ssh_config
@@ -322,6 +335,7 @@ save-ssh-config:
 
 set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
   #!/usr/bin/env bash
+  set -euo pipefail
   {{checkEnv}}
   {{stateDir}}
   # The log and socket file may not exist immediately upon node startup, so only check for the pid file
@@ -390,6 +404,7 @@ show-nameservers:
 
 sops-decrypt-binary FILE:
   #!/usr/bin/env bash
+  set -euo pipefail
   {{sopsConfigSetup}}
   [ -n "${DEBUG:-}" ] && set -x
 
@@ -399,6 +414,7 @@ sops-decrypt-binary FILE:
 
 sops-encrypt-binary FILE:
   #!/usr/bin/env bash
+  set -euo pipefail
   {{sopsConfigSetup}}
   [ -n "${DEBUG:-}" ] && set -x
 
@@ -440,6 +456,7 @@ ssh-list-names HOSTNAME_REGEX_PATTERN:
 
 start-demo:
   #!/usr/bin/env bash
+  set -euo pipefail
   just stop-node demo
 
   {{stateDir}}
@@ -552,6 +569,7 @@ start-demo:
 
 start-node ENV:
   #!/usr/bin/env bash
+  set -euo pipefail
   {{stateDir}}
 
   if ! [[ "{{ENV}}" =~ preprod$|preview$|private$|sanchonet$|shelley-qa ]]; then
@@ -582,12 +600,14 @@ start-node ENV:
 
 stop-all:
   #!/usr/bin/env bash
+  set -euo pipefail
   for i in preprod preview private shelley-qa sanchonet demo; do
     just stop-node $i
   done
 
 stop-node ENV:
   #!/usr/bin/env bash
+  set -euo pipefail
   {{stateDir}}
 
   if [ -f "$STATEDIR/node-{{ENV}}.pid" ]; then
@@ -598,6 +618,7 @@ stop-node ENV:
 
 tofu *ARGS:
   #!/usr/bin/env bash
+  set -euo pipefail
   IGREEN='\033[1;92m'
   IRED='\033[1;91m'
   NC='\033[0m'
