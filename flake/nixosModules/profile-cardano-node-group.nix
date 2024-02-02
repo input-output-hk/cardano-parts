@@ -3,9 +3,13 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.cardano-node.enableMithrilClient
+#   config.services.cardano-node.mithrilAggregatorEndpointUrl
+#   config.services.cardano-node.mithrilGenesisVerificationKey
+#   config.services.cardano-node.mithrilSnapshotDigest
 #   config.services.cardano-node.shareIpv6Address
-#   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.cardano-node.totalCpuCores
+#   config.services.cardano-node.totalMaxHeapSizeMiB
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module

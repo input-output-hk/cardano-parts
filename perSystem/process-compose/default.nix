@@ -323,7 +323,7 @@ flake @ {inputs, ...}: {
                 chmod 0600 "$PGPASSFILE"
 
                 ${config.cardano-parts.pkgs."cardano-db-sync${envVer env' "isDbsyncNg"}"}/bin/cardano-db-sync \
-                  --config ${envCfgs' env}/config/${env}/db-sync-config.json \
+                  --config ${envCfgs' env'}/config/${env}/db-sync-config.json \
                   --socket-path ${stateDir}/${env'}/cardano-node/node.socket \
                   --state-dir ${stateDir}/${env'}/cardano-db-sync/ledger-state \
                   --schema-dir ${flake.config.flake.cardano-parts.pkgs.special."cardano-db-sync-schema${envVer env' "isDbsyncNg"}"}
