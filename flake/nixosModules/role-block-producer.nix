@@ -9,9 +9,7 @@
 #   config.services.mithril-signer.useRelay
 #
 # Tips:
-#   * This is a cardano-node add-on to the upstream cardano-node nixos service module
-#   * This module assists with group deployments
-#   * The upstream cardano-node nixos service module should still be imported separately
+#   * This is a cardano-node add-on to the upstream cardano-node nixos service module to enable a block producer
 flake: {
   flake.nixosModules.role-block-producer = {
     config,
@@ -121,7 +119,7 @@ flake: {
 
         relayPort = mkOption {
           type = port;
-          default = 3128;
+          default = 3132;
           description = "The relay port the mithril signer must use in a production setup.";
         };
 
@@ -191,53 +189,41 @@ flake: {
         sops.secrets = keysCfg.${Protocol};
         users.users.cardano-node.extraGroups = ["keys"];
 
-        environment = {
-          variables = {
-            # CARDANO_NODE_NETWORK_ID = toString protocolMagic;
-            # CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
-            # CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
-            # CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
-            # AGGREGATOR_ENDPOINT = mkIf cfgMithril.enable cfgMithril.aggregatorEndpointUrl;
-            # GENESIS_VERIFICATION_KEY = mkIf cfgMithril.enable cfgMithril.genesisVerificationKey;
-            # TESTNET_MAGIC = toString protocolMagic;
-          };
+        environment.shellAliases = {
+          cardano-show-kes-period-info = ''
+            cardano-cli \
+              query kes-period-info \
+              --op-cert-file /run/secrets/cardano-node-operational-cert
+          '';
 
-          shellAliases = {
-            cardano-show-kes-period-info = ''
-              cardano-cli \
-                query kes-period-info \
-                --op-cert-file /run/secrets/cardano-node-operational-cert
-            '';
+          cardano-show-leadership-schedule = ''
+            cardano-cli \
+              query leadership-schedule \
+              --genesis ${ShelleyGenesisFile} \
+              --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+              --vrf-signing-key-file /run/secrets/cardano-node-vrf-signing \
+              --current
+          '';
 
-            cardano-show-leadership-schedule = ''
-              cardano-cli \
-                query leadership-schedule \
-                --genesis ${ShelleyGenesisFile} \
-                --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
-                --vrf-signing-key-file /run/secrets/cardano-node-vrf-signing \
-                --current
-            '';
+          cardano-show-pool-hash = ''
+            cardano-cli \
+              stake-pool id \
+              --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+              --output-format hex
+          '';
 
-            cardano-show-pool-hash = ''
-              cardano-cli \
-                stake-pool id \
-                --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
-                --output-format hex
-            '';
+          cardano-show-pool-id = ''
+            cardano-cli \
+              stake-pool id \
+              --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+              --output-format bech32
+          '';
 
-            cardano-show-pool-id = ''
-              cardano-cli \
-                stake-pool id \
-                --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
-                --output-format bech32
-            '';
-
-            cardano-show-pool-stake-snapshot = ''
-              cardano-cli \
-                query stake-snapshot \
-                --stake-pool-id "$(cardano-show-pool-id)"
-            '';
-          };
+          cardano-show-pool-stake-snapshot = ''
+            cardano-cli \
+              query stake-snapshot \
+              --stake-pool-id "$(cardano-show-pool-id)"
+          '';
         };
 
         assertions = [
