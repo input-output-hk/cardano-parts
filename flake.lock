@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1706813582,
-        "narHash": "sha256-syEg5q44eIYvvXNSC0pTGIFi+h9FbGIn/5o3rTA4+C0=",
+        "lastModified": 1707410145,
+        "narHash": "sha256-jcCjzHz3dNEIkWiySq5BP/lWV5LUOG4aGAGQC4gmLbQ=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "a46db6ec6e338ff8beb660b06ba82185097e81ff",
+        "rev": "b1c8840a0db496b5908341ac2612f16d9eb9c979",
         "type": "github"
       },
       "original": {
@@ -695,11 +695,11 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1706839868,
-        "narHash": "sha256-pCWqkQpdIHb6dy0/QJogLhR9U2UD0OWUabRHFnU4DsM=",
+        "lastModified": 1707337252,
+        "narHash": "sha256-sliOZlzvx3sG+YqkgcXqK7Va0OyYFD+VPWiEK+qeoNI=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "7f7e3a456cdf8569e66f73c6a067678d51585992",
+        "rev": "3358489541bdc1228afaa678c2adf4bb891f560e",
         "type": "github"
       },
       "original": {
