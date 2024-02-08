@@ -3,9 +3,13 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.mithril-signer.enable
+#   config.services.mithril-signer.relayEndpoint
+#   config.services.mithril-signer.relayPort
+#   config.services.mithril-signer.useRelay
 #
 # Tips:
-#
+#   * This is a cardano-node add-on to the upstream cardano-node nixos service module to enable a block producer
 flake: {
   flake.nixosModules.role-block-producer = {
     config,
@@ -15,14 +19,17 @@ flake: {
     ...
   }:
     with builtins; let
-      inherit (lib) mkIf mkForce optionalAttrs;
+      inherit (lib) getExe mkIf mkForce mkOption optionals optionalAttrs types;
+      inherit (types) bool port str;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
       inherit (perNodeCfg.lib) cardanoLib;
+      inherit (perNodeCfg.pkgs) cardano-cli mithril-signer;
       inherit (cardanoLib.environments.${environmentName}.nodeConfig) Protocol ShelleyGenesisFile;
       inherit (opsLib) mkSopsSecret;
 
       groupCfg = config.cardano-parts.cluster.group;
+      mithrilCfg = config.services.mithril-signer;
       nodeCfg = config.services.cardano-node;
       perNodeCfg = config.cardano-parts.perNode;
       groupOutPath = groupFlake.self.outPath;
@@ -46,8 +53,10 @@ flake: {
         inherit groupOutPath groupName secretName keyName pathPrefix;
         fileOwner = "cardano-node";
         fileGroup = "cardano-node";
-        reloadUnits = mkIf (nodeCfg.useSystemdReload && nodeCfg.useNewTopology) ["cardano-node.service"];
-        restartUnits = mkIf (!nodeCfg.useSystemdReload || !nodeCfg.useNewTopology) ["cardano-node.service"];
+        reloadUnits = optionals (nodeCfg.useSystemdReload && nodeCfg.useNewTopology) ["cardano-node.service"];
+        restartUnits =
+          optionals (!nodeCfg.useSystemdReload || !nodeCfg.useNewTopology) ["cardano-node.service"]
+          ++ optionals mithrilCfg.enable ["mithril-signer.service"];
       };
 
       serviceCfg = rec {
@@ -88,53 +97,141 @@ flake: {
 
         Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
       };
+
+      sopsPath = name: config.sops.secrets.${name}.path;
     in {
-      services.cardano-node =
-        serviceCfg.${Protocol}
-        // {
-          # These are also set from the profile-cardano-node-topology nixos module when role == "bp"
-          publicProducers = mkForce [];
-          usePeersFromLedgerAfterSlot = -1;
+      options.services.mithril-signer = {
+        enable = mkOption {
+          type = bool;
+          default = nodeCfg.environments.${environmentName} ? mithrilSignerConfig && environmentName != "mainnet";
+          description = "Enable this block producer to also run a mithril signer.";
         };
 
-      sops.secrets = keysCfg.${Protocol};
-      users.users.cardano-node.extraGroups = ["keys"];
+        relayEndpoint = mkOption {
+          type = str;
+          default = null;
+          description = ''
+            The relay endpoint the mithril signer must use in a production setup.
+            May be either a fully qualified DNS or an IP.
+            The port should not be included.
+          '';
+        };
 
-      environment.shellAliases = {
-        cardano-show-kes-period-info = ''
-          cardano-cli \
-            query kes-period-info \
-            --op-cert-file /run/secrets/cardano-node-operational-cert
-        '';
+        relayPort = mkOption {
+          type = port;
+          default = 3132;
+          description = "The relay port the mithril signer must use in a production setup.";
+        };
 
-        cardano-show-leadership-schedule = ''
-          cardano-cli \
-            query leadership-schedule \
-            --genesis ${ShelleyGenesisFile} \
-            --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
-            --vrf-signing-key-file /run/secrets/cardano-node-vrf-signing \
-            --current
-        '';
+        useRelay = mkOption {
+          type = bool;
+          default = true;
+          description = "Whether to use a proxy relay for requests to avoid leaking the block producer's IP.";
+        };
+      };
 
-        cardano-show-pool-hash = ''
-          cardano-cli \
-            stake-pool id \
-            --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
-            --output-format hex
-        '';
+      config = {
+        services.cardano-node =
+          serviceCfg.${Protocol}
+          // {
+            # These are also set from the profile-cardano-node-topology nixos module when role == "bp"
+            publicProducers = mkForce [];
+            usePeersFromLedgerAfterSlot = -1;
+          };
 
-        cardano-show-pool-id = ''
-          cardano-cli \
-            stake-pool id \
-            --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
-            --output-format bech32
-        '';
+        systemd.services.mithril-signer = mkIf mithrilCfg.enable {
+          wantedBy = ["multi-user.target"];
 
-        cardano-show-pool-stake-snapshot = ''
-          cardano-cli \
-            query stake-snapshot \
-            --stake-pool-id "$(cardano-show-pool-id)"
-        '';
+          # Allow up to 10 failures with 30 second restarts in a 15 minute window
+          # before entering failure state and alerting
+          startLimitBurst = 10;
+          startLimitIntervalSec = 900;
+
+          environment = with nodeCfg.environments.${environmentName}.mithrilSignerConfig; {
+            AGGREGATOR_ENDPOINT = aggregator_endpoint;
+            CARDANO_CLI_PATH = getExe cardano-cli;
+            CARDANO_NODE_SOCKET_PATH = nodeCfg.socketPath 0;
+            DATA_STORES_DIRECTORY = "/var/lib/mithril-signer/stores";
+            DB_DIRECTORY = nodeCfg.databasePath 0;
+            ERA_READER_ADAPTER_PARAMS = era_reader_adapter_params;
+            ERA_READER_ADAPTER_TYPE = era_reader_adapter_type;
+            KES_SECRET_KEY_PATH = sopsPath "cardano-node-kes-signing";
+            NETWORK = network;
+            OPERATIONAL_CERTIFICATE_PATH = sopsPath "cardano-node-operational-cert";
+            RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
+
+            # The mithril signer runtime interval in milliseconds
+            RUN_INTERVAL = toString run_interval;
+
+            # Maximum number of records in stores
+            STORE_RETENTION_LIMIT = toString store_retention_limit;
+          };
+
+          serviceConfig = {
+            ExecStart = getExe (pkgs.writeShellApplication {
+              name = "mithril-signer";
+              text = ''
+                echo "Starting mithril-signer"
+                ${getExe mithril-signer} -vvv
+              '';
+            });
+
+            Restart = "always";
+            RestartSec = 30;
+            User = "cardano-node";
+            Group = "cardano-node";
+
+            # Creates /var/lib/mithril-signer
+            StateDirectory = "mithril-signer";
+          };
+        };
+
+        sops.secrets = keysCfg.${Protocol};
+        users.users.cardano-node.extraGroups = ["keys"];
+
+        environment.shellAliases = {
+          cardano-show-kes-period-info = ''
+            cardano-cli \
+              query kes-period-info \
+              --op-cert-file /run/secrets/cardano-node-operational-cert
+          '';
+
+          cardano-show-leadership-schedule = ''
+            cardano-cli \
+              query leadership-schedule \
+              --genesis ${ShelleyGenesisFile} \
+              --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+              --vrf-signing-key-file /run/secrets/cardano-node-vrf-signing \
+              --current
+          '';
+
+          cardano-show-pool-hash = ''
+            cardano-cli \
+              stake-pool id \
+              --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+              --output-format hex
+          '';
+
+          cardano-show-pool-id = ''
+            cardano-cli \
+              stake-pool id \
+              --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+              --output-format bech32
+          '';
+
+          cardano-show-pool-stake-snapshot = ''
+            cardano-cli \
+              query stake-snapshot \
+              --stake-pool-id "$(cardano-show-pool-id)"
+          '';
+        };
+
+        assertions = [
+          {
+            assertion = nodeCfg.instances == 1;
+            message = ''The role block producer does not currently work with multiple cardano-node instances per machine.'';
+          }
+        ];
       };
     };
 }
