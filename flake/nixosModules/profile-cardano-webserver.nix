@@ -82,6 +82,21 @@ flake: {
             description = "Extra FQDN aliases to be added to the ACME TLS cert for nginx.";
           };
 
+          rateLimitZoneDefn = mkOption {
+            type = str;
+            default = ''
+              limit_req_zone $binary_remote_addr zone=perIp:128m rate=1r/s;
+              limit_req_status 429;
+            '';
+            description = "The rate limit zone definition which is applied to the tlsTerminator default virtual host.";
+          };
+
+          rateLimitZone = mkOption {
+            type = str;
+            default = "limit_req zone=perIp burst=256 nodelay;";
+            description = "The application of the defined rate limit zone applied to the tlsTerminator default virtual host.";
+          };
+
           serverName = mkOption {
             type = str;
             default = "${name}.${domain}";
@@ -274,8 +289,7 @@ flake: {
                                '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
 
               access_log syslog:server=unix:/dev/log x-fwd;
-              limit_req_zone $binary_remote_addr zone=perIP:100m rate=1r/s;
-              limit_req_status 429;
+              ${cfg.rateLimitZoneDefn}
 
               map $http_accept_language $lang {
                       default en;
@@ -325,7 +339,10 @@ flake: {
                     default = true;
                     enableACME = cfg.enableAcme;
                     forceSSL = cfg.enableAcme;
-                    locations."/".proxyPass = "http://127.0.0.1:6081";
+                    locations."/" = {
+                      proxyPass = "http://127.0.0.1:6081";
+                      extraConfig = cfg.rateLimitZone;
+                    };
                   }
                   extraVhostConfig;
 
