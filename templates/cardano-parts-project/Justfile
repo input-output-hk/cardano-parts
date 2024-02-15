@@ -644,3 +644,49 @@ tofu *ARGS:
   tofu init -reconfigure
   tofu workspace select -or-create "$WORKSPACE"
   tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
+
+# quickly generate a file with all public and private IPs
+aws-eips:
+  #!/usr/bin/env nu
+  ( tofu show -json
+  | from json
+  | get values.root_module.resources
+  | where type == "aws_eip"
+  | reduce --fold ["
+    let
+      all = {
+    "]
+    {|eip, all|
+      $all | append $"
+    ($eip.name) = {
+      privateIpv4 = "($eip.values.private_ip)";
+      publicIpv4 = "($eip.values.public_ip)";
+    };"
+    }
+  | append "
+      };
+    in {
+      flake.nixosModules.ips = all;
+      flake.nixosModules.ipmodule = {
+        name,
+        lib,
+        ...
+      }: {
+        options = {
+          publicIpv4 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.publicIpv4;
+          };
+          publicIpv6 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.publicIpv6;
+          };
+        };
+      };
+    }
+    "
+  | str join "\n"
+  | alejandra --quiet -
+  | save --force flake/nixosModules/ips.nix
+  )
+  git add flake/nixosModules/ips.nix
