@@ -612,7 +612,7 @@ stop-node ENV:
 
   if [ -f "$STATEDIR/node-{{ENV}}.pid" ]; then
     echo "Stopping cardano-node for envrionment {{ENV}}"
-    kill $(< "$STATEDIR/node-{{ENV}}.pid") 2> /dev/null
+    kill $(< "$STATEDIR/node-{{ENV}}.pid") 2> /dev/null || true
     rm -f "$STATEDIR/node-{{ENV}}.pid" "$STATEDIR/node-{{ENV}}.socket"
   fi
 
