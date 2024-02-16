@@ -21,32 +21,28 @@ flake @ {inputs, ...}: {
     envCfgsNg = generateStaticHTMLConfigs pkgs cardanoLibNg environmentsNg;
 
     # Node and dbsync versioning for local development testing
-    #
-    # Note that mainnet, preprod, preview have dbsync set as `-ng` versioning
-    # until the next release after 13.1.1.3 which will no longer require
-    # the deprecated `ApplicationName` key to be set in the environment config
     envBinCfgs = {
       mainnet = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isNodeNg = false;
         magic = getMagic "mainnet";
       };
       preprod = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isNodeNg = false;
         magic = getMagic "preprod";
       };
       preview = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isNodeNg = false;
         magic = getMagic "preview";
       };
       private = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isNodeNg = false;
         magic = getMagic "private";
       };

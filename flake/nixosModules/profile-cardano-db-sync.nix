@@ -35,32 +35,7 @@
       # Required since db-sync still requires legacy byron application parameters as of 13.1.1.3.
       # Issue: https://github.com/IntersectMBO/cardano-db-sync/issues/1473
       #
-      # environmentConfig = environments.${environmentName}.nodeConfig;
-      environmentConfig = let
-        inherit
-          (environments.${environmentName})
-          networkConfig
-          nodeConfig
-          ;
-
-        legacyParams = {
-          ApplicationName = "cardano-sl";
-          ApplicationVersion =
-            if environmentName == "mainnet"
-            then 1
-            else 0;
-        };
-
-        networkConfig' = networkConfig // legacyParams;
-        nodeConfig' = nodeConfig // legacyParams;
-        NodeConfigFile' = "${__toFile "config-${environmentName}.json" (__toJSON nodeConfig')}";
-      in
-        recursiveUpdate environments.${environmentName} {
-          dbSyncConfig.NodeConfigFile = NodeConfigFile';
-          explorerConfig.NodeConfigFile = NodeConfigFile';
-          networkConfig = networkConfig';
-          nodeConfig = nodeConfig';
-        };
+      environmentConfig = environments.${environmentName}.nodeConfig;
 
       cfg = nixos.config.services.cardano-db-sync;
     in {
