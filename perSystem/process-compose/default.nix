@@ -16,8 +16,9 @@ flake @ {inputs, ...}: {
     cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
     opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
+    environmentsNg = cardanoLibNg.environments;
     envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
-    envCfgsNg = generateStaticHTMLConfigs pkgs cardanoLibNg environments;
+    envCfgsNg = generateStaticHTMLConfigs pkgs cardanoLibNg environmentsNg;
 
     # Node and dbsync versioning for local development testing
     #
@@ -44,9 +45,9 @@ flake @ {inputs, ...}: {
         magic = getMagic "preview";
       };
       private = {
-        isCardanoLibNg = true;
+        isCardanoLibNg = false;
         isDbsyncNg = true;
-        isNodeNg = true;
+        isNodeNg = false;
         magic = getMagic "private";
       };
       sanchonet = {
@@ -56,7 +57,7 @@ flake @ {inputs, ...}: {
         magic = getMagic "sanchonet";
       };
       shelley-qa = {
-        isCardanoLibNg = false;
+        isCardanoLibNg = true;
         isDbsyncNg = true;
         isNodeNg = true;
         magic = getMagic "shelley-qa";
@@ -73,10 +74,15 @@ flake @ {inputs, ...}: {
       then envCfgsNg
       else envCfgs;
 
+    envs = env:
+      if envBinCfgs.${env}.isCardanoLibNg
+      then environmentsNg
+      else environments;
+
     toHyphen = s: replaceStrings ["_"] ["-"] s;
     toUnderscore = s: replaceStrings ["-"] ["_"] s;
 
-    getMagic = env: toString (fromJSON (readFile environments.${toUnderscore env}.nodeConfig.ByronGenesisFile)).protocolConsts.protocolMagic;
+    getMagic = env: toString (fromJSON (readFile (envs env).${toUnderscore env}.nodeConfig.ByronGenesisFile)).protocolConsts.protocolMagic;
 
     # The common state dir will be generic and relative since
     # we may run this from any consuming repository stored at
@@ -106,8 +112,8 @@ flake @ {inputs, ...}: {
     '';
 
     mithril-client-bootstrap = env: let
-      inherit (environments.${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
-      isMithrilEnv = environments.${toUnderscore env} ? mithrilAggregatorEndpointUrl && env != "mainnet";
+      inherit ((envs env).${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
+      isMithrilEnv = (envs env).${toUnderscore env} ? mithrilAggregatorEndpointUrl && env != "mainnet";
     in
       optionalString isMithrilEnv ''
         if [ -z "''${MITHRIL_DISABLE:-}" ] && [ -z "''${MITHRIL_DISABLE_${env}:-}" ]; then
