@@ -27,7 +27,7 @@
     nodeResources,
     ...
   }: let
-    inherit (builtins) fromJSON readFile;
+    inherit (builtins) elem fromJSON readFile;
     inherit (lib) flatten foldl' getExe min mkDefault mkIf mkOption optionalString range recursiveUpdate types;
     inherit (types) bool float ints oneOf str;
     inherit (nodeResources) cpuCount memMiB;
@@ -108,7 +108,7 @@
         mithril-client = {
           enable = mkOption {
             type = bool;
-            default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && environmentName != "mainnet";
+            default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && elem environmentName ["preprod" "preview"];
             description = "Allow mithril-client to bootstrap cardano-node chain state.";
           };
 

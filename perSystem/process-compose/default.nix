@@ -16,37 +16,34 @@ flake @ {inputs, ...}: {
     cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
     opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
+    environmentsNg = cardanoLibNg.environments;
     envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
-    envCfgsNg = generateStaticHTMLConfigs pkgs cardanoLibNg environments;
+    envCfgsNg = generateStaticHTMLConfigs pkgs cardanoLibNg environmentsNg;
 
     # Node and dbsync versioning for local development testing
-    #
-    # Note that mainnet, preprod, preview have dbsync set as `-ng` versioning
-    # until the next release after 13.1.1.3 which will no longer require
-    # the deprecated `ApplicationName` key to be set in the environment config
     envBinCfgs = {
       mainnet = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isNodeNg = false;
         magic = getMagic "mainnet";
       };
       preprod = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isNodeNg = false;
         magic = getMagic "preprod";
       };
       preview = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isNodeNg = false;
         magic = getMagic "preview";
       };
       private = {
-        isCardanoLibNg = true;
-        isDbsyncNg = true;
-        isNodeNg = true;
+        isCardanoLibNg = false;
+        isDbsyncNg = false;
+        isNodeNg = false;
         magic = getMagic "private";
       };
       sanchonet = {
@@ -56,7 +53,7 @@ flake @ {inputs, ...}: {
         magic = getMagic "sanchonet";
       };
       shelley-qa = {
-        isCardanoLibNg = false;
+        isCardanoLibNg = true;
         isDbsyncNg = true;
         isNodeNg = true;
         magic = getMagic "shelley-qa";
@@ -73,10 +70,15 @@ flake @ {inputs, ...}: {
       then envCfgsNg
       else envCfgs;
 
+    envs = env:
+      if envBinCfgs.${env}.isCardanoLibNg
+      then environmentsNg
+      else environments;
+
     toHyphen = s: replaceStrings ["_"] ["-"] s;
     toUnderscore = s: replaceStrings ["-"] ["_"] s;
 
-    getMagic = env: toString (fromJSON (readFile environments.${toUnderscore env}.nodeConfig.ByronGenesisFile)).protocolConsts.protocolMagic;
+    getMagic = env: toString (fromJSON (readFile (envs env).${toUnderscore env}.nodeConfig.ByronGenesisFile)).protocolConsts.protocolMagic;
 
     # The common state dir will be generic and relative since
     # we may run this from any consuming repository stored at
@@ -106,8 +108,8 @@ flake @ {inputs, ...}: {
     '';
 
     mithril-client-bootstrap = env: let
-      inherit (environments.${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
-      isMithrilEnv = environments.${toUnderscore env} ? mithrilAggregatorEndpointUrl && env != "mainnet";
+      inherit ((envs env).${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
+      isMithrilEnv = (envs env).${toUnderscore env} ? mithrilAggregatorEndpointUrl && env != "mainnet";
     in
       optionalString isMithrilEnv ''
         if [ -z "''${MITHRIL_DISABLE:-}" ] && [ -z "''${MITHRIL_DISABLE_${env}:-}" ]; then

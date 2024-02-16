@@ -286,6 +286,11 @@ in {
                     to_port = 3001;
                   })
                   (mkRule {
+                    description = "Allow Forwarding Proxy";
+                    from_port = 3132;
+                    to_port = 3132;
+                  })
+                  (mkRule {
                     description = "Allow Wireguard";
                     from_port = 51820;
                     to_port = 51820;
