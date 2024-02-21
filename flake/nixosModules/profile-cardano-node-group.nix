@@ -41,6 +41,9 @@
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
     inherit (fromJSON (readFile ShelleyGenesisFile)) slotsPerKESPeriod;
 
+    # We don't use the mkTopology function directly from cardanoLib because that function
+    # determines p2p usage based on network EnableP2P definition, whereas we wish to
+    # determine p2p usage from individual node configuration
     mkTopology = env: let
       legacyTopology = mkEdgeTopology {
         edgeNodes = [env.relaysNew];
@@ -50,6 +53,25 @@
 
       p2pTopology = mkEdgeTopologyP2P {
         inherit (env) edgeNodes;
+
+        # Until legacy mainnet relays are deprecated and replaced by IOG bootstrap peers for relaysNew,
+        # filter the legacy relaysNew definition from the mainnet bootstrapPeers list.
+        #
+        # All other envs can use the edgeNodes list as bootstrapPeers.
+        bootstrapPeers =
+          if env == "mainnet"
+          then
+            map (e: {
+              inherit (e) port;
+              address = e.addr;
+            }) (builtins.filter (e: e.addr == env.relaysNew) env.edgeNodes)
+          else
+            map (e: {
+              inherit (e) port;
+              address = e.addr;
+            })
+            env.edgeNodes;
+
         useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
       };
     in
@@ -196,6 +218,7 @@
           if
             (cfg.producers == [])
             && cfg.publicProducers == []
+            && cfg.bootstrapPeers == null
             && (flatten (map cfg.instanceProducers iRange)) == []
             && (flatten (map cfg.instancePublicProducers iRange)) == []
           then mkTopology cardanoLib.environments.${environmentName}

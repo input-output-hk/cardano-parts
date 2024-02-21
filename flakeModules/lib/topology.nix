@@ -19,18 +19,27 @@ with lib; rec {
   groupMachines = nodes: sort (a: b: a < b) (filter (hasPrefix groupPrefix) (attrNames nodes));
 
   # Generate a p2p compatible producer attribute
-  mkProducer = producer: nodes: {
-    accessPoints = [
-      {
-        address = "${producer}.${domain}";
-        port = nodes.${producer}.config.cardano-parts.perNode.meta.cardanoNodePort;
-      }
-    ];
-  };
+  mkProducer = producer: nodes: let
+    producerName =
+      if isString producer
+      then producer
+      else producer.name;
+    extraCfg =
+      if isString producer
+      then {}
+      else removeAttrs producer ["name"];
+  in
+    {
+      accessPoints = [
+        {
+          address = "${producerName}.${domain}";
+          port = nodes.${producerName}.config.cardano-parts.perNode.meta.cardanoNodePort;
+        }
+      ];
+    }
+    // extraCfg;
 
-  # Generate p2p edgeNodes from cardanoLib legacy provided edgeNodes
-  # Note: this won't work for mainnet as iohk-nix edgeNodes element type differs
-  # TODO: fix iohk-nix upstream once p2p is implemented
+  # Generate p2p edgeNodes from cardanoLib provided edgeNodes
   p2pEdgeNodes = map (edgeNode: {
     accessPoints = [
       {
