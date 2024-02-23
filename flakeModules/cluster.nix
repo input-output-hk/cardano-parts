@@ -48,7 +48,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-smash
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-submit-api
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.mithril-client-cli
-#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.signer
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.mithril-signer
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.cluster.<...>

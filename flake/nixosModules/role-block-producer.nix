@@ -103,7 +103,7 @@ flake: {
       options.services.mithril-signer = {
         enable = mkOption {
           type = bool;
-          default = nodeCfg.environments.${environmentName} ? mithrilSignerConfig && elem environmentName ["preprod" "preview"];
+          default = nodeCfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && nodeCfg.environments.${environmentName} ? mithrilSignerConfig;
           description = "Enable this block producer to also run a mithril signer.";
         };
 

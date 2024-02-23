@@ -34,7 +34,7 @@
     ...
   }: let
     inherit (builtins) fromJSON readFile;
-    inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkIf mkOption optionalString range recursiveUpdate types;
+    inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkIf mkOption optional optionalAttrs optionalString range recursiveUpdate types;
     inherit (types) bool float ints listOf oneOf str;
     inherit (nodeResources) cpuCount memMiB;
 
@@ -188,17 +188,18 @@
     };
 
     config = {
-      environment.systemPackages = [
-        config.cardano-parts.pkgs.bech32
-        cardano-node-pkgs.cardano-cli
-        config.cardano-parts.pkgs.db-analyser
-        config.cardano-parts.pkgs.db-synthesizer
-        config.cardano-parts.pkgs.db-truncater
-        self'.packages.db-analyser-ng
-        self'.packages.db-synthesizer-ng
-        self'.packages.db-truncater-ng
-        mithril-client-cli
-      ];
+      environment.systemPackages =
+        [
+          config.cardano-parts.pkgs.bech32
+          cardano-node-pkgs.cardano-cli
+          config.cardano-parts.pkgs.db-analyser
+          config.cardano-parts.pkgs.db-synthesizer
+          config.cardano-parts.pkgs.db-truncater
+          self'.packages.db-analyser-ng
+          self'.packages.db-synthesizer-ng
+          self'.packages.db-truncater-ng
+        ]
+        ++ optional cfgMithril.enable mithril-client-cli;
 
       environment = {
         shellAliases = {
@@ -217,15 +218,18 @@
           '';
         };
 
-        variables = {
-          CARDANO_NODE_NETWORK_ID = toString protocolMagic;
-          CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
-          CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
-          CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
-          AGGREGATOR_ENDPOINT = mkIf cfgMithril.enable cfgMithril.aggregatorEndpointUrl;
-          GENESIS_VERIFICATION_KEY = mkIf cfgMithril.enable cfgMithril.genesisVerificationKey;
-          TESTNET_MAGIC = toString protocolMagic;
-        };
+        variables =
+          {
+            CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+            CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
+            CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
+            CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
+            TESTNET_MAGIC = toString protocolMagic;
+          }
+          // optionalAttrs cfgMithril.enable {
+            AGGREGATOR_ENDPOINT = mkIf cfgMithril.enable cfgMithril.aggregatorEndpointUrl;
+            GENESIS_VERIFICATION_KEY = mkIf cfgMithril.enable cfgMithril.genesisVerificationKey;
+          };
       };
 
       # Leave firewall rules to role config
@@ -368,7 +372,7 @@
               serviceConfig = {
                 ExecStartPre = getExe (pkgs.writeShellApplication {
                   name = "cardano-node-pre-start";
-                  runtimeInputs = with pkgs; [curl gnugrep gnutar jq gzip mithril-client-cli];
+                  runtimeInputs = with pkgs; [curl gnugrep gnutar jq gzip] ++ optional cfgMithril.enable mithril-client-cli;
                   excludeShellChecks = ["SC2050"];
                   text = let
                     mithril-client-bootstrap = optionalString cfgMithril.enable ''
