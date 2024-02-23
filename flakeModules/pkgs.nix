@@ -379,7 +379,7 @@ in
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2023-07-18)
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-7-3 // {version = "8.17.0.0";}))
-            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-8-0-pre // {version = "8.18.0.0";}))
+            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-8-1-pre // {version = "8.20.1.0";}))
             (mkPkg "cardano-db-sync" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-2-0-1" // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-sancho-4-0-0" // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-2-0-1")
@@ -387,11 +387,11 @@ in
             (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-8-7-3 // {version = "8.7.3";}))
-            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-8-0-pre // {version = "8.8.0-pre";}))
+            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-8-1-pre // {version = "8.8.1-pre";}))
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-2-0-1)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-4-0-0)
             (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-8-0-pre)
+            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-8-1-pre)
             (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-8-7-3)
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2023-12-18
               // {
