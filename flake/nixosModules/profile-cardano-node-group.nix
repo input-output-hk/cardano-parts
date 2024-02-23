@@ -68,12 +68,12 @@
         #
         # All other envs can use the edgeNodes list as bootstrapPeers.
         # bootstrapPeers =
-        #   if env == "mainnet"
+        #   if env.name == "mainnet"
         #   then
         #     map (e: {
         #       inherit (e) port;
         #       address = e.addr;
-        #     }) (builtins.filter (e: e.addr == env.relaysNew) env.edgeNodes)
+        #     }) (builtins.filter (e: e.addr != env.relaysNew) env.edgeNodes)
         #   else
         #     map (e: {
         #       inherit (e) port;
