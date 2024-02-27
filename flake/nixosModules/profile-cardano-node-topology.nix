@@ -36,9 +36,10 @@
 
       topologyFns = with topologyLib; {
         edge =
-          if cfgNode.bootstrapPeers == null
-          then p2pEdgeNodes cfg.edgeNodes
-          else [];
+          # This if can be simplified upon GA release for >= node 8.9.0
+          if cfgNode ? bootstrapPeers && cfgNode.bootstrapPeers != null
+          then []
+          else p2pEdgeNodes cfg.edgeNodes;
         list = topoList cfg.nodes cfg.nodeList;
         infix = topoInfixFiltered cfg.name cfg.nodes cfg.allowList;
         simple = topoSimple cfg.name cfg.nodes;
@@ -282,24 +283,31 @@
       };
 
       config = {
-        services.cardano-node = {
-          producers = mkIf (cfg.role != null || cfg.enableProducers) (
-            if cfg.role != null
-            then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
-            else verboseTrace "producers" (topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers)
-          );
+        services.cardano-node =
+          {
+            producers = mkIf (cfg.role != null || cfg.enableProducers) (
+              if cfg.role != null
+              then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
+              else verboseTrace "producers" (topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers)
+            );
 
-          publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
-            # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
-            if cfg.role != null
-            then verboseTrace "publicProducers" roles.${cfg.role}.publicProducers
-            else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
-          );
+            publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
+              # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
+              if cfg.role != null
+              then verboseTrace "publicProducers" roles.${cfg.role}.publicProducers
+              else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
+            );
 
-          usePeersFromLedgerAfterSlot =
-            mkIf (cfg.role == "bp")
-            roles.${cfg.role}.usePeersFromLedgerAfterSlot;
-        };
+            usePeersFromLedgerAfterSlot =
+              mkIf (cfg.role == "bp")
+              roles.${cfg.role}.usePeersFromLedgerAfterSlot;
+          }
+          # This if can be simplified upon GA release for >= node 8.9.0
+          // optionalAttrs (cfgNode ? bootstrapPeers) {
+            bootstrapPeers =
+              mkIf (cfg.role == "bp")
+              null;
+          };
       };
     };
 }

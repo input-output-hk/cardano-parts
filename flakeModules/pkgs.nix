@@ -16,6 +16,7 @@
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
+#   flake.cardano-parts.pkgs.special.cardano-node-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
@@ -269,6 +270,12 @@
         type = str;
         description = mdDoc "The cardano-parts default cardano-node-service import path string.";
         default = "${localFlake.inputs.cardano-node-service}/nix/nixos";
+      };
+
+      cardano-node-service-ng = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-node-service-ng import path string.";
+        default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos";
       };
 
       cardano-smash-service = mkOption {

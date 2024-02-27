@@ -63,27 +63,6 @@
       p2pTopology = mkEdgeTopologyP2P {
         inherit (env) edgeNodes;
 
-        # Until legacy mainnet relays are deprecated and replaced by IOG bootstrap peers for relaysNew,
-        # filter the legacy relaysNew definition from the mainnet bootstrapPeers list.
-        #
-        # All other envs can use the edgeNodes list as bootstrapPeers.
-        # bootstrapPeers =
-        #   if env.name == "mainnet"
-        #   then
-        #     map (e: {
-        #       inherit (e) port;
-        #       address = e.addr;
-        #     }) (builtins.filter (e: e.addr != env.relaysNew) env.edgeNodes)
-        #   else
-        #     map (e: {
-        #       inherit (e) port;
-        #       address = e.addr;
-        #     })
-        #     env.edgeNodes;
-        #
-        # Until bootstrapPeers support is released in node 8.9.0+, we'll need to disable it in topology:
-        bootstrapPeers = null;
-
         useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
       };
     in
@@ -254,7 +233,12 @@
           if
             (cfg.producers == [])
             && cfg.publicProducers == []
-            && cfg.bootstrapPeers == null
+            # The if can be dropped once a GA release is >= node 8.9.0 for `&& cfg.bootstrapPeers == null`
+            && (
+              if cfg ? bootstrapPeers
+              then cfg.bootstrapPeers == null
+              else true
+            )
             && (flatten (map cfg.instanceProducers iRange)) == []
             && (flatten (map cfg.instancePublicProducers iRange)) == []
           then mkTopology cardanoLib.environments.${environmentName}

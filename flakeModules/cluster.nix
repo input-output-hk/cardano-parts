@@ -33,6 +33,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-faucet-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-metadata-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service-ng
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-smash-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.domain
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.environmentName
@@ -390,6 +391,12 @@ flake @ {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
         default = cfg.pkgs.special.cardano-node-service;
+      };
+
+      cardano-node-service-ng = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-node-service-ng import path string.";
+        default = cfg.pkgs.special.cardano-node-service-ng;
       };
 
       cardano-smash-service = mkOption {
