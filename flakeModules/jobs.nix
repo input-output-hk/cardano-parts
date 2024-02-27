@@ -1017,13 +1017,7 @@ in {
             PROPOSAL_URL=''${PROPOSAL_URL:-"https://proposals.sancho.network/1"}
 
             WITNESSES=2
-            # TODO remove this hackery in 8.14 CLI hopefully
-            if [ "$ACTION" = "create-treasury-withdrawal" ]
-            then
-              DEPOSIT_STAKE_KEY_ARGS=("--deposit-return-stake-verification-key-file" "$(decrypt_check "$STAKE_KEY".vkey)")
-            else
-              DEPOSIT_STAKE_KEY_ARGS=("--stake-verification-key-file" "$(decrypt_check "$STAKE_KEY".vkey)")
-            fi
+            DEPOSIT_STAKE_KEY_ARGS=("--deposit-return-stake-verification-key-file" "$(decrypt_check "$STAKE_KEY".vkey)")
 
             CHANGE_ADDRESS=$(
               "''${CARDANO_CLI[@]}" address build \
@@ -1035,8 +1029,8 @@ in {
               --testnet \
               "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
-              --proposal-anchor-url "$PROPOSAL_URL" \
-              --proposal-anchor-metadata-hash "$PROPOSAL_HASH" \
+              --anchor-url "$PROPOSAL_URL" \
+              --anchor-data-hash "$PROPOSAL_HASH" \
               "''${PROPOSAL_ARGS[@]}" \
               --out-file "$ACTION".action
 
@@ -1230,7 +1224,7 @@ in {
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file drep-"$INDEX"-delegation.cert
 
-            WITNESSES=2
+            WITNESSES=3
             CHANGE_ADDRESS=$(
               "''${CARDANO_CLI[@]}" address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
@@ -1261,7 +1255,8 @@ in {
               --tx-body-file tx-drep-"$INDEX".txbody \
               --out-file tx-drep-"$INDEX".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
-              --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
+              --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey \
+              --signing-key-file "$DREP_DIR"/drep-"$INDEX".skey
 
             fd --type file . "$DREP_DIR"/ --exec bash -c 'encrypt_check {}'
 
