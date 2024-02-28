@@ -109,7 +109,7 @@ flake @ {inputs, ...}: {
 
     mithril-client-bootstrap = env: let
       inherit ((envs env).${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
-      isMithrilEnv = (envs env).${toUnderscore env} ? mithrilAggregatorEndpointUrl && env != "mainnet";
+      isMithrilEnv = (envs env).${toUnderscore env} ? mithrilAggregatorEndpointUrl;
     in
       optionalString isMithrilEnv ''
         if [ -z "''${MITHRIL_DISABLE:-}" ] && [ -z "''${MITHRIL_DISABLE_${env}:-}" ]; then
