@@ -68,12 +68,12 @@ in {
     }
     {
       alert = "cardano_new_node_blockheight_unchanged";
-      expr = "rate(cardano_node_metrics_blockNum_int[1m]) == 0";
+      expr = "rate(cardano_node_metrics_blockNum_int[2m]) == 0";
       for = "10m";
       labels.severity = "page";
       annotations = {
         summary = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes.";
-        description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes at a 1 minute rate resolution.";
+        description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes at a 2 minute rate resolution.";
       };
     }
     {
