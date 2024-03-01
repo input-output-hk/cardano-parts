@@ -387,10 +387,12 @@
 
                           while read -r HASH; do
                             ((IDX+=1))
-                            SIGNERS=$(curl -s "$AGGREGATOR_ENDPOINT/certificate/$HASH" | jq -r '.metadata.signers[] | .party_id')
+                            RESPONSE=$(curl -s "$AGGREGATOR_ENDPOINT/certificate/$HASH")
+                            SIGNERS=$(jq -r '.metadata.signers[] | .party_id' <<< "$RESPONSE")
                             if VERIFIED_BY=$(grep -E "$VERIFYING_POOLS" <<< "$SIGNERS"); then
                               VERIFIED_HASH="$HASH"
-                              VERIFIED_DIGEST=$(jq -r --arg HASH "$VERIFIED_HASH" '.[] | select(.certificate_hash == $HASH) | .digest' <<< "$SNAPSHOTS_JSON")
+                              VERIFIED_DIGEST=$(jq -r '.protocol_message.message_parts.snapshot_digest' <<< "$RESPONSE")
+                              VERIFIED_SEALED=$(jq -r '.metadata.sealed_at' <<< "$RESPONSE")
                               VERIFIED_SIGNED="true"
                               break
                             fi
@@ -400,6 +402,7 @@
                             echo "The following mithril snapshot was signed by verifying pool(s):"
                             echo "Verified Digest: $VERIFIED_DIGEST"
                             echo "Verified Hash: $VERIFIED_HASH"
+                            echo "Verified Sealed At: $VERIFIED_SEALED"
                             echo "Number of snapshots under review: $SNAPSHOTS_COUNT"
                             echo "Position index: $IDX"
                             echo "Verifying pools:"
@@ -414,6 +417,7 @@
                         fi
 
                         echo "Bootstrapping cardano-node-${toString i} state from mithril"
+                        mithril-client --version
                         mithril-client \
                           -vvv \
                           snapshot \

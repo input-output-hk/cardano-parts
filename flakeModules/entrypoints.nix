@@ -11,7 +11,7 @@ in {
     }: let
       inherit (builtins) attrNames;
       inherit (lib) boolToString concatStringsSep escapeShellArgs getExe;
-      inherit (opsLib) generateStaticHTMLConfigs;
+      inherit (opsLib) generateStaticHTMLConfigs mithrilVerifyingPools;
 
       cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
       cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
@@ -36,9 +36,10 @@ in {
             map (
               env:
                 "declare -A MITHRIL_CFG_${env}\n"
-                + "MITHRIL_CFG_${env}[MITHRIL_ENV]=\"${boolToString (environments.${env} ? mithrilAggregatorEndpointUrl && env != "mainnet")}\"\n"
+                + "MITHRIL_CFG_${env}[MITHRIL_ENV]=\"${boolToString (environments.${env} ? mithrilAggregatorEndpointUrl)}\"\n"
                 + "MITHRIL_CFG_${env}[AGG_ENDPOINT]=\"${environments.${env}.mithrilAggregatorEndpointUrl or ""}\"\n"
                 + "MITHRIL_CFG_${env}[GENESIS_VKEY]=\"${environments.${env}.mithrilGenesisVerificationKey or ""}\"\n"
+                + "MITHRIL_CFG_${env}[VERIFYING_POOLS]=\"${concatStringsSep "|" (mithrilVerifyingPools.${env} or [])}\"\n"
             )
             (attrNames environments)
           )
@@ -54,13 +55,12 @@ in {
         # Make entrypoints
         packages.run-cardano-node = pkgs.writeShellApplication {
           name = "run-cardano-node";
-          runtimeInputs = [pkgs.jq];
+          runtimeInputs = with pkgs; [curl gnugrep jq];
           excludeShellChecks = ["SC2034"];
           text = ''
             [ -z "''${DATA_DIR:-}" ] && echo "DATA_DIR env var must be set -- aborting" && exit 1
 
             mkdir -p "$DATA_DIR/config/custom"
-            chmod -R +w "$DATA_DIR/config" "$DATA_DIR/config/custom"
 
             # The menu of environments that we ship as built-in envs
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
@@ -70,6 +70,8 @@ in {
               echo "Preparing environments using cardanoLib"
               ${copyEnvsTemplate cardanoLib.environments}
             fi
+
+            chmod -R +w "$DATA_DIR/config" "$DATA_DIR/config/custom"
 
             if [ -n "''${ENVIRONMENT:-}" ]; then
               echo "Using the preset environment $ENVIRONMENT ..." >&2
@@ -83,6 +85,12 @@ in {
             fi
 
             DB_DIR="$DATA_DIR/db-''${ENVIRONMENT:-custom}"
+
+            # The following environment variables may be used to modify default process compose mithril behavior:
+            #   MITHRIL_DISABLE
+            #   MITHRIL_SNAPSHOT_DIGEST
+            #   MITHRIL_VERIFY_SNAPSHOT
+            #   MITHRIL_VERIFYING_POOLS
             if [ -z "''${MITHRIL_DISABLE:-}" ] && [ "''${ENVIRONMENT:-custom}" != "custom" ]; then
 
               # Use an indirect reference to access the runtime environment associative mithril config array
@@ -92,18 +100,76 @@ in {
               }
 
               if [ "$(mithrilAttr "$ENVIRONMENT" "MITHRIL_ENV")" == "true" ]; then
-                MITHRIL_CLIENT="${cfgPkgs.mithril-client-cli}/bin/mithril-client"
-                TMPSTATE="''${DB_DIR}/node-mithril"
-                rm -rf "$TMPSTATE"
+                if [ "''${UNSTABLE_MITHRIL:-}" = "true" ]; then
+                  MITHRIL_CLIENT="${config.cardano-parts.pkgs.mithril-client-cli-ng}/bin/mithril-client"
+                else
+                  MITHRIL_CLIENT="${config.cardano-parts.pkgs.mithril-client-cli}/bin/mithril-client"
+                fi
+
                 if ! [ -d "$DB_DIR/node" ]; then
+                  MITHRIL_SNAPSHOT_DIGEST="''${MITHRIL_SNAPSHOT_DIGEST:-latest}"
+                  DIGEST="$MITHRIL_SNAPSHOT_DIGEST"
+
+                  AGGREGATOR_ENDPOINT="$(mithrilAttr "$ENVIRONMENT" "AGG_ENDPOINT")"
+                  export AGGREGATOR_ENDPOINT
+
+                  TMPSTATE="''${DB_DIR}/node-mithril"
+                  rm -rf "$TMPSTATE"
+                  if [ "''${MITHRIL_VERIFY_SNAPSHOT:-true}" == "true" ]; then
+                    if [ "$DIGEST" = "latest" ]; then
+                      # If digest is "latest" search through all available recent snaps for signing verification.
+                      SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" snapshot list --json)
+                      HASHES=$(jq -r '.[] | .certificate_hash' <<< "$SNAPSHOTS_JSON")
+                    else
+                      # Otherwise, only attempt the specifically declared snapshot digest
+                      SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" snapshot show "$DIGEST" --json | jq -s)
+                      HASHES=$(jq -r --arg DIGEST "$DIGEST" '.[] | select(.digest == $DIGEST) | .certificate_hash' <<< "$SNAPSHOTS_JSON")
+                    fi
+
+                    SNAPSHOTS_COUNT=$(jq '. | length' <<< "$SNAPSHOTS_JSON")
+                    VERIFYING_POOLS="''${MITHRIL_VERIFYING_POOLS:-$(mithrilAttr "$ENVIRONMENT" "VERIFYING_POOLS")}"
+                    VERIFIED_SIGNED="false"
+                    IDX=0
+
+                    while read -r HASH; do
+                      ((IDX+=1))
+                      RESPONSE=$(curl -s "$AGGREGATOR_ENDPOINT/certificate/$HASH")
+                      SIGNERS=$(jq -r '.metadata.signers[] | .party_id' <<< "$RESPONSE")
+                      if VERIFIED_BY=$(grep -E "$VERIFYING_POOLS" <<< "$SIGNERS"); then
+                        VERIFIED_HASH="$HASH"
+                        VERIFIED_DIGEST=$(jq -r '.protocol_message.message_parts.snapshot_digest' <<< "$RESPONSE")
+                        VERIFIED_SEALED=$(jq -r '.metadata.sealed_at' <<< "$RESPONSE")
+                        VERIFIED_SIGNED="true"
+                        break
+                      fi
+                    done <<< "$HASHES"
+
+                    if [ "$VERIFIED_SIGNED" = "true" ]; then
+                      echo "The following mithril snapshot was signed by verifying pool(s):"
+                      echo "Verified Digest: $VERIFIED_DIGEST"
+                      echo "Verified Hash: $VERIFIED_HASH"
+                      echo "Verified Sealed At: $VERIFIED_SEALED"
+                      echo "Number of snapshots under review: $SNAPSHOTS_COUNT"
+                      echo "Position index: $IDX"
+                      echo "Verifying pools:"
+                      echo "$VERIFIED_BY"
+                      DIGEST="$VERIFIED_DIGEST"
+                    else
+                      echo "Of the $SNAPSHOTS_COUNT mithril snapshots examined, none were signed by any of the verifying pools:"
+                      echo "$VERIFYING_POOLS" | tr '|' '\n'
+                      echo "Mithril snapshot usage will be skipped."
+                      exit 0
+                    fi
+                  fi
+
                   echo "Bootstrapping cardano-node state from mithril"
                   echo "To disable mithril syncing, set MITHRIL_DISABLE env var"
+                  "$MITHRIL_CLIENT" --version
                   "$MITHRIL_CLIENT" \
                     -vvv \
-                    --aggregator-endpoint "$(mithrilAttr "$ENVIRONMENT" "AGG_ENDPOINT")" \
                     snapshot \
                     download \
-                    "latest" \
+                    "$DIGEST" \
                     --download-dir "$TMPSTATE" \
                     --genesis-verification-key "$(mithrilAttr "$ENVIRONMENT" "GENESIS_VKEY")"
                   mv "$TMPSTATE/db" "$DB_DIR/node"
