@@ -77,6 +77,26 @@ in {
       };
     }
     {
+      alert = "cardano_blockfetchclient_blockdelay_high";
+      expr = ''cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.90'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 90% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 90% of blocks over a 6 hour window arriving in 5 seconds.";
+      };
+    }
+    {
+      alert = "cardano_blockfetchclient_blockdelay_critical";
+      expr = "cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.50";
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 50% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
+      };
+    }
+    {
       alert = "cardano_new_node_forge_not_adopted_error";
       expr = "increase(cardano_node_metrics_Forge_didnt_adopt_int[1h]) > 0";
       for = "1m";
