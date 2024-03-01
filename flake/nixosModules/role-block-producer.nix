@@ -25,8 +25,9 @@ flake: {
       inherit (groupCfg.meta) environmentName;
       inherit (perNodeCfg.lib) cardanoLib;
       inherit (perNodeCfg.pkgs) cardano-cli mithril-signer;
-      inherit (cardanoLib.environments.${environmentName}.nodeConfig) Protocol ShelleyGenesisFile;
+      inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile Protocol ShelleyGenesisFile;
       inherit (opsLib) mkSopsSecret;
+      inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
 
       groupCfg = config.cardano-parts.cluster.group;
       mithrilCfg = config.services.mithril-signer;
@@ -128,6 +129,12 @@ flake: {
           default = true;
           description = "Whether to use a proxy relay for requests to avoid leaking the block producer's IP.";
         };
+
+        useSignerVerifier = mkOption {
+          type = bool;
+          default = true;
+          description = "Whether to use a daily run systemd service that will monitor for signed mithril certificates and fail if none are signed by the block producer.";
+        };
       };
 
       config = {
@@ -139,50 +146,119 @@ flake: {
             usePeersFromLedgerAfterSlot = -1;
           };
 
-        systemd.services.mithril-signer = mkIf mithrilCfg.enable {
-          wantedBy = ["multi-user.target"];
+        systemd = {
+          services.mithril-signer = mkIf mithrilCfg.enable {
+            wantedBy = ["multi-user.target"];
 
-          # Allow up to 10 failures with 30 second restarts in a 15 minute window
-          # before entering failure state and alerting
-          startLimitBurst = 10;
-          startLimitIntervalSec = 900;
+            # Allow up to 10 failures with 30 second restarts in a 15 minute window
+            # before entering failure state and alerting
+            startLimitBurst = 10;
+            startLimitIntervalSec = 900;
 
-          environment = with nodeCfg.environments.${environmentName}.mithrilSignerConfig; {
-            AGGREGATOR_ENDPOINT = aggregator_endpoint;
-            CARDANO_CLI_PATH = getExe cardano-cli;
-            CARDANO_NODE_SOCKET_PATH = nodeCfg.socketPath 0;
-            DATA_STORES_DIRECTORY = "/var/lib/mithril-signer/stores";
-            DB_DIRECTORY = nodeCfg.databasePath 0;
-            ERA_READER_ADAPTER_PARAMS = era_reader_adapter_params;
-            ERA_READER_ADAPTER_TYPE = era_reader_adapter_type;
-            KES_SECRET_KEY_PATH = sopsPath "cardano-node-kes-signing";
-            NETWORK = network;
-            OPERATIONAL_CERTIFICATE_PATH = sopsPath "cardano-node-operational-cert";
-            RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
+            environment = with nodeCfg.environments.${environmentName}.mithrilSignerConfig; {
+              AGGREGATOR_ENDPOINT = aggregator_endpoint;
+              CARDANO_CLI_PATH = getExe cardano-cli;
+              CARDANO_NODE_SOCKET_PATH = nodeCfg.socketPath 0;
+              DATA_STORES_DIRECTORY = "/var/lib/mithril-signer/stores";
+              DB_DIRECTORY = nodeCfg.databasePath 0;
+              ERA_READER_ADAPTER_PARAMS = era_reader_adapter_params;
+              ERA_READER_ADAPTER_TYPE = era_reader_adapter_type;
+              KES_SECRET_KEY_PATH = sopsPath "cardano-node-kes-signing";
+              NETWORK = network;
+              OPERATIONAL_CERTIFICATE_PATH = sopsPath "cardano-node-operational-cert";
+              RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
 
-            # The mithril signer runtime interval in milliseconds
-            RUN_INTERVAL = toString run_interval;
+              # The mithril signer runtime interval in milliseconds
+              RUN_INTERVAL = toString run_interval;
 
-            # Maximum number of records in stores
-            STORE_RETENTION_LIMIT = toString store_retention_limit;
+              # Maximum number of records in stores
+              STORE_RETENTION_LIMIT = toString store_retention_limit;
+            };
+
+            serviceConfig = {
+              ExecStart = getExe (pkgs.writeShellApplication {
+                name = "mithril-signer";
+                text = ''
+                  echo "Starting mithril-signer"
+                  ${getExe mithril-signer} -vvv
+                '';
+              });
+
+              Restart = "always";
+              RestartSec = 30;
+              User = "cardano-node";
+              Group = "cardano-node";
+
+              # Creates /var/lib/mithril-signer
+              StateDirectory = "mithril-signer";
+            };
           };
 
-          serviceConfig = {
-            ExecStart = getExe (pkgs.writeShellApplication {
-              name = "mithril-signer";
-              text = ''
-                echo "Starting mithril-signer"
-                ${getExe mithril-signer} -vvv
-              '';
-            });
+          services.mithril-signer-verifier = mkIf (mithrilCfg.enable
+            && mithrilCfg.useSignerVerifier) {
+            wantedBy = ["multi-user.target"];
 
-            Restart = "always";
-            RestartSec = 30;
-            User = "cardano-node";
-            Group = "cardano-node";
+            environment = with nodeCfg.environments.${environmentName}.mithrilSignerConfig; {
+              AGGREGATOR_ENDPOINT = aggregator_endpoint;
+              CARDANO_NODE_SOCKET_PATH = nodeCfg.socketPath 0;
+              CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+              RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
+            };
 
-            # Creates /var/lib/mithril-signer
-            StateDirectory = "mithril-signer";
+            serviceConfig = {
+              Type = "oneshot";
+              ExecStart = getExe (pkgs.writeShellApplication {
+                name = "mithril-signer-verifier";
+                runtimeInputs = with pkgs; [cardano-cli curl gnugrep jq];
+                text = ''
+                  echo "Starting mithril-signer-verifier"
+                  POOL_ID=$(cardano-cli stake-pool id \
+                    --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
+                    --output-format bech32)
+
+                  CURL_WITH_RELAY() {
+                    curl -s ${
+                    if mithrilCfg.useRelay
+                    then "-x \"$RELAY_ENDPOINT\""
+                    else ""
+                  } "$1"
+                  }
+
+                  CERTIFICATES_RESPONSE=$(CURL_WITH_RELAY "$AGGREGATOR_ENDPOINT/certificates")
+                  CERTIFICATES_COUNT=$(jq '. | length' <<< "$CERTIFICATES_RESPONSE")
+
+                  echo "For pool id $POOL_ID:"
+                  SIGNED=0
+                  while read -r HASH; do
+                      RESPONSE=$(CURL_WITH_RELAY "$AGGREGATOR_ENDPOINT/certificate/$HASH")
+                      if jq -r '.metadata.signers[].party_id' <<< "$RESPONSE" | grep -qe "$POOL_ID"; then
+                        echo "Certificate sealed at $(jq -r '.metadata.sealed_at' <<< "$RESPONSE") with hash $HASH has been signed"
+                        SIGNED=$((SIGNED+1))
+                      fi
+                  done < <(jq -r '.[] | .hash' <<< "$CERTIFICATES_RESPONSE")
+
+                  echo "Of the $CERTIFICATES_COUNT most recent certificates, $SIGNED have been signed this pool"
+
+                  if [ "$SIGNED" -eq "0" ]; then
+                    exit 1
+                  else
+                    exit 0
+                  fi
+                '';
+              });
+
+              User = "cardano-node";
+              Group = "cardano-node";
+            };
+          };
+
+          timers.mithril-signer-verifier = mkIf (mithrilCfg.enable
+            && mithrilCfg.useSignerVerifier) {
+            wantedBy = ["timers.target"];
+            timerConfig = {
+              OnCalendar = "daily";
+              Unit = "mithril-signer-verifier.service";
+            };
           };
         };
 
