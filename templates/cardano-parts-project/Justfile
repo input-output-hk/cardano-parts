@@ -13,12 +13,14 @@ checkEnv := '''
   ENV="${1:-}"
   TESTNET_MAGIC="${2:-""}"
 
-  if ! [[ "$ENV" =~ preprod$|preview$|private$|sanchonet$|shelley-qa$|demo$ ]]; then
-    echo "Error: only node environments for demo, preprod, preview, private, sanchonet and shelley-qa are supported"
+  if ! [[ "$ENV" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$|demo$ ]]; then
+    echo "Error: only node environments for demo, mainnet, preprod, preview, private, sanchonet and shelley-qa are supported"
     exit 1
   fi
 
-  if [ "$ENV" = "preprod" ]; then
+  if [ "$ENV" = "mainnet" ]; then
+    MAGIC="764824073"
+  elif [ "$ENV" = "preprod" ]; then
     MAGIC="1"
   elif [ "$ENV" = "preview" ]; then
     MAGIC="2"
@@ -293,7 +295,7 @@ query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
   QUERIED=0
-  for i in preprod preview private shelley-qa sanchonet demo; do
+  for i in mainnet preprod preview private shelley-qa sanchonet demo; do
     TIP=$(just query-tip $i 2>&1) && {
       echo "Environment: $i"
       echo "$TIP"
@@ -572,27 +574,31 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ preprod$|preview$|private$|sanchonet$|shelley-qa ]]; then
-    echo "Error: only node environments for preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
     exit 1
   fi
 
   # Stop any existing running node env for a clean restart
   just stop-node {{ENV}}
   echo "Starting cardano-node for envrionment {{ENV}}"
+  mkdir -p "$STATEDIR"
 
-  if [[ "{{ENV}}" =~ preprod$|preview$ ]]; then
+  if [[ "{{ENV}}" =~ mainnet$|preprod$|preview$ ]]; then
     UNSTABLE=false
     UNSTABLE_LIB=false
+    UNSTABLE_MITHRIL=false
   else
     UNSTABLE=true
     UNSTABLE_LIB=true
+    UNSTABLE_MITHRIL=true
   fi
 
   # Set required entrypoint vars and run node in a new nohup background session
   ENVIRONMENT="{{ENV}}" \
   UNSTABLE="$UNSTABLE" \
   UNSTABLE_LIB="$UNSTABLE_LIB" \
+  UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
   DATA_DIR="$STATEDIR" \
   SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
@@ -601,7 +607,7 @@ start-node ENV:
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
-  for i in preprod preview private shelley-qa sanchonet demo; do
+  for i in mainnet preprod preview private shelley-qa sanchonet demo; do
     just stop-node $i
   done
 
