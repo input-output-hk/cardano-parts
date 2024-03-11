@@ -44,10 +44,10 @@ flake @ {inputs, ...}: {
         magic = getMagic "preview";
       };
       private = {
-        isCardanoLibNg = false;
-        isDbsyncNg = false;
-        isMithrilNg = false;
-        isNodeNg = false;
+        isCardanoLibNg = true;
+        isDbsyncNg = true;
+        isMithrilNg = true;
+        isNodeNg = true;
         magic = getMagic "private";
       };
       sanchonet = {
