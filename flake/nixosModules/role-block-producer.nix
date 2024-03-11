@@ -7,6 +7,7 @@
 #   config.services.mithril-signer.relayEndpoint
 #   config.services.mithril-signer.relayPort
 #   config.services.mithril-signer.useRelay
+#   config.services.mithril-signer.useSignerVerifier
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module to enable a block producer

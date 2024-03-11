@@ -7,6 +7,10 @@
 #   config.services.cardano-node-topology.edgeNodes
 #   config.services.cardano-node-topology.enableProducers
 #   config.services.cardano-node-topology.enablePublicProducers
+#   config.services.cardano-node-topology.extraNodeListProducers
+#   config.services.cardano-node-topology.extraNodeListPublicProducers
+#   config.services.cardano-node-topology.extraProducers
+#   config.services.cardano-node-topology.extraPublicProducers
 #   config.services.cardano-node-topology.maxCount
 #   config.services.cardano-node-topology.name
 #   config.services.cardano-node-topology.nodeList
