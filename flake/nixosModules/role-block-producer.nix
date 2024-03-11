@@ -175,6 +175,18 @@ flake: {
               STORE_RETENTION_LIMIT = toString store_retention_limit;
             };
 
+            preStart = ''
+              set -uo pipefail
+              SOCKET="${nodeCfg.socketPath 0}"
+
+              # Wait for the node socket
+              while true; do
+                [ -S "$SOCKET" ] && sleep 2 && break
+                echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
+                sleep 2
+              done
+            '';
+
             serviceConfig = {
               ExecStart = getExe (pkgs.writeShellApplication {
                 name = "mithril-signer";

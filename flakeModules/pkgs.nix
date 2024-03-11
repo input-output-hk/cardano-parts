@@ -418,9 +418,9 @@ in
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0)
-            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2403-1-pre {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-client";}))
             (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2403-1-pre {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-signer";}))
             (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-signer";}))
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0 {meta.mainProgram = "token-metadata-creator";}))
           ];
