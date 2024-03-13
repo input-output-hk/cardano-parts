@@ -20,25 +20,27 @@ flake @ {inputs, ...}: {
     envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
     envCfgsNg = generateStaticHTMLConfigs pkgs cardanoLibNg environmentsNg;
 
-    # Node and dbsync versioning for local development testing
+    # Node and dbsync versioning for local development testing.
+    # With node 8.9.0 release, until a version of db-sync is available that is compatible
+    # with 8.9.0 genesis, db-sync will be -ng variant.
     envBinCfgs = {
       mainnet = {
         isCardanoLibNg = false;
-        isDbsyncNg = false;
+        isDbsyncNg = true;
         isMithrilNg = false;
         isNodeNg = false;
         magic = getMagic "mainnet";
       };
       preprod = {
         isCardanoLibNg = false;
-        isDbsyncNg = false;
+        isDbsyncNg = true;
         isMithrilNg = false;
         isNodeNg = false;
         magic = getMagic "preprod";
       };
       preview = {
         isCardanoLibNg = false;
-        isDbsyncNg = false;
+        isDbsyncNg = true;
         isMithrilNg = false;
         isNodeNg = false;
         magic = getMagic "preview";
