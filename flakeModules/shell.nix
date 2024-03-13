@@ -318,6 +318,7 @@ in
                         age
                         awscli2
                         localFlake.inputs.colmena.packages.${system}.colmena
+                        graphviz
                         mdbook
                         mdbook-kroki-preprocessor
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
