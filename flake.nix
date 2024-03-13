@@ -28,7 +28,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/bootstrap-peers-legacy";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Cardano related inputs required for service config
@@ -50,7 +50,7 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/8.8.1-pre";
+      url = "github:IntersectMBO/cardano-node/8.9.0";
       flake = false;
     };
 
@@ -60,7 +60,7 @@
     };
 
     cardano-wallet-service = {
-      url = "github:cardano-foundation/cardano-wallet/v2023-12-18";
+      url = "github:cardano-foundation/cardano-wallet/v2024-03-01";
       flake = false;
     };
 

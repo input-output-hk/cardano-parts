@@ -4,6 +4,7 @@
 #
 # Attributes available on flakeModule import:
 #   flake.cardano-parts.pkgs.special.cardanoLib
+#   flake.cardano-parts.pkgs.special.cardanoLibCustom
 #   flake.cardano-parts.pkgs.special.cardanoLibNg
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-schema
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-schema-ng
@@ -118,6 +119,19 @@
           The definition must be a function of system.
         '';
         default = system: mkCardanoLib system localFlake.inputs.iohk-nix;
+      };
+
+      cardanoLibCustom = mkOption {
+        type = anything;
+        description = mdDoc ''
+          The cardano-parts system dependent default package for cardanoLibCustom.
+
+          This is the same as the cardanoLib option with the exception that a
+          custom iohk-nix flake input is passed as an arg to obtain cardanoLib.
+
+          The definition must be a function of iohk-nix input and system.
+        '';
+        default = iohk-nix: system: mkCardanoLib system iohk-nix;
       };
 
       cardanoLibNg = mkOption {
@@ -384,10 +398,10 @@ in
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
-            (mkPkg "bech32" caPkgs.bech32-input-output-hk-cardano-node-8-7-3)
+            (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main)
-            (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2023-07-18)
-            (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-7-3 // {version = "8.17.0.0";}))
+            (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-03-01)
+            (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.20.3.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.20.3.0";}))
             (mkPkg "cardano-db-sync" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-2-0-1" // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-sancho-4-0-0" // {exeName = "cardano-db-sync";}))
@@ -395,23 +409,23 @@ in
             (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-sancho-4-0-0")
             (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
-            (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-8-7-3 // {version = "8.7.3";}))
+            (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.9.0";}))
             (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.9.0";}))
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-2-0-1)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-4-0-0)
-            (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-7-3)
+            (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-9-0^{}")
-            (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2023-12-18
+            (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-03-01
               // {
                 pname = "cardano-wallet";
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
-            (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-7-3)
+            (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "db-analyser-ng" caPkgs."db-analyser-input-output-hk-cardano-node-8-9-0^{}")
-            (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-7-3)
+            (mkPkg "db-synthesizer" caPkgs."db-synthesizer-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "db-synthesizer-ng" caPkgs."db-synthesizer-input-output-hk-cardano-node-8-9-0^{}")
-            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-7-3)
+            (mkPkg "db-truncater" caPkgs."db-truncater-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "db-truncater-ng" caPkgs."db-truncater-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v0-80-0)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-ops-1-0-0)

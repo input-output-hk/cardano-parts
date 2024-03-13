@@ -74,17 +74,17 @@
     "blst": {
       "flake": false,
       "locked": {
-        "lastModified": 1656163412,
-        "narHash": "sha256-xero1aTe2v4IhWIJaEDUsVDOfE77dOV5zKeHWntHogY=",
+        "lastModified": 1691598027,
+        "narHash": "sha256-oqljy+ZXJAXEB/fJtmB8rlAr4UXM+Z2OkDa20gpILNA=",
         "owner": "supranational",
         "repo": "blst",
-        "rev": "03b5124029979755c752eec45f3c29674b558446",
+        "rev": "3dd0f804b1819e5d03fb22ca2e6fac105932043a",
         "type": "github"
       },
       "original": {
         "owner": "supranational",
+        "ref": "v0.3.11",
         "repo": "blst",
-        "rev": "03b5124029979755c752eec45f3c29674b558446",
         "type": "github"
       }
     },
@@ -242,16 +242,16 @@
     "cardano-node-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1708540590,
-        "narHash": "sha256-Rq2KvB6oWhScejtVQ5loPznAbPDXpi0PaDjEhFRjUD4=",
+        "lastModified": 1709733493,
+        "narHash": "sha256-chcwbks+HyImFk7FpbkC7FFmfpScMx5T7K0TzTkGAww=",
         "owner": "IntersectMBO",
         "repo": "cardano-node",
-        "rev": "968432eff066bc59603a6f9e8c79cfe1735f1ae3",
+        "rev": "0d98405a60d57e1c8e13406d51cce0e34356bd64",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "8.8.1-pre",
+        "ref": "8.9.0",
         "repo": "cardano-node",
         "type": "github"
       }
@@ -292,16 +292,16 @@
     "cardano-wallet-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1702897013,
-        "narHash": "sha256-b0aSAVU1YrP/rWTG2si0dq5lVwkXYHb5m9VTFcdxtPQ=",
+        "lastModified": 1709323258,
+        "narHash": "sha256-O5u0V7XHY/9umFV6/R4JBk8Zu3sBnmuMCK++XGVwQ2Q=",
         "owner": "cardano-foundation",
         "repo": "cardano-wallet",
-        "rev": "6130be741a412e503fa1b83432d11a049a03a3bc",
+        "rev": "e69616ba776f4a52173ead423141d234e03d468f",
         "type": "github"
       },
       "original": {
         "owner": "cardano-foundation",
-        "ref": "v2023-12-18",
+        "ref": "v2024-03-01",
         "repo": "cardano-wallet",
         "type": "github"
       }
@@ -691,16 +691,15 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1709241459,
-        "narHash": "sha256-OzKfB27Hf6mrbCBnlNUgQHoKA1vs0EKi/c/HS4OAvn8=",
+        "lastModified": 1709083850,
+        "narHash": "sha256-6DQ89ktt8rRVV1pXEyX2JwPjaqS0mQkelkmJmka04rg=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "6e4d8bd0f5a21a6116d4bef36062954da74175a2",
+        "rev": "1c793a53ac0bd99b795c2180eb23d37e8389a74b",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "bootstrap-peers-legacy",
         "repo": "iohk-nix",
         "type": "github"
       }
