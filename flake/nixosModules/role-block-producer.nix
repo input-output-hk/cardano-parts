@@ -204,6 +204,10 @@ flake: {
 
               # Creates /var/lib/mithril-signer
               StateDirectory = "mithril-signer";
+
+              # Wait up to an hour for the node socket to appear on preStart.
+              # Allow long ledger replays and/or db-restore gunzip, including on slow systems
+              TimeoutStartSec = 24 * 3600;
             };
           };
 

@@ -453,7 +453,7 @@
                 });
 
                 # Allow long ledger replays and/or db-restore gunzip, including on slow systems
-                TimeoutStartSec = "infinity";
+                TimeoutStartSec = 24 * 3600;
               };
             };
           }) {}
