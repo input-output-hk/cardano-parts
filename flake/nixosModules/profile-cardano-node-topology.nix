@@ -7,6 +7,9 @@
 #   config.services.cardano-node-topology.edgeNodes
 #   config.services.cardano-node-topology.enableProducers
 #   config.services.cardano-node-topology.enablePublicProducers
+#   config.services.cardano-node-topology.extraCfgInfix
+#   config.services.cardano-node-topology.extraCfgSimple
+#   config.services.cardano-node-topology.extraCfgSimpleMax
 #   config.services.cardano-node-topology.extraNodeListProducers
 #   config.services.cardano-node-topology.extraNodeListPublicProducers
 #   config.services.cardano-node-topology.extraProducers
@@ -40,14 +43,26 @@
 
       topologyFns = with topologyLib; {
         edge =
-          # This if can be simplified upon GA release for >= node 8.9.0
+          # This can be simplified upon all machines deployed >= node 8.9.0
           if cfgNode ? bootstrapPeers && cfgNode.bootstrapPeers != null
           then []
           else p2pEdgeNodes cfg.edgeNodes;
-        list = topoList cfg.nodes cfg.nodeList;
-        infix = topoInfixFiltered cfg.name cfg.nodes cfg.allowList;
-        simple = topoSimple cfg.name cfg.nodes;
-        simpleMax = topoSimpleMax cfg.name cfg.nodes cfg.maxCount;
+        list = topoList {inherit (cfg) nodes nodeList;};
+
+        infix = topoInfixFiltered {
+          inherit (cfg) name nodes allowList;
+          extraCfg = cfg.extraCfgInfix;
+        };
+
+        simple = topoSimple {
+          inherit (cfg) name nodes;
+          extraCfg = cfg.extraCfgSimple;
+        };
+
+        simpleMax = topoSimpleMax {
+          inherit (cfg) name nodes maxCount;
+          extraCfg = cfg.extraCfgSimpleMax;
+        };
       };
 
       roles = with topologyLib; {
@@ -57,12 +72,20 @@
         };
 
         relay = {
-          producers = topoInfixFiltered cfg.name cfg.nodes cfg.infixProducersForRel;
+          producers = topoInfixFiltered {
+            inherit (cfg) name nodes;
+            allowList = cfg.infixProducersForRel;
+            extraCfg = cfg.extraCfgInfix;
+          };
           publicProducers = topologyFns.edge ++ extraNodeListPublicProducers ++ extraPublicProducers;
         };
 
         bp = {
-          producers = topoInfixFiltered cfg.name cfg.nodes cfg.infixProducersForBp;
+          producers = topoInfixFiltered {
+            inherit (cfg) name nodes;
+            allowList = cfg.infixProducersForBp;
+            extraCfg = cfg.extraCfgInfix;
+          };
 
           # These are also set from the role-block-producer nixos module
           publicProducers = mkForce (extraNodeListPublicProducers ++ extraPublicProducers);
@@ -78,8 +101,15 @@
         }
         // extraCfg;
 
-      extraNodeListProducers = topologyLib.topoList cfg.nodes cfg.extraNodeListProducers;
-      extraNodeListPublicProducers = topologyLib.topoList cfg.nodes cfg.extraNodeListPublicProducers;
+      extraNodeListProducers = topologyLib.topoList {
+        inherit (cfg) nodes;
+        nodeList = cfg.extraNodeListProducers;
+      };
+
+      extraNodeListPublicProducers = topologyLib.topoList {
+        inherit (cfg) nodes;
+        nodeList = cfg.extraNodeListPublicProducers;
+      };
 
       extraProducers = map mkBasicProducers cfg.extraProducers;
       extraPublicProducers = map mkBasicProducers cfg.extraPublicProducers;
@@ -119,6 +149,24 @@
             type = bool;
             default = true;
             description = "Whether to enable public producers by default.";
+          };
+
+          extraCfgInfix = mkOption {
+            type = attrs;
+            default = {};
+            description = "Any extra config which should be applied to infix topology function generated results.";
+          };
+
+          extraCfgSimple = mkOption {
+            type = attrs;
+            default = {};
+            description = "Any extra config which should be applied to simple topology function generated results.";
+          };
+
+          extraCfgSimpleMax = mkOption {
+            type = attrs;
+            default = {};
+            description = "Any extra config which should be applied to simpleMax topology function generated results.";
           };
 
           extraNodeListProducers = mkOption {
@@ -306,7 +354,7 @@
               mkIf (cfg.role == "bp")
               roles.${cfg.role}.usePeersFromLedgerAfterSlot;
           }
-          # This if can be simplified upon GA release for >= node 8.9.0
+          # This can be simplified upon all machines deployed >= node 8.9.0
           // optionalAttrs (cfgNode ? bootstrapPeers) {
             bootstrapPeers =
               mkIf (cfg.role == "bp")
