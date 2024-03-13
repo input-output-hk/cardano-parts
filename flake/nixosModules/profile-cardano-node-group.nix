@@ -41,7 +41,7 @@
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
-    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node cardano-node-pkgs mithril-client-cli;
+    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
     inherit (opsLib) mithrilVerifyingPools;
@@ -170,7 +170,7 @@
       environment.systemPackages =
         [
           config.cardano-parts.pkgs.bech32
-          cardano-node-pkgs.cardano-cli
+          cardano-cli
           config.cardano-parts.pkgs.db-analyser
           config.cardano-parts.pkgs.db-synthesizer
           config.cardano-parts.pkgs.db-truncater
