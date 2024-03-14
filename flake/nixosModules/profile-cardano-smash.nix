@@ -37,7 +37,7 @@ flake: {
       inherit (nodeResources) memMiB;
 
       inherit (perNodeCfg.meta) cardanoSmashDelistedPools;
-      inherit (perNodeCfg.pkgs) cardano-smash cardano-db-sync-pkgs cardano-node-pkgs;
+      inherit (perNodeCfg.pkgs) cardano-cli cardano-smash cardano-db-sync-pkgs;
 
       groupCfg = config.cardano-parts.cluster.group;
       perNodeCfg = config.cardano-parts.perNode;
@@ -245,7 +245,7 @@ flake: {
 
             path = with pkgs; [
               config.services.postgresql.package
-              cardano-node-pkgs.cardano-cli
+              cardano-cli
               coreutils
               curl
               dnsutils

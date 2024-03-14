@@ -4,6 +4,7 @@
 #
 # Attributes available on flakeModule import:
 #   flake.cardano-parts.pkgs.special.cardanoLib
+#   flake.cardano-parts.pkgs.special.cardanoLibCustom
 #   flake.cardano-parts.pkgs.special.cardanoLibNg
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-schema
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-schema-ng
@@ -16,6 +17,7 @@
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
+#   flake.cardano-parts.pkgs.special.cardano-node-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
@@ -43,7 +45,9 @@
 #   perSystem.cardano-parts.pkgs.metadata-validator-github
 #   perSystem.cardano-parts.pkgs.metadata-webhook
 #   perSystem.cardano-parts.pkgs.mithril-client-cli
+#   perSystem.cardano-parts.pkgs.mithril-client-cli-ng
 #   perSystem.cardano-parts.pkgs.mithril-signer
+#   perSystem.cardano-parts.pkgs.mithril-signer-ng
 #   perSystem.cardano-parts.pkgs.token-metadata-creator
 #
 # Tips:
@@ -115,6 +119,19 @@
           The definition must be a function of system.
         '';
         default = system: mkCardanoLib system localFlake.inputs.iohk-nix;
+      };
+
+      cardanoLibCustom = mkOption {
+        type = anything;
+        description = mdDoc ''
+          The cardano-parts system dependent default package for cardanoLibCustom.
+
+          This is the same as the cardanoLib option with the exception that a
+          custom iohk-nix flake input is passed as an arg to obtain cardanoLib.
+
+          The definition must be a function of iohk-nix input and system.
+        '';
+        default = iohk-nix: system: mkCardanoLib system iohk-nix;
       };
 
       cardanoLibNg = mkOption {
@@ -269,6 +286,12 @@
         default = "${localFlake.inputs.cardano-node-service}/nix/nixos";
       };
 
+      cardano-node-service-ng = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-node-service-ng import path string.";
+        default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos";
+      };
+
       cardano-smash-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-smash-service import path string.";
@@ -375,42 +398,44 @@ in
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
-            (mkPkg "bech32" caPkgs.bech32-input-output-hk-cardano-node-8-7-3)
+            (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main)
-            (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2023-07-18)
-            (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-7-3 // {version = "8.17.0.0";}))
-            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-8-8-0-pre // {version = "8.18.0.0";}))
+            (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-03-01)
+            (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.20.3.0";}))
+            (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.20.3.0";}))
             (mkPkg "cardano-db-sync" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-2-0-1" // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-sancho-4-0-0" // {exeName = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-2-0-1")
             (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-sancho-4-0-0")
             (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-master")
-            (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-8-7-3 // {version = "8.7.3";}))
-            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-8-8-0-pre // {version = "8.8.0-pre";}))
+            (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.9.0";}))
+            (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-8-9-0^{}" // {version = "8.9.0";}))
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-2-0-1)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-4-0-0)
-            (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-8-8-0-pre)
-            (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2023-12-18
+            (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-03-01
               // {
                 pname = "cardano-wallet";
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
-            (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "db-analyser-ng" caPkgs.db-analyser-input-output-hk-cardano-node-8-8-0-pre)
-            (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "db-synthesizer-ng" caPkgs.db-synthesizer-input-output-hk-cardano-node-8-8-0-pre)
-            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-8-7-3)
-            (mkPkg "db-truncater-ng" caPkgs.db-truncater-input-output-hk-cardano-node-8-8-0-pre)
+            (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "db-analyser-ng" caPkgs."db-analyser-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "db-synthesizer" caPkgs."db-synthesizer-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "db-synthesizer-ng" caPkgs."db-synthesizer-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "db-truncater" caPkgs."db-truncater-input-output-hk-cardano-node-8-9-0^{}")
+            (mkPkg "db-truncater-ng" caPkgs."db-truncater-input-output-hk-cardano-node-8-9-0^{}")
             (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v0-80-0)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0)
-            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2403-1-pre {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2403-1-pre {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2408-0-pre {meta.mainProgram = "mithril-signer";}))
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0 {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
@@ -463,6 +488,8 @@ in
             db-analyser-ng = mkWrapper "db-analyser-ng" cfgPkgs.db-analyser-ng;
             db-synthesizer-ng = mkWrapper "db-synthesizer-ng" cfgPkgs.db-synthesizer-ng;
             db-truncater-ng = mkWrapper "db-truncater-ng" cfgPkgs.db-truncater-ng;
+            mithril-client-cli-ng = mkWrapper "mithril-client-cli-ng" cfgPkgs.mithril-client-cli-ng;
+            mithril-signer-ng = mkWrapper "mithril-signer-ng" cfgPkgs.mithril-signer-ng;
           };
         };
       });

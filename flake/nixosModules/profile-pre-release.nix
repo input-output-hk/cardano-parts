@@ -27,6 +27,8 @@ flake @ {moduleWithSystem, ...}: {
         cardano-smash = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-smash-ng);
         cardano-submit-api = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api-ng);
         cardano-node-pkgs = groupFlake.config.flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng system;
+        mithril-client-cli = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-client-cli-ng);
+        mithril-signer = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-signer-ng);
       };
     };
   });

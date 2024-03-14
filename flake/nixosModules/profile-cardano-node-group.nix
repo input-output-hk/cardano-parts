@@ -10,12 +10,18 @@
 #   config.services.mithril-client.aggregatorEndpointUrl
 #   config.services.mithril-client.genesisVerificationKey
 #   config.services.mithril-client.snapshotDigest
+#   config.services.mithril-client.verifyingPools
+#   config.services.mithril-client.verifySnapshotSignature
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
 #   * This module assists with group deployments
 #   * The upstream cardano-node nixos service module should still be imported separately
-{moduleWithSystem, ...}: {
+{
+  self,
+  moduleWithSystem,
+  ...
+}: {
   flake.nixosModules.profile-cardano-node-group = moduleWithSystem ({
     config,
     self',
@@ -27,20 +33,26 @@
     nodeResources,
     ...
   }: let
-    inherit (builtins) elem fromJSON readFile;
-    inherit (lib) flatten foldl' getExe min mkDefault mkIf mkOption optionalString range recursiveUpdate types;
-    inherit (types) bool float ints oneOf str;
+    inherit (builtins) fromJSON readFile;
+    inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkIf mkOption optional optionalAttrs optionalString range recursiveUpdate types;
+    inherit (types) bool float ints listOf oneOf str;
     inherit (nodeResources) cpuCount memMiB;
 
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
-    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-node cardano-node-pkgs mithril-client-cli;
+    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
+    inherit (opsLib) mithrilVerifyingPools;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
     inherit (fromJSON (readFile ShelleyGenesisFile)) slotsPerKESPeriod;
 
+    opsLib = self.cardano-parts.lib.opsLib pkgs;
+
+    # We don't use the mkTopology function directly from cardanoLib because that function
+    # determines p2p usage based on network EnableP2P definition, whereas we wish to
+    # determine p2p usage from individual node configuration
     mkTopology = env: let
       legacyTopology = mkEdgeTopology {
         edgeNodes = [env.relaysNew];
@@ -50,6 +62,7 @@
 
       p2pTopology = mkEdgeTopologyP2P {
         inherit (env) edgeNodes;
+
         useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
       };
     in
@@ -108,7 +121,7 @@
         mithril-client = {
           enable = mkOption {
             type = bool;
-            default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && elem environmentName ["preprod" "preview"];
+            default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl;
             description = "Allow mithril-client to bootstrap cardano-node chain state.";
           };
 
@@ -129,22 +142,43 @@
             default = "latest";
             description = "The mithril snapshot digest id or `latest` for the most recently taken snapshot.";
           };
+
+          verifyingPools = mkOption {
+            type = listOf str;
+            default = mithrilVerifyingPools.${environmentName};
+            description = ''
+              A list of verifying pool id strings in bech32.
+
+              If veryifySnapshotSignature boolean is true, the mithril snapshot will only be used if at least one
+              of the listed pools has signed the snapshot.
+            '';
+          };
+
+          verifySnapshotSignature = mkOption {
+            type = bool;
+            default = true;
+            description = ''
+              Only use a mithril snapshot if it is signed by at least one of the pools in the verifyingPools list
+              for the respective environment.
+            '';
+          };
         };
       };
     };
 
     config = {
-      environment.systemPackages = [
-        config.cardano-parts.pkgs.bech32
-        cardano-node-pkgs.cardano-cli
-        config.cardano-parts.pkgs.db-analyser
-        config.cardano-parts.pkgs.db-synthesizer
-        config.cardano-parts.pkgs.db-truncater
-        self'.packages.db-analyser-ng
-        self'.packages.db-synthesizer-ng
-        self'.packages.db-truncater-ng
-        mithril-client-cli
-      ];
+      environment.systemPackages =
+        [
+          config.cardano-parts.pkgs.bech32
+          cardano-cli
+          config.cardano-parts.pkgs.db-analyser
+          config.cardano-parts.pkgs.db-synthesizer
+          config.cardano-parts.pkgs.db-truncater
+          self'.packages.db-analyser-ng
+          self'.packages.db-synthesizer-ng
+          self'.packages.db-truncater-ng
+        ]
+        ++ optional cfgMithril.enable mithril-client-cli;
 
       environment = {
         shellAliases = {
@@ -163,15 +197,18 @@
           '';
         };
 
-        variables = {
-          CARDANO_NODE_NETWORK_ID = toString protocolMagic;
-          CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
-          CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
-          CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
-          AGGREGATOR_ENDPOINT = mkIf cfgMithril.enable cfgMithril.aggregatorEndpointUrl;
-          GENESIS_VERIFICATION_KEY = mkIf cfgMithril.enable cfgMithril.genesisVerificationKey;
-          TESTNET_MAGIC = toString protocolMagic;
-        };
+        variables =
+          {
+            CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+            CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
+            CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
+            CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
+            TESTNET_MAGIC = toString protocolMagic;
+          }
+          // optionalAttrs cfgMithril.enable {
+            AGGREGATOR_ENDPOINT = mkIf cfgMithril.enable cfgMithril.aggregatorEndpointUrl;
+            GENESIS_VERIFICATION_KEY = mkIf cfgMithril.enable cfgMithril.genesisVerificationKey;
+          };
       };
 
       # Leave firewall rules to role config
@@ -196,6 +233,12 @@
           if
             (cfg.producers == [])
             && cfg.publicProducers == []
+            # The if can be dropped once a GA release is >= node 8.9.0 for `&& cfg.bootstrapPeers == null`
+            && (
+              if cfg ? bootstrapPeers
+              then cfg.bootstrapPeers == null
+              else true
+            )
             && (flatten (map cfg.instanceProducers iRange)) == []
             && (flatten (map cfg.instancePublicProducers iRange)) == []
           then mkTopology cardanoLib.environments.${environmentName}
@@ -313,19 +356,73 @@
               serviceConfig = {
                 ExecStartPre = getExe (pkgs.writeShellApplication {
                   name = "cardano-node-pre-start";
-                  runtimeInputs = with pkgs; [gnutar gzip];
+                  runtimeInputs = with pkgs; [curl gnugrep gnutar jq gzip] ++ optional cfgMithril.enable mithril-client-cli;
+                  excludeShellChecks = ["SC2050"];
                   text = let
                     mithril-client-bootstrap = optionalString cfgMithril.enable ''
-                      TMPSTATE="''${DB_DIR}-mithril"
-                      rm -rf "$TMPSTATE"
                       if ! [ -d "$DB_DIR" ]; then
+                        DIGEST="${cfgMithril.snapshotDigest}"
+
+                        AGGREGATOR_ENDPOINT="${cfgMithril.aggregatorEndpointUrl}"
+                        export AGGREGATOR_ENDPOINT
+
+                        TMPSTATE="''${DB_DIR}-mithril"
+                        rm -rf "$TMPSTATE"
+
+                        if [ "${boolToString cfgMithril.verifySnapshotSignature}" == "true" ]; then
+                          if [ "$DIGEST" = "latest" ]; then
+                            # If digest is "latest" search through all available recent snaps for signing verification.
+                            SNAPSHOTS_JSON=$(mithril-client snapshot list --json)
+                            HASHES=$(jq -r '.[] | .certificate_hash' <<< "$SNAPSHOTS_JSON")
+                          else
+                            # Otherwise, only attempt the specifically declared snapshot digest
+                            SNAPSHOTS_JSON=$(mithril-client snapshot show "$DIGEST" --json | jq -s)
+                            HASHES=$(jq -r --arg DIGEST "$DIGEST" '.[] | select(.digest == $DIGEST) | .certificate_hash' <<< "$SNAPSHOTS_JSON")
+                          fi
+
+                          SNAPSHOTS_COUNT=$(jq '. | length' <<< "$SNAPSHOTS_JSON")
+                          VERIFYING_POOLS="${concatStringsSep "|" cfgMithril.verifyingPools}"
+                          VERIFIED_SIGNED="false"
+                          IDX=0
+
+                          while read -r HASH; do
+                            ((IDX+=1))
+                            RESPONSE=$(curl -s "$AGGREGATOR_ENDPOINT/certificate/$HASH")
+                            SIGNERS=$(jq -r '.metadata.signers[] | .party_id' <<< "$RESPONSE")
+                            if VERIFIED_BY=$(grep -E "$VERIFYING_POOLS" <<< "$SIGNERS"); then
+                              VERIFIED_HASH="$HASH"
+                              VERIFIED_DIGEST=$(jq -r '.protocol_message.message_parts.snapshot_digest' <<< "$RESPONSE")
+                              VERIFIED_SEALED=$(jq -r '.metadata.sealed_at' <<< "$RESPONSE")
+                              VERIFIED_SIGNED="true"
+                              break
+                            fi
+                          done <<< "$HASHES"
+
+                          if [ "$VERIFIED_SIGNED" = "true" ]; then
+                            echo "The following mithril snapshot was signed by verifying pool(s):"
+                            echo "Verified Digest: $VERIFIED_DIGEST"
+                            echo "Verified Hash: $VERIFIED_HASH"
+                            echo "Verified Sealed At: $VERIFIED_SEALED"
+                            echo "Number of snapshots under review: $SNAPSHOTS_COUNT"
+                            echo "Position index: $IDX"
+                            echo "Verifying pools:"
+                            echo "$VERIFIED_BY"
+                            DIGEST="$VERIFIED_DIGEST"
+                          else
+                            echo "Of the $SNAPSHOTS_COUNT mithril snapshots examined, none were signed by any of the verifying pools:"
+                            echo "$VERIFYING_POOLS" | tr '|' '\n'
+                            echo "Mithril snapshot usage will be skipped."
+                            exit 0
+                          fi
+                        fi
+
                         echo "Bootstrapping cardano-node-${toString i} state from mithril"
-                        ${getExe mithril-client-cli} \
+                        mithril-client --version
+                        mithril-client \
                           -vvv \
-                          --aggregator-endpoint "${cfgMithril.aggregatorEndpointUrl}" \
                           snapshot \
                           download \
-                          "${cfgMithril.snapshotDigest}" \
+                          "$DIGEST" \
                           --download-dir "$TMPSTATE" \
                           --genesis-verification-key "${cfgMithril.genesisVerificationKey}"
                         mv "$TMPSTATE/db" "$DB_DIR"
@@ -356,7 +453,7 @@
                 });
 
                 # Allow long ledger replays and/or db-restore gunzip, including on slow systems
-                TimeoutStartSec = "infinity";
+                TimeoutStartSec = 24 * 3600;
               };
             };
           }) {}

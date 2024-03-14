@@ -10,15 +10,25 @@ statePrefix := "~/.local/share"
 
 # Common code
 checkEnv := '''
-  ENV="${1:-}"
   TESTNET_MAGIC="${2:-""}"
+''' + checkEnvWithoutOverride + '''
+  # Allow a magic override if the just recipe optional var is provided
+  if ! [ -z "${TESTNET_MAGIC:-}" ]; then
+    MAGIC="$TESTNET_MAGIC"
+  fi
+'''
 
-  if ! [[ "$ENV" =~ preprod$|preview$|private$|sanchonet$|shelley-qa$|demo$ ]]; then
-    echo "Error: only node environments for demo, preprod, preview, private, sanchonet and shelley-qa are supported"
+checkEnvWithoutOverride := '''
+  ENV="${1:-}"
+
+  if ! [[ "$ENV" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$|demo$ ]]; then
+    echo "Error: only node environments for demo, mainnet, preprod, preview, private, sanchonet and shelley-qa are supported"
     exit 1
   fi
 
-  if [ "$ENV" = "preprod" ]; then
+  if [ "$ENV" = "mainnet" ]; then
+    MAGIC="764824073"
+  elif [ "$ENV" = "preprod" ]; then
     MAGIC="1"
   elif [ "$ENV" = "preview" ]; then
     MAGIC="2"
@@ -30,11 +40,6 @@ checkEnv := '''
     MAGIC="5"
   elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
-  fi
-
-  # Allow a magic override if the just recipe optional var is provided
-  if ! [ -z "${TESTNET_MAGIC:-}" ]; then
-    MAGIC="$TESTNET_MAGIC"
   fi
 '''
 
@@ -172,18 +177,30 @@ dbsync-create-faucet-stake-keys-table ENV HOSTNAME NUM_ACCOUNTS="500":
   echo "Executing stake key sql injection command for environment {{ENV}}..."
   just ssh {{HOSTNAME}} -t "psql -XU cexplorer cexplorer < \"$TMPFILE\""
 
-dedelegate-non-performing-pools ENV TESTNET_MAGIC=null *STAKE_KEY_INDEXES=null:
+dedelegate-non-performing-pools ENV *STAKE_KEY_INDEXES=null:
   #!/usr/bin/env bash
   set -euo pipefail
-  {{checkEnv}}
+  {{checkEnvWithoutOverride}}
+
+  if [ "{{ENV}}" = "mainnet" ]; then
+    echo "Dedelegation cannot be performed on the mainnet environment"
+    exit 1
+  fi
   just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
 
+  if [ "$(jq -re .syncProgress <<< "$(just query-tip {{ENV}})")" != "100.00" ]; then
+    echo "Please wait until the local tip of environment {{ENV}} is 100.00 before dedelegation"
+    exit 1
+  fi
+
+  echo
+  read -p "Press any key to start de-delegating {{ENV}} faucet pool delegations for stake key indexes {{STAKE_KEY_INDEXES}}" -n 1 -r -s
   echo
   echo "Starting de-delegation of the following stake key indexes: {{STAKE_KEY_INDEXES}}"
   for i in {{STAKE_KEY_INDEXES}}; do
     echo "De-delegating index $i"
     NOMENU=true scripts/restore-delegation-accounts.py \
-      --testnet-magic {{TESTNET_MAGIC}} \
+      --testnet-magic "$MAGIC" \
       --signing-key-file <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey) \
       --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
       --delegation-index "$i"
@@ -293,7 +310,7 @@ query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
   QUERIED=0
-  for i in preprod preview private shelley-qa sanchonet demo; do
+  for i in mainnet preprod preview private shelley-qa sanchonet demo; do
     TIP=$(just query-tip $i 2>&1) && {
       echo "Environment: $i"
       echo "$TIP"
@@ -572,27 +589,31 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ preprod$|preview$|private$|sanchonet$|shelley-qa ]]; then
-    echo "Error: only node environments for preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
     exit 1
   fi
 
   # Stop any existing running node env for a clean restart
   just stop-node {{ENV}}
   echo "Starting cardano-node for envrionment {{ENV}}"
+  mkdir -p "$STATEDIR"
 
-  if [[ "{{ENV}}" =~ preprod$|preview$ ]]; then
+  if [[ "{{ENV}}" =~ mainnet$|preprod$|preview$ ]]; then
     UNSTABLE=false
     UNSTABLE_LIB=false
+    UNSTABLE_MITHRIL=false
   else
     UNSTABLE=true
     UNSTABLE_LIB=true
+    UNSTABLE_MITHRIL=true
   fi
 
   # Set required entrypoint vars and run node in a new nohup background session
   ENVIRONMENT="{{ENV}}" \
   UNSTABLE="$UNSTABLE" \
   UNSTABLE_LIB="$UNSTABLE_LIB" \
+  UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
   DATA_DIR="$STATEDIR" \
   SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
@@ -601,7 +622,7 @@ start-node ENV:
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
-  for i in preprod preview private shelley-qa sanchonet demo; do
+  for i in mainnet preprod preview private shelley-qa sanchonet demo; do
     just stop-node $i
   done
 

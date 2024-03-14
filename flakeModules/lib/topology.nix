@@ -19,18 +19,27 @@ with lib; rec {
   groupMachines = nodes: sort (a: b: a < b) (filter (hasPrefix groupPrefix) (attrNames nodes));
 
   # Generate a p2p compatible producer attribute
-  mkProducer = producer: nodes: {
-    accessPoints = [
-      {
-        address = "${producer}.${domain}";
-        port = nodes.${producer}.config.cardano-parts.perNode.meta.cardanoNodePort;
-      }
-    ];
-  };
+  mkProducer = producer: nodes: let
+    producerName =
+      if isString producer
+      then producer
+      else producer.name;
+    extraCfg =
+      if isString producer
+      then {}
+      else removeAttrs producer ["name"];
+  in
+    {
+      accessPoints = [
+        {
+          address = "${producerName}.${domain}";
+          port = nodes.${producerName}.config.cardano-parts.perNode.meta.cardanoNodePort;
+        }
+      ];
+    }
+    // extraCfg;
 
-  # Generate p2p edgeNodes from cardanoLib legacy provided edgeNodes
-  # Note: this won't work for mainnet as iohk-nix edgeNodes element type differs
-  # TODO: fix iohk-nix upstream once p2p is implemented
+  # Generate p2p edgeNodes from cardanoLib provided edgeNodes
   p2pEdgeNodes = map (edgeNode: {
     accessPoints = [
       {
@@ -44,8 +53,13 @@ with lib; rec {
   shiftList = n: l: drop n l ++ (take n l);
 
   # Generate p2p producers using groupMachines filtered for self and allowing allowList infixes
-  topoInfixFiltered = name: nodes: allowList:
-    map (producer: mkProducer producer nodes) (
+  topoInfixFiltered = {
+    name,
+    nodes,
+    allowList,
+    extraCfg ? {},
+  }:
+    map (producer: mkProducer ({name = producer;} // extraCfg) nodes) (
       filter (
         n:
           (n != name)
@@ -54,21 +68,48 @@ with lib; rec {
     );
 
   # Generate p2p producers using a list of machineNames which exist in nodes
-  topoList = nodes: map (producer: mkProducer producer nodes);
+  # The nodeList may be provided as a list of either strings of Colmena machine names
+  # or attribute sets each of which contains at least a name key with a Colmena machine name:
+  # [
+  #   "$COLMENA_MACHINE_1"
+  #   {name = "$COLMENA_MACHINE_2"; ...}
+  # ]
+  topoList = {
+    nodes,
+    nodeList,
+    extraCfg ? {},
+  }:
+    map (producer:
+      mkProducer (
+        if isString producer
+        then {name = producer;} // extraCfg
+        else producer // extraCfg
+      )
+      nodes)
+    nodeList;
 
   # Generate p2p producers using groupMachines filtered for self
-  topoSimple = name: nodes:
-    map (producer: mkProducer producer nodes) (filter (n: n != name) (groupMachines nodes));
+  topoSimple = {
+    name,
+    nodes,
+    extraCfg ? {},
+  }:
+    map (producer: mkProducer ({name = producer;} // extraCfg) nodes) (filter (n: n != name) (groupMachines nodes));
 
   # Generate p2p producers using groupMachines filtered for self and applying a maximum producer limit
-  topoSimpleMax = name: nodes: maxCount: let
+  topoSimpleMax = {
+    name,
+    nodes,
+    maxCount,
+    extraCfg ? {},
+  }: let
     groupMachines' = groupMachines nodes;
     findPosition = name: l: (listToAttrs (imap0 (i: n: nameValuePair n i) l)).${name};
   in
     if maxCount >= (length groupMachines') - 1
     then topoSimple name nodes
     else
-      map (producer: mkProducer producer nodes)
+      map (producer: mkProducer ({name = producer;} // extraCfg) nodes)
       (
         take maxCount
         (

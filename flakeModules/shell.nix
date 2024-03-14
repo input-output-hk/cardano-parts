@@ -299,6 +299,7 @@ in
                         self'.packages.db-analyser-ng
                         self'.packages.db-synthesizer-ng
                         self'.packages.db-truncater-ng
+                        self'.packages.mithril-client-cli-ng
 
                         gdb
                         process-compose
@@ -317,6 +318,7 @@ in
                         age
                         awscli2
                         localFlake.inputs.colmena.packages.${system}.colmena
+                        graphviz
                         mdbook
                         mdbook-kroki-preprocessor
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir

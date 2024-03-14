@@ -7,6 +7,13 @@
 #   config.services.cardano-node-topology.edgeNodes
 #   config.services.cardano-node-topology.enableProducers
 #   config.services.cardano-node-topology.enablePublicProducers
+#   config.services.cardano-node-topology.extraCfgInfix
+#   config.services.cardano-node-topology.extraCfgSimple
+#   config.services.cardano-node-topology.extraCfgSimpleMax
+#   config.services.cardano-node-topology.extraNodeListProducers
+#   config.services.cardano-node-topology.extraNodeListPublicProducers
+#   config.services.cardano-node-topology.extraProducers
+#   config.services.cardano-node-topology.extraPublicProducers
 #   config.services.cardano-node-topology.maxCount
 #   config.services.cardano-node-topology.name
 #   config.services.cardano-node-topology.nodeList
@@ -27,7 +34,7 @@
   }:
     with builtins;
     with lib; let
-      inherit (types) attrs bool enum ints listOf nullOr str;
+      inherit (types) attrs bool either enum ints listOf nullOr str;
       inherit (config.cardano-parts.cluster.group.meta) environmentName;
       inherit (config.cardano-parts.perNode.lib) cardanoLib topologyLib;
       inherit (cardanoLib.environments.${environmentName}) edgeNodes;
@@ -35,11 +42,27 @@
       verboseTrace = desc: v: traceVerbose "${name}: is using ${desc} of: ${toJSON v}" v;
 
       topologyFns = with topologyLib; {
-        edge = p2pEdgeNodes cfg.edgeNodes;
-        list = topoList cfg.nodes cfg.nodeList;
-        infix = topoInfixFiltered cfg.name cfg.nodes cfg.allowList;
-        simple = topoSimple cfg.name cfg.nodes;
-        simpleMax = topoSimpleMax cfg.name cfg.nodes cfg.maxCount;
+        edge =
+          # This can be simplified upon all machines deployed >= node 8.9.0
+          if cfgNode ? bootstrapPeers && cfgNode.bootstrapPeers != null
+          then []
+          else p2pEdgeNodes cfg.edgeNodes;
+        list = topoList {inherit (cfg) nodes nodeList;};
+
+        infix = topoInfixFiltered {
+          inherit (cfg) name nodes allowList;
+          extraCfg = cfg.extraCfgInfix;
+        };
+
+        simple = topoSimple {
+          inherit (cfg) name nodes;
+          extraCfg = cfg.extraCfgSimple;
+        };
+
+        simpleMax = topoSimpleMax {
+          inherit (cfg) name nodes maxCount;
+          extraCfg = cfg.extraCfgSimpleMax;
+        };
       };
 
       roles = with topologyLib; {
@@ -49,12 +72,20 @@
         };
 
         relay = {
-          producers = topoInfixFiltered cfg.name cfg.nodes cfg.infixProducersForRel;
+          producers = topoInfixFiltered {
+            inherit (cfg) name nodes;
+            allowList = cfg.infixProducersForRel;
+            extraCfg = cfg.extraCfgInfix;
+          };
           publicProducers = topologyFns.edge ++ extraNodeListPublicProducers ++ extraPublicProducers;
         };
 
         bp = {
-          producers = topoInfixFiltered cfg.name cfg.nodes cfg.infixProducersForBp;
+          producers = topoInfixFiltered {
+            inherit (cfg) name nodes;
+            allowList = cfg.infixProducersForBp;
+            extraCfg = cfg.extraCfgInfix;
+          };
 
           # These are also set from the role-block-producer nixos module
           publicProducers = mkForce (extraNodeListPublicProducers ++ extraPublicProducers);
@@ -62,16 +93,28 @@
         };
       };
 
-      mkBasicProducers = producer: {
-        accessPoints = [{inherit (producer) address port;}];
+      mkBasicProducers = producer: let
+        extraCfg = removeAttrs producer ["address" "port"];
+      in
+        {
+          accessPoints = [{inherit (producer) address port;}];
+        }
+        // extraCfg;
+
+      extraNodeListProducers = topologyLib.topoList {
+        inherit (cfg) nodes;
+        nodeList = cfg.extraNodeListProducers;
       };
 
-      extraNodeListProducers = topologyLib.topoList cfg.nodes cfg.extraNodeListProducers;
-      extraNodeListPublicProducers = topologyLib.topoList cfg.nodes cfg.extraNodeListPublicProducers;
+      extraNodeListPublicProducers = topologyLib.topoList {
+        inherit (cfg) nodes;
+        nodeList = cfg.extraNodeListPublicProducers;
+      };
 
       extraProducers = map mkBasicProducers cfg.extraProducers;
       extraPublicProducers = map mkBasicProducers cfg.extraPublicProducers;
 
+      cfgNode = config.services.cardano-node;
       cfg = config.services.cardano-node-topology;
     in {
       options = {
@@ -108,39 +151,67 @@
             description = "Whether to enable public producers by default.";
           };
 
+          extraCfgInfix = mkOption {
+            type = attrs;
+            default = {};
+            description = "Any extra config which should be applied to infix topology function generated results.";
+          };
+
+          extraCfgSimple = mkOption {
+            type = attrs;
+            default = {};
+            description = "Any extra config which should be applied to simple topology function generated results.";
+          };
+
+          extraCfgSimpleMax = mkOption {
+            type = attrs;
+            default = {};
+            description = "Any extra config which should be applied to simpleMax topology function generated results.";
+          };
+
           extraNodeListProducers = mkOption {
-            type = listOf str;
+            type = listOf (either str attrs);
             default = [];
             description = ''
               Extra producers which will be added to any role or function.
 
-              Provided as list of strings of Colmena machine names:
+              Provided as a list of either strings of Colmena machine names or attribute sets
+              each of which contains at least a name key with a Colmena machine name:
               [
                 "$COLMENA_MACHINE_1"
-                "$COLMENA_MACHINE_2"
+                {name = "$COLMENA_MACHINE_2"; ...}
               ]
 
-              This is intended to be a simple way to inject extra producers from relay node names.
-              If specifying valency or advertising, or custom grouping is required,
-              add the extra producers directly to the services.cardano-node.producers option.
+              This is intended to be a simple way to inject extra producers from node names.
+
+              When declaring an attribute set list item, any additional attributes beyond the name
+              will be appended as extra config to the accessPoints list.
+
+              If further customization is required, add the extra producers directly to the
+              services.cardano-node.producers option.
             '';
           };
 
           extraNodeListPublicProducers = mkOption {
-            type = listOf str;
+            type = listOf (either str attrs);
             default = [];
             description = ''
               Extra public producers which will be added to any role or function.
 
-              Provided as list of strings of Colmena machine names:
+              Provided as a list of either strings of Colmena machine names or attribute sets
+              each of which contains at least a name key with a Colmena machine name:
               [
                 "$COLMENA_MACHINE_1"
-                "$COLMENA_MACHINE_2"
+                {name = "$COLMENA_MACHINE_2"; ...}
               ]
 
-              This is intended to be a simple way to inject extra public producers from relay node names.
-              If specifying valency or advertising, or custom grouping is required,
-              add the extra public producers directly to the services.cardano-node.publicProducers option.
+              This is intended to be a simple way to inject extra public producers from node names.
+
+              When declaring an attribute set list item, any additional attributes beyond the name
+              will be appended as extra config to the accessPoints list.
+
+              If further customization is required, add the extra public producers directly to the
+              services.cardano-node.publicProducers option.
             '';
           };
 
@@ -154,11 +225,16 @@
               {
                 address = "$ADDRESS";
                 port = $PORT;
+                ...
               }
 
               This is intended to be a simple way to inject basic form extra producers.
-              If specifying valency or advertising, or custom grouping is required,
-              add the extra producers directly to the services.cardano-node.producers option.
+
+              Additional attributes beyond address and port in the attribute set will be appended
+              as extra config to the accessPoint list.
+
+              If further customization is required add the extra producers directly to the
+              services.cardano-node.producers option.
             '';
           };
 
@@ -172,11 +248,16 @@
               {
                 address = "$ADDRESS";
                 port = $PORT;
+                ...
               }
 
               This is intended to be a simple way to inject basic form extra public producers.
-              If specifying valency or advertising, or custom grouping is required,
-              add the extra public producers directly to the services.cardano-node.publicProducers option.
+
+              Additional attributes beyond address and port in the attribute set will be appended
+              as extra config to the accessPoints list.
+
+              If further customization is required, add the extra public producers directly to the
+              services.cardano-node.publicProducers option.
             '';
           };
 
@@ -213,7 +294,7 @@
           };
 
           nodeList = mkOption {
-            type = listOf str;
+            type = listOf (either str attrs);
             default = attrNames cfg.nodes;
             description = ''
               The node list for topology functions requiring it.
@@ -254,24 +335,31 @@
       };
 
       config = {
-        services.cardano-node = {
-          producers = mkIf (cfg.role != null || cfg.enableProducers) (
-            if cfg.role != null
-            then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
-            else verboseTrace "producers" (topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers)
-          );
+        services.cardano-node =
+          {
+            producers = mkIf (cfg.role != null || cfg.enableProducers) (
+              if cfg.role != null
+              then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
+              else verboseTrace "producers" (topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers)
+            );
 
-          publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
-            # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
-            if cfg.role != null
-            then verboseTrace "publicProducers" roles.${cfg.role}.publicProducers
-            else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
-          );
+            publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
+              # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
+              if cfg.role != null
+              then verboseTrace "publicProducers" roles.${cfg.role}.publicProducers
+              else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
+            );
 
-          usePeersFromLedgerAfterSlot =
-            mkIf (cfg.role == "bp")
-            roles.${cfg.role}.usePeersFromLedgerAfterSlot;
-        };
+            usePeersFromLedgerAfterSlot =
+              mkIf (cfg.role == "bp")
+              roles.${cfg.role}.usePeersFromLedgerAfterSlot;
+          }
+          # This can be simplified upon all machines deployed >= node 8.9.0
+          // optionalAttrs (cfgNode ? bootstrapPeers) {
+            bootstrapPeers =
+              mkIf (cfg.role == "bp")
+              null;
+          };
       };
     };
 }
