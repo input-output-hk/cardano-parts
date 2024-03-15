@@ -63,7 +63,7 @@ in
       };
 
       # Snapshots Profile: add this to a dbsync machine defn and deploy; remove once the snapshot is restored.
-      # Snapshots for mainnet can be found at: https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html#13.1/
+      # Snapshots for mainnet can be found at: https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html
       # snapshot = {services.cardano-db-sync.restoreSnapshot = "$SNAPSHOT_URL";};
 
       # Topology profiles

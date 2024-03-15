@@ -189,10 +189,6 @@ flake: {
         systemd = {
           services = {
             cardano-db-sync = {
-              # Required by the takeSnapshot called scripts in ExecStopPost
-              # Ref: https://github.com/IntersectMBO/cardano-db-sync/issues/1645
-              path = with pkgs; [getconf tree];
-
               # Increase stop timeout to 12h, to allow for snapshot creation on mainnet.
               # Currently the snapshots take less than ~6h and 12h timeout will allow further db growth.
               serviceConfig.TimeoutStopSec = lib.mkForce "12h";
