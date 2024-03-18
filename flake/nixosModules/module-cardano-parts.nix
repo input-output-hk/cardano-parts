@@ -16,6 +16,7 @@
 #   config.cardano-parts.perNode.meta.cardano-metadata-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
+#   config.cardano-parts.perNode.meta.enableAlertCount
 #   config.cardano-parts.perNode.meta.hostAddr
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.blockperf
@@ -181,6 +182,21 @@ flake @ {moduleWithSystem, ...}: {
           type = str;
           description = mdDoc "The cardano-smash-service import path string.";
           default = cfg.group.meta.cardano-smash-service;
+        };
+
+        enableAlertCount = mkOption {
+          type = bool;
+          description = mdDoc ''
+            Whether to count this machine as an expected machine to appear in grafana/prometheus metrics.
+
+            In cases where this machine may be created, but mostly kept in a stopped state such that it will
+            not push metrics to the monitoring server, this option can be disabled to exclude it from the
+            expected machine count.
+
+            The value of this boolean will affect the alert rules applied by running `just tofu grafana apply`
+            from a cardano-parts ops devShell.
+          '';
+          default = true;
         };
 
         hostAddr = mkOption {

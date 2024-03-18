@@ -26,6 +26,7 @@ in
       # ebsHighPerf = recursiveUpdate (ebsIops 10000) (ebsTp 1000);
 
       # Helper defs:
+      # disableAlertCount.cardano-parts.perNode.meta.enableAlertCount = false;
       # delete.aws.instance.count = 0;
 
       # Cardano group assignments:
