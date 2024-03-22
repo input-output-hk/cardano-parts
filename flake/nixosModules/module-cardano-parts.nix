@@ -18,6 +18,7 @@
 #   config.cardano-parts.perNode.meta.cardano-smash-service
 #   config.cardano-parts.perNode.meta.enableAlertCount
 #   config.cardano-parts.perNode.meta.hostAddr
+#   config.cardano-parts.perNode.meta.hostsList
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.blockperf
 #   config.cardano-parts.perNode.pkgs.cardano-cli
@@ -38,12 +39,17 @@ flake @ {moduleWithSystem, ...}: {
     config,
     lib,
     pkgs,
+    nodes,
     ...
   }: let
-    inherit (lib) foldl' mdDoc mkOption recursiveUpdate types;
+    inherit (builtins) attrNames deepSeq elem head stringLength;
+    inherit (lib) count filterAttrs foldl' mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair pipe recursiveUpdate types;
     inherit (types) anything attrsOf bool ints listOf package port nullOr str submodule;
+    inherit (cfg.group) groupFlake;
+    inherit (cfgPerNode.lib) topologyLib;
 
     cfg = config.cardano-parts.cluster;
+    cfgPerNode = config.cardano-parts.perNode;
 
     mkBoolOpt = mkOption {
       type = bool;
@@ -205,6 +211,18 @@ flake @ {moduleWithSystem, ...}: {
           default = "0.0.0.0";
         };
 
+        hostsList = mkOption {
+          type = listOf str;
+          description = mdDoc ''
+            A list of Colmena machine names for which /etc/hosts will be configured for if
+            nixosModule.ip-module is available in the downstream repo.
+
+            These hostname entries can then be used in cardano-node by supplying producers
+            with an addressType attribute.  See flakeModules/lib/topology.nix for details.
+          '';
+          default = topologyLib.groupMachines nodes;
+        };
+
         nodeId = mkOption {
           type = nullOr ints.unsigned;
           description = mdDoc "The hostAddr to associate with the nixos cardano-node";
@@ -242,6 +260,56 @@ flake @ {moduleWithSystem, ...}: {
       cardano-parts = mkOption {
         type = mainSubmodule;
       };
+    };
+
+    config = {
+      # The hosts file is case-insensitive, so switch from camelCase attr name to kebab-case
+      networking.hosts = mkIf (groupFlake.config.flake.nixosModules ? ips) (let
+        genHostsType = type: suffix:
+          pipe (head groupFlake.config.flake.nixosModules.ips.imports) [
+            # Filter empty values
+            (filterAttrs (_: v: v.${type} != ""))
+
+            # Filter by hosts filter
+            (filterAttrs (n: _: elem n cfgPerNode.meta.hostsList))
+
+            # Abort on any duplicated ips across multiple machines
+            (ipAttrs:
+              deepSeq (
+                let
+                  ipList = mapAttrsToList (_: v: v.${type}) ipAttrs;
+                in
+                  map (ip:
+                    if (count (ipCheck: ipCheck == ip) ipList) > 1
+                    then abort "ABORT: ${type} ${ip} has more than one occurence.  Refer to nixosModule.ip-module in the downstream repo."
+                    else null)
+                  ipList
+              )
+              ipAttrs)
+
+            # Abort on any hostname larger than RFC1035 allows
+            (ipAttrs:
+              deepSeq (
+                map (hostName:
+                  if (stringLength hostName > 63)
+                  then abort "ABORT: ${type} hostname ${hostName} has more than 63 characters and may result in DNS lookup failure."
+                  else null)
+                (attrNames ipAttrs)
+              )
+              ipAttrs)
+
+            # Transform attrs into expected networking.hosts list of strings attr values
+            (mapAttrs' (n: v: nameValuePair v.${type} ["${n}.${suffix}"]))
+          ];
+      in
+        # Merge ip types together in the hosts file declaration
+        foldl' (acc: e: recursiveUpdate acc e) {} [
+          (genHostsType "privateIpv4" "private-ipv4")
+          (genHostsType "publicIpv4" "public-ipv4")
+        ]);
+
+      # Enable deployed machines to be able to resolve the /etc/hosts entries created above in cardano-node topology files
+      services.dnsmasq.enable = true;
     };
   });
 }

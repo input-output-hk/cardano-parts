@@ -24,15 +24,44 @@ with lib; rec {
       if isString producer
       then producer
       else producer.name;
+
     extraCfg =
       if isString producer
       then {}
       else removeAttrs producer ["name"];
+
+    # An addressType attr can be passed as extraCfg and will have the following effect on producer generation, when declared as:
+    #   fqdn            ==> will record the producer as the nixosConfiguration machine name with cluster DNS suffix
+    #   namePrivateIpv4 ==> will record the nixosConfiguration machine name with a `-private-ipv4` suffix
+    #   namePublicIpv4  ==> will record the nixosConfiguration machine name with a `-public-ipv4` suffix
+    #   privateIpv4     ==> will record the actual private ipv4
+    #   publiceIpv4     ==> will record the actual public ipv4
+    #
+    # Note that the use of addressType of name[Public|Private]Ipv4 will fail unless there is a corresponding /etc/hosts entry.
+    # The hosts configuration, by default, will only be set up with private and public ipv4 for machines in the same cardano-parts group
+    # assuming that the nixosModules ips-module created locally in each downstream cardano-parts repo is available.
+    #
+    # See the config.cardano-parts.perNode.meta.hostsList option in module-cardano-parts for details.
+    addressType =
+      if extraCfg ? addressType
+      then
+        if elem extraCfg.addressType ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"]
+        then extraCfg.addressType
+        else abort "ABORT: producer addressType must be one of: fqdn, namePrivateIpv4, namePublicIpv4, privateIpv4, publicIpv4"
+      else "namePublicIpv4";
+
+    addressSelector = {
+      inherit (nodes.${producerName}.config.ips) privateIpv4 publicIpv4;
+      fqdn = "${producerName}.${domain}";
+      name = producerName;
+      namePrivateIpv4 = "${producerName}.private-ipv4";
+      namePublicIpv4 = "${producerName}.public-ipv4";
+    };
   in
     {
       accessPoints = [
         {
-          address = "${producerName}.${domain}";
+          address = addressSelector.${addressType};
           port = nodes.${producerName}.config.cardano-parts.perNode.meta.cardanoNodePort;
         }
       ];
