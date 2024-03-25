@@ -353,6 +353,10 @@
         // foldl' (acc: i:
           recursiveUpdate acc {
             "${serviceName i}" = {
+              # Ensure node can query from /etc/hosts properly if dnsmasq service is enabled
+              after = mkIf nixos.config.services.dnsmasq.enable ["dnsmasq.service"];
+              wants = mkIf nixos.config.services.dnsmasq.enable ["dnsmasq.service"];
+
               serviceConfig = {
                 ExecStartPre = getExe (pkgs.writeShellApplication {
                   name = "cardano-node-pre-start";
