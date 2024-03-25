@@ -17,6 +17,7 @@
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
 #   config.cardano-parts.perNode.meta.enableAlertCount
+#   config.cardano-parts.perNode.meta.enableDns
 #   config.cardano-parts.perNode.meta.hostAddr
 #   config.cardano-parts.perNode.meta.hostsList
 #   config.cardano-parts.perNode.meta.nodeId
@@ -201,6 +202,16 @@ flake @ {moduleWithSystem, ...}: {
 
             The value of this boolean will affect the alert rules applied by running `just tofu grafana apply`
             from a cardano-parts ops devShell.
+          '';
+          default = true;
+        };
+
+        enableDns = mkOption {
+          type = bool;
+          description = mdDoc ''
+            Whether to create a DNS for this machine when running `just tofu apply`.
+
+            Typically, only block producers or other sensitive machines would want to set this to false.
           '';
           default = true;
         };
