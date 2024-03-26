@@ -71,6 +71,7 @@
                 name = "remove-ssh-bootstrap-key";
                 runtimeInputs = [fd gnugrep gnused];
                 text = ''
+                  mkdir -p /root/.ssh && chmod 0600 /root/.ssh
                   if ! [ -f /root/.ssh/.bootstrap-key-removed ]; then
                     # Verify auth keys is properly hooked into sshd
                     if ! grep -q 'AuthorizedKeysCommand /etc/ssh/auth-keys-hub --user %u' /etc/ssh/sshd_config; then
@@ -97,7 +98,9 @@
 
                     # Remove the bootstrap key and set a marker
                     echo "Removing the bootstrap key from /root/.ssh/authorized_keys"
-                    sed -i '/bootstrap/d' /root/.ssh/authorized_keys
+                    if [ -s /root/.ssh/authorized_keys ]; then
+                      sed -i '/bootstrap/d' /root/.ssh/authorized_keys
+                    fi
                     touch /root/.ssh/.bootstrap-key-removed
                   fi
                 '';
