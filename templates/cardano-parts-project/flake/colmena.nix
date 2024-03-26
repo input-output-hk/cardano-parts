@@ -69,8 +69,8 @@ in
 
       # Topology profiles
       # Note: not including a topology profile will default to edge topology if module profile-cardano-node-group is imported
-      topoBp = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-topology = {role = "bp";};}];};
-      topoRel = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-topology = {role = "relay";};}];};
+      topoBp = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-node-topology = {role = "bp";};}];};
+      topoRel = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-node-topology = {role = "relay";};}];};
 
       # Roles
       bp = {imports = [inputs.cardano-parts.nixosModules.role-block-producer topoBp];};
