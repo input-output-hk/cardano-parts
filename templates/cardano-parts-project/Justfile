@@ -665,3 +665,59 @@ tofu *ARGS:
   tofu init -reconfigure
   tofu workspace select -or-create "$WORKSPACE"
   tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
+
+update-ips:
+  #!/usr/bin/env nu
+  tofu init -reconfigure
+  if (tofu workspace show) != "cluster" {
+    tofu workspace select -or-create cluster
+  }
+
+  ( tofu show -json
+  | from json
+  | get values.root_module.resources
+  | where type == "aws_eip"
+  | reduce --fold ["
+    let
+      all = {
+    "]
+    {|eip, all|
+      $all | append $"
+    ($eip.name) = {
+      privateIpv4 = "($eip.values.private_ip)";
+      publicIpv4 = "($eip.values.public_ip)";
+    };"
+    }
+  | append "
+      };
+    in {
+      flake.nixosModules.ips = all;
+      flake.nixosModules.ip-module = {
+        name,
+        lib,
+        ...
+      }: {
+        options.ips = {
+          privateIpv4 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.privateIpv4 or "";
+          };
+          publicIpv4 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.publicIpv4 or "";
+          };
+        };
+      };
+    }
+    "
+  | str join "\n"
+  | alejandra --quiet -
+  | save --force flake/nixosModules/ips-DONT-COMMIT.nix
+  )
+
+  # This is required for flake builds to find the nix module.
+  # The pre-push git hook will complain if this file has been committed accidently.
+  git add --intent-to-add flake/nixosModules/ips-DONT-COMMIT.nix
+  echo
+  echo "Ips have been written to: flake/nixosModules/ips-DONT-COMMIT.nix"
+  echo "Obviously, don't commit this file."

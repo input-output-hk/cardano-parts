@@ -31,6 +31,16 @@ in
 
       # Cardano group assignments:
       group = name: {
+        imports =
+          [
+            {
+              config.warnings =
+                optional (!(config.flake.nixosModules ? ip-module))
+                ''The nixosModule "ip-module" which most clusters use is missing; builds or deployed software and services may break. Generate the module with `just update-ips`'';
+            }
+          ]
+          ++ optional (nixosModules ? ip-module) nixosModules.ip-module;
+
         cardano-parts.cluster.group = config.flake.cardano-parts.cluster.groups.${name};
 
         # Since all machines are assigned a group, this is a good place to include default aws instance tags
@@ -52,6 +62,11 @@ in
         ];
       };
 
+      # Mithril signing config
+      # mithrilRelay = {imports = [inputs.cardano-parts.nixosModules.profile-mithril-relay];};
+      # declMRel = node: {services.mithril-signer.relayEndpoint = nixosConfigurations.${node}.config.ips.privateIpv4;};
+      # declMSigner = node: {services.mithril-relay.signerIp = nixosConfigurations.${node}.config.ips.privateIpv4;};
+
       # Profiles
       pre = {imports = [inputs.cardano-parts.nixosModules.profile-pre-release];};
 
@@ -63,7 +78,7 @@ in
         ];
       };
 
-      # Snapshots Profile: add this to a dbsync machine defn and deploy; remove once the snapshot is restored.
+      # Snapshots: add this to a dbsync machine defn and deploy; remove once the snapshot is restored.
       # Snapshots for mainnet can be found at: https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html
       # snapshot = {services.cardano-db-sync.restoreSnapshot = "$SNAPSHOT_URL";};
 
@@ -73,7 +88,14 @@ in
       topoRel = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-node-topology = {role = "relay";};}];};
 
       # Roles
-      bp = {imports = [inputs.cardano-parts.nixosModules.role-block-producer topoBp];};
+      bp = {
+        imports = [
+          inputs.cardano-parts.nixosModules.role-block-producer
+          topoBp
+          # Disable machine DNS creation for block producers to avoid ip discovery
+          {cardano-parts.perNode.meta.enableDns = false;}
+        ];
+      };
       rel = {imports = [inputs.cardano-parts.nixosModules.role-relay topoRel];};
 
       dbsync = {
