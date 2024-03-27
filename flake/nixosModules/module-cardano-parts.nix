@@ -7,6 +7,7 @@
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.opsLib
 #   config.cardano-parts.perNode.lib.topologyLib
+#   config.cardano-parts.perNode.meta.addressType
 #   config.cardano-parts.perNode.meta.cardanoDbSyncPrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardanoNodePort
 #   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
@@ -45,7 +46,7 @@ flake @ {moduleWithSystem, ...}: {
   }: let
     inherit (builtins) attrNames deepSeq elem head stringLength;
     inherit (lib) count filterAttrs foldl' mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair pipe recursiveUpdate types;
-    inherit (types) anything attrsOf bool ints listOf package port nullOr str submodule;
+    inherit (types) anything attrsOf bool enum ints listOf package port nullOr str submodule;
     inherit (cfg.group) groupFlake;
     inherit (cfgPerNode.lib) topologyLib;
 
@@ -137,6 +138,12 @@ flake @ {moduleWithSystem, ...}: {
 
     metaSubmodule = submodule {
       options = {
+        addressType = mkOption {
+          type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
+          description = mdDoc "The default addressType for topologyLib mkProducer function.";
+          default = cfg.group.meta.addressType;
+        };
+
         cardanoDbSyncPrometheusExporterPort = mkOption {
           type = port;
           description = mdDoc "The port to associate with the nixos cardano-db-sync prometheus exporter.";
@@ -218,7 +225,7 @@ flake @ {moduleWithSystem, ...}: {
 
         hostAddr = mkOption {
           type = str;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node";
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node.";
           default = "0.0.0.0";
         };
 
@@ -236,7 +243,7 @@ flake @ {moduleWithSystem, ...}: {
 
         nodeId = mkOption {
           type = nullOr ints.unsigned;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node";
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node.";
           default = 0;
         };
       };

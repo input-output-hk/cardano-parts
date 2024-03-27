@@ -25,6 +25,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.cardanoLib
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.opsLib
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.topologyLib
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.addressType
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoDbSyncPrometheusExporterPort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePrometheusExporterPort
@@ -60,7 +61,7 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf functionTo listOf nullOr package port raw str submodule;
+  inherit (types) addCheck anything attrsOf enum functionTo listOf nullOr package port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -345,6 +346,15 @@ flake @ {
 
   metaSubmodule = submodule {
     options = {
+      addressType = mkOption {
+        type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
+        description = mdDoc "Cardano-parts cluster group default addressType for topologyLib mkProducer function.";
+        default =
+          if flake.config.flake.nixosModules ? ips
+          then "namePublicIpv4"
+          else "fqdn";
+      };
+
       cardanoDbSyncPrometheusExporterPort = mkOption {
         type = port;
         description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
