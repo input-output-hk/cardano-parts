@@ -41,7 +41,6 @@ flake @ {moduleWithSystem, ...}: {
     config,
     lib,
     pkgs,
-    nodes,
     ...
   }: let
     inherit (builtins) attrNames deepSeq elem head stringLength;
@@ -233,12 +232,10 @@ flake @ {moduleWithSystem, ...}: {
           type = listOf str;
           description = mdDoc ''
             A list of Colmena machine names for which /etc/hosts will be configured for if
-            nixosModule.ip-module is available in the downstream repo.
-
-            These hostname entries can then be used in cardano-node by supplying producers
-            with an addressType attribute.  See flakeModules/lib/topology.nix for details.
+            nixosModule.ip-module is available in the downstream repo and module-cardano-parts
+            nixosModule is imported.
           '';
-          default = topologyLib.groupMachines nodes;
+          default = cfg.group.meta.hostsList;
         };
 
         nodeId = mkOption {
