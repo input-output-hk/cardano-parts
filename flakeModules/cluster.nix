@@ -62,7 +62,7 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf enum functionTo listOf nullOr package port raw str submodule;
+  inherit (types) addCheck anything attrsOf enum functionTo listOf nullOr oneOf package port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
@@ -222,7 +222,7 @@ flake @ {
   groupSubmodule = submodule ({name, ...}: {
     options = {
       meta = mkOption {
-        type = metaSubmodule name;
+        type = metaSubmodule;
         description = mdDoc "Cardano-parts cluster group meta submodule.";
         default = {};
       };
@@ -345,101 +345,106 @@ flake @ {
     };
   };
 
-  metaSubmodule = groupName:
-    submodule {
-      options = {
-        addressType = mkOption {
-          type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
-          description = mdDoc "Cardano-parts cluster group default addressType for topologyLib mkProducer function.";
-          default =
-            if flake.config.flake.nixosModules ? ips
-            then "namePublicIpv4"
-            else "fqdn";
-        };
+  metaSubmodule = submodule {
+    options = {
+      addressType = mkOption {
+        type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
+        description = mdDoc "Cardano-parts cluster group default addressType for topologyLib mkProducer function.";
+        default =
+          if flake.config.flake.nixosModules ? ips
+          then "namePublicIpv4"
+          else "fqdn";
+      };
 
-        cardanoDbSyncPrometheusExporterPort = mkOption {
-          type = port;
-          description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
-          default = 8080;
-        };
+      cardanoDbSyncPrometheusExporterPort = mkOption {
+        type = port;
+        description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
+        default = 8080;
+      };
 
-        cardanoNodePort = mkOption {
-          type = port;
-          description = mdDoc "Cardano-parts cluster group cardanoNodePort.";
-          default = 3001;
-        };
+      cardanoNodePort = mkOption {
+        type = port;
+        description = mdDoc "Cardano-parts cluster group cardanoNodePort.";
+        default = 3001;
+      };
 
-        cardanoNodePrometheusExporterPort = mkOption {
-          type = port;
-          description = mdDoc "Cardano-parts cluster group cardanoNodePrometheusExporterPort.";
-          default = 12798;
-        };
+      cardanoNodePrometheusExporterPort = mkOption {
+        type = port;
+        description = mdDoc "Cardano-parts cluster group cardanoNodePrometheusExporterPort.";
+        default = 12798;
+      };
 
-        cardanoSmashDelistedPools = mkOption {
-          type = listOf str;
-          description = mdDoc "Cardano-parts cluster group cardano-smash delisted pools.";
-          default = [];
-        };
+      cardanoSmashDelistedPools = mkOption {
+        type = listOf str;
+        description = mdDoc "Cardano-parts cluster group cardano-smash delisted pools.";
+        default = [];
+      };
 
-        cardano-db-sync-service = mkOption {
-          type = str;
-          description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
-          default = cfg.pkgs.special.cardano-db-sync-service;
-        };
+      cardano-db-sync-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
+        default = cfg.pkgs.special.cardano-db-sync-service;
+      };
 
-        cardano-faucet-service = mkOption {
-          type = str;
-          description = mdDoc "Cardano-parts cluster group cardano-faucet-service import path string.";
-          default = cfg.pkgs.special.cardano-faucet-service;
-        };
+      cardano-faucet-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-faucet-service import path string.";
+        default = cfg.pkgs.special.cardano-faucet-service;
+      };
 
-        cardano-metadata-service = mkOption {
-          type = str;
-          description = mdDoc "Cardano-parts cluster group cardano-metadata-service import path string.";
-          default = cfg.pkgs.special.cardano-metadata-service;
-        };
+      cardano-metadata-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-metadata-service import path string.";
+        default = cfg.pkgs.special.cardano-metadata-service;
+      };
 
-        cardano-node-service = mkOption {
-          type = str;
-          description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
-          default = cfg.pkgs.special.cardano-node-service;
-        };
+      cardano-node-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
+        default = cfg.pkgs.special.cardano-node-service;
+      };
 
-        cardano-node-service-ng = mkOption {
-          type = str;
-          description = mdDoc "Cardano-parts cluster group cardano-node-service-ng import path string.";
-          default = cfg.pkgs.special.cardano-node-service-ng;
-        };
+      cardano-node-service-ng = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-node-service-ng import path string.";
+        default = cfg.pkgs.special.cardano-node-service-ng;
+      };
 
-        cardano-smash-service = mkOption {
-          type = str;
-          description = mdDoc "Cardano-parts cluster group cardano-smash-service import path string.";
-          default = cfg.pkgs.special.cardano-smash-service;
-        };
+      cardano-smash-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-smash-service import path string.";
+        default = cfg.pkgs.special.cardano-smash-service;
+      };
 
-        domain = mkOption {
-          type = str;
-          description = mdDoc "Cardano-parts cluster group domain.";
-          default = cfgAws.domain;
-        };
+      domain = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group domain.";
+        default = cfgAws.domain;
+      };
 
-        environmentName = mkOption {
-          type = nullOr str;
-          description = mdDoc "Cardano-parts cluster group environmentName.";
-          default = "custom";
-        };
+      environmentName = mkOption {
+        type = nullOr str;
+        description = mdDoc "Cardano-parts cluster group environmentName.";
+        default = "custom";
+      };
 
-        hostsList = mkOption {
-          type = listOf str;
-          description = mdDoc ''
-            A list of Colmena machine names for which /etc/hosts will be configured for if
-            nixosModule.ip-module is available in the downstream repo and module-cardano-parts
-            nixosModule is imported.
-          '';
-          default = (cfg.lib.topologyLib cfg.cluster.groups.${groupName}).groupMachines (flake.self.nixosConfigurations or {});
-        };
+      hostsList = mkOption {
+        type = oneOf [(enum ["all" "group"]) (listOf str)];
+        description = mdDoc ''
+          A list of Colmena machine names for which /etc/hosts will be configured for if
+          nixosModule.ip-module is available in the downstream repo and module-cardano-parts
+          nixosModule is imported.
+
+          If instead of a list, this option is configured with a string of "all", all
+          Colmena machine names in the cluster will be used for the /etc/hosts file.
+
+          If configured with a string of "group" then all Colmena machine names in the
+          same group will be used for the /etc/hosts file.
+        '';
+        default = "group";
       };
     };
+  };
 
   pkgsSubmodule = submodule {
     options = {

@@ -41,11 +41,12 @@ flake @ {moduleWithSystem, ...}: {
     config,
     lib,
     pkgs,
+    nodes,
     ...
   }: let
     inherit (builtins) attrNames deepSeq elem head stringLength;
-    inherit (lib) count filterAttrs foldl' mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair pipe recursiveUpdate types;
-    inherit (types) anything attrsOf bool enum ints listOf package port nullOr str submodule;
+    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair pipe recursiveUpdate types;
+    inherit (types) anything attrsOf bool enum ints listOf oneOf package port nullOr str submodule;
     inherit (cfg.group) groupFlake;
     inherit (cfgPerNode.lib) topologyLib;
 
@@ -229,11 +230,17 @@ flake @ {moduleWithSystem, ...}: {
         };
 
         hostsList = mkOption {
-          type = listOf str;
+          type = oneOf [(enum ["all" "group"]) (listOf str)];
           description = mdDoc ''
             A list of Colmena machine names for which /etc/hosts will be configured for if
             nixosModule.ip-module is available in the downstream repo and module-cardano-parts
             nixosModule is imported.
+
+            If instead of a list, this option is configured with a string of "all", all
+            Colmena machine names in the cluster will be used for the /etc/hosts file.
+
+            If configured with a string of "group" then all Colmena machine names in the
+            same group will be used for the /etc/hosts file.
           '';
           default = cfg.group.meta.hostsList;
         };
@@ -280,13 +287,23 @@ flake @ {moduleWithSystem, ...}: {
     config = {
       # The hosts file is case-insensitive, so switch from camelCase attr name to kebab-case
       networking.hosts = mkIf (groupFlake.config.flake.nixosModules ? ips) (let
+        hostsList =
+          # See hostsList type and description above
+          # If hostsList is a list, use it directly
+          if isList cfgPerNode.meta.hostsList
+          then cfgPerNode.meta.hostsList
+          # If hostsList is a string of "all", use all machines, otherwise for "group" use group machines
+          else if cfgPerNode.meta.hostsList == "all"
+          then attrNames nodes
+          else topologyLib.groupMachines nodes;
+
         genHostsType = type: suffix:
           pipe (head groupFlake.config.flake.nixosModules.ips.imports) [
             # Filter empty values
             (filterAttrs (_: v: v.${type} != ""))
 
             # Filter by hosts filter
-            (filterAttrs (n: _: elem n cfgPerNode.meta.hostsList))
+            (filterAttrs (n: _: elem n hostsList))
 
             # Abort on any duplicated ips across multiple machines
             (ipAttrs:
