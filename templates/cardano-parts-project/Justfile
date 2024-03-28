@@ -439,6 +439,17 @@ sops-encrypt-binary FILE:
   # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
+sops-rotate-binary FILE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  # Default to in-place encryption rotation.
+  # This supports the common use case of rekeying, for example if recipient keys have changed.
+  just sops-decrypt-binary {{FILE}} | sponge {{FILE}}
+  just sops-encrypt-binary {{FILE}}
+
 scp *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
