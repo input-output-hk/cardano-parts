@@ -35,7 +35,7 @@ in
           [
             {
               config.warnings =
-                optional (!(config.flake.nixosModules ? ip-module))
+                optional (!(config.flake.nixosModules ? ip-module) && cfgGeneric.warnOnMissingIpModule)
                 ''The nixosModule "ip-module" which most clusters use is missing; builds or deployed software and services may break. Generate the module with `just update-ips`'';
             }
           ]
@@ -45,7 +45,7 @@ in
 
         # Since all machines are assigned a group, this is a good place to include default aws instance tags
         aws.instance.tags = {
-          inherit (config.flake.cardano-parts.cluster.infra.generic) organization tribe function repo;
+          inherit (cfgGeneric) organization tribe function repo;
           environment = config.flake.cardano-parts.cluster.groups.${name}.meta.environmentName;
           group = name;
         };
