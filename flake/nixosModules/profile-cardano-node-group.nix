@@ -361,7 +361,6 @@
                 ExecStartPre = getExe (pkgs.writeShellApplication {
                   name = "cardano-node-pre-start";
                   runtimeInputs = with pkgs; [curl gnugrep gnutar jq gzip] ++ optional cfgMithril.enable mithril-client-cli;
-                  excludeShellChecks = ["SC2050"];
                   text = let
                     mithril-client-bootstrap = optionalString cfgMithril.enable ''
                       if ! [ -d "$DB_DIR" ]; then
@@ -373,6 +372,8 @@
                         TMPSTATE="''${DB_DIR}-mithril"
                         rm -rf "$TMPSTATE"
 
+                        # Prevent comparing two static strings in bash from causing a shellcheck failure
+                        # shellcheck disable=SC2050
                         if [ "${boolToString cfgMithril.verifySnapshotSignature}" == "true" ]; then
                           if [ "$DIGEST" = "latest" ]; then
                             # If digest is "latest" search through all available recent snaps for signing verification.

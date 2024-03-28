@@ -214,10 +214,6 @@ flake: {
                   name = "cardano-db-sync-snapshots";
                   runtimeInputs = with pkgs; [cardano-cli curl gawk jq ripgrep s3cmd systemd];
 
-                  # Exclude SC2012 as `ls -tr1 ...` accomplishes what we want with the pattern
-                  # we use and alternative cmds are unnecessarily complex.
-                  excludeShellChecks = ["SC2012"];
-
                   text = ''
                     echo "Starting cardano-db-sync-snapshots"
                     STATE_DIR=${cfgDbsync.stateDir}
