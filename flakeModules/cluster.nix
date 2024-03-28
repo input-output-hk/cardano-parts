@@ -453,7 +453,7 @@ flake @ {
         type = oneOf [(enum ["all" "group"]) (listOf str)];
         description = mdDoc ''
           A list of Colmena machine names for which /etc/hosts will be configured for if
-          nixosModule.ip-module is available in the downstream repo and module-cardano-parts
+          nixosModule.ip-module is available in the downstream repo and profile-cardano-parts
           nixosModule is imported.
 
           If instead of a list, this option is configured with a string of "all", all

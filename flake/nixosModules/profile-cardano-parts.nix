@@ -1,4 +1,4 @@
-# nixosModule: module-cardano-parts
+# nixosModule: profile-cardano-parts
 #
 # TODO: Move this to a docs generator
 #
@@ -37,7 +37,7 @@
 #   config.cardano-parts.perNode.pkgs.mithril-signer
 #   config.cardano-parts.perNode.roles.isCardanoDensePool
 flake @ {moduleWithSystem, ...}: {
-  flake.nixosModules.module-cardano-parts = moduleWithSystem ({system}: {
+  flake.nixosModules.profile-cardano-parts = moduleWithSystem ({system}: {
     config,
     lib,
     pkgs,
@@ -233,7 +233,7 @@ flake @ {moduleWithSystem, ...}: {
           type = oneOf [(enum ["all" "group"]) (listOf str)];
           description = mdDoc ''
             A list of Colmena machine names for which /etc/hosts will be configured for if
-            nixosModule.ip-module is available in the downstream repo and module-cardano-parts
+            nixosModule.ip-module is available in the downstream repo and profile-cardano-parts
             nixosModule is imported.
 
             If instead of a list, this option is configured with a string of "all", all
@@ -302,7 +302,7 @@ flake @ {moduleWithSystem, ...}: {
             # Filter empty values
             (filterAttrs (_: v: v.${type} != ""))
 
-            # Filter by hosts filter
+            # Filter by hosts
             (filterAttrs (n: _: elem n hostsList))
 
             # Abort on any duplicated ips across multiple machines
@@ -313,7 +313,7 @@ flake @ {moduleWithSystem, ...}: {
                 in
                   map (ip:
                     if (count (ipCheck: ipCheck == ip) ipList) > 1
-                    then abort "ABORT: ${type} ${ip} has more than one occurence.  Refer to nixosModule.ip-module in the downstream repo."
+                    then abort "ABORT: ${type} ${ip} has more than one occurrence.  Refer to nixosModule.ip-module in the downstream repo."
                     else null)
                   ipList
               )
