@@ -439,6 +439,17 @@ sops-encrypt-binary FILE:
   # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
+sops-rotate-binary FILE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  # Default to in-place encryption rotation.
+  # This supports the common use case of rekeying, for example if recipient keys have changed.
+  just sops-decrypt-binary {{FILE}} | sponge {{FILE}}
+  just sops-encrypt-binary {{FILE}}
+
 scp *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
@@ -665,3 +676,59 @@ tofu *ARGS:
   tofu init -reconfigure
   tofu workspace select -or-create "$WORKSPACE"
   tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
+
+update-ips:
+  #!/usr/bin/env nu
+  tofu init -reconfigure
+  if (tofu workspace show) != "cluster" {
+    tofu workspace select -or-create cluster
+  }
+
+  ( tofu show -json
+  | from json
+  | get values.root_module.resources
+  | where type == "aws_eip"
+  | reduce --fold ["
+    let
+      all = {
+    "]
+    {|eip, all|
+      $all | append $"
+    ($eip.name) = {
+      privateIpv4 = "($eip.values.private_ip)";
+      publicIpv4 = "($eip.values.public_ip)";
+    };"
+    }
+  | append "
+      };
+    in {
+      flake.nixosModules.ips = all;
+      flake.nixosModules.ip-module = {
+        name,
+        lib,
+        ...
+      }: {
+        options.ips = {
+          privateIpv4 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.privateIpv4 or "";
+          };
+          publicIpv4 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.publicIpv4 or "";
+          };
+        };
+      };
+    }
+    "
+  | str join "\n"
+  | alejandra --quiet -
+  | save --force flake/nixosModules/ips-DONT-COMMIT.nix
+  )
+
+  # This is required for flake builds to find the nix module.
+  # The pre-push git hook will complain if this file has been committed accidently.
+  git add --intent-to-add flake/nixosModules/ips-DONT-COMMIT.nix
+  echo
+  echo "Ips have been written to: flake/nixosModules/ips-DONT-COMMIT.nix"
+  echo "Obviously, don't commit this file."

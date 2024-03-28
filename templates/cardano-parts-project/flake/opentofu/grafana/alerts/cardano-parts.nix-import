@@ -1,0 +1,33 @@
+self:
+with builtins;
+with self.lib;
+let
+  # Setting enableAlertCount to false will exclude a machine from being added to the expected machine count.
+  # This can be useful if a machine exists, but is mostly kept in a stopped state.
+  machines = toString (length (attrNames (filterAttrs (_: v: v.config.cardano-parts.perNode.meta.enableAlertCount) self.nixosConfigurations)));
+in {
+  namespace = "cardano-parts-integrations";
+  name = "cardano-parts";
+  rule = [
+    {
+      alert = "unexpected_missing_machine";
+      expr = ''count(up{job="integrations/agent-check"}) < ${machines}'';
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "A machine has gone missing.";
+        description = "A machine has gone missing: ${machines} machines are expected, but only {{ $value }} are up.";
+      };
+    }
+    {
+      alert = "unexpected_new_machine";
+      expr = ''count(up{job="integrations/agent-check"}) > ${machines}'';
+      for = "5m";
+      labels.severity = "warning";
+      annotations = {
+        summary = "A new machine has appeared.";
+        description = "A new machine has appeared: ${machines} machines are expected, but {{ $value }} are up. Please `just tofu grafana apply` to update the alert to the new expected number.";
+      };
+    }
+  ];
+}

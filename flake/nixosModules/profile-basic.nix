@@ -106,6 +106,7 @@
 
         cron.enable = true;
         fail2ban.enable = true;
+        netdata.enable = true;
         openssh = {
           enable = true;
           settings = {

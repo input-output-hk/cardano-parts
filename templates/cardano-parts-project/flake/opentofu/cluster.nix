@@ -311,7 +311,7 @@ in {
 
           aws_route53_record =
             # Generate individual route53 node records
-            mapNodes (
+            mapAttrs (
               nodeName: _: {
                 zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                 name = "${nodeName}.\${data.aws_route53_zone.selected.name}";
@@ -319,7 +319,7 @@ in {
                 ttl = "300";
                 records = ["\${aws_eip.${nodeName}[0].public_ip}"];
               }
-            )
+            ) (filterAttrs (_: v: v.cardano-parts.perNode.meta.enableDns) nodes)
             // mkMultivalueDnsResources bookMultivalueDnsAttrs
             // mkMultivalueDnsResources groupMultivalueDnsAttrs
             // mkCustomRoute53Records;

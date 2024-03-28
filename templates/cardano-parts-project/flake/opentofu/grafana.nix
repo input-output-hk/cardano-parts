@@ -2,6 +2,7 @@
   inputs,
   lib,
   config,
+  self,
   ...
 }:
 with builtins;
@@ -161,14 +162,26 @@ in {
           # Alerts
           mimir_rule_group_alerting = foldl' (acc: f:
             recursiveUpdate acc {
-              ${extractFileName f} = (import f) // {provider = "mimir.prometheus";};
+              ${extractFileName f} =
+                (
+                  if isFunction (import f)
+                  then (import f) self
+                  else (import f)
+                )
+                // {provider = "mimir.prometheus";};
             }) {}
           alertFileList;
 
           # Recording rules
           mimir_rule_group_recording = foldl' (acc: f:
             recursiveUpdate acc {
-              ${extractFileName f} = import f // {provider = "mimir.prometheus";};
+              ${extractFileName f} =
+                (
+                  if isFunction (import f)
+                  then (import f) self
+                  else (import f)
+                )
+                // {provider = "mimir.prometheus";};
             }) {}
           recordingRulesFileList;
         };

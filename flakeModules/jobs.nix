@@ -598,7 +598,6 @@ in {
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-delegation.cert
 
-              # shellcheck disable=SC2031
               "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \

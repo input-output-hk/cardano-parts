@@ -56,6 +56,13 @@ in {
         packages.run-cardano-node = pkgs.writeShellApplication {
           name = "run-cardano-node";
           runtimeInputs = with pkgs; [curl gnugrep jq];
+
+          # Since we don't know what chain network will be used at runtime, we populate
+          # all the network mithril parameters at build time in copyEnvsTemplate.
+          #
+          # Since only one network will be used during runtime, this shellcheck
+          # exclusion makes sure the script doesn't fail because of the presence
+          # of other declared but unused mithril related env vars.
           excludeShellChecks = ["SC2034"];
           text = ''
             [ -z "''${DATA_DIR:-}" ] && echo "DATA_DIR env var must be set -- aborting" && exit 1

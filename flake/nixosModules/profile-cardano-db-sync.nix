@@ -13,6 +13,7 @@
 #   * The upstream cardano-db-sync nixos service module should still be imported separately
 {moduleWithSystem, ...}: {
   flake.nixosModules.profile-cardano-db-sync = moduleWithSystem ({config, ...}: nixos @ {
+    pkgs,
     lib,
     name,
     nodeResources,
@@ -100,6 +101,10 @@
             postgres.database = "cexplorer";
           };
         };
+
+        # Required by the cardano-db-sync restoreSnapshot and takeSnapshot scripts in ExecStopPost
+        # Ref: https://github.com/IntersectMBO/cardano-db-sync/issues/1645
+        systemd.services.cardano-db-sync.path = with pkgs; [getconf tree];
 
         # Ensure access to the cardano-node socket
         users = {
