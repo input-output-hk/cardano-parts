@@ -5,6 +5,9 @@
   ...
 }: let
   inherit (config.flake) nixosModules nixosConfigurations;
+  # inherit (config.flake.cardano-parts.cluster.infra.aws) domain regions;
+
+  cfgGeneric = config.flake.cardano-parts.cluster.infra.generic;
 in
   with builtins;
   with lib; {
