@@ -8,6 +8,13 @@ null := ""
 stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
 statePrefix := "~/.local/share"
 
+# Environment variables can be used to change the default template diff and path comparison sources.
+# If TEMPLATE_PATH is set, it will have precedence, otherwise git url will be used for source templates.
+templateBranch := env_var_or_default("TEMPLATE_BRANCH","main")
+templatePath := env_var_or_default("TEMPLATE_PATH","no-path-given")
+templateRepo := env_var_or_default("TEMPLATE_REPO","cardano-parts")
+templateUrl := "https://raw.githubusercontent.com/input-output-hk/" + templateRepo + "/" + templateBranch + "/templates/cardano-parts-project"
+
 # Common code
 checkEnv := '''
   TESTNET_MAGIC="${2:-""}"
@@ -439,6 +446,17 @@ sops-encrypt-binary FILE:
   # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
+sops-rotate-binary FILE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  # Default to in-place encryption rotation.
+  # This supports the common use case of rekeying, for example if recipient keys have changed.
+  just sops-decrypt-binary {{FILE}} | sponge {{FILE}}
+  just sops-encrypt-binary {{FILE}}
+
 scp *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
@@ -637,6 +655,43 @@ stop-node ENV:
     rm -f "$STATEDIR/node-{{ENV}}.pid" "$STATEDIR/node-{{ENV}}.socket"
   fi
 
+template-diff FILE *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if ! [ -f {{FILE}} ]; then
+    FILE=<(echo "")
+  else
+    FILE="{{FILE}}"
+  fi
+
+  if [ "{{templatePath}}" = "no-path-given" ]; then
+    SRC_FILE="<(curl -sL \"{{templateUrl}}/{{FILE}}\")"
+    SRC_NAME="{{templateUrl}}/{{FILE}}"
+  else
+    SRC_FILE="{{templatePath}}/{{FILE}}"
+    SRC_NAME="$SRC_FILE"
+  fi
+
+  eval "icdiff -L {{FILE}} -L \"$SRC_NAME\" {{ARGS}} \"$FILE\" $SRC_FILE"
+
+template-patch FILE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if git status --porcelain "{{FILE}}" | grep -q "{{FILE}}"; then
+    echo "Git file {{FILE}} is dirty.  Please revert or commit changes to clean state and try again."
+    exit 1
+  fi
+
+  if [ "{{templatePath}}" = "no-path-given" ]; then
+    SRC_FILE="<(curl -sL \"{{templateUrl}}/{{FILE}}\")"
+  else
+    SRC_FILE="{{templatePath}}/{{FILE}}"
+  fi
+
+  PATCH_FILE=$(eval "diff -Naru \"{{FILE}}\" $SRC_FILE || true")
+  patch "{{FILE}}" < <(echo "$PATCH_FILE")
+  git add -p "{{FILE}}"
+
 tofu *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -665,3 +720,95 @@ tofu *ARGS:
   tofu init -reconfigure
   tofu workspace select -or-create "$WORKSPACE"
   tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
+
+update-ips:
+  #!/usr/bin/env nu
+  tofu init -reconfigure
+  if (tofu workspace show) != "cluster" {
+    tofu workspace select -or-create cluster
+  }
+
+  ( tofu show -json
+  | from json
+  | get values.root_module.resources
+  | where type == "aws_eip"
+  | reduce --fold ["
+    let
+      all = {
+    "]
+    {|eip, all|
+      $all | append $"
+    ($eip.name) = {
+      privateIpv4 = "($eip.values.private_ip)";
+      publicIpv4 = "($eip.values.public_ip)";
+    };"
+    }
+  | append "
+      };
+    in {
+      flake.nixosModules.ips = all;
+      flake.nixosModules.ip-module = {
+        name,
+        lib,
+        ...
+      }: {
+        options.ips = {
+          privateIpv4 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.privateIpv4 or "";
+          };
+          publicIpv4 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.publicIpv4 or "";
+          };
+        };
+      };
+    }
+    "
+  | str join "\n"
+  | alejandra --quiet -
+  | save --force flake/nixosModules/ips-DONT-COMMIT.nix
+  )
+
+  # This is required for flake builds to find the nix module.
+  # The pre-push git hook will complain if this file has been committed accidently.
+  git add --intent-to-add flake/nixosModules/ips-DONT-COMMIT.nix
+  echo
+  echo "Ips have been written to: flake/nixosModules/ips-DONT-COMMIT.nix"
+  echo "Obviously, don't commit this file."
+
+update-ips-example:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "The following code example shows the expected struct of the \"ips\" and \"ip-module\" nixosModules."
+  echo "This may be used as a template if a custom flake/nixosModules/ips-DONT-COMMIT.nix file"
+  echo "needs to be created and managed manually, for example, in a non-aws environment."
+  echo
+  cat <<"EOF"
+  let
+    all = {
+      machine-example-1 = {
+        privateIpv4 = "172.16.0.1";
+        publicIpv4 = "1.2.3.4";
+      };
+    };
+  in {
+    flake.nixosModules.ips = all;
+    flake.nixosModules.ip-module = {
+      name,
+      lib,
+      ...
+    }: {
+      options.ips = {
+        privateIpv4 = lib.mkOption {
+          type = lib.types.str;
+          default = all.${name}.privateIpv4 or "";
+        };
+        publicIpv4 = lib.mkOption {
+          type = lib.types.str;
+          default = all.${name}.publicIpv4 or "";
+        };
+      };
+    };
+  }
+  EOF

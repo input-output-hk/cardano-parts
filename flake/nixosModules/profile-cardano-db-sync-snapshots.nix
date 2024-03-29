@@ -189,10 +189,6 @@ flake: {
         systemd = {
           services = {
             cardano-db-sync = {
-              # Required by the takeSnapshot called scripts in ExecStopPost
-              # Ref: https://github.com/IntersectMBO/cardano-db-sync/issues/1645
-              path = with pkgs; [getconf tree];
-
               # Increase stop timeout to 12h, to allow for snapshot creation on mainnet.
               # Currently the snapshots take less than ~6h and 12h timeout will allow further db growth.
               serviceConfig.TimeoutStopSec = lib.mkForce "12h";
@@ -217,10 +213,6 @@ flake: {
                 ExecStart = getExe (pkgs.writeShellApplication {
                   name = "cardano-db-sync-snapshots";
                   runtimeInputs = with pkgs; [cardano-cli curl gawk jq ripgrep s3cmd systemd];
-
-                  # Exclude SC2012 as `ls -tr1 ...` accomplishes what we want with the pattern
-                  # we use and alternative cmds are unnecessarily complex.
-                  excludeShellChecks = ["SC2012"];
 
                   text = ''
                     echo "Starting cardano-db-sync-snapshots"

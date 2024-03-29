@@ -26,15 +26,26 @@ in
       # ebsHighPerf = recursiveUpdate (ebsIops 10000) (ebsTp 1000);
 
       # Helper defs:
+      # disableAlertCount.cardano-parts.perNode.meta.enableAlertCount = false;
       # delete.aws.instance.count = 0;
 
       # Cardano group assignments:
       group = name: {
+        imports =
+          [
+            {
+              config.warnings =
+                optional (!(config.flake.nixosModules ? ip-module) && cfgGeneric.warnOnMissingIpModule)
+                ''The nixosModule "ip-module" which most clusters use is missing; builds or deployed software and services may break. Generate the module with `just update-ips`'';
+            }
+          ]
+          ++ optional (nixosModules ? ip-module) nixosModules.ip-module;
+
         cardano-parts.cluster.group = config.flake.cardano-parts.cluster.groups.${name};
 
         # Since all machines are assigned a group, this is a good place to include default aws instance tags
         aws.instance.tags = {
-          inherit (config.flake.cardano-parts.cluster.infra.generic) organization tribe function repo;
+          inherit (cfgGeneric) organization tribe function repo;
           environment = config.flake.cardano-parts.cluster.groups.${name}.meta.environmentName;
           group = name;
         };
@@ -51,6 +62,11 @@ in
         ];
       };
 
+      # Mithril signing config
+      # mithrilRelay = {imports = [inputs.cardano-parts.nixosModules.profile-mithril-relay];};
+      # declMRel = node: {services.mithril-signer.relayEndpoint = nixosConfigurations.${node}.config.ips.privateIpv4;};
+      # declMSigner = node: {services.mithril-relay.signerIp = nixosConfigurations.${node}.config.ips.privateIpv4;};
+
       # Profiles
       pre = {imports = [inputs.cardano-parts.nixosModules.profile-pre-release];};
 
@@ -62,17 +78,24 @@ in
         ];
       };
 
-      # Snapshots Profile: add this to a dbsync machine defn and deploy; remove once the snapshot is restored.
-      # Snapshots for mainnet can be found at: https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html#13.1/
+      # Snapshots: add this to a dbsync machine defn and deploy; remove once the snapshot is restored.
+      # Snapshots for mainnet can be found at: https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html
       # snapshot = {services.cardano-db-sync.restoreSnapshot = "$SNAPSHOT_URL";};
 
       # Topology profiles
       # Note: not including a topology profile will default to edge topology if module profile-cardano-node-group is imported
-      topoBp = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-topology = {role = "bp";};}];};
-      topoRel = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-topology = {role = "relay";};}];};
+      topoBp = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-node-topology = {role = "bp";};}];};
+      topoRel = {imports = [inputs.cardano-parts.nixosModules.profile-cardano-node-topology {services.cardano-node-topology = {role = "relay";};}];};
 
       # Roles
-      bp = {imports = [inputs.cardano-parts.nixosModules.role-block-producer topoBp];};
+      bp = {
+        imports = [
+          inputs.cardano-parts.nixosModules.role-block-producer
+          topoBp
+          # Disable machine DNS creation for block producers to avoid ip discovery
+          {cardano-parts.perNode.meta.enableDns = false;}
+        ];
+      };
       rel = {imports = [inputs.cardano-parts.nixosModules.role-relay topoRel];};
 
       dbsync = {
@@ -126,7 +149,7 @@ in
 
       defaults.imports = [
         inputs.cardano-parts.nixosModules.module-aws-ec2
-        inputs.cardano-parts.nixosModules.module-cardano-parts
+        inputs.cardano-parts.nixosModules.profile-cardano-parts
         inputs.cardano-parts.nixosModules.profile-basic
         inputs.cardano-parts.nixosModules.profile-common
         inputs.cardano-parts.nixosModules.profile-grafana-agent

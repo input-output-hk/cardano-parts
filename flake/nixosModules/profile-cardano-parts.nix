@@ -1,4 +1,4 @@
-# nixosModule: module-cardano-parts
+# nixosModule: profile-cardano-parts
 #
 # TODO: Move this to a docs generator
 #
@@ -7,6 +7,7 @@
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.opsLib
 #   config.cardano-parts.perNode.lib.topologyLib
+#   config.cardano-parts.perNode.meta.addressType
 #   config.cardano-parts.perNode.meta.cardanoDbSyncPrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardanoNodePort
 #   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
@@ -16,7 +17,10 @@
 #   config.cardano-parts.perNode.meta.cardano-metadata-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
+#   config.cardano-parts.perNode.meta.enableAlertCount
+#   config.cardano-parts.perNode.meta.enableDns
 #   config.cardano-parts.perNode.meta.hostAddr
+#   config.cardano-parts.perNode.meta.hostsList
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.blockperf
 #   config.cardano-parts.perNode.pkgs.cardano-cli
@@ -33,16 +37,21 @@
 #   config.cardano-parts.perNode.pkgs.mithril-signer
 #   config.cardano-parts.perNode.roles.isCardanoDensePool
 flake @ {moduleWithSystem, ...}: {
-  flake.nixosModules.module-cardano-parts = moduleWithSystem ({system}: {
+  flake.nixosModules.profile-cardano-parts = moduleWithSystem ({system}: {
     config,
     lib,
     pkgs,
+    nodes,
     ...
   }: let
-    inherit (lib) foldl' mdDoc mkOption recursiveUpdate types;
-    inherit (types) anything attrsOf bool ints listOf package port nullOr str submodule;
+    inherit (builtins) attrNames deepSeq elem head stringLength;
+    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair pipe recursiveUpdate types;
+    inherit (types) anything attrsOf bool enum ints listOf oneOf package port nullOr str submodule;
+    inherit (cfg.group) groupFlake;
+    inherit (cfgPerNode.lib) topologyLib;
 
     cfg = config.cardano-parts.cluster;
+    cfgPerNode = config.cardano-parts.perNode;
 
     mkBoolOpt = mkOption {
       type = bool;
@@ -129,6 +138,12 @@ flake @ {moduleWithSystem, ...}: {
 
     metaSubmodule = submodule {
       options = {
+        addressType = mkOption {
+          type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
+          description = mdDoc "The default addressType for topologyLib mkProducer function.";
+          default = cfg.group.meta.addressType;
+        };
+
         cardanoDbSyncPrometheusExporterPort = mkOption {
           type = port;
           description = mdDoc "The port to associate with the nixos cardano-db-sync prometheus exporter.";
@@ -183,15 +198,56 @@ flake @ {moduleWithSystem, ...}: {
           default = cfg.group.meta.cardano-smash-service;
         };
 
+        enableAlertCount = mkOption {
+          type = bool;
+          description = mdDoc ''
+            Whether to count this machine as an expected machine to appear in grafana/prometheus metrics.
+
+            In cases where this machine may be created, but mostly kept in a stopped state such that it will
+            not push metrics to the monitoring server, this option can be disabled to exclude it from the
+            expected machine count.
+
+            The value of this boolean will affect the alert rules applied by running `just tofu grafana apply`
+            from a cardano-parts ops devShell.
+          '';
+          default = true;
+        };
+
+        enableDns = mkOption {
+          type = bool;
+          description = mdDoc ''
+            Whether to create a DNS for this machine when running `just tofu apply`.
+
+            Typically, only block producers or other sensitive machines would want to set this to false.
+          '';
+          default = true;
+        };
+
         hostAddr = mkOption {
           type = str;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node";
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node.";
           default = "0.0.0.0";
+        };
+
+        hostsList = mkOption {
+          type = oneOf [(enum ["all" "group"]) (listOf str)];
+          description = mdDoc ''
+            A list of Colmena machine names for which /etc/hosts will be configured for if
+            nixosModule.ip-module is available in the downstream repo and profile-cardano-parts
+            nixosModule is imported.
+
+            If instead of a list, this option is configured with a string of "all", all
+            Colmena machine names in the cluster will be used for the /etc/hosts file.
+
+            If configured with a string of "group" then all Colmena machine names in the
+            same group will be used for the /etc/hosts file.
+          '';
+          default = cfg.group.meta.hostsList;
         };
 
         nodeId = mkOption {
           type = nullOr ints.unsigned;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node";
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node.";
           default = 0;
         };
       };
@@ -226,6 +282,66 @@ flake @ {moduleWithSystem, ...}: {
       cardano-parts = mkOption {
         type = mainSubmodule;
       };
+    };
+
+    config = {
+      # The hosts file is case-insensitive, so switch from camelCase attr name to kebab-case
+      networking.hosts = mkIf (groupFlake.config.flake.nixosModules ? ips) (let
+        hostsList =
+          # See hostsList type and description above
+          # If hostsList is a list, use it directly
+          if isList cfgPerNode.meta.hostsList
+          then cfgPerNode.meta.hostsList
+          # If hostsList is a string of "all", use all machines, otherwise for "group" use group machines
+          else if cfgPerNode.meta.hostsList == "all"
+          then attrNames nodes
+          else topologyLib.groupMachines nodes;
+
+        genHostsType = type: suffix:
+          pipe (head groupFlake.config.flake.nixosModules.ips.imports) [
+            # Filter empty values
+            (filterAttrs (_: v: v.${type} != ""))
+
+            # Filter by hosts
+            (filterAttrs (n: _: elem n hostsList))
+
+            # Abort on any duplicated ips across multiple machines
+            (ipAttrs:
+              deepSeq (
+                let
+                  ipList = mapAttrsToList (_: v: v.${type}) ipAttrs;
+                in
+                  map (ip:
+                    if (count (ipCheck: ipCheck == ip) ipList) > 1
+                    then abort "ABORT: ${type} ${ip} has more than one occurrence.  Refer to nixosModule.ip-module in the downstream repo."
+                    else null)
+                  ipList
+              )
+              ipAttrs)
+
+            # Abort on any hostname larger than RFC1035 allows
+            (ipAttrs:
+              deepSeq (
+                map (hostName:
+                  if (stringLength hostName > 63)
+                  then abort "ABORT: ${type} hostname ${hostName} has more than 63 characters and may result in DNS lookup failure."
+                  else null)
+                (attrNames ipAttrs)
+              )
+              ipAttrs)
+
+            # Transform attrs into expected networking.hosts list of strings attr values
+            (mapAttrs' (n: v: nameValuePair v.${type} ["${n}.${suffix}"]))
+          ];
+      in
+        # Merge ip types together in the hosts file declaration
+        foldl' (acc: e: recursiveUpdate acc e) {} [
+          (genHostsType "privateIpv4" "private-ipv4")
+          (genHostsType "publicIpv4" "public-ipv4")
+        ]);
+
+      # Enable deployed machines to be able to resolve the /etc/hosts entries created above in cardano-node topology files
+      services.dnsmasq.enable = true;
     };
   });
 }

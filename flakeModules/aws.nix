@@ -53,11 +53,21 @@
         default = foldl' (acc: spec:
           recursiveUpdate acc {
             ${spec.InstanceType} = {
+              # The following are expected to be strings
               provider = "aws";
-              coreCount = spec.VCpuInfo.DefaultCores;
-              cpuCount = spec.VCpuInfo.DefaultVCpus;
               nodeType = spec.InstanceType;
+
+              # The following are expected to be ints
+              # Total core count
+              coreCount = spec.VCpuInfo.DefaultCores;
+
+              # Total cpu count
+              cpuCount = spec.VCpuInfo.DefaultVCpus;
+
+              # Total memory in Mebibytes
               memMiB = spec.MemoryInfo.SizeInMiB;
+
+              # Number of threads per core
               threadsPerCore = spec.VCpuInfo.DefaultThreadsPerCore;
             };
           }) {}

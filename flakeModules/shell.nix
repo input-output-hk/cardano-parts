@@ -242,10 +242,12 @@ in
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
                     deadnix
+                    diffutils
                     fd
                     gawk
                     gnugrep
                     gnused
+                    icdiff
                     # Ensure we use jq 1.7 for rc != 0 on empty file or stream test
                     # if the downstream repo is pinned to a nixpkgs <= 23.05
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
@@ -253,6 +255,7 @@ in
                     moreutils
                     # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a non-existent pkg failure
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellFull
+                    patch
                     ripgrep
                     statix
                     xxd
