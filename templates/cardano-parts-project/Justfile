@@ -660,7 +660,7 @@ template-diff FILE *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
   if ! [ -f {{FILE}} ]; then
-    FILE=<(echo "")
+    FILE="<(echo '')"
   else
     FILE="{{FILE}}"
   fi
@@ -673,7 +673,7 @@ template-diff FILE *ARGS:
     SRC_NAME="$SRC_FILE"
   fi
 
-  eval "icdiff -L {{FILE}} -L \"$SRC_NAME\" {{ARGS}} \"$FILE\" $SRC_FILE"
+  eval "icdiff -L {{FILE}} -L \"$SRC_NAME\" {{ARGS}} $FILE $SRC_FILE"
 
 template-patch FILE:
   #!/usr/bin/env bash

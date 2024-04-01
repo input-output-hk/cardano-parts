@@ -13,7 +13,7 @@ downstream-diff FILE *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
   if ! [ -f "{{templatePath}}/{{FILE}}" ]; then
-    FILE=<(echo "")
+    FILE="<(echo '')"
   else
     FILE="{{templatePath}}/{{FILE}}"
   fi
@@ -26,7 +26,7 @@ downstream-diff FILE *ARGS:
     DWN_NAME="$DWN_FILE"
   fi
 
-  eval "icdiff -L \"{{templatePath}}/{{FILE}}\" -L \"$DWN_NAME\" {{ARGS}} \"$FILE\" $DWN_FILE"
+  eval "icdiff -L \"{{templatePath}}/{{FILE}}\" -L \"$DWN_NAME\" {{ARGS}} $FILE $DWN_FILE"
 
 # Patch a downstream file into a cardano-parts template file
 downstream-patch FILE:
