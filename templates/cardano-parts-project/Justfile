@@ -724,10 +724,9 @@ tofu *ARGS:
 
 update-ips:
   #!/usr/bin/env nu
+  nix build ".#opentofu.cluster" --out-link terraform.tf.json
   tofu init -reconfigure
-  if (tofu workspace show) != "cluster" {
-    tofu workspace select -or-create cluster
-  }
+  tofu workspace select -or-create cluster
 
   ( tofu show -json
   | from json
