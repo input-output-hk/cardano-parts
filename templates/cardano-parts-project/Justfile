@@ -339,11 +339,12 @@ query-tip ENV TESTNET_MAGIC=null:
 save-bootstrap-ssh-key:
   #!/usr/bin/env nu
   print "Retrieving ssh key from tofu..."
-  tofu workspace select -or-create cluster
+  nix build ".#opentofu.cluster" --out-link terraform.tf.json
   tofu init -reconfigure
+  tofu workspace select -or-create cluster
   let tf = (tofu show -json | from json)
   let key = ($tf.values.root_module.resources | where type == tls_private_key and name == bootstrap)
-  $key.values.private_key_openssh | save .ssh_key
+  $key.values.private_key_openssh | to text | save --force .ssh_key
   chmod 0600 .ssh_key
 
 save-ssh-config:
@@ -354,7 +355,7 @@ save-ssh-config:
   tofu workspace select -or-create cluster
   let tf = (tofu show -json | from json)
   let key = ($tf.values.root_module.resources | where type == local_file and name == ssh_config)
-  $key.values.content | save --force .ssh_config
+  $key.values.content | to text | save --force .ssh_config
   chmod 0600 .ssh_config
 
 set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
