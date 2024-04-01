@@ -35,7 +35,8 @@
       # function = "cardano-parts";
       # repo = "https://github.com/input-output-hk/UPDATE_ME";
 
-      # By default warn if the ip-module is missing:
+      # By default abort and warn if the ip-module is missing:
+      # abortOnMissingIpModule = true;
       # warnOnMissingIpModule = true;
     };
 
