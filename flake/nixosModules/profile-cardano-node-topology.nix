@@ -47,21 +47,25 @@
           if cfgNode ? bootstrapPeers && cfgNode.bootstrapPeers != null
           then []
           else p2pEdgeNodes cfg.edgeNodes;
+
         list = topoList {inherit (cfg) nodes nodeList;};
 
         infix = topoInfixFiltered {
           inherit (cfg) name nodes allowList;
-          extraCfg = cfg.extraCfgInfix;
+          # For intra-cluster peer members, default to trustable localRoots
+          extraCfg = {trustable = true;} // cfg.extraCfgInfix;
         };
 
         simple = topoSimple {
           inherit (cfg) name nodes;
-          extraCfg = cfg.extraCfgSimple;
+          # For intra-cluster peer members, default to trustable localRoots
+          extraCfg = {trustable = true;} // cfg.extraCfgSimple;
         };
 
         simpleMax = topoSimpleMax {
           inherit (cfg) name nodes maxCount;
-          extraCfg = cfg.extraCfgSimpleMax;
+          # For intra-cluster peer members, default to trustable localRoots
+          extraCfg = {trustable = true;} // cfg.extraCfgSimpleMax;
         };
       };
 
@@ -75,7 +79,8 @@
           producers = topoInfixFiltered {
             inherit (cfg) name nodes;
             allowList = cfg.infixProducersForRel;
-            extraCfg = cfg.extraCfgInfix;
+            # For intra-cluster peer members, default to trustable localRoots
+            extraCfg = {trustable = true;} // cfg.extraCfgInfix;
           };
           publicProducers = topologyFns.edge ++ extraNodeListPublicProducers ++ extraPublicProducers;
         };
@@ -84,7 +89,8 @@
           producers = topoInfixFiltered {
             inherit (cfg) name nodes;
             allowList = cfg.infixProducersForBp;
-            extraCfg = cfg.extraCfgInfix;
+            # For intra-cluster peer members, default to trustable localRoots
+            extraCfg = {trustable = true;} // cfg.extraCfgInfix;
           };
 
           # These are also set from the role-block-producer nixos module
@@ -154,19 +160,31 @@
           extraCfgInfix = mkOption {
             type = attrs;
             default = {};
-            description = "Any extra config which should be applied to infix topology function generated results.";
+            description = ''
+              Any extra config which should be applied to infix topology function generated results.
+
+              Note that intra-cluster localRoots defined with topoInfixFiltered will be automatically set trustable.
+            '';
           };
 
           extraCfgSimple = mkOption {
             type = attrs;
             default = {};
-            description = "Any extra config which should be applied to simple topology function generated results.";
+            description = ''
+              Any extra config which should be applied to simple topology function generated results.
+
+              Note that intra-cluster localRoots defined with topoSimple will be automatically set trustable.
+            '';
           };
 
           extraCfgSimpleMax = mkOption {
             type = attrs;
             default = {};
-            description = "Any extra config which should be applied to simpleMax topology function generated results.";
+            description = ''
+              Any extra config which should be applied to simpleMax topology function generated results.
+
+              Note that intra-cluster localRoots defined with topoSimpleMax will be automatically set trustable.
+            '';
           };
 
           extraNodeListProducers = mkOption {
