@@ -94,6 +94,10 @@
           };
 
           # These are also set from the role-block-producer nixos module
+          extraNodeConfig = {
+            PeerSharing = false;
+            TargetNumberOfRootPeers = 100;
+          };
           publicProducers = mkForce (extraNodeListPublicProducers ++ extraPublicProducers);
           usePeersFromLedgerAfterSlot = -1;
         };
@@ -355,6 +359,8 @@
       config = {
         services.cardano-node =
           {
+            extraNodeConfig = mkIf (cfg.role == "bp") roles.${cfg.role}.extraNodeConfig;
+
             producers = mkIf (cfg.role != null || cfg.enableProducers) (
               if cfg.role != null
               then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
@@ -368,9 +374,7 @@
               else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
             );
 
-            usePeersFromLedgerAfterSlot =
-              mkIf (cfg.role == "bp")
-              roles.${cfg.role}.usePeersFromLedgerAfterSlot;
+            usePeersFromLedgerAfterSlot = mkIf (cfg.role == "bp") roles.${cfg.role}.usePeersFromLedgerAfterSlot;
           }
           # This can be simplified upon all machines deployed >= node 8.9.0
           // optionalAttrs (cfgNode ? bootstrapPeers) {

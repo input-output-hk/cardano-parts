@@ -524,6 +524,7 @@ start-demo:
   export UNSTABLE_LIB=true
   export USE_ENCRYPTION=true
   export USE_DECRYPTION=true
+  export USE_NODE_CONFIG_BP=false
   export DEBUG=1
 
   SECURITY_PARAM=8 \
@@ -622,10 +623,12 @@ start-node ENV:
     UNSTABLE=false
     UNSTABLE_LIB=false
     UNSTABLE_MITHRIL=false
+    USE_NODE_CONFIG_BP=false
   else
     UNSTABLE=true
     UNSTABLE_LIB=true
     UNSTABLE_MITHRIL=true
+    USE_NODE_CONFIG_BP=false
   fi
 
   # Set required entrypoint vars and run node in a new nohup background session
@@ -633,6 +636,7 @@ start-node ENV:
   UNSTABLE="$UNSTABLE" \
   UNSTABLE_LIB="$UNSTABLE_LIB" \
   UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
+  USE_NODE_CONFIG_BP="$USE_NODE_CONFIG_BP" \
   DATA_DIR="$STATEDIR" \
   SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
