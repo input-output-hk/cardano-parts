@@ -29,7 +29,10 @@
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/node-8.10";
+
+    # TMP:
+    cardano-node-810.url = "github:IntersectMBO/cardano-node/sl/node-8.10-cc-testnet";
 
     # Cardano related inputs required for service config
     # Services offered from the nixosModules of this repo are directly assigned to
