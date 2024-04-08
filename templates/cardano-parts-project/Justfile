@@ -1,3 +1,5 @@
+import? 'scripts/custom-recipes.just'
+
 set shell := ["bash", "-uc"]
 set positional-arguments
 alias terraform := tofu
