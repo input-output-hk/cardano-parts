@@ -4,15 +4,16 @@
 """setup-delegation-accounts
 
 Usage:
-    setup-delegation-accounts [--print-only] [--testnet-magic INT] [--signing-key-file FILE] [--wallet-mnemonic FILE] [--num-accounts INT]
+    setup-delegation-accounts [--print-only] [--testnet-magic INT] [--signing-key-file FILE] [--wallet-mnemonic FILE] --num-accounts INT [--delegation-amount INT]
 
 Options:
     -h --help                    Show this screen
+    -p --print-only              Print sql for creation of faucet_stake_addr table only, take no other action
     -t --testnet-magic <INT>     Testnet Magic
     -s --signing-key-file <FILE> Signing Key
     -w --wallet-mnemonic <FILE>  mnemonic file cardano-address uses
     -n --num-accounts <INT>      Number of accounts to setup delegation
-    -p --print-sql               Print sql for creation of faucet_stake_addr table only, take no other action
+    -d --delegation-amount <INT> Set the amount of the pool delegations in lovelace; defaults to 10M ADA
 
 """
 import cbor2
@@ -31,6 +32,11 @@ if arguments["--num-accounts"]:
 else:
   print("Must specify number of accounts")
   exit(1)
+
+if arguments["--delegation-amount"]:
+  delegation_amount = int(arguments["--delegation-amount"])
+else:
+  delegation_amount = 10000000000000
 
 if not arguments["--print-only"]:
   if arguments["--signing-key-file"] and os.path.exists(arguments["--signing-key-file"]):
@@ -182,7 +188,7 @@ def generateStakeRegistration(stake_vkey, file):
       raise Exception(f"Unknown error generating registration certificate")
   return
 
-def createTx(txin, stake_vkey, delegation_address, change_address, payment_signing_key_str, out_file, delegation_amount=1000000000000):
+def createTx(txin, stake_vkey, delegation_address, change_address, payment_signing_key_str, out_file, delegation_amount):
   with tempfile.NamedTemporaryFile("w+") as stake_reg_cert, tempfile.NamedTemporaryFile("w+") as tx_body:
     generateStakeRegistration(stake_vkey, stake_reg_cert)
     new_lovelace = txin[1] - 2000000 - 200000 - delegation_amount
@@ -285,7 +291,7 @@ for i in range(0, num_accounts):
       printStr+=f'"{i}":"{stake_address}",'
     else:
       delegation_address = derive_delegation_address(payment_addr, stake_vkey_ext)
-      txin = createTx(txin, stake_vkey, delegation_address, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{i}.txsigned")
+      txin = createTx(txin, stake_vkey, delegation_address, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{i}.txsigned", delegation_amount)
       print(f"Setting up delegation for {i} and submitting the transaction")
       sendTx(f"tx-deleg-account-{i}.txsigned")
 
