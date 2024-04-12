@@ -1,3 +1,5 @@
+import? 'scripts/custom-recipes.just'
+
 set shell := ["bash", "-uc"]
 set positional-arguments
 alias terraform := tofu
@@ -106,6 +108,8 @@ build-book-prod:
   ln -sf book-prod.toml book.toml
   cd -
   mdbook build docs/
+  echo
+  nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
 
 build-book-staging:
   #!/usr/bin/env bash
@@ -114,6 +118,8 @@ build-book-staging:
   ln -sf book-staging.toml book.toml
   cd -
   mdbook build docs/
+  echo
+  nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
 
 build-machine MACHINE *ARGS:
   nix build -L .#nixosConfigurations.{{MACHINE}}.config.system.build.toplevel {{ARGS}}
@@ -339,12 +345,29 @@ query-tip ENV TESTNET_MAGIC=null:
 save-bootstrap-ssh-key:
   #!/usr/bin/env nu
   print "Retrieving ssh key from tofu..."
-  tofu workspace select -or-create cluster
+  nix build ".#opentofu.cluster" --out-link terraform.tf.json
   tofu init -reconfigure
+  tofu workspace select -or-create cluster
   let tf = (tofu show -json | from json)
   let key = ($tf.values.root_module.resources | where type == tls_private_key and name == bootstrap)
-  $key.values.private_key_openssh | save .ssh_key
+  $key.values.private_key_openssh | to text | save --force .ssh_key
   chmod 0600 .ssh_key
+
+# Used to quickly assemble a full group bulk creds file from current or prior KES for network respin purposes
+save-bulk-creds ENV COMMIT="HEAD":
+  #!/usr/bin/env bash
+  mkdir -p workbench/custom/rundir
+  for i in 1 2 3; do
+    sops --config /dev/null --input-type binary --output-type binary --decrypt \
+    <(git cat-file blob {{COMMIT}}:secrets/groups/{{ENV}}$i/no-deploy/bulk.creds.pools.json) \
+    | jq -r '.[]'
+  done | jq -s > workbench/custom/rundir/bulk.creds.secret.{{ENV}}.{{COMMIT}}.pools.json
+
+  echo
+  echo "Bulk credentials file for environment {{ENV}}, commit {{COMMIT}} has been saved at:"
+  echo "  workbench/custom/rundir/bulk.creds.secret.{{ENV}}.{{COMMIT}}.pools.json"
+  echo
+  echo "Do not commit this file and delete it when local workbench work is completed."
 
 save-ssh-config:
   #!/usr/bin/env nu
@@ -354,7 +377,7 @@ save-ssh-config:
   tofu workspace select -or-create cluster
   let tf = (tofu show -json | from json)
   let key = ($tf.values.root_module.resources | where type == local_file and name == ssh_config)
-  $key.values.content | save --force .ssh_config
+  $key.values.content | to text | save --force .ssh_config
   chmod 0600 .ssh_config
 
 set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
@@ -523,6 +546,7 @@ start-demo:
   export UNSTABLE_LIB=true
   export USE_ENCRYPTION=true
   export USE_DECRYPTION=true
+  export USE_NODE_CONFIG_BP=false
   export DEBUG=1
 
   SECURITY_PARAM=8 \
@@ -621,10 +645,12 @@ start-node ENV:
     UNSTABLE=false
     UNSTABLE_LIB=false
     UNSTABLE_MITHRIL=false
+    USE_NODE_CONFIG_BP=false
   else
     UNSTABLE=true
     UNSTABLE_LIB=true
     UNSTABLE_MITHRIL=true
+    USE_NODE_CONFIG_BP=false
   fi
 
   # Set required entrypoint vars and run node in a new nohup background session
@@ -632,6 +658,7 @@ start-node ENV:
   UNSTABLE="$UNSTABLE" \
   UNSTABLE_LIB="$UNSTABLE_LIB" \
   UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
+  USE_NODE_CONFIG_BP="$USE_NODE_CONFIG_BP" \
   DATA_DIR="$STATEDIR" \
   SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
@@ -659,7 +686,7 @@ template-diff FILE *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
   if ! [ -f {{FILE}} ]; then
-    FILE=<(echo "")
+    FILE="<(echo '')"
   else
     FILE="{{FILE}}"
   fi
@@ -672,7 +699,7 @@ template-diff FILE *ARGS:
     SRC_NAME="$SRC_FILE"
   fi
 
-  eval "icdiff -L {{FILE}} -L \"$SRC_NAME\" {{ARGS}} \"$FILE\" $SRC_FILE"
+  eval "icdiff -L {{FILE}} -L \"$SRC_NAME\" {{ARGS}} $FILE $SRC_FILE"
 
 template-patch FILE:
   #!/usr/bin/env bash
@@ -723,15 +750,21 @@ tofu *ARGS:
 
 update-ips:
   #!/usr/bin/env nu
+  nix build ".#opentofu.cluster" --out-link terraform.tf.json
   tofu init -reconfigure
-  if (tofu workspace show) != "cluster" {
-    tofu workspace select -or-create cluster
-  }
+  tofu workspace select -or-create cluster
 
-  ( tofu show -json
-  | from json
-  | get values.root_module.resources
-  | where type == "aws_eip"
+  echo
+  let nodeCount = nix eval .#nixosConfigurations --raw --apply 'let f = x: toString (builtins.length (builtins.attrNames x)); in f'
+  echo $"Processing ip information for ($nodeCount) nixos machine configurations..."
+
+  let eipRecords = (tofu show -json
+    | from json
+    | get values.root_module.resources
+    | where type == "aws_eip"
+  )
+
+  ($eipRecords
   | reduce --fold ["
     let
       all = {
@@ -773,7 +806,14 @@ update-ips:
   # This is required for flake builds to find the nix module.
   # The pre-push git hook will complain if this file has been committed accidently.
   git add --intent-to-add flake/nixosModules/ips-DONT-COMMIT.nix
-  echo
+
+  echo $"Ips were written for a machine count of: ($eipRecords | length)"
+  if $nodeCount != ($eipRecords | length | into string) {
+    echo
+    echo $"(ansi bg_red)WARNING:(ansi reset) There are ($nodeCount) nixos machine configurations but ($eipRecords | length) ip record sets were written."
+    echo
+  }
+
   echo "Ips have been written to: flake/nixosModules/ips-DONT-COMMIT.nix"
   echo "Obviously, don't commit this file."
 

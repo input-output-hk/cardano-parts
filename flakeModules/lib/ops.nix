@@ -21,9 +21,12 @@ with lib; rec {
           cp -v "${cardano-deployment}/$i" "$out/config/$ENV/''${i#"$ENV-"}"
         done
 
-        # Adjust genesis file and config refs
-        sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/config.json"
-        sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/db-sync-config.json"
+        # Adjust genesis file, config and config-bp refs
+        for i in config config-bp db-sync-config; do
+          if [ -f "$out/config/$ENV/$i.json" ]; then
+            sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
+          fi
+        done
 
         # Adjust index.html file refs
         sed -i "s|$ENV-|config/$ENV/|g" "$out/index.html"

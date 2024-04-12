@@ -45,7 +45,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/sancho-4-0-0";
+      url = "github:IntersectMBO/cardano-db-sync/sancho-4.1.0";
       flake = false;
     };
 
@@ -55,7 +55,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/8.9.1";
+      url = "github:IntersectMBO/cardano-node/8.10.0-pre";
       flake = false;
     };
 

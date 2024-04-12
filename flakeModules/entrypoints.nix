@@ -20,7 +20,8 @@ in {
       cfgPkgs = config.cardano-parts.pkgs;
 
       # Copy the environment configs from iohk-nix into our jobs at runtime
-      copyEnvsTemplate = environments: let
+      copyEnvsTemplate = cardanoLib: let
+        inherit (cardanoLib) environments;
         envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
       in ''
         # Prepare standard env configs
@@ -72,10 +73,10 @@ in {
             # The menu of environments that we ship as built-in envs
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               echo "Preparing environments using cardanoLibNg"
-              ${copyEnvsTemplate cardanoLibNg.environments}
+              ${copyEnvsTemplate cardanoLibNg}
             else
               echo "Preparing environments using cardanoLib"
-              ${copyEnvsTemplate cardanoLib.environments}
+              ${copyEnvsTemplate cardanoLib}
             fi
 
             chmod -R +w "$DATA_DIR/config" "$DATA_DIR/config/custom"
@@ -84,7 +85,11 @@ in {
               echo "Using the preset environment $ENVIRONMENT ..." >&2
 
               # Subst hyphen for underscore as iohk-nix envs historically use the former
-              NODE_CONFIG="$DATA_DIR/config/''${ENVIRONMENT/-/_}/config.json"
+              if [ "''${USE_NODE_CONFIG_BP:-}" = "true" ]; then
+                NODE_CONFIG="$DATA_DIR/config/''${ENVIRONMENT/-/_}/config-bp.json"
+              else
+                NODE_CONFIG="$DATA_DIR/config/''${ENVIRONMENT/-/_}/config.json"
+              fi
               NODE_TOPOLOGY="''${NODE_TOPOLOGY:-$DATA_DIR/config/''${ENVIRONMENT/-/_}/topology.json}"
             else
               [ -z "''${NODE_CONFIG:-}" ] && echo "NODE_CONFIG env var must be set for custom config -- aborting" && exit 1

@@ -143,6 +143,8 @@ flake: {
           serviceCfg.${Protocol}
           // {
             # These are also set from the profile-cardano-node-topology nixos module when role == "bp"
+            extraNodeConfig.PeerSharing = false;
+            extraNodeConfig.TargetNumberOfRootPeers = 100;
             publicProducers = mkForce [];
             usePeersFromLedgerAfterSlot = -1;
           };

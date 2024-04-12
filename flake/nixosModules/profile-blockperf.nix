@@ -28,7 +28,7 @@ flake: {
     ...
   }: let
     inherit (builtins) concatStringsSep;
-    inherit (lib) escapeShellArgs hasSuffix getExe mkOption;
+    inherit (lib) escapeShellArgs hasSuffix getExe mkOption optional;
     inherit (lib.types) int listOf package str;
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
@@ -200,8 +200,9 @@ flake: {
       # The blockperf systemd service name cannot contain the string "blockperf"
       # or the bin utility will think it is already running
       systemd.services.blockPerf = {
-        after = ["cardano-node.service"];
-        wants = ["cardano-node.service"];
+        # Ensure blockperf can also query from /etc/hosts properly if dnsmasq service is enabled
+        after = ["cardano-node.service"] ++ optional config.services.dnsmasq.enable "dnsmasq.service";
+        wants = ["cardano-node.service"] ++ optional config.services.dnsmasq.enable "dnsmasq.service";
         partOf = ["cardano-node.service"];
         wantedBy = ["cardano-node.service"];
 
