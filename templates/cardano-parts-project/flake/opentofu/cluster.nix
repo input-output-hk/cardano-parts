@@ -11,7 +11,7 @@ with lib; let
 
   cluster = infra.aws;
 
-  amis = import "${inputs.nixpkgs}/nixos/modules/virtualisation/ec2-amis.nix";
+  amis = import "${inputs.nixpkgs-unstable}/nixos/modules/virtualisation/ec2-amis.nix";
   awsProviderFor = region: "aws.${underscore region}";
   hyphen = replaceStrings ["."] ["-"];
   underscore = replaceStrings ["-"] ["_"];
@@ -129,7 +129,7 @@ in {
               {
                 inherit (node.aws.instance) count instance_type;
                 provider = awsProviderFor node.aws.region;
-                ami = node.aws.instance.ami or amis.${node.system.stateVersion}.${node.aws.region}.hvm-ebs;
+                ami = node.aws.instance.ami or amis.${substring 0 5 inputs.nixpkgs.lib.version}.${node.aws.region}.hvm-ebs;
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
                 monitoring = true;
                 key_name = "\${aws_key_pair.bootstrap_${underscore node.aws.region}[0].key_name}";
