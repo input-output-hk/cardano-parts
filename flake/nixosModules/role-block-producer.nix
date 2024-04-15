@@ -224,8 +224,16 @@ flake: {
               RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
             };
 
+            preStart = ''
+              while ! [ -s /run/secrets/cardano-node-cold-verification ]; do
+                echo "Waiting 10 seconds for secret /run/secrets/cardano-node-cold-verification to become available..."
+                sleep 10
+              done
+            '';
+
             serviceConfig = {
               Type = "oneshot";
+
               ExecStart = getExe (pkgs.writeShellApplication {
                 name = "mithril-signer-verifier";
                 runtimeInputs = with pkgs; [cardano-cli curl gnugrep jq];
