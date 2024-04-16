@@ -92,15 +92,19 @@ sopsConfigSetup := '''
   }
 '''
 
+# List all just recipes available
 default:
   @just --list
 
+# Deploy select machines
 apply *ARGS:
   colmena apply --verbose --on {{ARGS}}
 
+# Deploy all machines
 apply-all *ARGS:
   colmena apply --verbose {{ARGS}}
 
+# Build the prod cardano book
 build-book-prod:
   #!/usr/bin/env bash
   set -e
@@ -111,6 +115,7 @@ build-book-prod:
   echo
   nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
 
+# Build the staging cardano book
 build-book-staging:
   #!/usr/bin/env bash
   set -e
@@ -121,24 +126,51 @@ build-book-staging:
   echo
   nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
 
+# Build a nixos configuration
 build-machine MACHINE *ARGS:
   nix build -L .#nixosConfigurations.{{MACHINE}}.config.system.build.toplevel {{ARGS}}
 
+# Build all nixosConfigurations
 build-machines *ARGS:
   #!/usr/bin/env nu
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
   for node in $nodes {just build-machine $node {{ARGS}}}
 
+# Deploy a cloudFormation stack
 cf STACKNAME:
   #!/usr/bin/env nu
   mkdir cloudFormation
   nix eval --json '.#cloudFormation.{{STACKNAME}}' | from json | save --force 'cloudFormation/{{STACKNAME}}.json'
   rain deploy --debug --termination-protection --yes ./cloudFormation/{{STACKNAME}}.json
 
+# Prep dbsync for delegation analysis
+dbsync-prep ENV HOST ACCTS="500":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
+
+  echo "Creating stake key sql injection command for environment {{ENV}} (this will take a minute)..."
+  NOMENU=true \
+  scripts/setup-delegation-accounts.py \
+    --print-only \
+    --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
+    --num-accounts {{ACCTS}} \
+    > "$TMPFILE"
+
+  echo
+  echo "Pushing stake key sql injection command for environment {{ENV}}..."
+  just scp "$TMPFILE" {{HOST}}:"$TMPFILE"
+
+  echo
+  echo "Executing stake key sql injection command for environment {{ENV}}..."
+  just ssh {{HOST}} -t "psql -XU cexplorer cexplorer < \"$TMPFILE\""
+
+# Start a remote dbsync psql session
 dbsync-psql HOSTNAME:
   #!/usr/bin/env bash
   just ssh {{HOSTNAME}} -t 'psql -U cexplorer cexplorer'
 
+# Analyze pool performance
 dbsync-pool-analyze HOSTNAME:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -169,28 +201,8 @@ dbsync-pool-analyze HOSTNAME:
   MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
   echo "The maximum percentage difference de-delegation of all these pools will make in chain density is: $MAX_SHIFT"
 
-dbsync-create-faucet-stake-keys-table ENV HOSTNAME NUM_ACCOUNTS="500":
-  #!/usr/bin/env bash
-  set -euo pipefail
-  TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
-
-  echo "Creating stake key sql injection command for environment {{ENV}} (this will take a minute)..."
-  NOMENU=true \
-  scripts/setup-delegation-accounts.py \
-    --print-only \
-    --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
-    --num-accounts {{NUM_ACCOUNTS}} \
-    > "$TMPFILE"
-
-  echo
-  echo "Pushing stake key sql injection command for environment {{ENV}}..."
-  just scp "$TMPFILE" {{HOSTNAME}}:"$TMPFILE"
-
-  echo
-  echo "Executing stake key sql injection command for environment {{ENV}}..."
-  just ssh {{HOSTNAME}} -t "psql -XU cexplorer cexplorer < \"$TMPFILE\""
-
-dedelegate-non-performing-pools ENV *STAKE_KEY_INDEXES=null:
+# De-delegation pools for given faucet stake indexes
+dedelegate-pools ENV *IDXS=null:
   #!/usr/bin/env bash
   set -euo pipefail
   {{checkEnvWithoutOverride}}
@@ -207,10 +219,10 @@ dedelegate-non-performing-pools ENV *STAKE_KEY_INDEXES=null:
   fi
 
   echo
-  read -p "Press any key to start de-delegating {{ENV}} faucet pool delegations for stake key indexes {{STAKE_KEY_INDEXES}}" -n 1 -r -s
+  read -p "Press any key to start de-delegating {{ENV}} faucet pool delegations for stake key indexes {{IDXS}}" -n 1 -r -s
   echo
-  echo "Starting de-delegation of the following stake key indexes: {{STAKE_KEY_INDEXES}}"
-  for i in {{STAKE_KEY_INDEXES}}; do
+  echo "Starting de-delegation of the following stake key indexes: {{IDXS}}"
+  for i in {{IDXS}}; do
     echo "De-delegating index $i"
     NOMENU=true scripts/restore-delegation-accounts.py \
       --testnet-magic "$MAGIC" \
@@ -223,16 +235,19 @@ dedelegate-non-performing-pools ENV *STAKE_KEY_INDEXES=null:
     echo
   done
 
-gen-payment-address-from-mnemonic MNEMONIC_FILE ADDRESS_OFFSET="0":
-  cardano-address key from-recovery-phrase Shelley < {{MNEMONIC_FILE}} \
-    | cardano-address key child 1852H/1815H/0H/0/{{ADDRESS_OFFSET}} \
+# Get a wallet address from mnemonic file
+gen-payment-address FILE OFFSET="0":
+  cardano-address key from-recovery-phrase Shelley < {{FILE}} \
+    | cardano-address key child 1852H/1815H/0H/0/{{OFFSET}} \
     | cardano-address key public --with-chain-code \
     | cardano-address address payment --network-tag testnet
 
+# Standard lint check
 lint:
   deadnix -f
   statix check
 
+# List machines
 list-machines:
   #!/usr/bin/env nu
   let nixosNodes = (do -i { ^nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames' } | complete)
@@ -285,6 +300,7 @@ list-machines:
       | where machine != ""
   )
 
+# Check mimir required config
 mimir-alertmanager-bootstrap:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -319,6 +335,7 @@ mimir-alertmanager-bootstrap:
   echo "receivers:"
   echo "  - name: 'empty-receiver'"
 
+# Query the tip of all running envs
 query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -333,6 +350,7 @@ query-tip-all:
   done
   [ "$QUERIED" = "0" ] && echo "No environments running." || true
 
+# Query the current envs tip
 query-tip ENV TESTNET_MAGIC=null:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -342,6 +360,7 @@ query-tip ENV TESTNET_MAGIC=null:
     --socket-path "$STATEDIR/node-{{ENV}}.socket" \
     --testnet-magic "$MAGIC"
 
+# Save the cluster bootstrap ssh key
 save-bootstrap-ssh-key:
   #!/usr/bin/env nu
   print "Retrieving ssh key from tofu..."
@@ -353,22 +372,26 @@ save-bootstrap-ssh-key:
   $key.values.private_key_openssh | to text | save --force .ssh_key
   chmod 0600 .ssh_key
 
-# Used to quickly assemble a full group bulk creds file from current or prior KES for network respin purposes
+# Save bulk credentials from select commit
 save-bulk-creds ENV COMMIT="HEAD":
   #!/usr/bin/env bash
   mkdir -p workbench/custom/rundir
+  DATE=$(git show --no-patch --format=%cs {{COMMIT}})
   for i in 1 2 3; do
     sops --config /dev/null --input-type binary --output-type binary --decrypt \
     <(git cat-file blob {{COMMIT}}:secrets/groups/{{ENV}}$i/no-deploy/bulk.creds.pools.json) \
     | jq -r '.[]'
-  done | jq -s > workbench/custom/rundir/bulk.creds.secret.{{ENV}}.{{COMMIT}}.pools.json
+  done \
+    | jq -s \
+      > "workbench/custom/rundir/bulk.creds.secret.{{ENV}}.{{COMMIT}}.$DATE.pools.json"
 
   echo
   echo "Bulk credentials file for environment {{ENV}}, commit {{COMMIT}} has been saved at:"
-  echo "  workbench/custom/rundir/bulk.creds.secret.{{ENV}}.{{COMMIT}}.pools.json"
+  echo "  workbench/custom/rundir/bulk.creds.secret.{{ENV}}.{{COMMIT}}.$DATE.pools.json"
   echo
   echo "Do not commit this file and delete it when local workbench work is completed."
 
+# Save ssh config
 save-ssh-config:
   #!/usr/bin/env nu
   print "Retrieving ssh config from tofu..."
@@ -380,6 +403,7 @@ save-ssh-config:
   $key.values.content | to text | save --force .ssh_config
   chmod 0600 .ssh_config
 
+# Set the shell's default node env
 set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -435,9 +459,11 @@ set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
     echo "  export TESTNET_MAGIC=$MAGIC"
   fi
 
+# Show nix flake details
 show-flake *ARGS:
   nix flake show --allow-import-from-derivation {{ARGS}}
 
+# Show DNS nameservers
 show-nameservers:
   #!/usr/bin/env nu
   let domain = (nix eval --raw '.#cardano-parts.cluster.infra.aws.domain')
@@ -449,6 +475,7 @@ show-nameservers:
   print $"Nameservers for domain: ($domain) \(hosted zone id: ($id)) are:"
   print ($ns | to text)
 
+# Decrypt a file to stdout
 sops-decrypt-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -459,6 +486,7 @@ sops-decrypt-binary FILE:
   # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
 
+# Encrypt a file in place
 sops-encrypt-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -469,6 +497,7 @@ sops-encrypt-binary FILE:
   # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
+# Rotate sops encryption
 sops-rotate-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -480,38 +509,46 @@ sops-rotate-binary FILE:
   just sops-decrypt-binary {{FILE}} | sponge {{FILE}}
   just sops-encrypt-binary {{FILE}}
 
+# Scp using repo ssh config
 scp *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
   scp -o LogLevel=ERROR -F .ssh_config {{ARGS}}
 
+# Ssh using repo ssh config
 ssh HOSTNAME *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
   ssh -o LogLevel=ERROR -F .ssh_config {{HOSTNAME}} {{ARGS}}
 
+# Ssh using cluster bootstrap key
 ssh-bootstrap HOSTNAME *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
   {{checkSshKey}}
   ssh -o LogLevel=ERROR -F .ssh_config -i .ssh_key {{HOSTNAME}} {{ARGS}}
 
+# Ssh to all
 ssh-for-all *ARGS:
   #!/usr/bin/env nu
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
   $nodes | par-each {|node| just ssh -q $node {{ARGS}}}
 
+# Ssh for select
 ssh-for-each HOSTNAMES *ARGS:
   colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
 
-ssh-list-ips HOSTNAME_REGEX_PATTERN:
+# List machine ips based on regex pattern
+ssh-list-ips PATTERN:
   #!/usr/bin/env nu
-  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | default "" HostName | where Host =~ "{{HOSTNAME_REGEX_PATTERN}}" | get HostName | str join " "
+  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | default "" HostName | where Host =~ "{{PATTERN}}" | get HostName | str join " "
 
-ssh-list-names HOSTNAME_REGEX_PATTERN:
+# List machine names based on regex pattern
+ssh-list-names PATTERN:
   #!/usr/bin/env nu
-  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | default "" HostName | where Host =~ "{{HOSTNAME_REGEX_PATTERN}}" | get Host | str join " "
+  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | default "" HostName | where Host =~ "{{PATTERN}}" | get Host | str join " "
 
+# Start a fork to conway demo
 start-demo:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -626,6 +663,7 @@ start-demo:
   echo "Finished sequence..."
   echo
 
+# Start a node for specific env
 start-node ENV:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -664,6 +702,7 @@ start-node ENV:
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
   just set-default-cardano-env {{ENV}} "" "$PPID"
 
+# Stop all nodes
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -671,6 +710,7 @@ stop-all:
     just stop-node $i
   done
 
+# Stop node for a specific env
 stop-node ENV:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -682,6 +722,7 @@ stop-node ENV:
     rm -f "$STATEDIR/node-{{ENV}}.pid" "$STATEDIR/node-{{ENV}}.socket"
   fi
 
+# Diff against cardano-parts template
 template-diff FILE *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -701,6 +742,7 @@ template-diff FILE *ARGS:
 
   eval "icdiff -L {{FILE}} -L \"$SRC_NAME\" {{ARGS}} $FILE $SRC_FILE"
 
+# Patch against cardano-parts template
 template-patch FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -719,6 +761,7 @@ template-patch FILE:
   patch "{{FILE}}" < <(echo "$PATCH_FILE")
   git add -p "{{FILE}}"
 
+# Run tofu for cluster or grafana workspace
 tofu *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -748,6 +791,62 @@ tofu *ARGS:
   tofu workspace select -or-create "$WORKSPACE"
   tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
 
+# Truncate a select chain after slot
+truncate-chain ENV SLOT:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  [ -n "${DEBUG:-}" ] && set -x
+  {{stateDir}}
+
+  if ! [[ "{{ENV}}" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet and shelley-qa are supported for truncate-chain recipe"
+    exit 1
+  fi
+
+  if ! [ -d "$STATEDIR/db-{{ENV}}/node" ]; then
+    echo "Error: no chain state appears to exist for {{ENV}} at: $STATEDIR/db-{{ENV}}/node"
+    exit 1
+  fi
+
+  echo "Truncating cardano-node chain for envrionment {{ENV}} to slot {{SLOT}}"
+  just stop-node {{ENV}}
+  mkdir -p "$STATEDIR"
+
+  SYNTH_ARGS=(
+    "--db" "$STATEDIR/db-{{ENV}}/node/"
+    "cardano"
+    "--config" "$STATEDIR/config/{{ENV}}/config.json"
+  )
+
+  TRUNC_ARGS=(
+    "${SYNTH_ARGS[@]}"
+    "--truncate-after-slot" "{{SLOT}}"
+  )
+
+  nix run .#job-gen-env-config &> /dev/null
+  if [[ "{{ENV}}" =~ mainnet$|preprod$|preview$ ]]; then
+    cp result/environments/config/{{ENV}}/*  "$STATEDIR/config/{{ENV}}/"
+    chmod -R +w "$STATEDIR/config/{{ENV}}/"
+    db-truncater "${TRUNC_ARGS[@]}"
+
+    echo "Truncation finished."
+    echo "Analyzing to confirm truncation.  This may take some time..."
+    db-analyser "${SYNTH_ARGS[@]}"
+  else
+    cp result/environments-pre/config/{{ENV}}/*  "$STATEDIR/config/{{ENV}}/"
+    chmod -R +w "$STATEDIR/config/{{ENV}}/"
+    db-truncater-ng "${TRUNC_ARGS[@]}"
+
+    echo "Truncation finished."
+    echo "Analyzing to confirm truncation.  This may take some time..."
+    db-analyser-ng "${SYNTH_ARGS[@]}"
+  fi
+
+  echo
+  echo "Note that db-truncater does not produce exact results."
+  echo "If the chain is still longer then you want, try reducing the truncation slot more."
+
+# Update cluster ips from tofu
 update-ips:
   #!/usr/bin/env nu
   nix build ".#opentofu.cluster" --out-link terraform.tf.json
@@ -817,6 +916,7 @@ update-ips:
   echo "Ips have been written to: flake/nixosModules/ips-DONT-COMMIT.nix"
   echo "Obviously, don't commit this file."
 
+# Generate example ip-module code
 update-ips-example:
   #!/usr/bin/env bash
   set -euo pipefail
