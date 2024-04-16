@@ -377,11 +377,11 @@
                         if [ "${boolToString cfgMithril.verifySnapshotSignature}" == "true" ]; then
                           if [ "$DIGEST" = "latest" ]; then
                             # If digest is "latest" search through all available recent snaps for signing verification.
-                            SNAPSHOTS_JSON=$(mithril-client snapshot list --json)
+                            SNAPSHOTS_JSON=$(mithril-client cardano-db snapshot list --json)
                             HASHES=$(jq -r '.[] | .certificate_hash' <<< "$SNAPSHOTS_JSON")
                           else
                             # Otherwise, only attempt the specifically declared snapshot digest
-                            SNAPSHOTS_JSON=$(mithril-client snapshot show "$DIGEST" --json | jq -s)
+                            SNAPSHOTS_JSON=$(mithril-client cardano-db snapshot show "$DIGEST" --json | jq -s)
                             HASHES=$(jq -r --arg DIGEST "$DIGEST" '.[] | select(.digest == $DIGEST) | .certificate_hash' <<< "$SNAPSHOTS_JSON")
                           fi
 
@@ -425,7 +425,7 @@
                         mithril-client --version
                         mithril-client \
                           -vvv \
-                          snapshot \
+                          cardano-db \
                           download \
                           "$DIGEST" \
                           --download-dir "$TMPSTATE" \

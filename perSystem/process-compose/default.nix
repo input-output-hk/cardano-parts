@@ -136,17 +136,18 @@ flake @ {inputs, ...}: {
             AGGREGATOR_ENDPOINT="${mithrilAggregatorEndpointUrl}"
             export AGGREGATOR_ENDPOINT
 
+            CONTINUE="true"
             TMPSTATE="''${DB_DIR}-mithril"
             rm -rf "$TMPSTATE"
 
             if [ "''${MITHRIL_VERIFY_SNAPSHOT_${env}:-true}" == "true" ]; then
               if [ "$DIGEST" = "latest" ]; then
                 # If digest is "latest" search through all available recent snaps for signing verification.
-                SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" snapshot list --json)
+                SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" cardano-db snapshot list --json)
                 HASHES=$(jq -r '.[] | .certificate_hash' <<< "$SNAPSHOTS_JSON")
               else
                 # Otherwise, only attempt the specifically declared snapshot digest
-                SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" snapshot show "$DIGEST" --json | jq -s)
+                SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" cardano-db snapshot show "$DIGEST" --json | jq -s)
                 HASHES=$(jq -r --arg DIGEST "$DIGEST" '.[] | select(.digest == $DIGEST) | .certificate_hash' <<< "$SNAPSHOTS_JSON")
               fi
 
@@ -182,23 +183,25 @@ flake @ {inputs, ...}: {
                 echo "Of the $SNAPSHOTS_COUNT mithril snapshots examined, none were signed by any of the verifying pools:"
                 echo "$VERIFYING_POOLS" | tr '|' '\n'
                 echo "Mithril snapshot usage will be skipped."
-                exit 0
+                CONTINUE="false"
               fi
             fi
 
-            echo "Bootstrapping cardano-node state from mithril"
-            echo "To disable mithril syncing, set MITHRIL_DISABLE or MITHRIL_DISABLE_${env} env vars"
-            "$MITHRIL_CLIENT" --version
-            "$MITHRIL_CLIENT" \
-              -vvv \
-              snapshot \
-              download \
-              "$DIGEST" \
-              --download-dir "$TMPSTATE" \
-              --genesis-verification-key "${mithrilGenesisVerificationKey}"
-            mv "$TMPSTATE/db" "$DB_DIR"
-            rm -rf "$TMPSTATE"
-            echo "Mithril bootstrap complete for $DB_DIR"
+            if [ "$CONTINUE" = "true" ]; then
+              echo "Bootstrapping cardano-node state from mithril"
+              echo "To disable mithril syncing, set MITHRIL_DISABLE or MITHRIL_DISABLE_${env} env vars"
+              "$MITHRIL_CLIENT" --version
+              "$MITHRIL_CLIENT" \
+                -vvv \
+                cardano-db \
+                download \
+                "$DIGEST" \
+                --download-dir "$TMPSTATE" \
+                --genesis-verification-key "${mithrilGenesisVerificationKey}"
+              mv "$TMPSTATE/db" "$DB_DIR"
+              rm -rf "$TMPSTATE"
+              echo "Mithril bootstrap complete for $DB_DIR"
+            fi
           fi
         fi
       '';

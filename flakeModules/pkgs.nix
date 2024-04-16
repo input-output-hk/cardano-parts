@@ -431,10 +431,10 @@ in
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
-            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2408-0-pre-5afc6fc {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2408-0-pre-5afc6fc {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2408-0-pre-5afc6fc {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2408-0-pre-5afc6fc {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2412-0-pre-2e462c0 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2412-0-pre-2e462c0 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2412-0-pre-2e462c0 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2412-0-pre-2e462c0 {meta.mainProgram = "mithril-signer";}))
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
@@ -487,7 +487,7 @@ in
             db-analyser-ng = mkWrapper "db-analyser-ng" cfgPkgs.db-analyser-ng;
             db-synthesizer-ng = mkWrapper "db-synthesizer-ng" cfgPkgs.db-synthesizer-ng;
             db-truncater-ng = mkWrapper "db-truncater-ng" cfgPkgs.db-truncater-ng;
-            mithril-client-cli-ng = mkWrapper "mithril-client-cli-ng" cfgPkgs.mithril-client-cli-ng;
+            mithril-client-cli-ng = mkWrapper "mithril-client-ng" cfgPkgs.mithril-client-cli-ng;
             mithril-signer-ng = mkWrapper "mithril-signer-ng" cfgPkgs.mithril-signer-ng;
           };
         };
