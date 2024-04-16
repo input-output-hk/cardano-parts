@@ -5,6 +5,7 @@ AWS_REGION := 'eu-central-1'
 downstreamPath := env_var_or_default("DOWNSTREAM_PATH","no-path-given")
 templatePath := 'templates/cardano-parts-project'
 
+# List all just recipes available
 default:
   @just --list
 
@@ -48,13 +49,16 @@ downstream-patch FILE:
   patch "{{templatePath}}/{{FILE}}" < <(echo "$PATCH_FILE")
   git add -p "{{templatePath}}/{{FILE}}"
 
+# Standard code lint
 lint:
   deadnix -f
   statix check
 
+# Show nix flake details
 show-flake *ARGS:
   nix flake show --allow-import-from-derivation {{ARGS}}
 
+# Update the aws ec2 flakeModule spec
 update-aws-ec2-spec AWS_PROFILE region=AWS_REGION:
   #!/usr/bin/env nu
   # To describe instance types, any valid aws profile can be provided
