@@ -311,6 +311,18 @@ flake: {
                         ];
                       })
 
+                      # Metrics exporter: mithril-signer
+                      (mkIf (cfgSvc ? mithril-signer && cfgSvc.mithril-signer.enable && cfgSvc.mithril-signer.enableMetrics) {
+                        job_name = "integrations/mithril-signer";
+                        metrics_path = "/metrics";
+                        static_configs = [
+                          {
+                            inherit labels;
+                            targets = ["${cfgSvc.mithril-signer.metricsAddress}:${toString cfgSvc.mithril-signer.metricsPort}"];
+                          }
+                        ];
+                      })
+
                       # Metrics exporter: cardano-smash
                       (mkIf (cfgSvc ? cardano-smash) {
                         job_name = "integrations/cardano-smash";

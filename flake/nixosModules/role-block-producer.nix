@@ -4,6 +4,9 @@
 #
 # Attributes available on nixos module import:
 #   config.services.mithril-signer.enable
+#   config.services.mithril-signer.enableMetrics
+#   config.services.mithril-signer.metricsAddress
+#   config.services.mithril-signer.metricsPort
 #   config.services.mithril-signer.relayEndpoint
 #   config.services.mithril-signer.relayPort
 #   config.services.mithril-signer.useRelay
@@ -20,7 +23,7 @@ flake: {
     ...
   }:
     with builtins; let
-      inherit (lib) getExe mkIf mkForce mkOption optionals optionalAttrs types;
+      inherit (lib) boolToString getExe mkIf mkForce mkOption optionals optionalAttrs types;
       inherit (types) bool port str;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
@@ -109,6 +112,24 @@ flake: {
           description = "Enable this block producer to also run a mithril signer.";
         };
 
+        enableMetrics = mkOption {
+          type = bool;
+          default = true;
+          description = "Enable mithril-signer's built in prometheus metrics server.";
+        };
+
+        metricsAddress = mkOption {
+          type = str;
+          default = "127.0.0.1";
+          description = "Set the address to serve mithril-signer's built in prometheus metrics server.";
+        };
+
+        metricsPort = mkOption {
+          type = port;
+          default = 9090;
+          description = "Set the port address to serve mithril-signer's built in prometheus metrics server.";
+        };
+
         relayEndpoint = mkOption {
           type = str;
           default = null;
@@ -164,9 +185,12 @@ flake: {
               CARDANO_NODE_SOCKET_PATH = nodeCfg.socketPath 0;
               DATA_STORES_DIRECTORY = "/var/lib/mithril-signer/stores";
               DB_DIRECTORY = nodeCfg.databasePath 0;
+              ENABLE_METRICS_SERVER = boolToString mithrilCfg.enableMetrics;
               ERA_READER_ADAPTER_PARAMS = era_reader_adapter_params;
               ERA_READER_ADAPTER_TYPE = era_reader_adapter_type;
               KES_SECRET_KEY_PATH = sopsPath "cardano-node-kes-signing";
+              METRICS_SERVER_IP = mithrilCfg.metricsAddress;
+              METRICS_SERVER_PORT = toString mithrilCfg.metricsPort;
               NETWORK = network;
               OPERATIONAL_CERTIFICATE_PATH = sopsPath "cardano-node-operational-cert";
               RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
@@ -264,7 +288,7 @@ flake: {
                       fi
                   done < <(jq -r '.[] | .hash' <<< "$CERTIFICATES_RESPONSE")
 
-                  echo "Of the $CERTIFICATES_COUNT most recent certificates, $SIGNED have been signed this pool"
+                  echo "Of the $CERTIFICATES_COUNT most recent certificates, $SIGNED have been signed by this pool"
 
                   if [ "$SIGNED" -eq "0" ]; then
                     exit 1
