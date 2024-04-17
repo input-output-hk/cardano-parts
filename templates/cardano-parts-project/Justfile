@@ -108,10 +108,10 @@ apply-all *ARGS:
 build-book-prod:
   #!/usr/bin/env bash
   set -e
-  cd docs
+  cd mdbook
   ln -sf book-prod.toml book.toml
   cd -
-  mdbook build docs/
+  mdbook build mdbook/
   echo
   nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
 
@@ -119,10 +119,10 @@ build-book-prod:
 build-book-staging:
   #!/usr/bin/env bash
   set -e
-  cd docs
+  cd mdbook
   ln -sf book-staging.toml book.toml
   cd -
-  mdbook build docs/
+  mdbook build mdbook/
   echo
   nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
 
