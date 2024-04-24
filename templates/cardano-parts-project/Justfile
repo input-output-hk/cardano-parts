@@ -105,6 +105,10 @@ apply *ARGS:
 apply-all *ARGS:
   colmena apply --verbose {{ARGS}}
 
+# Deploy select machines with the bootstrap key
+apply-bootstrap *ARGS:
+  SSH_CONFIG=<(sed '6i IdentityFile .ssh_key' .ssh_config) colmena apply --verbose --on {{ARGS}}
+
 # Build the prod cardano book
 build-book-prod:
   #!/usr/bin/env bash
