@@ -1,4 +1,5 @@
-import? 'scripts/custom-recipes.just'
+import? 'scripts/recipes-aws.just'
+import? 'scripts/recipes-custom.just'
 
 set shell := ["bash", "-uc"]
 set positional-arguments
