@@ -27,7 +27,7 @@ flake: {
       opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
       mkSopsSecretParams = secretName: {
-        inherit groupOutPath groupName secretName;
+        inherit groupOutPath groupName name secretName;
         keyName = secretName + ".enc";
         # Setting grafana-agent service to a non-dynamic user allows constraining the secrets file to non-root ownership
         fileOwner = "grafana-agent";

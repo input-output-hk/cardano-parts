@@ -55,7 +55,7 @@ flake: {
       bulkCredentials = "${name}-bulk.creds";
 
       mkSopsSecretParams = secretName: keyName: {
-        inherit groupOutPath groupName secretName keyName pathPrefix;
+        inherit groupOutPath groupName name secretName keyName pathPrefix;
         fileOwner = "cardano-node";
         fileGroup = "cardano-node";
         reloadUnits = optionals (nodeCfg.useSystemdReload && nodeCfg.useNewTopology) ["cardano-node.service"];

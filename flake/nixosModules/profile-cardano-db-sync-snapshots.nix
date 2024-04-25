@@ -42,7 +42,7 @@ flake: {
       opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
       mkSopsSecretParams = secretName: keyName: {
-        inherit groupOutPath groupName secretName keyName;
+        inherit groupOutPath groupName name secretName keyName;
         fileOwner = cfg.user;
         fileGroup = cfg.group;
         restartUnits = ["cardano-db-sync-snapshots.service"];
