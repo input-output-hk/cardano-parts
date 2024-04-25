@@ -9,12 +9,12 @@
         ## Intended usage
         For new cardano clusters which will leverage the shared flake and nixOS modules of cardano-parts.
 
-        ## More info
+        ## Instructions and Info
 
-        See the following READMEs:
+        See the following READMEs in the order provided:
 
         * cardano-parts: [https://github.com/input-output-hk/cardano-parts/blob/main/README.md](https://github.com/input-output-hk/cardano-parts/blob/main/README.md)
-        * The new cardano-parts project default README at flake/README.md
+        * The new cardano-parts project default README.md
       '';
     };
   };
