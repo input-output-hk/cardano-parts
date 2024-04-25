@@ -48,6 +48,8 @@
           then []
           else p2pEdgeNodes cfg.edgeNodes;
 
+        empty = [];
+
         list = topoList {inherit (cfg) nodes nodeList;};
 
         infix = topoInfixFiltered {
@@ -332,13 +334,13 @@
           };
 
           producerTopologyFn = mkOption {
-            type = enum ["edge" "infix" "list" "simple" "simpleMax"];
+            type = enum ["edge" "empty" "infix" "list" "simple" "simpleMax"];
             default = "simple";
             description = "The topology function to use for producers.";
           };
 
           publicProducerTopologyFn = mkOption {
-            type = enum ["edge" "infix" "list" "simple" "simpleMax"];
+            type = enum ["edge" "empty" "infix" "list" "simple" "simpleMax"];
             default = "edge";
             description = "The topology function to use for public producers.";
           };
