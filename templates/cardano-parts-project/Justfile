@@ -55,7 +55,7 @@ checkEnvWithoutOverride := '''
 
 checkSshConfig := '''
   if not ('.ssh_config' | path exists) {
-    print "Please run tofu first to create the .ssh_config file"
+    print "Please run `just save-ssh-config` first to create the .ssh_config file"
     exit 1
   }
 '''
