@@ -482,7 +482,7 @@ in {
             NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
             # Generate stake delegation certificate
-            "''${CARDANO_CLI[@]}" stake-address stake-delegation-certificate \
+            "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
               --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
               --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
               --out-file "$POOL_NAME"-reward-delegation.cert
@@ -605,7 +605,7 @@ in {
                   --out-file "$POOL_NAME"-reward-registration.cert
               fi
 
-              "''${CARDANO_CLI[@]}" stake-address stake-delegation-certificate \
+              "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
                 --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-delegation.cert
