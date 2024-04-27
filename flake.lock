@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1713549217,
-        "narHash": "sha256-abysJm6RaCcZZXzUN1bA0vDEK5hLSZSaIThCouugOpI=",
+        "lastModified": 1714243381,
+        "narHash": "sha256-bTBG8Hb/SZnrhoJjq5ljYr8Cdf7Abde2FLC8O5o3cH8=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "cf5d4e0b964e94f5d28f4bfb029317ab2f3ac571",
+        "rev": "0b59eca7d21dc5a852e8508d44e3d91e80f628d4",
         "type": "github"
       },
       "original": {
@@ -174,16 +174,16 @@
     "cardano-db-sync-schema": {
       "flake": false,
       "locked": {
-        "lastModified": 1707925775,
-        "narHash": "sha256-z3YUrUImpV/wmJi+pfw6YuhBw+2Xd3jGlSWk7WI69/4=",
+        "lastModified": 1713466238,
+        "narHash": "sha256-ydvcYNfVoqsMhLqg4/zSDoCkltWdMjsD0fXhp2nIuQs=",
         "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
-        "rev": "ed3dc8bbb79f07c26ec43f10bad661b0bef3b915",
+        "rev": "1f26396e91a0124a545201d4c6519d015b24fa6e",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "13.2.0.1",
+        "ref": "13.2.0.2",
         "repo": "cardano-db-sync",
         "type": "github"
       }
@@ -208,16 +208,16 @@
     "cardano-db-sync-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1707925775,
-        "narHash": "sha256-z3YUrUImpV/wmJi+pfw6YuhBw+2Xd3jGlSWk7WI69/4=",
+        "lastModified": 1713466238,
+        "narHash": "sha256-ydvcYNfVoqsMhLqg4/zSDoCkltWdMjsD0fXhp2nIuQs=",
         "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
-        "rev": "ed3dc8bbb79f07c26ec43f10bad661b0bef3b915",
+        "rev": "1f26396e91a0124a545201d4c6519d015b24fa6e",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "13.2.0.1",
+        "ref": "13.2.0.2",
         "repo": "cardano-db-sync",
         "type": "github"
       }

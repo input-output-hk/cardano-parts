@@ -26,21 +26,21 @@ flake @ {inputs, ...}: {
     envBinCfgs = {
       mainnet = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isMithrilNg = false;
         isNodeNg = false;
         magic = getMagic "mainnet";
       };
       preprod = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isMithrilNg = false;
         isNodeNg = false;
         magic = getMagic "preprod";
       };
       preview = {
         isCardanoLibNg = false;
-        isDbsyncNg = true;
+        isDbsyncNg = false;
         isMithrilNg = false;
         isNodeNg = false;
         magic = getMagic "preview";
