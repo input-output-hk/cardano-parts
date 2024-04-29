@@ -45,6 +45,7 @@ with lib; rec {
     .cardanoLib;
 
   mkSopsSecret = {
+    name ? "unknown",
     secretName,
     keyName,
     groupOutPath,

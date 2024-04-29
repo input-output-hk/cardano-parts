@@ -40,7 +40,7 @@ flake: {
     sops.secrets = mkSopsSecret {
       secretName = "cardano-faucet.json";
       keyName = "${name}-faucet.json";
-      inherit groupOutPath groupName;
+      inherit groupOutPath groupName name;
       fileOwner = "cardano-faucet";
       fileGroup = "cardano-faucet";
       restartUnits = ["cardano-faucet.service"];

@@ -482,7 +482,7 @@ in {
             NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
             # Generate stake delegation certificate
-            "''${CARDANO_CLI[@]}" stake-address stake-delegation-certificate \
+            "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
               --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
               --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
               --out-file "$POOL_NAME"-reward-delegation.cert
@@ -527,7 +527,7 @@ in {
 
         job-register-stake-pools = writeShellApplication {
           name = "job-register-stake-pools";
-          runtimeInputs = stdPkgs;
+          runtimeInputs = stdPkgs ++ [pkgs.curl];
           text = ''
             # Inputs:
             #   [$DEBUG]
@@ -535,6 +535,8 @@ in {
             #   [$ERA_CMD]
             #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
+            #   [$POOL_METADATA_BASE_URL]
+            #   [$POOL_METADATA_URL]
             #   $POOL_NAMES
             #   [$POOL_PLEDGE]
             #   $POOL_RELAY
@@ -549,6 +551,7 @@ in {
             [ -n "''${DEBUG:-}" ] && set -x
 
             export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
+            METADATA_ARGS=()
 
             ${secretsFns}
             ${selectCardanoCli}
@@ -581,6 +584,15 @@ in {
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
               NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
+              if [ -n "''${POOL_METADATA_BASE_URL:-}" ]; then
+                POOL_METADATA_URL="$POOL_METADATA_BASE_URL/$POOL_NAME.json"
+                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI[@]}" stake-pool metadata-hash --pool-metadata-file /dev/stdin)
+                METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
+              elif [ -n "''${POOL_METADATA_URL:-}" ]; then
+                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI[@]}" stake-pool metadata-hash --pool-metadata-file /dev/stdin)
+                METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
+              fi
+
               # Generate stake registration and delegation certificate
               "''${CARDANO_CLI[@]}" stake-address registration-certificate \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
@@ -593,7 +605,7 @@ in {
                   --out-file "$POOL_NAME"-reward-registration.cert
               fi
 
-              "''${CARDANO_CLI[@]}" stake-address stake-delegation-certificate \
+              "''${CARDANO_CLI[@]}" stake-address delegation-certificate \
                 --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-delegation.cert
@@ -609,6 +621,7 @@ in {
                 --pool-relay-port "$POOL_RELAY_PORT" \
                 --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                 --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
+                "''${METADATA_ARGS[@]}" \
                 --out-file "$POOL_NAME"-registration.cert
             done
 

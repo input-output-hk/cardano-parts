@@ -538,7 +538,7 @@ flake: {
         sops.secrets = mkSopsSecret {
           secretName = "cardano-metadata-webhook";
           keyName = "${name}-metadata-webhook";
-          inherit groupOutPath groupName;
+          inherit groupOutPath groupName name;
           fileOwner = "metadata-webhook";
           fileGroup = "metadata-webhook";
           restartUnits = ["metadata-webhook.service"];

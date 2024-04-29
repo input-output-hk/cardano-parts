@@ -25,6 +25,7 @@ flake: {
     config,
     lib,
     pkgs,
+    name,
     ...
   }: let
     inherit (builtins) concatStringsSep;
@@ -38,7 +39,7 @@ flake: {
     opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
 
     mkSopsSecretParams = secretName: keyName: {
-      inherit keyName groupOutPath groupName secretName;
+      inherit keyName groupOutPath groupName name secretName;
       fileOwner = "cardano-node";
       fileGroup = "cardano-node";
       pathPrefix =

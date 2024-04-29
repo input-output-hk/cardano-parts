@@ -7,19 +7,22 @@
   <br />
 </p>
 
-Cardano is a decentralized third-generation proof-of-stake blockchain platform and home to the ada cryptocurrency.
-It is the first blockchain platform to evolve out of a scientific philosophy and a research-first driven approach.
+Cardano is a decentralized third-generation proof-of-stake blockchain platform
+and home to the ada cryptocurrency. It is the first blockchain platform to
+evolve out of a scientific philosophy and a research-first driven approach.
 
 # Cardano Parts
 
-The cardano-parts project serves as the common code repository for deploying cardano networks.
-It utilizes [flake-parts](https://flake.parts/) and provides nixosModules and
-flakeModules to downstream consumers, such as
+The cardano-parts project serves as the common code repository for deploying
+cardano networks. It utilizes [flake-parts](https://flake.parts/) and provides
+nixosModules and flakeModules to downstream consumers, such as
 [cardano-playground](https://github.com/input-output-hk/cardano-playground).
 
-Multiple cardano networks can be defined and deployed from within a single downstream repository.
+Multiple cardano networks can be defined and deployed from within a single
+downstream repository.
 
-Various nixos modules are provided which support cardano network deployments including roles of:
+Various nixos modules are provided which support cardano network deployments
+including roles of:
 
     cardano-node
     cardano-db-sync
@@ -53,4 +56,5 @@ Update the following files in the `<NEW_DIRECTORY>`:
     flake/cloudFormation/terraformState.nix
     flake/opentofu/cluster.nix
 
-Continue following the [README](templates/cardano-parts-project/README.md) found in your <NEW_DIRECTORY>.
+Continue following the [README](templates/cardano-parts-project/README.md)
+found in your <NEW_DIRECTORY> and customize it as desired.

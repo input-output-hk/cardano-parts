@@ -241,6 +241,7 @@ in
                 description = mdDoc "Minimal devShell";
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
+                    alejandra
                     deadnix
                     diffutils
                     fd

@@ -1,5 +1,14 @@
 import json
+import os
 import subprocess
+
+def cardanoCliStr() -> str:
+    if(os.getenv('USE_SHELL_BINS') == "true"):
+        return("cardano-cli")
+    elif(os.getenv('UNSTABLE') == "true"):
+        return("cardano-cli-ng")
+    else:
+        return("cardano-cli")
 
 def createTransaction(start, end, txin, payments_txouts, utxo_address, utxo_signing_key_str, *network_args) -> tuple:
     payments_txout_args = []
@@ -17,7 +26,7 @@ def createTransaction(start, end, txin, payments_txouts, utxo_address, utxo_sign
     tx_out_amount = int(txin[1]) - 0 - total_payments_spent
 
     p = subprocess.run([
-        "cardano-cli", "transaction", "build-raw",
+        cardanoCliStr(), "transaction", "build-raw",
         "--out-file", f"{tx_prefix}.txbody",
         "--tx-in", txin_str,
         "--tx-out", f"{utxo_address}+{tx_out_amount}",
@@ -32,7 +41,7 @@ def createTransaction(start, end, txin, payments_txouts, utxo_address, utxo_sign
         raise Exception("Not enough funds")
 
     p = subprocess.run([
-        "cardano-cli", "transaction", "build-raw",
+        cardanoCliStr(), "transaction", "build-raw",
         "--out-file", f"{tx_prefix}.txbody",
         "--tx-in", txin_str,
         "--tx-out", f"{utxo_address}+{tx_out_amount}",
@@ -42,14 +51,15 @@ def createTransaction(start, end, txin, payments_txouts, utxo_address, utxo_sign
 
     signed_tx = signTx(tx_prefix, utxo_signing_key_str)
 
-    p = subprocess.run(["cardano-cli", "transaction", "txid", "--tx-file", signed_tx], capture_output=True, text=True)
+    p = subprocess.run([cardanoCliStr(), "transaction", "txid", "--tx-file", signed_tx], capture_output=True, text=True)
     new_txin = p.stdout.rstrip()
     return (f"{new_txin}#0", tx_out_amount, fee)
 
 
 def estimateFeeTx(txbody, txin_count, txout_count, pparams) -> int:
     cmd = [
-        "cardano-cli", "transaction", "calculate-min-fee",
+        cardanoCliStr(), "transaction", "calculate-min-fee",
+        "--reference-script-size", "0",
         "--tx-in-count", str(txin_count),
         "--tx-out-count", str(txout_count),
         "--witness-count", "1",
@@ -72,7 +82,7 @@ def getAccountsFromFile(filename) -> list:
 
 
 def getLargestUtxoForAddress(address, *network_args) -> tuple:
-    subprocess.run(["cardano-cli", "query", "utxo", "--out-file", "tmp_utxo.json", *network_args, "--address", address])
+    subprocess.run([cardanoCliStr(), "query", "utxo", "--out-file", "tmp_utxo.json", *network_args, "--address", address])
     f = open("tmp_utxo.json")
     utxo = json.load(f)
     f.close()
@@ -95,13 +105,13 @@ def getLargestUtxoForAddress(address, *network_args) -> tuple:
 
 
 def getPParams(*network_args) -> str:
-    p = subprocess.Popen(["cardano-cli", "query", "protocol-parameters", *network_args, "--out-file", "pparams.json"])
+    p = subprocess.Popen([cardanoCliStr(), "query", "protocol-parameters", *network_args, "--out-file", "pparams.json"])
     p.wait()
     return "pparams.json"
 
 
 def getTTL(*network_args, addnl_sec=3600) -> int:
-    p = subprocess.run(["cardano-cli", "query", "tip", *network_args], capture_output=True, text=True)
+    p = subprocess.run([cardanoCliStr(), "query", "tip", *network_args], capture_output=True, text=True)
     if p.returncode != 0:
         print(p.stderr)
         raise Exception("Unknown error getting ttl")
