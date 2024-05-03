@@ -415,6 +415,7 @@ in
             (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-9-2-424983f")
             (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-10-1-pre-1ffe4a5")
             (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-8-9-2-424983f")
+            (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-8-10-1-pre-1ffe4a5")
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-03-01-d372d86
               // {
                 pname = "cardano-wallet";
@@ -484,6 +485,7 @@ in
             cardano-node-ng = mkWrapper "cardano-node-ng" cfgPkgs.cardano-node-ng;
             cardano-smash-ng = mkWrapper "cardano-smash-ng" cfgPkgs.cardano-smash-ng;
             cardano-submit-api-ng = mkWrapper "cardano-submit-api-ng" cfgPkgs.cardano-submit-api-ng;
+            cardano-tracer-ng = mkWrapper "cardano-tracer-ng" cfgPkgs.cardano-tracer-ng;
             db-analyser-ng = mkWrapper "db-analyser-ng" cfgPkgs.db-analyser-ng;
             db-synthesizer-ng = mkWrapper "db-synthesizer-ng" cfgPkgs.db-synthesizer-ng;
             db-truncater-ng = mkWrapper "db-truncater-ng" cfgPkgs.db-truncater-ng;
