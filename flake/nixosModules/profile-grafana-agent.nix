@@ -388,18 +388,28 @@ flake: {
                     ]
                     # Metrics exporter: cardano-node
                     ++ optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable)
-                    (map (i: {
-                      job_name = let
-                        serviceName = i:
-                          if i == 0
-                          then "cardano-node"
-                          else "cardano-node-${toString i}";
-                      in "integrations/${serviceName i}";
-                      metrics_path = "/metrics";
+                    (map (i: let
+                      metrics_path =
+                        if cfgSvc.cardano-node.useLegacyTracing
+                        then "/metrics"
+                        else "/${(cfgSvc.cardano-node.extraNodeInstanceConfig i).TraceOptionNodeName}";
+
+                      serviceName = i:
+                        if i == 0
+                        then "cardano-node"
+                        else "cardano-node-${toString i}";
+
+                      targets =
+                        if cfgSvc.cardano-node.useLegacyTracing
+                        then ["${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"]
+                        else ["${hostAddr}:${toString cardanoNodePrometheusExporterPort}"];
+                    in {
+                      inherit metrics_path;
+                      job_name = "integrations/${serviceName i}";
                       static_configs = [
                         {
+                          inherit targets;
                           labels = labels // {instanceNum = i;};
-                          targets = ["${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"];
                         }
                       ];
                     }) (range 0 (cfgSvc.cardano-node.instances - 1)));
