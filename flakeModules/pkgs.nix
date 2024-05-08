@@ -18,6 +18,8 @@
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
 #   flake.cardano-parts.pkgs.special.cardano-node-service-ng
+#   flake.cardano-parts.pkgs.special.cardano-tracer-service
+#   flake.cardano-parts.pkgs.special.cardano-tracer-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
@@ -296,6 +298,18 @@
         type = str;
         description = mdDoc "The cardano-parts default cardano-smash-service import path string.";
         default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/smash-service.nix";
+      };
+
+      cardano-tracer-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-tracer-service import path string.";
+        default = "${localFlake.inputs.cardano-node-service}/nix/nixos/cardano-tracer-service.nix";
+      };
+
+      cardano-tracer-service-ng = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-tracer-service-ng import path string.";
+        default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos/cardano-tracer-service.nix";
       };
     };
   };

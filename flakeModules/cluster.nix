@@ -38,6 +38,8 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service-ng
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-smash-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-tracer-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-tracer-service-ng
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.domain
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.environmentName
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.hostsList
@@ -52,6 +54,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node-pkgs
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-smash
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-submit-api
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-tracer
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.mithril-client-cli
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.mithril-signer
 #
@@ -458,6 +461,18 @@ flake @ {
         default = cfg.pkgs.special.cardano-smash-service;
       };
 
+      cardano-tracer-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-tracer-service import path string.";
+        default = cfg.pkgs.special.cardano-tracer-service;
+      };
+
+      cardano-tracer-service-ng = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-tracer-service-ng import path string.";
+        default = cfg.pkgs.special.cardano-tracer-service-ng;
+      };
+
       domain = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group domain.";
@@ -566,6 +581,12 @@ flake @ {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default cardano-submit-api package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api);
+      };
+
+      cardano-tracer = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-tracer package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-tracer);
       };
 
       mithril-client-cli = mkOption {

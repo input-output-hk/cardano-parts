@@ -17,6 +17,7 @@
 #   config.cardano-parts.perNode.meta.cardano-metadata-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
+#   config.cardano-parts.perNode.meta.cardano-tracer-service
 #   config.cardano-parts.perNode.meta.enableAlertCount
 #   config.cardano-parts.perNode.meta.enableDns
 #   config.cardano-parts.perNode.meta.hostAddr
@@ -197,6 +198,12 @@ flake @ {moduleWithSystem, ...}: {
           type = str;
           description = mdDoc "The cardano-smash-service import path string.";
           default = cfg.group.meta.cardano-smash-service;
+        };
+
+        cardano-tracer-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-tracer-service import path string.";
+          default = cfg.group.meta.cardano-tracer-service;
         };
 
         enableAlertCount = mkOption {
