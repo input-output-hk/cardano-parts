@@ -393,9 +393,9 @@ flake: {
                         ];
                       })
 
-                      # Metrics exporter: cardano-node-custom-metrics
-                      (mkIf (cfgSvc ? cardano-node-custom-metrics && cfgSvc.netdata.enable) {
-                        job_name = "integrations/cardano-node-custom-metrics";
+                      # Metrics exporter: cardano-custom-metrics
+                      (mkIf (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) {
+                        job_name = "integrations/cardano-custom-metrics";
                         metrics_path = "/api/v1/allmetrics";
                         params = {
                           format = ["prometheus"];
@@ -406,7 +406,7 @@ flake: {
                         static_configs = [
                           {
                             inherit labels;
-                            targets = ["${cfgSvc.cardano-node-custom-metrics.address}:${toString cfgSvc.cardano-node-custom-metrics.port}"];
+                            targets = ["${cfgSvc.cardano-custom-metrics.address}:${toString cfgSvc.cardano-custom-metrics.port}"];
                           }
                         ];
                       })

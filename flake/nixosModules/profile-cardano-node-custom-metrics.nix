@@ -1,4 +1,4 @@
-# nixosModule: profile-cardano-node-custom-metrics
+# nixosModule: profile-cardano-custom-metrics
 #
 # TODO: Move this to a docs generator
 #
@@ -6,11 +6,11 @@
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
-#   * This module will acquire additional relevant metrics not provided by node and push them to a statsd server if available
+#   * This module will acquire additional cardano relevant metrics and push them to a statsd server if available
 #   * The upstream cardano-node nixos service module should still be imported separately
 #   * The cardano-parts profile-cardano-node-group nixosModule should still be imported separately
 {
-  flake.nixosModules.profile-cardano-node-custom-metrics = {
+  flake.nixosModules.profile-cardano-custom-metrics = {
     config,
     pkgs,
     lib,
@@ -22,9 +22,9 @@
     inherit (perNodeCfg.pkgs) cardano-cli;
 
     perNodeCfg = config.cardano-parts.perNode;
-    cfg = config.services.cardano-node-custom-metrics;
+    cfg = config.services.cardano-custom-metrics;
   in {
-    options.services.cardano-node-custom-metrics = {
+    options.services.cardano-custom-metrics = {
       address = mkOption {
         type = str;
         default = "localhost";
@@ -77,7 +77,7 @@
         };
       };
 
-      systemd.services.cardano-node-custom-metrics = {
+      systemd.services.cardano-custom-metrics = {
         path = with pkgs; [cardano-cli coreutils jq nmap];
         environment = {
           inherit
@@ -106,24 +106,24 @@
             return 0
           }
 
-          if CARDANO_PING_OUPUT=$(cardano-cli ping \
+          if CARDANO_NODE_PING_OUPUT=$(cardano-cli ping \
               --count=1 \
               --host=${hostAddr} \
               --port=${toString cardanoNodePort} \
               --magic="$TESTNET_MAGIC" \
               --quiet \
               --json); then
-            CARDANO_PING_LATENCY=$(jq '.pongs[-1].sample * 1000' <<< "$CARDANO_PING_OUPUT")
+            CARDANO_NODE_PING_LATENCY=$(jq '.pongs[-1].sample * 1000' <<< "$CARDANO_NODE_PING_OUPUT")
           fi
 
-          echo "cardano.node_ping_latency_ms:''${CARDANO_PING_LATENCY}|g"
-          statsd "cardano.node_ping_latency_ms:''${CARDANO_PING_LATENCY}|g"
+          echo "cardano.node_ping_latency_ms:''${CARDANO_NODE_PING_LATENCY}|g"
+          statsd "cardano.node_ping_latency_ms:''${CARDANO_NODE_PING_LATENCY}|g"
         '';
       };
 
-      systemd.timers.cardano-node-custom-metrics = {
+      systemd.timers.cardano-custom-metrics = {
         timerConfig = {
-          Unit = "cardano-node-custom-metrics.service";
+          Unit = "cardano-custom-metrics.service";
           OnCalendar = "minutely";
         };
         wantedBy = ["timers.target"];
