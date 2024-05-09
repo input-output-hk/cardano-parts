@@ -16,8 +16,8 @@
     lib,
     ...
   }: let
-    inherit (lib) mkOption;
-    inherit (lib.types) port str;
+    inherit (lib) mkIf mkOption;
+    inherit (lib.types) bool port str;
     inherit (perNodeCfg.meta) cardanoNodePort hostAddr;
     inherit (perNodeCfg.pkgs) cardano-cli;
 
@@ -31,6 +31,12 @@
         description = "The default netdata statsd listening binding for udp and tcp.";
       };
 
+      enableFilter = mkOption {
+        type = bool;
+        default = true;
+        description = "Whether to filter netdata metrics exported to prometheus.";
+      };
+
       filter = mkOption {
         type = str;
         default = "statsd_cardano*";
@@ -38,6 +44,12 @@
       };
 
       port = mkOption {
+        type = port;
+        default = 19999;
+        description = "The default netdata listening port.";
+      };
+
+      statsdPort = mkOption {
         type = port;
         default = 8125;
         description = "The default netdata statsd listening port.";
@@ -47,14 +59,22 @@
     config = {
       services.netdata = {
         enable = true;
-        configText = ''
-          [statsd]
-            bind to = udp:${cfg.address} tcp:${cfg.address}
-            default port = ${toString cfg.port}
 
-          [prometheus:exporter]
-            send charts matching = ${cfg.filter}
-        '';
+        config = {
+          web."default port" = cfg.port;
+
+          statsd = {
+            "bind to" = "udp:${cfg.address} tcp:${cfg.address}";
+            "default port" = cfg.statsdPort;
+          };
+        };
+
+        configDir = mkIf cfg.enableFilter {
+          "exporting.conf" = pkgs.writeText "exporting.conf" ''
+            [prometheus:exporter]
+              send charts matching = ${cfg.filter}
+          '';
+        };
       };
 
       systemd.services.cardano-node-custom-metrics = {
@@ -76,12 +96,12 @@
               UDP=
             fi
 
-            echo "Pushing statsd metrics to port: ${toString cfg.port}; udp=$UDP"
+            echo "Pushing statsd metrics to port: ${toString cfg.statsdPort}; udp=$UDP"
 
             while [ -n "''${1}" ]; do
               printf "%s\n" "''${1}"
               shift
-            done | ncat "''${UDP}" --send-only ${cfg.address} ${toString cfg.port} || return 1
+            done | ncat "''${UDP}" --send-only ${cfg.address} ${toString cfg.statsdPort} || return 1
 
             return 0
           }
@@ -96,8 +116,8 @@
             CARDANO_PING_LATENCY=$(jq '.pongs[-1].sample * 1000' <<< "$CARDANO_PING_OUPUT")
           fi
 
-          echo "cardano_ping_latency_ms:''${CARDANO_PING_LATENCY}|g"
-          statsd "cardano_ping_latency_ms:''${CARDANO_PING_LATENCY}|g"
+          echo "cardano.node_ping_latency_ms:''${CARDANO_PING_LATENCY}|g"
+          statsd "cardano.node_ping_latency_ms:''${CARDANO_PING_LATENCY}|g"
         '';
       };
 
