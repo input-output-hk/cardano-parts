@@ -16,7 +16,7 @@ flake: {
   }:
     with builtins;
     with lib; let
-      inherit (lib.types) bool str;
+      inherit (lib.types) bool enum str;
       inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
@@ -41,6 +41,12 @@ flake: {
     in {
       options = {
         services.grafana-agent = {
+          logLevel = mkOption {
+            type = enum ["debug" "info" "warn" "error"];
+            default = "info";
+            description = "The default log level for grafana agent";
+          };
+
           systemdUnitInclude = mkOption {
             type = str;
             default = "(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
@@ -142,6 +148,8 @@ flake: {
               }
             ];
           in {
+            server.log_level = cfg.logLevel;
+
             integrations = {
               agent = {
                 enabled = true;
@@ -384,7 +392,27 @@ flake: {
                           }
                         ];
                       })
-                      # ];
+
+                      # TODO: Uncomment once netdata filter issue is fixed
+                      # Ref: https://github.com/netdata/netdata/issues/17620
+                      #
+                      # Metrics exporter: cardano-node-custom-metrics
+                      # (mkIf (cfgSvc ? cardano-node-custom-metrics && cfgSvc.netdata.enable) {
+                      #   job_name = "integrations/cardano-node-custom-metrics";
+                      #   metrics_path = "/api/v1/allmetrics?filter=statsd_cardano*&format=prometheus";
+                      #   params = {
+                      #     format = ["prometheus"];
+                      #     # Filtering here won't work as grafana-agent encodes the pattern match.
+                      #     # Filtering can be configured from the module with the filter option.
+                      #     # filter = ["statsd_cardano*"];
+                      #   };
+                      #   static_configs = [
+                      #     {
+                      #       inherit labels;
+                      #       targets = ["${cfgSvc.cardano-node-custom-metrics.address}:${toString cfgSvc.cardano-node-custom-metrics.port}"];
+                      #     }
+                      #   ];
+                      # })
                     ]
                     # Metrics exporter: cardano-node
                     ++ optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable)
