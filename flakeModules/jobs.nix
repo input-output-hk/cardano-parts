@@ -18,7 +18,7 @@ in {
       opsLib = localFlake.cardano-parts.lib.opsLib pkgs;
 
       cfgPkgs = config.cardano-parts.pkgs;
-      stdPkgs = with pkgs; [age coreutils fd jq moreutils sops];
+      stdPkgs = with pkgs; [age coreutils fd gnused jq moreutils sops];
 
       # To support searching for sops config files from the target path rather than cwd up,
       # implement a userland solution until natively sops supported.
@@ -294,6 +294,118 @@ in {
             popd &> /dev/null
 
             fd --type file . "$GENESIS_DIR/envs/$ENV"/ --exec bash -c 'encrypt_check {}'
+          '';
+        };
+
+        job-gen-custom-node-config-data = writeShellApplication {
+          name = "job-gen-custom-node-config-data";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ENV]
+            #   [$ERA_CMD]
+            #   [$GENESIS_DIR]
+            #   [$NUM_GENESIS_KEYS]
+            #   [$SECURITY_PARAM]
+            #   [$SLOT_LENGTH]
+            #   [$START_TIME]
+            #   [$TEMPLATE_DIR]
+            #   [$TESTNET_MAGIC]
+            #   [$UNSTABLE]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
+            export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
+            export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
+            export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
+            export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+
+            if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
+              export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
+            else
+              export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix}/cardano-lib/testnet-template"}
+            fi
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            ENV="''${ENV:-custom}"
+
+            "''${CARDANO_CLI[@]}" genesis create-testnet-data \
+              --genesis-keys "$NUM_GENESIS_KEYS" \
+              --utxo-keys 1 \
+              --total-supply 45000000000000000 \
+              --delegated-supply 0 \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --spec-shelley "$TEMPLATE_DIR/shelley.json" \
+              --spec-alonzo "$TEMPLATE_DIR/alonzo.json" \
+              --spec-conway "$TEMPLATE_DIR/conway.json" \
+              --start-time "$START_TIME" \
+              --out-dir "$GENESIS_DIR"
+
+            ACTIVE_SLOT_COEFF="0.050"
+            EPOCH_LENGTH=$(perl -E "say ((10 * $SECURITY_PARAM) / $ACTIVE_SLOT_COEFF)")
+            SLOT_LENGTH_SEC=$(perl -E "say ($SLOT_LENGTH / 1000)")
+
+            sed -Ei "s/([[:blank:]]*\"activeSlotsCoeff\":)([[:blank:]]*[^,]*,)/\1 0.050,/" "$GENESIS_DIR/shelley-genesis.json"
+            sed -Ei "s/([[:blank:]]*\"epochLength\":)([[:blank:]]*[^,]*,)/\1 $EPOCH_LENGTH,/" "$GENESIS_DIR/shelley-genesis.json"
+            sed -Ei "s/([[:blank:]]*\"securityParam\":)([[:blank:]]*[^,]*)/\1 $SECURITY_PARAM/" "$GENESIS_DIR/shelley-genesis.json"
+            sed -Ei "s/([[:blank:]]*\"slotLength\":)([[:blank:]]*[^,]*,)/\1 $SLOT_LENGTH_SEC,/" "$GENESIS_DIR/shelley-genesis.json"
+
+            cp "$TEMPLATE_DIR/byron.json" "$GENESIS_DIR/byron-genesis.json"
+            cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
+            chmod +w "$GENESIS_DIR/byron-genesis.json" "$GENESIS_DIR/node-config.json"
+
+            for i in byron-genesis shelley-genesis alonzo-genesis conway-genesis node-config; do
+              jq -S < "$GENESIS_DIR/$i.json" | sponge "$GENESIS_DIR/$i.json"
+            done
+
+            # # TODO remove when genesis generator outputs non-extended-key format
+            # pushd "$GENESIS_DIR/genesis-keys" &> /dev/null
+            #   for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
+            #     mv shelley.00"$i".vkey shelley.00"$i".vkey-ext
+            #     "''${CARDANO_CLI[@]}" key non-extended-key \
+            #       --extended-verification-key-file shelley.00"$i".vkey-ext \
+            #       --verification-key-file shelley.00"$i".vkey
+            #   done
+            # popd &> /dev/null
+
+            # pushd "$GENESIS_DIR/delegate-keys" &> /dev/null
+            #   (for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
+            #     cat shelley.00"$i".{opcert.json,vrf.skey,kes.skey} | jq -s
+            #   done) | jq -s > bulk.creds.bft.json
+            #   chmod 0600 bulk.creds.bft.json
+            # popd &> /dev/null
+
+            # cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
+
+            # "''${CARDANO_CLI[@]}" address key-gen \
+            #   --signing-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.skey" \
+            #   --verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
+
+            # "''${CARDANO_CLI[@]}" address build \
+            #   --payment-verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey" \
+            #   --testnet-magic "$TESTNET_MAGIC" \
+            #   > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
+            #   chmod 0600 "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
+
+            # # Shape the genesis output directory to match secrets layout expected
+            # # by cardano-parts for environments and groups. This makes for easier
+            # # import of new environment secrets.
+            # pushd "$GENESIS_DIR" &> /dev/null
+            #   mkdir -p envs/"$ENV" rundir
+            #   mv delegate-keys envs/"$ENV"/
+            #   mv genesis-keys envs/"$ENV"/
+            #   mv utxo-keys envs/"$ENV"/
+            #   mv node-config.json ./*-genesis.json topology.json rundir/
+            # popd &> /dev/null
+
+            # fd --type file . "$GENESIS_DIR/envs/$ENV"/ --exec bash -c 'encrypt_check {}'
           '';
         };
 
