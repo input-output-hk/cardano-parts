@@ -18,7 +18,7 @@ in {
       opsLib = localFlake.cardano-parts.lib.opsLib pkgs;
 
       cfgPkgs = config.cardano-parts.pkgs;
-      stdPkgs = with pkgs; [age coreutils fd gnused jq moreutils sops];
+      stdPkgs = with pkgs; [age coreutils fd jq moreutils sops];
 
       # To support searching for sops config files from the target path rather than cwd up,
       # implement a userland solution until natively sops supported.
@@ -308,6 +308,8 @@ in {
             #   [$ENV]
             #   [$ERA_CMD]
             #   [$GENESIS_DIR]
+            #   [$INITIAL_FUNDS]
+            #   [$MAX_SUPPLY]
             #   [$NUM_GENESIS_KEYS]
             #   [$SECURITY_PARAM]
             #   [$SLOT_LENGTH]
@@ -337,10 +339,14 @@ in {
             ${selectCardanoCli}
 
             ENV="''${ENV:-custom}"
-            ACTIVE_SLOT_COEFF="0.050"
-            EPOCH_LENGTH=$(perl -E "say ((10 * $SECURITY_PARAM) / $ACTIVE_SLOT_COEFF)")
+            ACTIVE_SLOTS_COEFF="0.050"
+            EPOCH_LENGTH=$(perl -E "say ((10 * $SECURITY_PARAM) / $ACTIVE_SLOTS_COEFF)")
             SLOT_LENGTH_SEC=$(perl -E "say ($SLOT_LENGTH / 1000)")
-            MAX_SUPPLY="45000000000000000"
+
+            if [ -z "''${MAX_SUPPLY:-}" ]; then
+              # cardano-cli throws an error is max supply is larger than this
+              MAX_SUPPLY="45000000000000000"
+            fi
 
             # Use the new create-testnet-data cli cmd
             "''${CARDANO_CLI[@]}" genesis create-testnet-data \
@@ -372,20 +378,31 @@ in {
             # Move the byron genesis into the same dir as shelley, alonzo, conway genesis files
             mv "$GENESIS_DIR/byron-config/genesis.json" "$GENESIS_DIR/byron-genesis.json"
 
-            # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide args for these
-            sed -Ei "s/([[:blank:]]*\"activeSlotsCoeff\":)([[:blank:]]*[^,]*,)/\1 $ACTIVE_SLOT_COEFF,/" "$GENESIS_DIR/shelley-genesis.json"
-            sed -Ei "s/([[:blank:]]*\"epochLength\":)([[:blank:]]*[^,]*,)/\1 $EPOCH_LENGTH,/" "$GENESIS_DIR/shelley-genesis.json"
-            sed -Ei "s/([[:blank:]]*\"securityParam\":)([[:blank:]]*[^,]*)/\1 $SECURITY_PARAM/" "$GENESIS_DIR/shelley-genesis.json"
-            sed -Ei "s/([[:blank:]]*\"slotLength\":)([[:blank:]]*[^,]*,)/\1 $SLOT_LENGTH_SEC,/" "$GENESIS_DIR/shelley-genesis.json"
-            sed -Ei "s/([[:blank:]]*\"slotLength\":)([[:blank:]]*[^,]*,)/\1 $SLOT_LENGTH,/" "$GENESIS_DIR/byron-genesis.json"
+            # If initial funds is explicitly declared for the rich key, set it here
+            if [ -n "''${INITIAL_FUNDS:-}" ]; then
+              jq ".initialFunds[.initialFunds | to_entries | sort_by(.value)[-1].key] |= $INITIAL_FUNDS" \
+                < "$GENESIS_DIR/shelley-genesis.json" \
+                | sponge "$GENESIS_DIR/shelley-genesis.json"
+            fi
 
-            # Obatin a base node config and topology
+            # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide args for these
+            jq --sort-keys \
+              --argjson jsonUpdates "{
+                \"activeSlotsCoeff\": $ACTIVE_SLOTS_COEFF,
+                \"epochLength\": $EPOCH_LENGTH,
+                \"securityParam\": $SECURITY_PARAM,
+                \"slotLength\": $SLOT_LENGTH_SEC}" \
+              '. += $jsonUpdates' \
+              < "$GENESIS_DIR/shelley-genesis.json" \
+              | sponge "$GENESIS_DIR/shelley-genesis.json"
+
+            # Obtain a base node config and topology
             cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
             cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
             chmod +w "$GENESIS_DIR/node-config.json" "$GENESIS_DIR/topology.json"
 
-            # Make the json files legible instead of minified
-            for i in byron-genesis shelley-genesis alonzo-genesis conway-genesis topology; do
+            # Also prettify the other json files prior to hash calcs
+            for i in byron-genesis alonzo-genesis conway-genesis topology; do
               jq --sort-keys < "$GENESIS_DIR/$i.json" | sponge "$GENESIS_DIR/$i.json"
             done
 
