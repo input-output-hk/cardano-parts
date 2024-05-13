@@ -1,73 +1,9 @@
-let
-  chainDensityLow = toString 70;
-  chainDensityVeryLow = toString 50;
-  highBlockUtilization = toString 95; # Alert if blocks are above that % full.
-in {
-  namespace="cardano";
-  name = "cardano-node";
+{
+  namespace = "cardano";
+  name = "cardano-node-generic";
   rule = [
     {
-      alert = "high_cardano_ping_latency";
-      expr = "avg_over_time(cardano_ping_latency_ms[5m]) > 250";
-      for = "30m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: Cardano average ping latency over 5 minutes has been above 250 milliseconds for the last 30 minutes";
-        description = "{{$labels.instance}}: Cardano average ping latency over 5 minutes has been above 250 milliseconds for the last 30 minutes.";
-      };
-    }
-    {
-      alert = "chain_quality_degraded";
-      expr = ''100 * quantile by(environment) (0.2, (cardano_node_metrics_density_real{environment!~"private|sanchonet|shelley-qa|shelley_qa"} * 20)) < ${chainDensityLow}'';
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "Degraded Chain Density: more than 20% of nodes have low chain density (<${chainDensityLow}%) in environment {{$labels.environment}}.";
-        description = "Degraded Chain Density: more than 20% of nodes have low chain density (<${chainDensityLow}%) in environment {{$labels.environment}}.";
-      };
-    }
-    {
-      alert = "chain_quality_degraded_very_low";
-      expr = ''100 * quantile by(environment) (0.2, (cardano_node_metrics_density_real * 20)) < ${chainDensityVeryLow}'';
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "Degraded Chain Density: more than 20% of nodes have low chain density (<${chainDensityVeryLow}%) in environment {{$labels.environment}}.";
-        description = "Degraded Chain Density: more than 20% of nodes have low chain density (<${chainDensityVeryLow}%) in environment {{$labels.environment}}.";
-      };
-    }
-    {
-      alert = "blocks_adoption_delay_too_high";
-      expr = "avg(quantile_over_time(0.95, cardano_node_metrics_blockadoption_forgeDelay_real[6h])) >= 4.5";
-      for = "1m";
-      labels.severity = "page";
-      annotations = {
-        summary = "Blocks adoption delay have been above 4.5s for more than 5% of blocks";
-        description = "Node average of blocks adoption delay have been above 4.5s for more than 5% of blocks for more than 6 hours";
-      };
-    }
-    {
-      alert = "blocks_utilization_too_high";
-      expr = "100 * avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize[6h]) / on(instance) (cardano_node_protocol_maxBlockBodySize + cardano_node_protocol_maxBlockHeaderSize)) > ${highBlockUtilization}";
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "Block utilization is above ${highBlockUtilization}%.";
-        description = "Block utilization has averaged above ${highBlockUtilization}% for more than 6h.";
-      };
-    }
-    {
-      alert = "cardano_new_node_block_divergence";
-      expr = "((abs(max(cardano_node_metrics_blockNum_int) - ignoring(instance, job, role) group_right(instance) cardano_node_metrics_blockNum_int) > bool 2) - (abs(max(cardano_node_metrics_slotNum_int) - ignoring(instance, job, role) group_right(instance) cardano_node_metrics_slotNum_int) < bool 60)) == 1";
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node block divergence detected for more than 5 minutes.";
-        description = "{{$labels.instance}}: cardano-node block divergence of more than 2 blocks and 60 seconds lag detected for more than 5 minutes.";
-      };
-    }
-    {
-      alert = "cardano_new_node_blockheight_unchanged";
+      alert = "cardano_node_blockheight_unchanged";
       expr = "rate(cardano_node_metrics_blockNum_int[2m]) == 0";
       for = "10m";
       labels.severity = "page";
@@ -77,75 +13,35 @@ in {
       };
     }
     {
-      alert = "cardano_blockfetchclient_blockdelay_high";
-      expr = ''cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.90'';
+      alert = "cardano_node_blockheight_unchanged_new_tracing";
+      expr = "rate(ChainDB_BlockNum[2m]) == 0";
       for = "10m";
       labels.severity = "page";
       annotations = {
-        summary = "{{$labels.instance}}: cardano-node has less than 90% of blocks arriving in 5 seconds.";
-        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 90% of blocks over a 6 hour window arriving in 5 seconds.";
+        summary = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes.";
+        description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes at a 2 minute rate resolution.";
       };
     }
+    # Note: This alert will automatically disable after 6 hours (360 minutes) even if there are still no expected metrics available.
     {
-      alert = "cardano_blockfetchclient_blockdelay_critical";
-      expr = "cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.50";
-      for = "10m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node has less than 50% of blocks arriving in 5 seconds.";
-        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
-      };
-    }
-    {
-      alert = "cardano_new_node_forge_not_adopted_error";
-      expr = "increase(cardano_node_metrics_Forge_didnt_adopt_int[1h]) > 0";
+      alert = "cardano_node_metric_missing";
+      expr = "(sum_over_time((cardano_node_metrics_blockNum_int != bool 0)[360m:1m]) < bool 350) > 0 unless cardano_node_metrics_blockNum_int";
       for = "1m";
       labels.severity = "page";
       annotations = {
-        summary = "{{$labels.instance}}: cardano-node is failing to adopt recent forged blocks.";
-        description = ''
-          {{$labels.instance}}: cardano-node failed to adopt 1 or more blocks in the past hour.
-          A restart of node on the affected machine(s) may be required.'';
+        summary = "{{$labels.instance}}: cardano-node blockheight metric has gone missing for more than 10 minutes.";
+        description = "{{$labels.instance}}: cardano-node blockheight metric has gone missing for more than 10 minutes at a 1 minute resolution.";
       };
     }
+    # Note: This alert will automatically disable after 6 hours (360 minutes) even if there are still no expected metrics available.
     {
-      alert = "too_many_slot_leadership_checks_missed";
-      expr = "rate(cardano_node_metrics_slotsMissedNum_int[5m]) * 1 > 0.5";
-      for = "2m";
+      alert = "cardano_node_metric_missing_new_tracing";
+      expr = "(sum_over_time((ChainDB_BlockNum != bool 0)[360m:1m]) < bool 350) > 0 unless ChainDB_BlockNum";
+      for = "1m";
       labels.severity = "page";
       annotations = {
-        summary = "{{$labels.instance}}: block producing node is failing to check for slot leadership for more than half of the slots.";
-        description = "{{$labels.instance}}: block producing node is failing to check for slot leadership for more than half of the slots for more than 2 min.";
-      };
-    }
-    {
-      alert = "cardano_new_node_KES_expiration_metric_10period_notice";
-      expr = "cardano_node_metrics_remainingKESPeriods_int <= 10";
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node KES expiration notice: less than 10 periods until KES expiration.";
-        description = "{{$labels.instance}}: cardano-node KES expiration notice: less than 10 periods until KES expiration.";
-      };
-    }
-    {
-      alert = "cardano_new_node_KES_expiration_metric_5period_notice";
-      expr = "cardano_node_metrics_remainingKESPeriods_int <= 5";
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node KES expiration notice: less than 5 periods until KES expiration.";
-        description = "{{$labels.instance}}: cardano-node KES expiration notice: less than 5 periods until KES expiration.";
-      };
-    }
-    {
-      alert = "cardano_new_node_KES_expiration_metric_1period_warning";
-      expr = "cardano_node_metrics_remainingKESPeriods_int <= 1";
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node KES expiration warning: less than 1 periods until KES expiration.";
-        description = "{{$labels.instance}}: cardano-node KES expiration warning: less than 1 periods until KES expiration.";
+        summary = "{{$labels.instance}}: cardano-node blockheight metric has gone missing for more than 10 minutes.";
+        description = "{{$labels.instance}}: cardano-node blockheight metric has gone missing for more than 10 minutes at a 1 minute resolution.";
       };
     }
   ];

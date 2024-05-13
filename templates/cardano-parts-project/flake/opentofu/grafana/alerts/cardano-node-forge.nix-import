@@ -1,0 +1,124 @@
+let
+  mkKesAlert = {
+    periodNotice,
+    useLegacyTracing ? true,
+  }: let
+    kesPeriodsRemaining =
+      if useLegacyTracing
+      then "cardano_node_metrics_remainingKESPeriods_int"
+      else "(KESInfo_operationalCertificateExpiryKESPeriod - KESInfo_operationalCertificateStartKESPeriod) - KESInfo_currentKESPeriod";
+  in {
+    alert = "cardano_node_KES_expiration_metric_${toString periodNotice}period_notice${
+      if useLegacyTracing
+      then ""
+      else "_new_tracing"
+    }";
+    expr = "${kesPeriodsRemaining} <= ${toString periodNotice}";
+    for = "5m";
+    labels.severity = "page";
+    annotations = {
+      summary = "{{$labels.instance}}: cardano-node KES expiration notice: less than 10 periods until KES expiration.";
+      description = "{{$labels.instance}}: cardano-node KES expiration notice: less than 10 periods until KES expiration.";
+    };
+  };
+in {
+  namespace = "cardano";
+  name = "cardano-node-forge";
+  rule = [
+    {
+      alert = "cardano_node_forge_blocks_missing";
+      expr = "increase(cardano_node_metrics_Forge_forged_int[24h]) == 0";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has not forged any blocks for 1 day.";
+        description = ''
+          {{$labels.instance}}: cardano-node has not forged any blocks for 1 day.
+          This should be investigated, or the alert adjusted if this is expected.'';
+      };
+    }
+    {
+      alert = "cardano_node_forge_blocks_missing_new_tracing";
+      expr = "increase(Forge_BlocksForgedNum[24h]) == 0";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has not forged any blocks for 1 day.";
+        description = ''
+          {{$labels.instance}}: cardano-node has not forged any blocks for 1 day.
+          This should be investigated, or the alert adjusted if this is expected.'';
+      };
+    }
+    {
+      alert = "cardano_node_forge_not_adopted_error";
+      expr = "increase(cardano_node_metrics_Forge_didnt_adopt_int[1h]) > 0";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node is failing to adopt recent forged blocks.";
+        description = ''
+          {{$labels.instance}}: cardano-node failed to adopt 1 or more blocks in the past hour.
+          A restart of node on the affected machine(s) may be required.'';
+      };
+    }
+    {
+      alert = "cardano_node_forge_not_adopted_error_new_tracing";
+      expr = "sum_over_time(abs((Forge_ForgedSlotLast - Forge_ForgedSlotLast == bool 0) - 1)[1h:]) > 0";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node is failing to adopt recent forged blocks.";
+        description = ''
+          {{$labels.instance}}: cardano-node failed to adopt 1 or more blocks in the past hour.
+          A restart of node on the affected machine(s) may be required.'';
+      };
+    }
+    {
+      alert = "cardano_node_cannot_forge_new_tracing";
+      expr = "increase(Forge_NodeCannotForgeNum[1h]) > 0";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node is failing to forge blocks.";
+        description = ''
+          {{$labels.instance}}: cardano-node failed to forge 1 or more blocks in the past hour.
+          A restart of node on the affected machine(s) may be required.'';
+      };
+    }
+    {
+      alert = "too_many_slot_leadership_checks_missed";
+      expr = "rate(cardano_node_metrics_slotsMissedNum_int[5m]) * 1 > 0.5";
+      for = "2m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: block producing node is failing to check for slot leadership for more than half of the slots.";
+        description = "{{$labels.instance}}: block producing node is failing to check for slot leadership for more than half of the slots for more than 2 min.";
+      };
+    }
+    {
+      alert = "too_many_slot_leadership_checks_missed_new_tracing";
+      expr = "rate(Forge_SlotsMissed[5m]) * 1 > 0.5";
+      for = "2m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: block producing node is failing to check for slot leadership for more than half of the slots.";
+        description = "{{$labels.instance}}: block producing node is failing to check for slot leadership for more than half of the slots for more than 2 min.";
+      };
+    }
+    (mkKesAlert {periodNotice = 10;})
+    (mkKesAlert {periodNotice = 5;})
+    (mkKesAlert {periodNotice = 1;})
+    (mkKesAlert {
+      periodNotice = 10;
+      useLegacyTracing = false;
+    })
+    (mkKesAlert {
+      periodNotice = 5;
+      useLegacyTracing = false;
+    })
+    (mkKesAlert {
+      periodNotice = 1;
+      useLegacyTracing = false;
+    })
+  ];
+}

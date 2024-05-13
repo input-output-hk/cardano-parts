@@ -1,0 +1,92 @@
+let
+  highBlockUtilization = toString 95; # Alert if blocks are above that % full.
+in {
+  namespace = "cardano";
+  name = "cardano-node-network";
+  rule = [
+    # This latency alert requires the cardano-parts profile-cardano-custom-metrics nixosModule
+    {
+      alert = "high_cardano_ping_latency";
+      expr = "avg_over_time(netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average[5m]) > 500";
+      for = "60m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: Cardano average ping latency over 5 minutes has been above 500 milliseconds for the last hour.";
+        description = "{{$labels.instance}}: Cardano average ping latency over 5 minutes has been above 500 milliseconds for the last hour.";
+      };
+    }
+    # TODO: New tracer equivalent metric?
+    {
+      alert = "blocks_adoption_delay_too_high";
+      expr = "avg(quantile_over_time(0.95, cardano_node_metrics_blockadoption_forgeDelay_real[6h])) >= 4.5";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Blocks adoption delay have been above 4.5s for more than 5% of blocks.";
+        description = "Node average of blocks adoption delay have been above 4.5s for more than 5% of blocks for more than 6 hours.";
+      };
+    }
+    # TODO: Static max block size until node publishes max block size metric
+    {
+      alert = "blocks_utilization_too_high";
+      expr = "100 * avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize[6h]) / 90112) > ${highBlockUtilization}";
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Block utilization is above ${highBlockUtilization}%.";
+        description = "Block utilization has averaged above ${highBlockUtilization}% for more than 6h.";
+      };
+    }
+    # TODO: Static max block size until node publishes max block size metric
+    {
+      alert = "blocks_utilization_too_high_new_tracing";
+      expr = "100 * avg(avg_over_time(Blockfetch_Client_Blocksize[6h]) / 90112) > ${highBlockUtilization}";
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Block utilization is above ${highBlockUtilization}%.";
+        description = "Block utilization has averaged above ${highBlockUtilization}% for more than 6h.";
+      };
+    }
+    {
+      alert = "cardano_blockfetchclient_blockdelay_high";
+      expr = ''cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.90'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 90% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 90% of blocks over a 6 hour window arriving in 5 seconds.";
+      };
+    }
+    {
+      alert = "cardano_blockfetchclient_blockdelay_high_new_tracing";
+      expr = ''Blockfetch_Client_Blockdelay_cdfFive < 0.90'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 90% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 90% of blocks over a 6 hour window arriving in 5 seconds.";
+      };
+    }
+    {
+      alert = "cardano_blockfetchclient_blockdelay_critical";
+      expr = "cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.50";
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 50% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
+      };
+    }
+    {
+      alert = "cardano_blockfetchclient_blockdelay_critical_new_tracing";
+      expr = ''Blockfetch_Client_Blockdelay_cdfFive < 0.50'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 50% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
+      };
+    }
+  ];
+}

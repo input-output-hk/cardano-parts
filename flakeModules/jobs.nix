@@ -344,7 +344,7 @@ in {
             SLOT_LENGTH_SEC=$(perl -E "say ($SLOT_LENGTH / 1000)")
 
             if [ -z "''${MAX_SUPPLY:-}" ]; then
-              # cardano-cli throws an error is max supply is larger than this
+              # cardano-cli throws an error if max supply is larger than this
               MAX_SUPPLY="45000000000000000"
             fi
 
