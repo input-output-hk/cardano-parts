@@ -364,6 +364,10 @@ flake @ {inputs, ...}: {
                 echo "...or, if psql is already in your devShell path, then simply:"
                 echo
                 echo "  psql -h ${socketDir} -U cexplorer -d cexplorer"
+                echo
+                echo "If superuser postgres access is required, then use the \$USER this job was started with:"
+                echo
+                echo "  psql -h ${socketDir} -U $USER -d postgres"
               '';
             };
             depends_on."postgres-${env'}".condition = "process_healthy";
