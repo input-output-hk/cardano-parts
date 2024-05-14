@@ -226,6 +226,17 @@
         cardanoNodePackages = mkDefault cardano-node-pkgs;
         nodeId = mkDefault nodeId;
 
+        # We're still on legacy tracing system for now, but flip this when we're ready.
+        # Also review iohk-nix and cardano-node nixos service related changes.
+        useLegacyTracing = mkDefault true;
+
+        # Once the new tracing system is default, this can be simplified and iohk-nix updated.
+        nodeConfig = mkDefault (
+          if cfg.useLegacyTracing
+          then cardanoLib.environments.${environmentName}.nodeConfig
+          else removeAttrs cardanoLib.environments.${environmentName}.nodeConfig ["hasEKG" "hasPrometheus" "rotation"]
+        );
+
         # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
         useNewTopology = mkDefault true;
         useSystemdReload = mkDefault true;
@@ -256,23 +267,25 @@
         producers = mkDefault [];
         publicProducers = mkDefault [];
 
-        extraNodeConfig = {
-          hasPrometheus = [cfg.hostAddr cardanoNodePrometheusExporterPort];
+        extraNodeConfig =
+          {
+            # The maximum number of used peers when fetching newly forged blocks
+            MaxConcurrencyDeadline = 4;
+          }
+          // optionalAttrs cfg.useLegacyTracing {
+            hasPrometheus = [cfg.hostAddr cardanoNodePrometheusExporterPort];
 
-          # The maximum number of used peers when fetching newly forged blocks
-          MaxConcurrencyDeadline = 4;
+            # Use Journald output
+            setupScribes = [
+              {
+                scKind = "JournalSK";
+                scName = "cardano";
+                scFormat = "ScText";
+              }
+            ];
 
-          # Use Journald output
-          setupScribes = [
-            {
-              scKind = "JournalSK";
-              scName = "cardano";
-              scFormat = "ScText";
-            }
-          ];
-
-          defaultScribes = [["JournalSK" "cardano"]];
-        };
+            defaultScribes = [["JournalSK" "cardano"]];
+          };
 
         extraServiceConfig = _: {
           # Allow up to 10 failures with 30 second restarts in a 15 minute window

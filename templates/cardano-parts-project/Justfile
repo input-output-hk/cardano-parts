@@ -589,21 +589,34 @@ start-demo:
   export USE_ENCRYPTION=true
   export USE_DECRYPTION=true
   export USE_NODE_CONFIG_BP=false
-  export DEBUG=1
+  export USE_CREATE_TESTNET_DATA=false
+  export DEBUG=true
 
-  SECURITY_PARAM=8 \
-    SLOT_LENGTH=200 \
-    START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds") \
+  export SECURITY_PARAM=8
+  export SLOT_LENGTH=100
+  export START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds")
+  if [ "$USE_CREATE_TESTNET_DATA" = true ]; then
+    ERA_CMD="alonzo" \
+      nix run .#job-gen-custom-node-config-data
+  else
     nix run .#job-gen-custom-node-config
+  fi
 
   nix run .#job-create-stake-pool-keys
 
+  if [ "$USE_DECRYPTION" = true ]; then
+    BFT_CREDS=$(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
+    POOL_CREDS=$(just sops-decrypt-binary "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+  else
+    BFT_CREDS=$(cat "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
+    POOL_CREDS=$(cat "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+  fi
   (
-    jq -r '.[]' < <(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
-    jq -r '.[]' < <(just sops-decrypt-binary "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+    jq -r '.[]' <<< "$BFT_CREDS"
+    jq -r '.[]' <<< "$POOL_CREDS"
   ) | jq -s > "$BULK_CREDS"
 
-  echo "Start cardano-node in the background. Run \"just stop\" to stop"
+  echo "Start cardano-node in the background. Run \"just stop-node demo\" to stop"
   NODE_CONFIG="$DATA_DIR/node-config.json" \
     NODE_TOPOLOGY="$DATA_DIR/topology.json" \
     SOCKET_PATH="$STATEDIR/node-demo.socket" \
@@ -613,13 +626,15 @@ start-demo:
   sleep 30
   echo
 
-  echo "Moving genesis utxo..."
-  BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
-    ERA_CMD="alonzo" \
-    nix run .#job-move-genesis-utxo
-  echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
-  sleep 7
-  echo
+  if [ "$USE_CREATE_TESTNET_DATA" = false ]; then
+    echo "Moving genesis utxo..."
+    BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
+      ERA_CMD="alonzo" \
+      nix run .#job-move-genesis-utxo
+    echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
+    sleep 7
+    echo
+  fi
 
   echo "Registering stake pools..."
   POOL_RELAY=demo.local \
@@ -633,8 +648,8 @@ start-demo:
   echo "Delegating rewards stake key..."
   ERA_CMD="alonzo" \
     nix run .#job-delegate-rewards-stake-key
-  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
-  sleep 320
+  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
+  sleep 160
   echo
 
   echo "Forking to babbage..."
@@ -642,8 +657,8 @@ start-demo:
   MAJOR_VERSION=7 \
     ERA_CMD="alonzo" \
     nix run .#job-update-proposal-hard-fork
-  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
-  sleep 320
+  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
+  sleep 160
   echo
 
   echo "Forking to babbage (intra-era)..."
@@ -651,8 +666,8 @@ start-demo:
   MAJOR_VERSION=8 \
     ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
-  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
-  sleep 320
+  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
+  sleep 160
   echo
 
   echo "Forking to conway..."
@@ -660,8 +675,8 @@ start-demo:
   MAJOR_VERSION=9 \
     ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
-  echo "Sleeping 320 seconds until $(date -d  @$(($(date +%s) + 320)))"
-  sleep 320
+  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
+  sleep 160
   echo
 
   just query-tip demo

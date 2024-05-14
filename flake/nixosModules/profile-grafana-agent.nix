@@ -16,7 +16,7 @@ flake: {
   }:
     with builtins;
     with lib; let
-      inherit (lib.types) bool str;
+      inherit (lib.types) bool enum str;
       inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
@@ -41,6 +41,12 @@ flake: {
     in {
       options = {
         services.grafana-agent = {
+          logLevel = mkOption {
+            type = enum ["debug" "info" "warn" "error"];
+            default = "info";
+            description = "The default log level for grafana agent";
+          };
+
           systemdUnitInclude = mkOption {
             type = str;
             default = "(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
@@ -142,6 +148,8 @@ flake: {
               }
             ];
           in {
+            server.log_level = cfg.logLevel;
+
             integrations = {
               agent = {
                 enabled = true;
@@ -384,22 +392,49 @@ flake: {
                           }
                         ];
                       })
-                      # ];
+
+                      # Metrics exporter: cardano-custom-metrics
+                      (mkIf (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) {
+                        job_name = "integrations/cardano-custom-metrics";
+                        metrics_path = "/api/v1/allmetrics";
+                        params = {
+                          format = ["prometheus"];
+                          # Filtering here won't work as grafana-agent encodes the pattern match.
+                          # Filtering can be configured from the module with the `enableFilter` and `filter` options.
+                          # filter = ["statsd_cardano*"];
+                        };
+                        static_configs = [
+                          {
+                            inherit labels;
+                            targets = ["${cfgSvc.cardano-custom-metrics.address}:${toString cfgSvc.cardano-custom-metrics.port}"];
+                          }
+                        ];
+                      })
                     ]
                     # Metrics exporter: cardano-node
                     ++ optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable)
-                    (map (i: {
-                      job_name = let
-                        serviceName = i:
-                          if i == 0
-                          then "cardano-node"
-                          else "cardano-node-${toString i}";
-                      in "integrations/${serviceName i}";
-                      metrics_path = "/metrics";
+                    (map (i: let
+                      metrics_path =
+                        if cfgSvc.cardano-node.useLegacyTracing
+                        then "/metrics"
+                        else "/${(cfgSvc.cardano-node.extraNodeInstanceConfig i).TraceOptionNodeName}";
+
+                      serviceName = i:
+                        if i == 0
+                        then "cardano-node"
+                        else "cardano-node-${toString i}";
+
+                      targets =
+                        if cfgSvc.cardano-node.useLegacyTracing
+                        then ["${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"]
+                        else ["${hostAddr}:${toString cardanoNodePrometheusExporterPort}"];
+                    in {
+                      inherit metrics_path;
+                      job_name = "integrations/${serviceName i}";
                       static_configs = [
                         {
+                          inherit targets;
                           labels = labels // {instanceNum = i;};
-                          targets = ["${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"];
                         }
                       ];
                     }) (range 0 (cfgSvc.cardano-node.instances - 1)));

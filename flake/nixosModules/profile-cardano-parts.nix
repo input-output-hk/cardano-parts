@@ -17,6 +17,7 @@
 #   config.cardano-parts.perNode.meta.cardano-metadata-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
+#   config.cardano-parts.perNode.meta.cardano-tracer-service
 #   config.cardano-parts.perNode.meta.enableAlertCount
 #   config.cardano-parts.perNode.meta.enableDns
 #   config.cardano-parts.perNode.meta.hostAddr
@@ -33,6 +34,7 @@
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-smash
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
+#   config.cardano-parts.perNode.pkgs.cardano-tracer
 #   config.cardano-parts.perNode.pkgs.mithril-client-cli
 #   config.cardano-parts.perNode.pkgs.mithril-signer
 #   config.cardano-parts.perNode.roles.isCardanoDensePool
@@ -198,6 +200,12 @@ flake @ {moduleWithSystem, ...}: {
           default = cfg.group.meta.cardano-smash-service;
         };
 
+        cardano-tracer-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-tracer-service import path string.";
+          default = cfg.group.meta.cardano-tracer-service;
+        };
+
         enableAlertCount = mkOption {
           type = bool;
           description = mdDoc ''
@@ -263,6 +271,7 @@ flake @ {moduleWithSystem, ...}: {
         (mkPkgOpt "cardano-node" (cfg.group.pkgs.cardano-node system))
         (mkPkgOpt "cardano-smash" (cfg.group.pkgs.cardano-smash system))
         (mkPkgOpt "cardano-submit-api" (cfg.group.pkgs.cardano-submit-api system))
+        (mkPkgOpt "cardano-tracer" (cfg.group.pkgs.cardano-tracer system))
         (mkPkgOpt "mithril-client-cli" (cfg.group.pkgs.mithril-client-cli system))
         (mkPkgOpt "mithril-signer" (cfg.group.pkgs.mithril-signer system))
         (mkSpecialOpt "cardano-db-sync-pkgs" lib.types.attrs (cfg.group.pkgs.cardano-db-sync-pkgs system))

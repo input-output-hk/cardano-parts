@@ -24,9 +24,10 @@ flake @ {moduleWithSystem, ...}: {
         cardano-db-sync-pkgs = groupFlake.config.flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs-ng system;
         cardano-faucet = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-faucet-ng);
         cardano-node = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node-ng);
+        cardano-node-pkgs = groupFlake.config.flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng system;
         cardano-smash = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-smash-ng);
         cardano-submit-api = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api-ng);
-        cardano-node-pkgs = groupFlake.config.flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng system;
+        cardano-tracer = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-tracer-ng);
         mithril-client-cli = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-client-cli-ng);
         mithril-signer = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-signer-ng);
       };

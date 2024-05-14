@@ -1,0 +1,71 @@
+let
+  mkDivergenceAlert = {
+    env,
+    lagBlocks ? 6,
+    lagSeconds ? 120,
+    thresholdMinutes ? 5,
+    useLegacyTracing ? true,
+  }: let
+    blockMetric =
+      if useLegacyTracing
+      then "cardano_node_metrics_blockNum_int"
+      else "ChainDB_BlockNum";
+    slotMetric =
+      if useLegacyTracing
+      then "cardano_node_metrics_slotNum_int"
+      else "ChainDB_SlotNum";
+  in {
+    alert = "cardano_node_block_divergence_${env}${
+      if useLegacyTracing
+      then ""
+      else "_new_tracing"
+    }";
+    expr = ''
+      (
+        (abs(max(${blockMetric}{environment="${env}"}) - on() group_right() ${blockMetric}{environment="${env}"}) > bool ${toString lagBlocks})
+        - (abs(max(${slotMetric}{environment="${env}"}) - on() group_right() ${slotMetric}{environment="${env}"}) < bool ${toString lagSeconds})
+      ) == 1
+    '';
+    for = "${toString thresholdMinutes}m";
+    labels.severity = "page";
+    annotations = {
+      summary = "{{$labels.instance}}: cardano-node block divergence detected on ${env} for more than ${toString thresholdMinutes} minutes.";
+      description = "{{$labels.instance}}: cardano-node block divergence of more than ${toString lagBlocks} blocks and ${toString lagSeconds} seconds lag detected for more than ${toString thresholdMinutes} minutes.";
+    };
+  };
+in {
+  namespace = "cardano";
+  name = "cardano-node-divergence";
+  rule = [
+    (mkDivergenceAlert {env = "mainnet";})
+    (mkDivergenceAlert {env = "preprod";})
+    (mkDivergenceAlert {env = "preview";})
+    (mkDivergenceAlert {env = "private";})
+    (mkDivergenceAlert {env = "sanchonet";})
+    (mkDivergenceAlert {env = "shelley-qa";})
+    (mkDivergenceAlert {
+      env = "mainnet";
+      useLegacyTracing = false;
+    })
+    (mkDivergenceAlert {
+      env = "preprod";
+      useLegacyTracing = false;
+    })
+    (mkDivergenceAlert {
+      env = "preview";
+      useLegacyTracing = false;
+    })
+    (mkDivergenceAlert {
+      env = "private";
+      useLegacyTracing = false;
+    })
+    (mkDivergenceAlert {
+      env = "sanchonet";
+      useLegacyTracing = false;
+    })
+    (mkDivergenceAlert {
+      env = "shelley-qa";
+      useLegacyTracing = false;
+    })
+  ];
+}

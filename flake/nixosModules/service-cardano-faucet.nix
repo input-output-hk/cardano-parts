@@ -22,11 +22,7 @@
 # Tips:
 #   * This service-cardano-faucet nixos module provides a basic cardano-faucet service
 {moduleWithSystem, ...}: {
-  flake.nixosModules.service-cardano-faucet = moduleWithSystem ({
-    config,
-    system,
-    ...
-  }: nixos @ {
+  flake.nixosModules.service-cardano-faucet = moduleWithSystem ({config, ...}: nixos @ {
     pkgs,
     lib,
     name,
@@ -35,10 +31,10 @@
     with builtins;
     with lib; let
       inherit (types) bool listOf package port str;
-      inherit (groupCfg) groupFlake;
       inherit (groupCfg.meta) domain;
 
       groupCfg = nixos.config.cardano-parts.cluster.group;
+      perNodeCfg = nixos.config.cardano-parts.perNode;
 
       cfg = nixos.config.services.cardano-faucet;
     in {
@@ -100,7 +96,7 @@
 
           package = mkOption {
             type = package;
-            default = groupFlake.withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-faucet);
+            default = perNodeCfg.pkgs.cardano-faucet;
             description = "The cardano-faucet package that should be used.";
           };
 
@@ -172,6 +168,10 @@
             Restart = "always";
             RestartSec = "30s";
             SupplementaryGroups = concatStringsSep " " cfg.supplementaryGroups;
+
+            # To avoid extended ledger replays timing out and failing the service on preStart
+            # while waiting for a socket.
+            TimeoutStartSec = 3600;
           };
         };
 
