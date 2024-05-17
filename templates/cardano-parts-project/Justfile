@@ -766,7 +766,7 @@ template-diff FILE *ARGS:
   fi
 
   if [ "{{templatePath}}" = "no-path-given" ]; then
-    SRC_FILE="<(curl -sL \"{{templateUrl}}/{{FILE}}\")"
+    SRC_FILE="<(curl -H 'Cache-Control: no-cache' -sL \"{{templateUrl}}/{{FILE}}\")"
     SRC_NAME="{{templateUrl}}/{{FILE}}"
   else
     SRC_FILE="{{templatePath}}/{{FILE}}"
@@ -785,7 +785,7 @@ template-patch FILE:
   fi
 
   if [ "{{templatePath}}" = "no-path-given" ]; then
-    SRC_FILE="<(curl -sL \"{{templateUrl}}/{{FILE}}\")"
+    SRC_FILE="<(curl -H 'Cache-Control: no-cache' -sL \"{{templateUrl}}/{{FILE}}\")"
   else
     SRC_FILE="{{templatePath}}/{{FILE}}"
   fi
