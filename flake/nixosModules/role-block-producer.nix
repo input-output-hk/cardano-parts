@@ -172,7 +172,10 @@ flake: {
 
         systemd = {
           services.mithril-signer = mkIf mithrilCfg.enable {
-            wantedBy = ["multi-user.target"];
+            after = ["cardano-node.service"];
+            wants = ["cardano-node.service"];
+            partOf = ["cardano-node.service"];
+            wantedBy = ["cardano-node.service"];
 
             # Allow up to 10 failures with 30 second restarts in a 15 minute window
             # before entering failure state and alerting
