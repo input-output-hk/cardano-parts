@@ -361,7 +361,20 @@ query-tip ENV TESTNET_MAGIC=null:
   set -euo pipefail
   {{checkEnv}}
   {{stateDir}}
-  cardano-cli query tip \
+
+  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+    CARDANO_CLI="cardano-cli"
+  elif [ -n "${UNSTABLE:-}" ] && [ "${UNSTABLE:-}" != "true" ]; then
+    CARDANO_CLI="cardano-cli"
+  elif [ "${UNSTABLE:-}" = "true" ]; then
+    CARDANO_CLI="cardano-cli-ng"
+  elif [[ "$ENV" =~ mainnet$|preprod$|preview$|shelley-qa$ ]]; then
+    CARDANO_CLI="cardano-cli"
+  elif [[ "$ENV" =~ private$|sanchonet$|demo$ ]]; then
+    CARDANO_CLI="cardano-cli-ng"
+  fi
+
+  eval "$CARDANO_CLI" query tip \
     --socket-path "$STATEDIR/node-{{ENV}}.socket" \
     --testnet-magic "$MAGIC"
 
@@ -753,7 +766,7 @@ template-diff FILE *ARGS:
   fi
 
   if [ "{{templatePath}}" = "no-path-given" ]; then
-    SRC_FILE="<(curl -sL \"{{templateUrl}}/{{FILE}}\")"
+    SRC_FILE="<(curl -H 'Cache-Control: no-cache' -sL \"{{templateUrl}}/{{FILE}}\")"
     SRC_NAME="{{templateUrl}}/{{FILE}}"
   else
     SRC_FILE="{{templatePath}}/{{FILE}}"
@@ -772,7 +785,7 @@ template-patch FILE:
   fi
 
   if [ "{{templatePath}}" = "no-path-given" ]; then
-    SRC_FILE="<(curl -sL \"{{templateUrl}}/{{FILE}}\")"
+    SRC_FILE="<(curl -H 'Cache-Control: no-cache' -sL \"{{templateUrl}}/{{FILE}}\")"
   else
     SRC_FILE="{{templatePath}}/{{FILE}}"
   fi

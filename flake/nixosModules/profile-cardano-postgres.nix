@@ -87,6 +87,39 @@
               -- Prepared statements for longer queries and functions
               DEALLOCATE ALL;
 
+              -- Show current pool forging to help debug network chain quality issues
+              PREPARE show_current_forging AS
+                WITH
+                  current_epoch AS (
+                    SELECT MAX(epoch_no) AS current_epoch FROM block),
+                  epoch_blocks AS (
+                    SELECT COUNT(block.block_no) AS epoch_blocks, pool_hash.view AS pool_view FROM block
+                      INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
+                      INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
+                      WHERE block.epoch_no = (SELECT * FROM current_epoch)
+                      GROUP BY pool_hash.view),
+                  last_blocks AS (
+                    SELECT distinct on (pool_hash.view) block.block_no AS last_block, block.time AS last_block_time, pool_hash.view AS pool_view FROM block
+                      INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
+                      INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
+                      ORDER BY pool_hash.view ASC, block.block_no desc),
+                  current_epoch_stake AS (
+                    SELECT SUM(amount) AS epoch_stake FROM epoch_stake
+                      WHERE epoch_no = (SELECT * FROM current_epoch))
+                SELECT
+                  (SELECT * FROM current_epoch),
+                  pool_hash.view AS pool_id,
+                  SUM(amount) AS lovelace,
+                  ROUND(SUM(amount) / (SELECT * FROM current_epoch_stake) * 100, 3) AS stake_pct,
+                  (SELECT epoch_blocks FROM epoch_blocks WHERE epoch_blocks.pool_view = pool_hash.view),
+                  (SELECT last_block FROM last_blocks WHERE last_blocks.pool_view = pool_hash.view),
+                  (SELECT last_block_time FROM last_blocks WHERE last_blocks.pool_view = pool_hash.view)
+                FROM epoch_stake
+                  INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
+                  WHERE epoch_no = (SELECT * FROM current_epoch)
+                    GROUP BY pool_hash.id
+                    ORDER BY lovelace DESC;
+
               -- Show the number of blocks made per epoch across all epochs by one pool
               PREPARE show_pool_block_history_by_epoch_fn (varchar) AS
                 SELECT block.epoch_no, count (*) AS block_count FROM block
@@ -94,7 +127,7 @@
                   INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
                   WHERE pool_hash.view = $1
                   GROUP BY block.epoch_no, pool_hash.view
-                  ORDER BY epoch_no desc;
+                  ORDER BY epoch_no DESC;
 
               -- Show the blocks made in one epoch by one pool
               PREPARE show_pool_block_history_in_epoch_fn (word31type, varchar) AS
