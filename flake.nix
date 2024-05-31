@@ -59,13 +59,18 @@
       flake = false;
     };
 
-    cardano-wallet-service = {
-      url = "github:cardano-foundation/cardano-wallet/v2024-03-01";
+    cardano-metadata-service = {
+      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
       flake = false;
     };
 
-    cardano-metadata-service = {
-      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
+    cardano-tracer-service = {
+      url = "github:IntersectMBO/cardano-node/jl/tracer-service";
+      flake = false;
+    };
+
+    cardano-wallet-service = {
+      url = "github:cardano-foundation/cardano-wallet/v2024-03-01";
       flake = false;
     };
 

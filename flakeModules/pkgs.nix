@@ -303,13 +303,13 @@
       cardano-tracer-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-tracer-service import path string.";
-        default = "${localFlake.inputs.cardano-node-service}/nix/nixos/cardano-tracer-service.nix";
+        default = "${localFlake.inputs.cardano-tracer-service}/nix/nixos/cardano-tracer-service.nix";
       };
 
       cardano-tracer-service-ng = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-tracer-service-ng import path string.";
-        default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos/cardano-tracer-service.nix";
+        default = "${localFlake.inputs.cardano-tracer-service}/nix/nixos/cardano-tracer-service.nix";
       };
     };
   };
