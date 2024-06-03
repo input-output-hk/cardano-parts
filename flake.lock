@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1716914311,
-        "narHash": "sha256-LiSeeSoJNjCV5AD4sN/uSFj2sTVYW6yP67jNUo8pm0Q=",
+        "lastModified": 1717183889,
+        "narHash": "sha256-9Vv1UFi+Vn1vUE1JNEIwbsMb/N+zq1/RBRh64p76dm0=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "3289699460bc81e61659974332b8c6e349bebbce",
+        "rev": "ec2ba4ec4572dc80ac91a160e6bc97a808225b20",
         "type": "github"
       },
       "original": {
@@ -270,6 +270,23 @@
         "owner": "IntersectMBO",
         "ref": "8.11.0-pre",
         "repo": "cardano-node",
+        "type": "github"
+      }
+    },
+    "cardano-ogmios-service": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1716597207,
+        "narHash": "sha256-4VirdOf0nO9b0TBon3MgUxjk1PFg+6ToXE3JirDvTlk=",
+        "owner": "input-output-hk",
+        "repo": "cardano-ogmios",
+        "rev": "2031861815ea18c543d2f7b65d4965003e26a2c9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "ogmios-6-3-0",
+        "repo": "cardano-ogmios",
         "type": "github"
       }
     },
@@ -1266,6 +1283,7 @@
         "cardano-metadata-service": "cardano-metadata-service",
         "cardano-node-service": "cardano-node-service",
         "cardano-node-service-ng": "cardano-node-service-ng",
+        "cardano-ogmios-service": "cardano-ogmios-service",
         "cardano-tracer-service": "cardano-tracer-service",
         "cardano-wallet-service": "cardano-wallet-service",
         "colmena": "colmena",

@@ -64,6 +64,11 @@
       flake = false;
     };
 
+    cardano-ogmios-service = {
+      url = "github:input-output-hk/cardano-ogmios/ogmios-6-3-0";
+      flake = false;
+    };
+
     cardano-tracer-service = {
       url = "github:IntersectMBO/cardano-node/jl/tracer-service";
       flake = false;

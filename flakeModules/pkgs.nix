@@ -18,6 +18,7 @@
 #   flake.cardano-parts.pkgs.special.cardano-node-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-node-service
 #   flake.cardano-parts.pkgs.special.cardano-node-service-ng
+#   flake.cardano-parts.pkgs.special.cardano-ogmios-service
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
@@ -33,6 +34,7 @@
 #   perSystem.cardano-parts.pkgs.cardano-faucet-ng
 #   perSystem.cardano-parts.pkgs.cardano-node
 #   perSystem.cardano-parts.pkgs.cardano-node-ng
+#   perSystem.cardano-parts.pkgs.cardano-ogmios
 #   perSystem.cardano-parts.pkgs.cardano-smash
 #   perSystem.cardano-parts.pkgs.cardano-smash-ng
 #   perSystem.cardano-parts.pkgs.cardano-submit-api
@@ -294,6 +296,12 @@
         default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos";
       };
 
+      cardano-ogmios-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-ogmios-service import path string.";
+        default = "${localFlake.inputs.cardano-ogmios-service}/nix/nixos";
+      };
+
       cardano-smash-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-smash-service import path string.";
@@ -424,6 +432,7 @@ in
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-8-10-f1b83b4")
             (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-8-9-3-e7f5f3a" // {version = "8.9.3";}))
             (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-8-11-0-pre-38c7f1c" // {version = "8.11.0-pre";}))
+            (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-ogmios-6-3-0-2031861)
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-2-0-2-1f26396)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-4-3-0-56c6b15)
             (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-9-3-e7f5f3a")
@@ -447,9 +456,9 @@ in
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2418-1-pre-512fe8d {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-635ba54 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-adec324 {meta.mainProgram = "mithril-client";}))
             (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2418-1-pre-512fe8d {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-635ba54 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-adec324 {meta.mainProgram = "mithril-signer";}))
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
@@ -474,6 +483,7 @@ in
               cardano-db-tool
               cardano-faucet
               cardano-node
+              cardano-ogmios
               cardano-smash
               cardano-submit-api
               cardano-tracer
