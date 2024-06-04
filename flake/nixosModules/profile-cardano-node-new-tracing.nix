@@ -144,7 +144,6 @@
 
       systemd.services.cardano-tracer = {
         wantedBy = ["multi-user.target"];
-        after = ["network-online.target"];
         environment.HOME = "/var/lib/cardano-tracer";
         serviceConfig = {
           MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB)}M";
