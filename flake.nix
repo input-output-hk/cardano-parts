@@ -9,7 +9,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     nix.url = "github:nixos/nix/2.19-maintenance";
     opentofu-registry = {
       url = "github:opentofu/registry";
