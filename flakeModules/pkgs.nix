@@ -432,7 +432,7 @@ in
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-8-10-f1b83b4")
             (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-8-9-3-e7f5f3a" // {version = "8.9.3";}))
             (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-8-11-0-pre-38c7f1c" // {version = "8.11.0-pre";}))
-            (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-ogmios-6-3-0-2031861)
+            (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-3-0-8ab5fd6)
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-2-0-2-1f26396)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-4-3-0-56c6b15)
             (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-9-3-e7f5f3a")
@@ -456,9 +456,9 @@ in
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2418-1-pre-512fe8d {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-adec324 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-d7141c0 {meta.mainProgram = "mithril-client";}))
             (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2418-1-pre-512fe8d {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-adec324 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-d7141c0 {meta.mainProgram = "mithril-signer";}))
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
