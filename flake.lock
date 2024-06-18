@@ -191,16 +191,16 @@
     "cardano-db-sync-schema-ng": {
       "flake": false,
       "locked": {
-        "lastModified": 1715980294,
-        "narHash": "sha256-tJwjDRkOxUb8nHcXNYrRAAvDSu+8nSJgh/9UblrdLnM=",
+        "lastModified": 1717630063,
+        "narHash": "sha256-+FOnVcBO5f+zae2TJt+wM91UyVaPoMwSvikamMRQIvY=",
         "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
-        "rev": "56c6b1592b7d0df75a47bdadb24c424d3ef453b5",
+        "rev": "cd10a2bf3849da5eb605ca0e92056990fb92b61d",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "sancho-4-3-0",
+        "ref": "sancho-5.0.0",
         "repo": "cardano-db-sync",
         "type": "github"
       }
