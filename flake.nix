@@ -35,7 +35,7 @@
     # Services offered from the nixosModules of this repo are directly assigned to
     # the flake.cardano-parts.pkgs.special.*-service flakeModule options.
     cardano-db-sync-service = {
-      url = "github:IntersectMBO/cardano-db-sync/13.2.0.2";
+      url = "github:IntersectMBO/cardano-db-sync";
       flake = false;
     };
 

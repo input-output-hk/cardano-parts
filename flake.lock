@@ -208,16 +208,15 @@
     "cardano-db-sync-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1713466238,
-        "narHash": "sha256-ydvcYNfVoqsMhLqg4/zSDoCkltWdMjsD0fXhp2nIuQs=",
+        "lastModified": 1718704579,
+        "narHash": "sha256-Ry0JcstuDKuJSQpO4hKel7Uxz27Bvpej6+Xu1LTkLsc=",
         "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
-        "rev": "1f26396e91a0124a545201d4c6519d015b24fa6e",
+        "rev": "47421f16671d295bf59aba7252ea2fcf7a262f49",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "13.2.0.2",
         "repo": "cardano-db-sync",
         "type": "github"
       }
