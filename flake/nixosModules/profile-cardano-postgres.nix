@@ -234,6 +234,12 @@
                       AND pool_retire.retiring_epoch <= (SELECT MAX (epoch_no) FROM block)
                   );
 
+              -- Show stake address delegation amount history
+              PREPARE show_stake_addr_deleg_amount_history_fn (varchar) AS
+                SELECT stake_address.view AS stake_address, epoch_stake.epoch_no, epoch_stake.amount FROM stake_address
+                  INNER JOIN epoch_stake ON stake_address.id = epoch_stake.addr_id
+                  WHERE stake_address.view = $1;
+
               -- Show stake address delegation history
               PREPARE show_stake_addr_deleg_history_fn (varchar) AS
                 SELECT delegation.active_epoch_no, pool_hash.view FROM delegation
