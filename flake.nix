@@ -28,7 +28,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/release-private-respin";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Cardano related inputs required for service config

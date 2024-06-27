@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1719411693,
-        "narHash": "sha256-e/0fROJHq5QZv+Vh1oqRshg/upqm69WZqOooC9WimhY=",
+        "lastModified": 1719462167,
+        "narHash": "sha256-4uKT8uCMDmh54c8kKIAbYJY4rAzPWovywxW54ILzqy8=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "d633e1f4a4133ad210c84e91dfd8acd96babdfe6",
+        "rev": "e9a0fa33216280587b1d59df1164e2f6d92dc343",
         "type": "github"
       },
       "original": {
@@ -724,16 +724,15 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1718748940,
-        "narHash": "sha256-1kUBjLfo0Vd3qbFd0K7GVIS0pWK20nn634clMxfJmfE=",
+        "lastModified": 1719443312,
+        "narHash": "sha256-JNDuUSmV/o5ck1CfnBtX8GJE/Pli4zYE73LZZ7u0E2Q=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "887eb250e13242d061fda262f965e1f9abe1790d",
+        "rev": "b4025c38b609c6fb99762e2a6201e4e3488a39d3",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "jl/release-private-respin",
         "repo": "iohk-nix",
         "type": "github"
       }
