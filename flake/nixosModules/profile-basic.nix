@@ -88,6 +88,11 @@
       ];
 
       programs = {
+        # Added to address openssh CVE-2024-6387
+        # Remove on the next nixpkgs pin update
+        # Also remove the nixpkgs-openssh flake input from flake.nix
+        ssh.package = inputs.nixpkgs-openssh.legacyPackages.${system}.openssh;
+
         tmux = {
           enable = true;
           aggressiveResize = true;

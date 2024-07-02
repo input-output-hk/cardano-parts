@@ -10,6 +10,12 @@
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+
+    # Added to address openssh CVE-2024-6387
+    # Remove upon the next nixpkgs update
+    # Also remove the openssh package pin from flake/nixosModules/profile-basic.nix
+    nixpkgs-openssh.url = "github:nixos/nixpkgs/nixos-24.05-small";
+
     nix.url = "github:nixos/nix/2.19-maintenance";
     opentofu-registry = {
       url = "github:opentofu/registry";

@@ -1016,6 +1016,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-openssh": {
+      "locked": {
+        "lastModified": 1719825363,
+        "narHash": "sha256-2ASBatUTQWNIiTeBZRuxROu27MyOavVnzeCv7h40QNw=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "10c832d0548e9e3a6df7eb51e68c2783212a303e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-24.05-small",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-regression": {
       "locked": {
         "lastModified": 1643052045,
@@ -1293,6 +1309,7 @@
         "iohk-nix-ng": "iohk-nix-ng",
         "nix": "nix_2",
         "nixpkgs": "nixpkgs_7",
+        "nixpkgs-openssh": "nixpkgs-openssh",
         "nixpkgs-unstable": "nixpkgs-unstable_2",
         "opentofu-registry": "opentofu-registry",
         "process-compose-flake": "process-compose-flake",
