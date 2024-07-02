@@ -89,9 +89,8 @@
 
       programs = {
         # Added to address openssh CVE-2024-6387
-        # Remove on the next nixpkgs pin update
-        # Also remove the nixpkgs-openssh flake input from flake.nix
-        ssh.package = inputs.nixpkgs-openssh.legacyPackages.${system}.openssh;
+        # Remove on the next nixpkgs major version update so openssh 9.8p1+ version is maintained
+        ssh.package = inputs.nixpkgs-unstable.legacyPackages.${system}.openssh;
 
         tmux = {
           enable = true;
