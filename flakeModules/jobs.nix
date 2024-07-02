@@ -766,8 +766,8 @@ in {
             fi
 
             if [ -z "''${POOL_PLEDGE:-}" ]; then
-              echo "Pool pledge is defaulting to 1 million ADA"
-              POOL_PLEDGE="1000000000000"
+              echo "Pool pledge is defaulting to 10 million ADA"
+              POOL_PLEDGE="10000000000000"
             fi
 
             NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"

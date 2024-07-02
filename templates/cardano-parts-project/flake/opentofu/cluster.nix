@@ -9,9 +9,10 @@ with builtins;
 with lib; let
   inherit (config.flake.cardano-parts.cluster) infra groups;
 
+  system = "x86_64-linux";
+
   cluster = infra.aws;
 
-  amis = import "${inputs.nixpkgs-unstable}/nixos/modules/virtualisation/ec2-amis.nix";
   awsProviderFor = region: "aws.${underscore region}";
   hyphen = replaceStrings ["."] ["-"];
   underscore = replaceStrings ["-"] ["_"];
@@ -86,7 +87,7 @@ with lib; let
   mkCustomRoute53Records = import ./cluster/route53.nix-import;
 in {
   flake.opentofu.cluster = inputs.cardano-parts.inputs.terranix.lib.terranixConfiguration {
-    system = "x86_64-linux";
+    inherit system;
     modules = [
       {
         terraform = {
@@ -121,6 +122,22 @@ in {
           aws_caller_identity.current = {};
           aws_region.current = {};
           aws_route53_zone.selected.name = "${cluster.domain}.";
+
+          aws_ami."nixos_${system}" = {
+            owners = ["427812963091"];
+            most_recent = true;
+
+            filter = [
+              {
+                name = "name";
+                values = ["nixos/24.05*"];
+              }
+              {
+                name = "architecture";
+                values = [(builtins.head (lib.splitString "-" system))];
+              }
+            ];
+          };
         };
 
         resource = {
@@ -129,7 +146,7 @@ in {
               {
                 inherit (node.aws.instance) count instance_type;
                 provider = awsProviderFor node.aws.region;
-                ami = node.aws.instance.ami or amis.${substring 0 5 inputs.nixpkgs.lib.version}.${node.aws.region}.hvm-ebs;
+                ami = "\${data.aws_ami.nixos_${system}.id}";
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
                 monitoring = true;
                 key_name = "\${aws_key_pair.bootstrap_${underscore node.aws.region}[0].key_name}";

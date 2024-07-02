@@ -45,6 +45,12 @@
             default = [];
           };
 
+          # While dbsync can also be heap and mem constrained with RTS
+          # parameters and systemd, it tends to much more readily OOM under
+          # these constraints than node does.  So the preferred approach is to
+          # leave dbsync unconstrained and vertically resize on 90% RAM node
+          # exporter alerts as the chain continues to grow.
+
           nodeRamAvailableMiB = mkOption {
             description = "The default RAM available for node max heap size on the machine in MiB.";
             type = oneOf [ints.positive float];

@@ -840,7 +840,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(ForgeSlotsMissed{environment=\"$environment\"}[1h]) * 3600",
+          "expr": "rate(Forge_SlotsMissed{environment=\"$environment\"}[1h]) * 3600",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,

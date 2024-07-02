@@ -6,7 +6,7 @@ let
     kesPeriodsRemaining =
       if useLegacyTracing
       then "cardano_node_metrics_remainingKESPeriods_int"
-      else "(KESInfo_operationalCertificateExpiryKESPeriod - KESInfo_operationalCertificateStartKESPeriod) - KESInfo_currentKESPeriod";
+      else "KESInfo_remainingKESPeriods - KESInfo_operationalCertificateStartKESPeriod";
   in {
     alert = "cardano_node_KES_expiration_metric_${toString periodNotice}period_notice${
       if useLegacyTracing

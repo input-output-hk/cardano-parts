@@ -11,6 +11,9 @@ null := ""
 stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
 statePrefix := "~/.local/share"
 
+# To skip ptrace permission modification prompting, env var AUTO_SET_ENV can be set to `false`
+autoSetEnv := env_var_or_default("AUTO_SET_ENV","unset")
+
 # Environment variables can be used to change the default template diff and path comparison sources.
 # If TEMPLATE_PATH is set, it will have precedence, otherwise git url will be used for source templates.
 templateBranch := env_var_or_default("TEMPLATE_BRANCH","main")
@@ -451,8 +454,32 @@ set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
   echo "  CARDANO_NODE_NETWORK_ID=$MAGIC"
   echo "  TESTNET_MAGIC=$MAGIC"
 
+  # Ptrace permissions are no longer "classic" by default starting in nixpkgs 24.05
+  AUTO_SET_ENV={{autoSetEnv}}
+  if [ -f /proc/sys/kernel/yama/ptrace_scope ] && [ "$AUTO_SET_ENV" != "false" ]; then
+     if [ "$(cat /proc/sys/kernel/yama/ptrace_scope)" = "0" ]; then
+       AUTO_SET_ENV=true
+     else
+       echo
+       echo "For just scripts to automatically set cardano environment variables in bash and zsh shells, ptrace classic permission needs to be enabled."
+       echo "This requires sudo access and will persist ptrace classic permission until the next reboot by writing:"
+       echo "  echo 0 > /proc/sys/kernel/yama/ptrace_scope"
+       echo
+       read -p "Do you have sudo access and wish to proceed [yY]? " -n 1 -r
+       echo
+       if [[ $REPLY =~ ^[Yy]$ ]]; then
+         if sudo bash -c 'echo 0 > /proc/sys/kernel/yama/ptrace_scope'; then
+           echo "ptrace_scope classic permission successfully set."
+           AUTO_SET_ENV=true
+         else
+           echo "ptrace_scope classic permission change unsuccessful."
+         fi
+       fi
+     fi
+  fi
+
   SH=$(cat /proc/$SHELLPID/comm)
-  if [[ "$SH" =~ bash$|zsh$ ]]; then
+  if [[ "$SH" =~ bash$|zsh$ ]] && [ "$AUTO_SET_ENV" = "true" ]; then
     # Modifying a parent shells env vars is generally not done
     # This is a hacky way to accomplish it in bash and zsh
     gdb -iex "set auto-load no" /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
@@ -470,7 +497,13 @@ set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
     fi
   else
     echo
-    echo "Unexpected shell: $SH"
+    if ! [[ "$SH" =~ bash$|zsh$ ]]; then
+      echo "Unexpected shell: $SH"
+    fi
+
+    if [ "$AUTO_SET_ENV" != "true" ]; then
+      echo "ptrace_scope: classic permission not enabled"
+    fi
     echo "The following vars will need to be manually exported, or the equivalent operation for your shell:"
     echo "  export CARDANO_NODE_SOCKET_PATH=$DEFAULT_PATH"
     echo "  export CARDANO_NODE_NETWORK_ID=$MAGIC"

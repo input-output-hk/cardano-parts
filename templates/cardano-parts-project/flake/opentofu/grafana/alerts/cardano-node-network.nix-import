@@ -88,5 +88,15 @@ in {
         description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
       };
     }
+    {
+      alert = "cardano_connection_count_high";
+      expr = ''cardano_node_metrics_connectionManager_incomingConns > 450'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has a high number of connections.";
+        description = "{{$labels.instance}}: cardano-node has an incoming connection count > 450 which is close to the hard limit of 512.  Consider scaling or taking other action.";
+      };
+    }
   ];
 }

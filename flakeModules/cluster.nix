@@ -37,6 +37,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-metadata-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service-ng
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-ogmios-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-smash-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-tracer-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-tracer-service-ng
@@ -52,6 +53,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-metadata-pkgs
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-node-pkgs
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-ogmios
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-smash
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-submit-api
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-tracer
@@ -455,6 +457,12 @@ flake @ {
         default = cfg.pkgs.special.cardano-node-service-ng;
       };
 
+      cardano-ogmios-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-ogmios-service import path string.";
+        default = cfg.pkgs.special.cardano-ogmios-service;
+      };
+
       cardano-smash-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-smash-service import path string.";
@@ -569,6 +577,12 @@ flake @ {
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardano-node-pkgs;
+      };
+
+      cardano-ogmios = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default cardano-ogmios package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-ogmios);
       };
 
       cardano-smash = mkOption {

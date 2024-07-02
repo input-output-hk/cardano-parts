@@ -138,7 +138,6 @@
           ++ optionals cfg.openFirewallNginx [80 443];
 
         systemd.services.cardano-faucet = {
-          after = ["network-online.target"];
           wantedBy = ["multi-user.target"];
 
           # Allow up to 10 failures with 30 second restarts in a 15 minute window
