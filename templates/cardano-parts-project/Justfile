@@ -152,7 +152,7 @@ cf STACKNAME:
   rain deploy --debug --termination-protection --yes ./cloudFormation/{{STACKNAME}}.json
 
 # Prep dbsync for delegation analysis
-dbsync-prep ENV HOST ACCTS="500":
+dbsync-prep ENV HOST ACCTS="501":
   #!/usr/bin/env bash
   set -euo pipefail
   TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
@@ -203,7 +203,7 @@ dbsync-pool-analyze HOSTNAME:
   echo
 
   echo "The string of indexes of faucet pools to de-delegate from the JSON above are:"
-  jq '.faucet_to_dedelegate | to_entries | map(.key) | join(" ")' <<< "$JSON"
+  jq -r '.faucet_to_dedelegate | to_entries | map(.key) | join(" ")' <<< "$JSON"
   echo
 
   MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
