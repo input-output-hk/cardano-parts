@@ -37,7 +37,7 @@ in {
       labels.severity = "page";
       annotations = {
         summary = "Coredumps have been detected in the past hour.";
-        description = "{{ $labels.instance }} has had {{ $value }} coredump(s) in the past hour. Please investigate.";
+        description = "{{ $labels.instance }} has had {{ printf \"%.0f\" $value }} coredump(s) in the past hour. Please investigate.";
       };
     }
   ];
