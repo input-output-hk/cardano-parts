@@ -29,5 +29,16 @@ in {
         description = "A new machine has appeared: ${machines} machines are expected, but {{ $value }} are up. Please `just tofu grafana apply` to update the alert to the new expected number.";
       };
     }
+    # NixosModule profile-cardano-custom-metrics.nix from cardano-parts provides this metric:
+    {
+      alert = "coredump_detected";
+      expr = ''netdata_statsd_cardano_coredumps_last_hour_gauge_value_average > 0'';
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Coredumps have been detected in the past hour.";
+        description = "{{ $labels.instance }} has had {{ printf \"%.0f\" $value }} coredump(s) in the past hour. Please investigate.";
+      };
+    }
   ];
 }

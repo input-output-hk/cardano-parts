@@ -9,7 +9,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     nix.url = "github:nixos/nix/2.19-maintenance";
     opentofu-registry = {
       url = "github:opentofu/registry";
@@ -28,14 +28,14 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/node-config-bp-legacy";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/private-sanchonet-test";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Cardano related inputs required for service config
     # Services offered from the nixosModules of this repo are directly assigned to
     # the flake.cardano-parts.pkgs.special.*-service flakeModule options.
     cardano-db-sync-service = {
-      url = "github:IntersectMBO/cardano-db-sync/13.2.0.2";
+      url = "github:IntersectMBO/cardano-db-sync";
       flake = false;
     };
 
@@ -45,7 +45,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/sancho-4-3-0";
+      url = "github:IntersectMBO/cardano-db-sync/sancho-5.0.0";
       flake = false;
     };
 
@@ -59,13 +59,23 @@
       flake = false;
     };
 
-    cardano-wallet-service = {
-      url = "github:cardano-foundation/cardano-wallet/v2024-03-01";
+    cardano-metadata-service = {
+      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
       flake = false;
     };
 
-    cardano-metadata-service = {
-      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
+    cardano-ogmios-service = {
+      url = "github:input-output-hk/cardano-ogmios/ogmios-6-3-0";
+      flake = false;
+    };
+
+    cardano-tracer-service = {
+      url = "github:IntersectMBO/cardano-node/jl/tracer-service";
+      flake = false;
+    };
+
+    cardano-wallet-service = {
+      url = "github:cardano-foundation/cardano-wallet/v2024-03-01";
       flake = false;
     };
 

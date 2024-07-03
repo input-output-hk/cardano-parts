@@ -16,6 +16,7 @@
 #   config.cardano-parts.perNode.meta.cardano-faucet-service
 #   config.cardano-parts.perNode.meta.cardano-metadata-service
 #   config.cardano-parts.perNode.meta.cardano-node-service
+#   config.cardano-parts.perNode.meta.cardano-ogmios-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
 #   config.cardano-parts.perNode.meta.cardano-tracer-service
 #   config.cardano-parts.perNode.meta.enableAlertCount
@@ -32,6 +33,7 @@
 #   config.cardano-parts.perNode.pkgs.cardano-metadata-pkgs
 #   config.cardano-parts.perNode.pkgs.cardano-node
 #   config.cardano-parts.perNode.pkgs.cardano-node-pkgs
+#   config.cardano-parts.perNode.pkgs.cardano-ogmios
 #   config.cardano-parts.perNode.pkgs.cardano-smash
 #   config.cardano-parts.perNode.pkgs.cardano-submit-api
 #   config.cardano-parts.perNode.pkgs.cardano-tracer
@@ -194,6 +196,12 @@ flake @ {moduleWithSystem, ...}: {
           default = cfg.group.meta.cardano-node-service;
         };
 
+        cardano-ogmios-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-ogmios-service import path string.";
+          default = cfg.group.meta.cardano-ogmios-service;
+        };
+
         cardano-smash-service = mkOption {
           type = str;
           description = mdDoc "The cardano-smash-service import path string.";
@@ -269,6 +277,7 @@ flake @ {moduleWithSystem, ...}: {
         (mkPkgOpt "cardano-db-tool" (cfg.group.pkgs.cardano-db-tool system))
         (mkPkgOpt "cardano-faucet" (cfg.group.pkgs.cardano-faucet system))
         (mkPkgOpt "cardano-node" (cfg.group.pkgs.cardano-node system))
+        (mkPkgOpt "cardano-ogmios" (cfg.group.pkgs.cardano-ogmios system))
         (mkPkgOpt "cardano-smash" (cfg.group.pkgs.cardano-smash system))
         (mkPkgOpt "cardano-submit-api" (cfg.group.pkgs.cardano-submit-api system))
         (mkPkgOpt "cardano-tracer" (cfg.group.pkgs.cardano-tracer system))

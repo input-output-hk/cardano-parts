@@ -116,8 +116,18 @@
             CARDANO_NODE_PING_LATENCY=$(jq '.pongs[-1].sample * 1000' <<< "$CARDANO_NODE_PING_OUPUT")
           fi
 
+          COREDUMPS=$(coredumpctl -S -1h --json=pretty 2>&1 || true)
+          if [ "$COREDUMPS" = "No coredumps found." ]; then
+            COREDUMPS_LAST_HOUR="0"
+          else
+            COREDUMPS_LAST_HOUR=$(jq -re '. | length' <<< "$COREDUMPS")
+          fi
+
+          echo "cardano.coredumps_last_hour:''${COREDUMPS_LAST_HOUR}|g"
           echo "cardano.node_ping_latency_ms:''${CARDANO_NODE_PING_LATENCY}|g"
-          statsd "cardano.node_ping_latency_ms:''${CARDANO_NODE_PING_LATENCY}|g"
+          statsd \
+            "cardano.coredumps_last_hour:''${COREDUMPS_LAST_HOUR}|g" \
+            "cardano.node_ping_latency_ms:''${CARDANO_NODE_PING_LATENCY}|g" \
         '';
       };
 

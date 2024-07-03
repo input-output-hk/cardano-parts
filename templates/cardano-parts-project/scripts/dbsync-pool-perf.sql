@@ -226,8 +226,11 @@ with
     --select view from pools_history),
     select distinct view from (
       select view from faucet_pool_not_perf
-      union
-      select view from faucet_pool_over_2m
+      -- No longer automatically include pools over 2m for dedelegation as:
+      --  a) some network faucets now use pool deleg amounts other than 1M, ex: sanchonet/private @ 10M pool deleg
+      --  b) if large pools are performing well, de-delegating will drop chain density further which may not be desirable
+      -- union
+      -- select view from faucet_pool_over_2m
     ) as faucet_pool_to_dedelegate),
 
   -- Faucet pools not performing and/or over 2M ADA stake, delegation

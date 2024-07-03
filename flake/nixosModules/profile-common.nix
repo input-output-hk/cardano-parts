@@ -62,7 +62,6 @@
           # Remove the bootstrap key after 1 week in favor of auth-keys-hub use
           remove-ssh-bootstrap-key = {
             wantedBy = ["multi-user.target"];
-            after = ["network-online.target"];
 
             serviceConfig = {
               Type = "oneshot";
@@ -130,7 +129,6 @@
           #
           sops-secrets = {
             wantedBy = ["multi-user.target"];
-            after = ["network-online.target"];
 
             script = config.system.activationScripts.setupSecrets.text or "true";
 

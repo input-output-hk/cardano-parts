@@ -12,6 +12,7 @@
   ...
 }: {
   flake.nixosModules.profile-basic = moduleWithSystem ({system}: {
+    config,
     name,
     pkgs,
     lib,
@@ -87,6 +88,10 @@
       ];
 
       programs = {
+        # Added to address openssh CVE-2024-6387
+        # Remove on the next nixpkgs major version update so openssh 9.8p1+ version is maintained
+        ssh.package = inputs.nixpkgs-unstable.legacyPackages.${system}.openssh;
+
         tmux = {
           enable = true;
           aggressiveResize = true;
@@ -156,13 +161,15 @@
       system.stateVersion = "23.05";
 
       warnings = let
+        nixosRelease = config.system.nixos.release;
+        nixpkgsRelease = sanitize inputs.nixpkgs.lib.version;
         match' = versionStr: match ''^([[:d:]]+\.[[:d:]]+).*$'' versionStr;
         sanitize = versionStr:
           if isList (match' versionStr)
           then head (match' versionStr)
           else versionStr;
       in
-        optional (version != inputs.nixpkgs.lib.version)
-        "cardano-parts nixosModules have been tested with ${sanitize inputs.nixpkgs.lib.version}, whereas this nixosConfiguration is using ${sanitize version}";
+        optional (nixosRelease != nixpkgsRelease)
+        "Cardano-parts nixosModules have been tested with release ${nixpkgsRelease}, whereas this nixosConfiguration is using release ${nixosRelease}";
     });
 }
