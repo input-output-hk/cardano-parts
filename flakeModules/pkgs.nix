@@ -419,10 +419,10 @@ in
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
-            (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-8-12-2-71f8c71")
+            (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-ad75468)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-03-01-d372d86)
-            (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-8-12-2-71f8c71" // {version = "8.24.0.0";}))
+            (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-9-0-0-2820a63" // {version = "9.0.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-9-0-0-2820a63" // {version = "9.0.0.0";}))
             (mkPkg "cardano-db-sync" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-2-0-2-1f26396" // {meta.mainProgram = "cardano-db-sync";}))
             (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-sancho-5-1-0-7dd3f60" // {meta.mainProgram = "cardano-db-sync";}))
@@ -430,25 +430,25 @@ in
             (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-sancho-5-1-0-7dd3f60")
             (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-8-3-ba2a8d9")
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-8-10-f1b83b4")
-            (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-8-12-2-71f8c71" // {version = "8.12.2";}))
+            (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-9-0-0-2820a63" // {version = "9.0.0";}))
             (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-9-0-0-2820a63" // {version = "9.0.0";}))
             (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-3-0-8ab5fd6)
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-2-0-2-1f26396)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-sancho-5-1-0-7dd3f60)
-            (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-8-12-2-71f8c71")
+            (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-9-0-0-2820a63")
-            (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-8-12-2-71f8c71")
+            (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-03-01-d372d86
               // {
                 pname = "cardano-wallet";
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
-            (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-8-12-2-71f8c71")
+            (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "db-analyser-ng" caPkgs."db-analyser-input-output-hk-cardano-node-9-0-0-2820a63")
-            (mkPkg "db-synthesizer" caPkgs."db-synthesizer-input-output-hk-cardano-node-8-12-2-71f8c71")
+            (mkPkg "db-synthesizer" caPkgs."db-synthesizer-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "db-synthesizer-ng" caPkgs."db-synthesizer-input-output-hk-cardano-node-9-0-0-2820a63")
-            (mkPkg "db-truncater" caPkgs."db-truncater-input-output-hk-cardano-node-8-12-2-71f8c71")
+            (mkPkg "db-truncater" caPkgs."db-truncater-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "db-truncater-ng" caPkgs."db-truncater-input-output-hk-cardano-node-9-0-0-2820a63")
             (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v0-80-0-26bf212)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
