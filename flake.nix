@@ -40,7 +40,7 @@
     };
 
     cardano-db-sync-schema = {
-      url = "github:IntersectMBO/cardano-db-sync/13.2.0.2";
+      url = "github:IntersectMBO/cardano-db-sync/13.3.0.0";
       flake = false;
     };
 
