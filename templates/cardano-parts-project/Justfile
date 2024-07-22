@@ -919,9 +919,9 @@ update-ips:
   tofu init -reconfigure
   tofu workspace select -or-create cluster
 
-  echo
+  print "\n"
   let nodeCount = nix eval .#nixosConfigurations --raw --apply 'let f = x: toString (builtins.length (builtins.attrNames x)); in f'
-  echo $"Processing ip information for ($nodeCount) nixos machine configurations..."
+  print $"Processing ip information for ($nodeCount) nixos machine configurations..."
 
   let eipRecords = (tofu show -json
     | from json
@@ -972,15 +972,15 @@ update-ips:
   # The pre-push git hook will complain if this file has been committed accidently.
   git add --intent-to-add flake/nixosModules/ips-DONT-COMMIT.nix
 
-  echo $"Ips were written for a machine count of: ($eipRecords | length)"
+  print $"Ips were written for a machine count of: ($eipRecords | length)"
   if $nodeCount != ($eipRecords | length | into string) {
-    echo
-    echo $"(ansi bg_red)WARNING:(ansi reset) There are ($nodeCount) nixos machine configurations but ($eipRecords | length) ip record sets were written."
-    echo
+    print "\n"
+    print $"(ansi bg_red)WARNING:(ansi reset) There are ($nodeCount) nixos machine configurations but ($eipRecords | length) ip record sets were written."
+    print "\n"
   }
 
-  echo "Ips have been written to: flake/nixosModules/ips-DONT-COMMIT.nix"
-  echo "Obviously, don't commit this file."
+  print "Ips have been written to: flake/nixosModules/ips-DONT-COMMIT.nix"
+  print "Obviously, don't commit this file."
 
 # Generate example ip-module code
 update-ips-example:
