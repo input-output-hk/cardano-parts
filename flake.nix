@@ -40,7 +40,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/sancho-5.1.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.3.0.0";
       flake = false;
     };
 
