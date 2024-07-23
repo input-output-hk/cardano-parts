@@ -31,14 +31,9 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
-    # Cardano related inputs required for service config
-    # Services offered from the nixosModules of this repo are directly assigned to
-    # the flake.cardano-parts.pkgs.special.*-service flakeModule options.
-    cardano-db-sync-service = {
-      url = "github:IntersectMBO/cardano-db-sync";
-      flake = false;
-    };
-
+    # Cardano-db-sync schema input pins, which must match the
+    # versioning of the release and pre-release (-ng) dbsync
+    # definitions found in flakeModule/pkgs.nix.
     cardano-db-sync-schema = {
       url = "github:IntersectMBO/cardano-db-sync/13.3.0.0";
       flake = false;
@@ -49,13 +44,22 @@
       flake = false;
     };
 
+    # Cardano inputs required for nixos services follow. These services
+    # are assigned to the flake.cardano-parts.pkgs.special.*-service
+    # flakeModule options and do not necessarily reflect the software
+    # versions running on those nixos services.
+    cardano-db-sync-service = {
+      url = "github:IntersectMBO/cardano-db-sync";
+      flake = false;
+    };
+
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/8.9.2";
+      url = "github:IntersectMBO/cardano-node/9.0.0";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/8.11.0-pre";
+      url = "github:IntersectMBO/cardano-node/9.0.0";
       flake = false;
     };
 
