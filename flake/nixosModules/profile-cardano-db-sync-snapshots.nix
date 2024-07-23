@@ -124,9 +124,9 @@ flake: {
                             "Expiration": {
                                 "Days": 60
                             },
-                            "ID": "Delete old 13.2 db-sync snapshots",
+                            "ID": "Delete old 13.3 db-sync snapshots",
                             "Filter": {
-                                "Prefix": "$PREFIX/13.2"
+                                "Prefix": "$PREFIX/13.3"
                             },
                             "Status": "Enabled"
                         }
