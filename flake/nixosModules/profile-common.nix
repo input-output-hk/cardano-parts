@@ -46,15 +46,21 @@
         };
       };
 
-      # Collect some system metrics locally at higher resolution than the default exported metrics which is typically a rate of 1 sample/min
-      services.sysstat = {
-        enable = true;
+      services = {
+        # Enable the at scheduler
+        atd.enable = true;
 
-        # Also include disk statistics by partition and filesystem not collected by default
-        collect-args = "1 1 -S XDISK";
+        # Collect some system metrics locally at higher resolution than the
+        # default exported metrics which is typically a rate of 1 sample/min
+        sysstat = {
+          enable = true;
 
-        # Collect every 10 seconds, with accuracy enforced in the systemd timer
-        collect-frequency = "*:*:00/10";
+          # Also include disk statistics by partition and filesystem not collected by default
+          collect-args = "1 1 -S XDISK";
+
+          # Collect every 10 seconds, with accuracy enforced in the systemd timer
+          collect-frequency = "*:*:00/10";
+        };
       };
 
       systemd = {
