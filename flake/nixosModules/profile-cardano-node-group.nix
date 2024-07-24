@@ -300,6 +300,9 @@
             # Ensure quick restarts on any condition
             Restart = "always";
             RestartSec = 30;
+
+            # Node uses SIGINT rather than the systemd default of SIGTERM for clean shutdown
+            KillSignal = "SIGINT";
           };
         };
 

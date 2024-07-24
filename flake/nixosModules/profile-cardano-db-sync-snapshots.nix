@@ -124,9 +124,9 @@ flake: {
                             "Expiration": {
                                 "Days": 60
                             },
-                            "ID": "Delete old 13.2 db-sync snapshots",
+                            "ID": "Delete old 13.3 db-sync snapshots",
                             "Filter": {
-                                "Prefix": "$PREFIX/13.2"
+                                "Prefix": "$PREFIX/13.3"
                             },
                             "Status": "Enabled"
                         }
@@ -289,7 +289,7 @@ flake: {
                         touch "$RUNNING_FILE"
 
                         echo "Obtaining last snapshot name:"
-                        OLD_SNAPSHOT=$(ls -tr1 db-sync-snapshot*.tgz 2> /dev/null || echo "NO_SNAPSHOT_FOUND" | tail -n 1)
+                        OLD_SNAPSHOT=$({ ls -tr1 db-sync-snapshot*.tgz 2> /dev/null || echo "NO_SNAPSHOT_FOUND"; } | tail -n 1)
                         echo "Last snapshot name: $OLD_SNAPSHOT"
 
                         echo "Starting snapshot creation -- expect this to take awhile..."
@@ -299,7 +299,7 @@ flake: {
                         systemctl start cardano-db-sync \
 
                         echo "Obtaining new snapshot name."
-                        NEW_SNAPSHOT=$(ls -tr1 db-sync-snapshot*.tgz 2> /dev/null || echo "NO_SNAPSHOT_FOUND" | tail -n 1)
+                        NEW_SNAPSHOT=$({ ls -tr1 db-sync-snapshot*.tgz 2> /dev/null || echo "NO_SNAPSHOT_FOUND"; } | tail -n 1)
                         echo "New snapshot name: $NEW_SNAPSHOT"
 
                         if [ "$NEW_SNAPSHOT" != "$OLD_SNAPSHOT" ]; then
