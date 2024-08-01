@@ -3,6 +3,16 @@
   name = "cardano-node-generic";
   rule = [
     {
+      alert = "cardano_node_elevated_restarts";
+      expr = ''changes(node_systemd_unit_state{name=~"cardano-node(-[0-9]+)?.service", state="active"}[1h]) > 1'';
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has experienced multiple restarts in the past hour.";
+        description = "{{$labels.instance}}: cardano-node has restarted {{ printf \"%.0f\" $value }} times in the past hour.";
+      };
+    }
+    {
       alert = "cardano_node_blockheight_unchanged";
       expr = "rate(cardano_node_metrics_blockNum_int[2m]) == 0";
       for = "10m";
