@@ -242,6 +242,7 @@ in
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
                     alejandra
+                    curl
                     deadnix
                     diffutils
                     fd
