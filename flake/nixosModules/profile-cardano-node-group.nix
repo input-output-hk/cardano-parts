@@ -4,7 +4,7 @@
 #
 # Attributes available on nixos module import:
 #   config.services.cardano-node.shareIpv6Address
-#   config.services.cardano-node.totalCpuCores
+#   config.services.cardano-node.totalCpuCount
 #   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.mithril-client.enable
 #   config.services.mithril-client.aggregatorEndpointUrl
