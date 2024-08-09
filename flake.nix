@@ -35,12 +35,12 @@
     # versioning of the release and pre-release (-ng) dbsync
     # definitions found in flakeModule/pkgs.nix.
     cardano-db-sync-schema = {
-      url = "github:IntersectMBO/cardano-db-sync/13.3.0.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.4.0.0";
       flake = false;
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.3.0.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.4.0.0";
       flake = false;
     };
 
