@@ -110,29 +110,7 @@ apply-all *ARGS:
 
 # Deploy select machines with the bootstrap key
 apply-bootstrap *ARGS:
-  SSH_CONFIG=<(sed '6i IdentityFile .ssh_key' .ssh_config) colmena apply --verbose --on {{ARGS}}
-
-# Build the prod cardano book
-build-book-prod:
-  #!/usr/bin/env bash
-  set -e
-  cd mdbook
-  ln -sf book-prod.toml book.toml
-  cd -
-  mdbook build mdbook/
-  echo
-  nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
-
-# Build the staging cardano book
-build-book-staging:
-  #!/usr/bin/env bash
-  set -e
-  cd mdbook
-  ln -sf book-staging.toml book.toml
-  cd -
-  mdbook build mdbook/
-  echo
-  nu -c 'echo $"(ansi bg_light_purple)REMINDER:(ansi reset) Ensure node version statement and link for each environment are up to date."'
+  SSH_CONFIG_FILE=<(sed '6i IdentityFile .ssh_key' .ssh_config) colmena apply --verbose --on {{ARGS}}
 
 # Build a nixos configuration
 build-machine MACHINE *ARGS:
@@ -179,41 +157,58 @@ dbsync-psql HOSTNAME:
   just ssh {{HOSTNAME}} -t 'psql -U cexplorer cexplorer'
 
 # Analyze pool performance
-dbsync-pool-analyze HOSTNAME:
+dbsync-pool-analyze HOSTNAME TABLE="summary" PSQL_ARGS="-xX" LOVELACE="2E12":
   #!/usr/bin/env bash
   set -euo pipefail
   echo "Pushing pool analysis sql command on {{HOSTNAME}}..."
   just scp scripts/dbsync-pool-perf.sql {{HOSTNAME}}:/tmp/
 
   echo
-  echo "Executing pool analysis sql command on host {{HOSTNAME}}..."
-  QUERY=$(just ssh {{HOSTNAME}} -t 'psql -P pager=off -xXU cexplorer cexplorer < /tmp/dbsync-pool-perf.sql')
+  echo "Executing pool analysis sql command on host {{HOSTNAME}} with:"
+  echo "  Table: {{TABLE}}"
+  echo "  Psql args: \"{{PSQL_ARGS}}\""
+  echo "  Lovelace threshold (lt): {{LOVELACE}}"
 
-  echo
-  echo "Query output:"
-  echo "$QUERY" | tail -n +2
-  echo
+  QUERY=$(just ssh {{HOSTNAME}} -t "'psql -P pager=off -v table={{TABLE}} -v lovelace={{LOVELACE}} -U cexplorer cexplorer {{PSQL_ARGS}} < /tmp/dbsync-pool-perf.sql'")
+  if [ "{{TABLE}}" = "summary" ] && [ "{{PSQL_ARGS}}" = "-xX" ]; then
+    echo
+    echo "Query output:"
+    echo "$QUERY" | tail -n +2
+    echo
 
-  JSON=$(grep -oP '^faucet_pool_summary_json[[:space:]]+\| \K{.*$' <<< "$QUERY" | jq .)
-  echo "$JSON"
-  echo
+    JSON=$(grep -oP '^faucet_pool_summary_json[[:space:]]+\| \K{.*$' <<< "$QUERY" | jq .)
+    DEDELEGATE_POOLS=$(jq '.faucet_to_dedelegate' <<< "$JSON")
+    echo "$JSON"
+    echo
 
-  echo "Faucet pools to de-delegate are:"
-  jq '.faucet_to_dedelegate' <<< "$JSON"
-  echo
+    echo "Faucet pools to de-delegate are:"
+    echo "$DEDELEGATE_POOLS"
+    echo
 
-  echo "The string of indexes of faucet pools to de-delegate from the JSON above are:"
-  jq -r '.faucet_to_dedelegate | to_entries | map(.key) | join(" ")' <<< "$JSON"
-  echo
+    if [ "$DEDELEGATE_POOLS" != "null" ]; then
+      echo "The string of indexes of faucet pools to de-delegate from the JSON above are:"
+      jq -r '.faucet_to_dedelegate | to_entries | map(.key) | join(" ")' <<< "$JSON"
+      echo
 
-  MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
-  echo "The maximum percentage difference de-delegation of all these pools will make in chain density is: $MAX_SHIFT"
+      MAX_SHIFT=$(grep -oP '^faucet_pool_to_dedelegate_shift_pct[[:space:]]+\| \K.*$' <<< "$QUERY")
+      echo "The maximum percentage difference de-delegation of all these pools will make in chain density is: $MAX_SHIFT"
+    else
+      echo "There are no faucet delegated non-performing pools to de-delegate at this time."
+    fi
+  else
+    echo "$QUERY"
+  fi
 
 # De-delegation pools for given faucet stake indexes
 dedelegate-pools ENV *IDXS=null:
   #!/usr/bin/env bash
   set -euo pipefail
   {{checkEnvWithoutOverride}}
+
+  if ! [[ "$ENV" =~ preprod$|preview$|private$|sanchonet$|shelley-qa$ ]]; then
+    echo "Error: only node environments for preprod, preview, private, sanchonet and shelley-qa are supported"
+    exit 1
+  fi
 
   if [ "{{ENV}}" = "mainnet" ]; then
     echo "Dedelegation cannot be performed on the mainnet environment"
@@ -224,6 +219,18 @@ dedelegate-pools ENV *IDXS=null:
   if [ "$(jq -re .syncProgress <<< "$(just query-tip {{ENV}})")" != "100.00" ]; then
     echo "Please wait until the local tip of environment {{ENV}} is 100.00 before dedelegation"
     exit 1
+  fi
+
+  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+    CARDANO_CLI="cardano-cli"
+  elif [ -n "${UNSTABLE:-}" ] && [ "${UNSTABLE:-}" != "true" ]; then
+    CARDANO_CLI="cardano-cli"
+  elif [ "${UNSTABLE:-}" = "true" ]; then
+    CARDANO_CLI="cardano-cli-ng"
+  elif [[ "$ENV" =~ preprod$|preview$|shelley-qa$ ]]; then
+    CARDANO_CLI="cardano-cli"
+  elif [[ "$ENV" =~ private$|sanchonet$ ]]; then
+    CARDANO_CLI="cardano-cli-ng"
   fi
 
   echo
@@ -237,8 +244,19 @@ dedelegate-pools ENV *IDXS=null:
       --signing-key-file <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey) \
       --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
       --delegation-index "$i"
-    echo "Sleeping 2 minutes until $(date -d  @$(($(date +%s) + 120)))"
-    sleep 120
+
+    TXID=$(eval "$CARDANO_CLI" transaction txid --tx-file tx-deleg-account-$i-restore.txsigned)
+    EXISTS="true"
+
+    while [ "$EXISTS" = "true" ]; do
+      EXISTS=$(eval "$CARDANO_CLI" query tx-mempool tx-exists $TXID | jq -r .exists)
+      if [ "$EXISTS" = "true" ]; then
+        echo "Pool de-delegation index $i tx still exists in the mempool, sleeping 5s: $TXID"
+      else
+        echo "Pool de-delegation index $i tx has been removed from the mempool."
+      fi
+      sleep 5
+    done
     echo
     echo
   done
@@ -788,11 +806,59 @@ stop-node ENV:
     rm -f "$STATEDIR/node-{{ENV}}.pid" "$STATEDIR/node-{{ENV}}.socket"
   fi
 
+# Clone a cardano-parts template
+template-clone FILE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  # If a local copy already exists and there is a diff, force awareness
+  if [ -f "{{FILE}}" ]; then
+    if ! git diff-index --quiet HEAD -- "{{FILE}}"; then
+      echo "A local copy exists with uncommitted git modifications: {{FILE}}"
+      echo "Please commit or revert modifications and try again."
+      exit 1
+    fi
+  else
+    # Ensure the path to it exists
+    mkdir -p "$(dirname "{{FILE}}")"
+  fi
+
+  TMPFILE=$(mktemp -t template-clone-XXXXXX)
+  if [ "{{templatePath}}" = "no-path-given" ]; then
+    echo "Retreiving a template file copy from:"
+    echo "  {{templateUrl}}/{{FILE}}"
+    if ! curl -H 'Cache-Control: no-cache' -sL "{{templateUrl}}/{{FILE}}" > "$TMPFILE"; then
+      echo "Unable to curl the requested resource successfully with:"
+      echo "curl -H 'Cache-Control: no-cache' -sL \"{{templateUrl}}/{{FILE}}\" > \"$TMPFILE\""
+      rm -f "$TMPFILE"
+      exit 1
+    fi
+  else
+    echo "Retreiving a template file copy from:"
+    echo "  {{templatePath}}/{{FILE}}"
+    if [ -f "{{templatePath}}/{{FILE}}" ]; then
+      cp "{{templatePath}}/{{FILE}}" "$TMPFILE"
+    else
+      echo "Unable to find the requested template file at {{templatePath}}/{{FILE}}"
+      exit 1
+    fi
+  fi
+
+  echo
+  echo "Moving the template file copy into place and setting file permissions to 0644"
+  mv -f "$TMPFILE" "{{FILE}}"
+  chmod 0644 "{{FILE}}"
+
+  echo
+  echo "Git adding file:"
+  echo "  {{FILE}}"
+  git add {{FILE}}
+
 # Diff against cardano-parts template
 template-diff FILE *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
-  if ! [ -f {{FILE}} ]; then
+  if ! [ -f "{{FILE}}" ]; then
     FILE="<(echo '')"
   else
     FILE="{{FILE}}"

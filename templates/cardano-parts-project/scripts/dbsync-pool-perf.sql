@@ -1,3 +1,10 @@
+-- Set variables expected for this query to work are:
+--   :table
+--     Where :table is the final table to select all rows from.
+--     This provides a convenient way select CTEs as well when exploring or debugging.
+--
+--   :lovelace
+--     This used to be fixed to 2E12, but different networks now use different faucet delegation amount.
 with
   current_epoch AS (
     select max(epoch_no) as current_epoch from block),
@@ -7,7 +14,8 @@ with
 
   -- Required as a reference table to avoid subquery namespacing errors
   pool_table AS (
-    select id, hash_raw, view as pool_view from pool_hash),
+    select distinct pool_hash.id, hash_raw, view as pool_view, ticker_name from pool_hash
+    left join off_chain_pool_data on pool_hash.id=off_chain_pool_data.pool_id),
 
   -- Total pools
   pools_total AS (
@@ -79,18 +87,18 @@ with
       inner join pool_hash on epoch_stake.pool_id = pool_hash.id
       where epoch_no = (select * from current_epoch) group by pool_hash.id),
 
-  -- Pools over 2M ADA
-  pools_over_2m AS (
-    select * from pools_deleg_sum where lovelace >= 2E12),
+  -- Pools over :lovelace ADA
+  pools_over_lt AS (
+    select * from pools_deleg_sum where lovelace >= :lovelace),
 
-  -- Pools over 2M ADA, delegation
-  pools_over_2m_deleg AS (
+  -- Pools over :lovelace ADA, delegation
+  pools_over_lt_deleg AS (
     select pool_hash.view, sum (amount) as lovelace from epoch_stake
       inner join pool_hash on epoch_stake.pool_id = pool_hash.id
       where epoch_no = (select * from current_epoch)
-      and pool_hash.view in (select view from pools_over_2m) group by pool_hash.id),
+      and pool_hash.view in (select view from pools_over_lt) group by pool_hash.id),
 
-  -- Pools to check block production of considering contraints of: valid, mature, and have delegation
+  -- Pools to check block production of considering constraints of: valid, mature, and have delegation
   pools_to_eval AS (
     select pools_reg_with_deleg.view from pools_reg_with_deleg
       inner join pools_mature on pools_reg_with_deleg.view = pools_mature.view
@@ -183,12 +191,12 @@ with
         order by delegation.tx_id desc limit 1) as view
       from faucet_stake_addr),
 
-  -- Faucet active pool delegations without considering contraints
+  -- Faucet active pool delegations without considering constraints
   faucet_pool_total AS (
     select * from faucet_pool_last_active
       where view is not null),
 
-  -- Faucet active pool delegations considering contraints of: valid, mature, and have delegation
+  -- Faucet active pool delegations considering constraints of: valid, mature, and have delegation
   faucet_pool_active AS (
     select * from faucet_pool_last_active
       where view is not null
@@ -216,24 +224,24 @@ with
       where epoch_no = (select * from current_epoch)
       and pool_hash.view in (select view from faucet_pool_not_perf) group by pool_hash.id),
 
-  -- Faucet delegated pools with over 2M ADA stake delegated to them
-  faucet_pool_over_2m AS (
-    select pools_over_2m.view, pools_over_2m.lovelace from pools_over_2m
-      inner join faucet_pool_active on pools_over_2m.view = faucet_pool_active.view),
+  -- Faucet delegated pools with over :lovelace ADA stake delegated to them
+  faucet_pool_over_lt AS (
+    select pools_over_lt.view, pools_over_lt.lovelace from pools_over_lt
+      inner join faucet_pool_active on pools_over_lt.view = faucet_pool_active.view),
 
-  -- Faucet pools not performing and/or over 2M ADA stake to dedelegate
+  -- Faucet pools not performing and/or over :lovelace ADA stake to dedelegate
   faucet_pool_to_dedelegate AS (
     --select view from pools_history),
     select distinct view from (
       select view from faucet_pool_not_perf
-      -- No longer automatically include pools over 2m for dedelegation as:
+      -- No longer automatically include pools over :lovelace for dedelegation as:
       --  a) some network faucets now use pool deleg amounts other than 1M, ex: sanchonet/private @ 10M pool deleg
       --  b) if large pools are performing well, de-delegating will drop chain density further which may not be desirable
       -- union
-      -- select view from faucet_pool_over_2m
+      -- select view from faucet_pool_over_lt
     ) as faucet_pool_to_dedelegate),
 
-  -- Faucet pools not performing and/or over 2M ADA stake, delegation
+  -- Faucet pools not performing and/or over :lovelace ADA stake, delegation
   faucet_pool_to_dedelegate_deleg AS (
     select pool_hash.view, sum(amount) as lovelace from epoch_stake
       inner join pool_hash on epoch_stake.pool_id = pool_hash.id
@@ -251,48 +259,61 @@ with
       where epoch_no = (select * from current_epoch)
       and pool_hash.view in (select view from pools_not_perf_outside_faucet) group by pool_hash.id),
 
-  -- Pools not performing with over 2M stake delegated to them
-  pools_not_perf_over_2m AS (
+  -- Pools not performing with over :lovelace stake delegated to them
+  pools_not_perf_over_lt AS (
     select pools_not_perf.view from pools_not_perf
-      inner join pools_over_2m on pools_not_perf.view = pools_over_2m.view
+      inner join pools_over_lt on pools_not_perf.view = pools_over_lt.view
       order by view),
 
-  -- Pools not performing with over 2M stake delegated to them lovelace, delegation
-  pools_not_perf_over_2m_deleg AS (
+  -- Pools not performing with over :lovelace stake delegated to them, with ticker name added for direct table query
+  pools_not_perf_over_lt_meta AS (
+    select pools_not_perf.view, ticker_name, lovelace from pools_not_perf
+      inner join pools_over_lt on pools_not_perf.view = pools_over_lt.view
+      left join pool_table on pools_not_perf.view = pool_table.pool_view
+      order by lovelace desc),
+
+  -- Pools not performing with over :lovelace stake delegated to them lovelace, delegation
+  pools_not_perf_over_lt_deleg AS (
     select pool_hash.view, sum (amount) as lovelace from epoch_stake
       inner join pool_hash on epoch_stake.pool_id = pool_hash.id
       where epoch_no = (select * from current_epoch)
-      and pool_hash.view in (select view from pools_not_perf_over_2m) group by pool_hash.id),
+      and pool_hash.view in (select view from pools_not_perf_over_lt) group by pool_hash.id),
 
   -- Current epoch stake, matches cardano-cli activeStakeSet
   current_epoch_stake AS (
     select sum(amount) as current_epoch_stake from epoch_stake where epoch_no = (select * from current_epoch)),
 
-  -- JSON for pools not performing over 2M ADA delegated
-  pools_not_perf_over_2m_json AS (
+  -- JSON for pools not performing over :lovelace ADA delegated
+  pools_not_perf_over_lt_json AS (
     select json_object_agg(
-      pools_not_perf_over_2m.view,
+      pools_not_perf_over_lt.view,
       jsonb_build_object(
         coalesce(faucet_stake_addr.key, 'notDelegated'),
-        coalesce(faucet_stake_addr.value, 'notDelegated')
+        coalesce(faucet_stake_addr.value, 'notDelegated'),
+        'ticker_name',
+        pool_table.ticker_name
       )
-    ) as pools_not_perf_over_2m_json
-    from pools_not_perf_over_2m
-      left join faucet_pool_total on pools_not_perf_over_2m.view = faucet_pool_total.view
-      left join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value),
+    ) as pools_not_perf_over_lt_json
+    from pools_not_perf_over_lt
+      left join faucet_pool_total on pools_not_perf_over_lt.view = faucet_pool_total.view
+      left join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value
+      left join pool_table on pools_not_perf_over_lt.view = pool_table.pool_view),
 
-  -- JSON for faucet delegated pools over 2M ADA delegated
-  faucet_pool_over_2m_json AS (
+  -- JSON for faucet delegated pools over :lovelace ADA delegated
+  faucet_pool_over_lt_json AS (
     select json_object_agg(
       faucet_stake_addr.key,
       jsonb_build_object(
         faucet_stake_addr.value,
-        faucet_pool_over_2m.view
+        faucet_pool_over_lt.view,
+        'ticker_name',
+        pool_table.ticker_name
       )
-    ) as faucet_pool_over_2m_json
-    from faucet_pool_over_2m
-      inner join faucet_pool_total on faucet_pool_over_2m.view = faucet_pool_total.view
-      inner join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value),
+    ) as faucet_pool_over_lt_json
+    from faucet_pool_over_lt
+      inner join faucet_pool_total on faucet_pool_over_lt.view = faucet_pool_total.view
+      inner join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value
+      inner join pool_table on faucet_pool_over_lt.view = pool_table.pool_view),
 
   -- JSON for faucet delegated pools not performing
   faucet_pool_not_perf_json AS (
@@ -300,12 +321,15 @@ with
       faucet_stake_addr.key,
       jsonb_build_object(
         faucet_stake_addr.value,
-        faucet_pool_not_perf.view
+        faucet_pool_not_perf.view,
+        'ticker_name',
+        pool_table.ticker_name
       )
     ) as faucet_pool_not_perf_json
   from faucet_pool_not_perf
     inner join faucet_pool_total on faucet_pool_not_perf.view = faucet_pool_total.view
-    inner join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value),
+    inner join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value
+    inner join pool_table on faucet_pool_not_perf.view = pool_table.pool_view),
 
   -- JSON for faucet pools to dedelegate
   faucet_pool_to_dedelegate_json AS (
@@ -313,18 +337,21 @@ with
       faucet_stake_addr.key,
       jsonb_build_object(
         faucet_stake_addr.value,
-        faucet_pool_to_dedelegate.view
+        faucet_pool_to_dedelegate.view,
+        'ticker_name',
+        pool_table.ticker_name
       )
     ) as faucet_pool_to_dedelegate_json
   from faucet_pool_to_dedelegate
     inner join faucet_pool_total on faucet_pool_to_dedelegate.view = faucet_pool_total.view
-    inner join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value),
+    inner join faucet_stake_addr on faucet_pool_total.stake_addr = faucet_stake_addr.value
+    inner join pool_table on faucet_pool_to_dedelegate.view = pool_table.pool_view),
 
   -- JSON faucet pool summary useful for dedelegation scripts
   faucet_pool_summary_json AS (
     select jsonb_build_object(
-      'pools_not_perf_over_2m', (select * from pools_not_perf_over_2m_json),
-      'faucet_pool_over_2m', (select * from faucet_pool_over_2m_json),
+      'pools_not_perf_over_lt', (select * from pools_not_perf_over_lt_json),
+      'faucet_pool_over_lt', (select * from faucet_pool_over_lt_json),
       'faucet_pool_not_perf', (select * from faucet_pool_not_perf_json),
       'faucet_to_dedelegate', (select * from faucet_pool_to_dedelegate_json)
     ) as faucet_pool_summary_json),
@@ -342,15 +369,15 @@ with
       pools_mature,
       pools_immature,
       pools_to_eval,
-      pools_over_2m,
+      pools_over_lt,
       pools_perf,
       pools_not_perf,
       pools_not_perf_outside_faucet,
-      pools_not_perf_over_2m,
+      pools_not_perf_over_lt,
       faucet_pool_total,
       faucet_pool_active,
       faucet_pool_not_perf,
-      faucet_pool_over_2m,
+      faucet_pool_over_lt,
       faucet_pool_to_dedelegate,
 
       pools_reg_with_deleg_deleg,
@@ -360,11 +387,11 @@ with
       pools_perf_deleg,
       pools_not_perf_deleg,
       pools_not_perf_outside_faucet_deleg,
-      pools_not_perf_over_2m_deleg,
-      pools_over_2m_deleg,
+      pools_not_perf_over_lt_deleg,
+      pools_over_lt_deleg,
       faucet_pool_active_deleg,
       faucet_pool_not_perf_deleg,
-      faucet_pool_over_2m_deleg,
+      faucet_pool_over_lt_deleg,
       faucet_pool_to_dedelegate_deleg,
       faucet_pool_to_dedelegate_shift,
 
@@ -375,16 +402,16 @@ with
       (select round(100 * pools_perf_deleg / current_epoch_stake, 1)) as pools_perf_deleg_pct,
       (select round(100 * pools_not_perf_deleg / current_epoch_stake, 1)) as pools_not_perf_deleg_pct,
       (select round(100 * pools_not_perf_outside_faucet_deleg / current_epoch_stake, 1)) as pools_not_perf_outside_faucet_deleg_pct,
-      (select round(100 * pools_over_2m_deleg / current_epoch_stake, 1)) as pools_over_2m_deleg_pct,
-      (select round(100 * pools_not_perf_over_2m_deleg / current_epoch_stake, 1)) as pools_not_perf_over_2m_deleg_pct,
+      (select round(100 * pools_over_lt_deleg / current_epoch_stake, 1)) as pools_over_lt_deleg_pct,
+      (select round(100 * pools_not_perf_over_lt_deleg / current_epoch_stake, 1)) as pools_not_perf_over_lt_deleg_pct,
       (select round(100 * faucet_pool_active_deleg / current_epoch_stake, 1)) as faucet_pool_active_deleg_pct,
       (select round(100 * faucet_pool_not_perf_deleg / current_epoch_stake, 1)) as faucet_pool_not_perf_deleg_pct,
-      (select round(100 * faucet_pool_over_2m_deleg / current_epoch_stake, 1)) as faucet_pool_over_2m_deleg_pct,
+      (select round(100 * faucet_pool_over_lt_deleg / current_epoch_stake, 1)) as faucet_pool_over_lt_deleg_pct,
       (select round(100 * faucet_pool_to_dedelegate_deleg / current_epoch_stake, 1)) as faucet_pool_to_dedelegate_deleg_pct,
       (select round(100 * faucet_pool_to_dedelegate_shift / current_epoch_stake, 1)) as faucet_pool_to_dedelegate_shift_pct,
 
-      pools_not_perf_over_2m_json,
-      faucet_pool_over_2m_json,
+      pools_not_perf_over_lt_json,
+      faucet_pool_over_lt_json,
       faucet_pool_not_perf_json,
       faucet_pool_summary_json.*
 
@@ -398,15 +425,15 @@ with
       cross join (select count(distinct view) as pools_mature from pools_mature) as pools_mature
       cross join (select count(distinct view) as pools_immature from pools_immature) as pools_immature
       cross join (select count(distinct view) as pools_to_eval from pools_to_eval) as pools_to_eval
-      cross join (select count(distinct view) as pools_over_2m from pools_over_2m) as pools_over_2m
+      cross join (select count(distinct view) as pools_over_lt from pools_over_lt) as pools_over_lt
       cross join (select count(distinct view) as pools_perf from pools_perf) as pools_perf
       cross join (select count(distinct view) as pools_not_perf from pools_not_perf) as pools_not_perf
       cross join (select count(distinct view) as pools_not_perf_outside_faucet from pools_not_perf_outside_faucet) as pools_not_perf_outside_faucet
-      cross join (select count(distinct view) as pools_not_perf_over_2m from pools_not_perf_over_2m) as pools_not_perf_over_2m
+      cross join (select count(distinct view) as pools_not_perf_over_lt from pools_not_perf_over_lt) as pools_not_perf_over_lt
       cross join (select count(distinct view) as faucet_pool_total from faucet_pool_total) as faucet_pool_total
       cross join (select count(distinct view) as faucet_pool_active from faucet_pool_active) as faucet_pool_active
       cross join (select count(distinct view) as faucet_pool_not_perf from faucet_pool_not_perf) as faucet_pool_not_perf
-      cross join (select count(distinct view) as faucet_pool_over_2m from faucet_pool_over_2m) as faucet_pool_over_2m
+      cross join (select count(distinct view) as faucet_pool_over_lt from faucet_pool_over_lt) as faucet_pool_over_lt
       cross join (select count(distinct view) as faucet_pool_to_dedelegate from faucet_pool_to_dedelegate) as faucet_pool_to_dedelegate
 
       cross join (select sum(lovelace) as pools_reg_with_deleg_deleg from pools_reg_with_deleg) as pools_reg_with_deleg_deleg
@@ -416,19 +443,24 @@ with
       cross join (select sum(lovelace) as pools_perf_deleg from pools_perf_deleg) as pools_perf_deleg
       cross join (select sum(lovelace) as pools_not_perf_deleg from pools_not_perf_deleg) as pools_not_perf_deleg
       cross join (select sum(lovelace) as pools_not_perf_outside_faucet_deleg from pools_not_perf_outside_faucet_deleg) as pools_not_perf_outside_faucet_deleg
-      cross join (select sum(lovelace) as pools_not_perf_over_2m_deleg from pools_not_perf_over_2m_deleg) as pools_not_perf_over_2m_deleg
-      cross join (select sum(lovelace) as pools_over_2m_deleg from pools_over_2m_deleg) as pools_over_2m_deleg
-      cross join (select sum(lovelace) as faucet_pool_active_deleg from faucet_pool_active_deleg) as faucet_active_2m_deleg
+      cross join (select sum(lovelace) as pools_not_perf_over_lt_deleg from pools_not_perf_over_lt_deleg) as pools_not_perf_over_lt_deleg
+      cross join (select sum(lovelace) as pools_over_lt_deleg from pools_over_lt_deleg) as pools_over_lt_deleg
+      cross join (select sum(lovelace) as faucet_pool_active_deleg from faucet_pool_active_deleg) as faucet_active_lt_deleg
       cross join (select sum(lovelace) as faucet_pool_not_perf_deleg from faucet_pool_not_perf_deleg) as faucet_not_perf_deleg
-      cross join (select sum(lovelace) as faucet_pool_over_2m_deleg from faucet_pool_over_2m) as faucet_pool_over_2m_deleg
+      cross join (select sum(lovelace) as faucet_pool_over_lt_deleg from faucet_pool_over_lt) as faucet_pool_over_lt_deleg
       cross join (select sum(lovelace) as faucet_pool_to_dedelegate_deleg from faucet_pool_to_dedelegate_deleg) as faucet_pool_to_dedelegate_deleg
       cross join (select count(distinct view) * 1E12 as faucet_pool_to_dedelegate_shift from faucet_pool_to_dedelegate) as faucet_pool_to_dedelegate_shift
 
-      cross join pools_not_perf_over_2m_json
-      cross join faucet_pool_over_2m_json
+      cross join pools_not_perf_over_lt_json
+      cross join faucet_pool_over_lt_json
       cross join faucet_pool_not_perf_json
       cross join faucet_pool_to_dedelegate_json
       cross join faucet_pool_summary_json
     )
 
-  select * from summary;
+  select * from :table;
+
+  -- Example useful tables to query from these CTEs:
+  -- select * from summary;
+  -- select * from pools_not_perf_over_lt_meta;
+  -- select * from pool_table;

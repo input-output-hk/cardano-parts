@@ -4,7 +4,7 @@
 #
 # Attributes available on nixos module import:
 #   config.services.cardano-node.shareIpv6Address
-#   config.services.cardano-node.totalCpuCores
+#   config.services.cardano-node.totalCpuCount
 #   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.mithril-client.enable
 #   config.services.mithril-client.aggregatorEndpointUrl
@@ -234,7 +234,73 @@
         nodeConfig = mkDefault (
           if cfg.useLegacyTracing
           then cardanoLib.environments.${environmentName}.nodeConfig
-          else removeAttrs cardanoLib.environments.${environmentName}.nodeConfig ["hasEKG" "hasPrometheus" "rotation"]
+          else
+            # Reference: https://github.com/IntersectMBO/cardano-node/blob/master/nix/workbench/service/tracing.nix
+            removeAttrs cardanoLib.environments.${environmentName}.nodeConfig [
+              "TraceAcceptPolicy"
+              "TraceBlockchainTime"
+              "TraceBlockFetchClient"
+              "TraceBlockFetchDecisions"
+              "TraceBlockFetchProtocol"
+              "TraceBlockFetchProtocolSerialised"
+              "TraceBlockFetchServer"
+              "TraceChainDb"
+              "TraceChainSyncClient"
+              "TraceChainSyncBlockServer"
+              "TraceChainSyncHeaderServer"
+              "TraceChainSyncProtocol"
+              "TraceConnectionManager"
+              "TraceConnectionManagerCounters"
+              "TraceConnectionManagerTransitions"
+              "DebugPeerSelectionInitiator"
+              "DebugPeerSelectionInitiatorResponder"
+              "TraceDiffusionInitialization"
+              "TraceDNSResolver"
+              "TraceDNSSubscription"
+              "TraceErrorPolicy"
+              "TraceForge"
+              "TraceForgeStateInfo"
+              "TraceHandshake"
+              "TraceIpSubscription"
+              "TraceKeepAliveClient"
+              "TraceLedgerPeers"
+              "TraceLocalChainSyncProtocol"
+              "TraceLocalConnectionManager"
+              "TraceLocalErrorPolicy"
+              "TraceLocalHandshake"
+              "TraceLocalInboundGovernor"
+              "TraceLocalRootPeers"
+              "TraceLocalServer"
+              "TraceLocalStateQueryProtocol"
+              "TraceLocalTxMonitorProtocol"
+              "TraceLocalTxSubmissionProtocol"
+              "TraceLocalTxSubmissionServer"
+              "TraceMempool"
+              "TraceMux"
+              "TraceLocalMux"
+              "TracePeerSelection"
+              "TracePeerSelectionCounters"
+              "TracePeerSelectionActions"
+              "TracePublicRootPeers"
+              "TraceServer"
+              "TraceInboundGovernor"
+              "TraceInboundGovernorCounters"
+              "TraceInboundGovernorTransitions"
+              "TraceTxInbound"
+              "TraceTxOutbound"
+              "TraceTxSubmissionProtocol"
+              "TraceTxSubmission2Protocol"
+              "TracingVerbosity"
+              "defaultBackends"
+              "defaultScribes"
+              "hasEKG"
+              "hasPrometheus"
+              "minSeverity"
+              "options"
+              "rotation"
+              "setupBackends"
+              "setupScribes"
+            ]
         );
 
         # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.

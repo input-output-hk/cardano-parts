@@ -112,8 +112,8 @@ flake: {
                 }
 
               There will also be worth applied an auto-expire lifecycle so old snapshots don't accumulate.
-              The `13.2` after the "Prefix" below is to apply the policy only to the snapshots in the current schema subdirectory
-              and not to the main prefix directory, where schema 13.2 is the current schema at the time of this writing.
+              The `13.3` after the "Prefix" below is to apply the policy only to the snapshots in the current schema subdirectory
+              and not to the main prefix directory, where schema 13.3 is the current schema at the time of this writing.
               The dbsync team may wish to keep at least one copy of old schema snapshots for testing which is why this lifecycle
               is only applied to the current schema subdirectory.
 
