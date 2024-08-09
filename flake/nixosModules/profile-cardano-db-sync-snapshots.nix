@@ -144,6 +144,16 @@ flake: {
             '';
           };
 
+          manualTriggerFile = mkOption {
+            type = str;
+            default = "/tmp/trigger-manual-snapshot";
+            description = ''
+              The full path and filename of a trigger file, which if it exists
+              will start a snapshot creation and upload system on the next
+              startup of the cardano-db-sync-snapshots systemd service.
+            '';
+          };
+
           prefix = mkOption {
             type = str;
             default = null;
@@ -155,6 +165,12 @@ flake: {
                 s3://''${cfg.bucket}/''${cfg.prefix}/$SCHEMA/"
 
               Where the $SCHEMA above is interpolated from the snapshot name.
+
+              NOTE: Do *NOT* make an explicit schema folder via S3 UI or cli as
+              this will create a 0 byte sized file with no name to mark an
+              explicitly created directory which may not be rendered properly
+              by a landing page.  Once created, this 0 byte file cannot removed
+              without deleting everything in the folder.
             '';
           };
 
@@ -162,7 +178,7 @@ flake: {
             type = str;
             default = "root";
             description = ''
-              The user of the cardano-db-sync-snapshots service.";
+              The user of the cardano-db-sync-snapshots service.
               The user current defaults to root in order to conditionally restart cardano-db-sync from within itself.
             '';
           };
@@ -259,8 +275,9 @@ flake: {
                     echo "Hours since last epoch are: $HOURS_SINCE_LAST_EPOCH"
                     echo "Hours until next epoch are: $HOURS_UNTIL_NEXT_EPOCH"
 
-                    if [ "$HOURS_SINCE_LAST_EPOCH" -le "1" ]; then
-                      echo "A new epoch has just started, attempting a snapshot and upload..."
+                    if [ "$HOURS_SINCE_LAST_EPOCH" -le "1" ] || [ -f "${cfg.manualTriggerFile}" ]; then
+                      echo "A new epoch has just started or a manual trigger has been issued, attempting a snapshot and upload..."
+                      rm -f "${cfg.manualTriggerFile}"
 
                       if ! [ -f "$RUNNING_FILE" ]; then
                         # Ensure node is synced
@@ -311,6 +328,7 @@ flake: {
                           for ARTIFACT in "$NEW_SNAPSHOT".sha256sum "$NEW_SNAPSHOT"; do
                             echo "Pushing artifact $ARTIFACT to s3://${cfg.bucket}/${cfg.prefix}/$SCHEMA/"
                             s3cmd put \
+                              --verbose \
                               --acl-public \
                               --multipart-chunk-size-mb=512 \
                               "$ARTIFACT" \
