@@ -111,11 +111,13 @@ flake: {
                     ]
                 }
 
-              There will also be worth applied an auto-expire lifecycle so old snapshots don't accumulate.
-              The `13.4` after the "Prefix" below is to apply the policy only to the snapshots in the current schema subdirectory
-              and not to the main prefix directory, where schema 13.4 is the current schema at the time of this writing.
-              The dbsync team may wish to keep at least one copy of old schema snapshots for testing which is why this lifecycle
-              is only applied to the current schema subdirectory.
+              An auto-expire lifecycle should also be applied so old snapshots
+              don't accumulate. The `$SCHEMA` after the "Prefix" below is to
+              apply the policy only to the snapshots in the current schema
+              subdirectory and not to the main prefix directory. The dbsync
+              team may wish to keep at least one copy of old schema snapshots
+              for testing which is why this lifecycle is only applied to the
+              current schema subdirectory.
 
                 $ aws s3api get-bucket-lifecycle-configuration --bucket "$BUCKET" --output json
                 {
@@ -126,7 +128,7 @@ flake: {
                             },
                             "ID": "Delete old 13.4 db-sync snapshots",
                             "Filter": {
-                                "Prefix": "$PREFIX/13.4"
+                                "Prefix": "$PREFIX/$SCHEMA"
                             },
                             "Status": "Enabled"
                         }
@@ -226,7 +228,7 @@ flake: {
                 User = cfg.user;
                 Group = cfg.group;
 
-                EnvironmentFile = config.sops.secrets.cardano-db-sync-snapshots.path;
+                EnvironmentFile = mkIf cfg.useSopsSecrets cfg.environmentFile;
 
                 ExecStart = getExe (pkgs.writeShellApplication {
                   name = "cardano-db-sync-snapshots";
