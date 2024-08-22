@@ -58,8 +58,57 @@ checkEnvWithoutOverride := '''
 
 checkSshConfig := '''
   if not ('.ssh_config' | path exists) {
-    print "Please run `just save-ssh-config` first to create the .ssh_config file"
+    print $"(ansi "bg_light_red")Please run:(ansi reset) `just save-ssh-config` first to create the .ssh_config file"
     exit 1
+  }
+
+  let checkFile = '.consistency-check-ts'
+
+  # Checking modified timestamps to decide whether to eval nixosCfgs which costs ~0.5s per ssh command
+  let runCheck = if ($checkFile | path exists) {
+    let checkTs = (stat -c %Y $checkFile) | into int
+    let colmenaTs = (stat -c %Y flake/colmena.nix) | into int
+    let sshHostsTs = (stat -c %Y .ssh_config) | into int
+    let moduleIpsTs = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      (stat -c %Y flake/nixosModules/ips-DONT-COMMIT.nix) | into int
+    } else {
+      0
+    }
+
+    ($checkTs < $colmenaTs) or ($checkTs < $sshHostsTs) or ($checkTs < $moduleIpsTs)
+  } else {
+    true
+  }
+
+  # Sanity check nixosConfigurations, ssh hosts and module ips agree
+  if ($runCheck == true) {
+    print "Checking nixosCfg, sshCfg and ipModuleCfg for consistency"
+    mut consistent = true
+    let nixosCfgs = (nix eval --json '.#nixosConfigurations' --apply 'let length = nodeSet: builtins.length (builtins.attrNames nodeSet); in length')
+    let sshHosts = (grep -Ec '^  HostName [0-9]+.*' .ssh_config)
+    let moduleIps = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      (grep -Ec '^    [-_"a-zA-Z0-9]+ = {$' flake/nixosModules/ips-DONT-COMMIT.nix)
+    } else {
+      "N/A"
+    }
+
+    if ($nixosCfgs != $sshHosts) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) The number of nixosConfigurations \(($nixosCfgs)\) differs from sshHosts \(($sshHosts)\)"
+      print "         You may need to run `just save-ssh-config` or `just tf apply` to update the .ssh_config file."
+      print ""
+      $consistent = false
+    }
+
+    if ($nixosCfgs != $moduleIps) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) The number of nixosConfigurations \(($nixosCfgs)\) differs from ip module machines \(($moduleIps)\)"
+      print "         You may need to run `just update-ips` to update the flake/nixosModules/ips-DONT-COMMIT.nix file."
+      print ""
+      $consistent = false
+    }
+
+    if ($consistent == true) {
+      touch $checkFile
+    }
   }
 '''
 
