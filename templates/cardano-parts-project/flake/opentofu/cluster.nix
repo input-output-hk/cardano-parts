@@ -19,6 +19,8 @@ with lib; let
 
   nixosConfigurations = mapAttrs (_: node: node.config) config.flake.nixosConfigurations;
   nodes = filterAttrs (_: node: node.aws != null && node.aws.instance.count > 0) nixosConfigurations;
+  dnsEnabledNodes = filterAttrs (_: node: node.cardano-parts.perNode.meta.enableDns) nodes;
+
   mapNodes = f: mapAttrs f nodes;
 
   regions =
@@ -59,7 +61,7 @@ with lib; let
             if (isMultivalueDnsMember mvDnsAttrName dns g n)
             then n
             else null)
-          (attrNames nodes)) (attrNames groups))));
+          (attrNames dnsEnabledNodes)) (attrNames groups))));
       }) {};
 
   mkMultivalueDnsResources = multivalueDnsAttrs:
@@ -123,21 +125,24 @@ in {
           aws_region.current = {};
           aws_route53_zone.selected.name = "${cluster.domain}.";
 
-          aws_ami."nixos_${system}" = {
-            owners = ["427812963091"];
-            most_recent = true;
+          aws_ami = mapRegions ({region, ...}: {
+            "nixos_${system}_${region}" = {
+              owners = ["427812963091"];
+              most_recent = true;
+              provider = "aws.${region}";
 
-            filter = [
-              {
-                name = "name";
-                values = ["nixos/24.05*"];
-              }
-              {
-                name = "architecture";
-                values = [(builtins.head (lib.splitString "-" system))];
-              }
-            ];
-          };
+              filter = [
+                {
+                  name = "name";
+                  values = ["nixos/24.05*"];
+                }
+                {
+                  name = "architecture";
+                  values = [(builtins.head (lib.splitString "-" system))];
+                }
+              ];
+            };
+          });
         };
 
         resource = {
@@ -146,7 +151,7 @@ in {
               {
                 inherit (node.aws.instance) count instance_type;
                 provider = awsProviderFor node.aws.region;
-                ami = "\${data.aws_ami.nixos_${system}.id}";
+                ami = "\${data.aws_ami.nixos_${system}_${underscore node.aws.region}.id}";
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
                 monitoring = true;
                 key_name = "\${aws_key_pair.bootstrap_${underscore node.aws.region}[0].key_name}";
@@ -336,7 +341,8 @@ in {
                 ttl = "300";
                 records = ["\${aws_eip.${nodeName}[0].public_ip}"];
               }
-            ) (filterAttrs (_: v: v.cardano-parts.perNode.meta.enableDns) nodes)
+            )
+            dnsEnabledNodes
             // mkMultivalueDnsResources bookMultivalueDnsAttrs
             // mkMultivalueDnsResources groupMultivalueDnsAttrs
             // mkCustomRoute53Records;
