@@ -295,6 +295,43 @@ flake: {
                     };
                   in
                     [
+                      # Metrics exporter: blockperf
+                      (mkIf (cfgSvc ? blockperf) {
+                        job_name = "integrations/blockperf";
+                        metrics_path = "/";
+                        metric_relabel_configs = [
+                          {
+                            action = "keep";
+                            regex = "^blockperf_.*$";
+                            source_labels = ["__name__"];
+                          }
+                        ];
+                        static_configs = [
+                          {
+                            inherit labels;
+                            targets = ["127.0.0.1:${toString config.services.blockperf.port}"];
+                          }
+                        ];
+                      })
+
+                      # Metrics exporter: cardano-custom-metrics
+                      (mkIf (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) {
+                        job_name = "integrations/cardano-custom-metrics";
+                        metrics_path = "/api/v1/allmetrics";
+                        params = {
+                          format = ["prometheus"];
+                          # Filtering here won't work as grafana-agent encodes the pattern match.
+                          # Filtering can be configured from the module with the `enableFilter` and `filter` options.
+                          # filter = ["statsd_cardano*"];
+                        };
+                        static_configs = [
+                          {
+                            inherit labels;
+                            targets = ["${cfgSvc.cardano-custom-metrics.address}:${toString cfgSvc.cardano-custom-metrics.port}"];
+                          }
+                        ];
+                      })
+
                       # Metrics exporter: cardano-db-sync
                       (mkIf (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) {
                         job_name = "integrations/cardano-db-sync";
@@ -319,18 +356,6 @@ flake: {
                         ];
                       })
 
-                      # Metrics exporter: mithril-signer
-                      (mkIf (cfgSvc ? mithril-signer && cfgSvc.mithril-signer.enable && cfgSvc.mithril-signer.enableMetrics) {
-                        job_name = "integrations/mithril-signer";
-                        metrics_path = "/metrics";
-                        static_configs = [
-                          {
-                            inherit labels;
-                            targets = ["${cfgSvc.mithril-signer.metricsAddress}:${toString cfgSvc.mithril-signer.metricsPort}"];
-                          }
-                        ];
-                      })
-
                       # Metrics exporter: cardano-smash
                       (mkIf (cfgSvc ? cardano-smash) {
                         job_name = "integrations/cardano-smash";
@@ -339,6 +364,18 @@ flake: {
                           {
                             inherit labels;
                             targets = ["${hostAddr}:${toString cfgSvc.cardano-smash.registeredRelaysExporterPort}"];
+                          }
+                        ];
+                      })
+
+                      # Metrics exporter: mithril-signer
+                      (mkIf (cfgSvc ? mithril-signer && cfgSvc.mithril-signer.enable && cfgSvc.mithril-signer.enableMetrics) {
+                        job_name = "integrations/mithril-signer";
+                        metrics_path = "/metrics";
+                        static_configs = [
+                          {
+                            inherit labels;
+                            targets = ["${cfgSvc.mithril-signer.metricsAddress}:${toString cfgSvc.mithril-signer.metricsPort}"];
                           }
                         ];
                       })
@@ -389,24 +426,6 @@ flake: {
                           {
                             inherit labels;
                             targets = ["${cfgSvc.prometheus.exporters.varnish.listenAddress}:${toString cfgSvc.prometheus.exporters.varnish.port}"];
-                          }
-                        ];
-                      })
-
-                      # Metrics exporter: cardano-custom-metrics
-                      (mkIf (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) {
-                        job_name = "integrations/cardano-custom-metrics";
-                        metrics_path = "/api/v1/allmetrics";
-                        params = {
-                          format = ["prometheus"];
-                          # Filtering here won't work as grafana-agent encodes the pattern match.
-                          # Filtering can be configured from the module with the `enableFilter` and `filter` options.
-                          # filter = ["statsd_cardano*"];
-                        };
-                        static_configs = [
-                          {
-                            inherit labels;
-                            targets = ["${cfgSvc.cardano-custom-metrics.address}:${toString cfgSvc.cardano-custom-metrics.port}"];
                           }
                         ];
                       })

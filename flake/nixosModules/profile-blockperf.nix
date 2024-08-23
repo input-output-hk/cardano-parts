@@ -30,7 +30,7 @@ flake: {
   }: let
     inherit (builtins) concatStringsSep;
     inherit (lib) escapeShellArgs hasSuffix getExe mkOption optional;
-    inherit (lib.types) int listOf package str;
+    inherit (lib.types) int listOf package port str;
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
 
@@ -112,7 +112,14 @@ flake: {
       package = mkOption {
         type = package;
         default = config.cardano-parts.perNode.pkgs.blockperf;
-        description = "The default blockperf package";
+        description = "The default blockperf package.";
+      };
+
+      # TODO: Tie this to a systemd env var once upstream doesn't use a hardcoded port.
+      port = mkOption {
+        type = port;
+        default = 8082;
+        description = "The default blockperf prometheus port.";
       };
 
       logFile = mkOption {
