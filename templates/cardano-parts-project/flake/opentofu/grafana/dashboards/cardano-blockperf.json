@@ -98,7 +98,7 @@
         "y": 0
       },
       "id": 5,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -202,7 +202,7 @@
         "y": 0
       },
       "id": 68,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -307,7 +307,7 @@
         "y": 8
       },
       "id": 86,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -412,7 +412,7 @@
         "y": 8
       },
       "id": 85,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -517,7 +517,7 @@
         "y": 16
       },
       "id": 84,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -622,7 +622,7 @@
         "y": 16
       },
       "id": 70,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -727,7 +727,7 @@
         "y": 24
       },
       "id": 87,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -832,7 +832,7 @@
         "y": 24
       },
       "id": 89,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -925,32 +925,7 @@
           },
           "unit": "none"
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "iogp4-pubRel-sa-east-1b-1"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -1064,7 +1039,7 @@
         "y": 32
       },
       "id": 74,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [
@@ -1168,7 +1143,7 @@
         "y": 40
       },
       "id": 83,
-      "interval": "",
+      "interval": "10s",
       "options": {
         "legend": {
           "calcs": [

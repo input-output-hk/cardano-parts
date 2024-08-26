@@ -298,6 +298,11 @@ flake: {
                       # Metrics exporter: blockperf
                       (mkIf (cfgSvc ? blockperf) {
                         job_name = "integrations/blockperf";
+
+                        # Normally we prefer 1 minute default; however, we need
+                        # higher frequency with blockPerf to catch large block
+                        # header delays.
+                        scrape_interval = "10s";
                         metrics_path = "/";
                         metric_relabel_configs = [
                           {
