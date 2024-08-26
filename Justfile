@@ -59,7 +59,7 @@ show-flake *ARGS:
   nix flake show --allow-import-from-derivation {{ARGS}}
 
 # Update the aws ec2 flakeModule spec
-update-aws-ec2-spec AWS_PROFILE region=AWS_REGION:
+update-aws-ec2-spec AWS_PROFILE region="eu-central-1":
   #!/usr/bin/env nu
   # To describe instance types, any valid aws profile can be provided
   # Default region for specs will be eu-central-1 which provides ~600 machine defns

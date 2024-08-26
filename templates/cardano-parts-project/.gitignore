@@ -10,6 +10,7 @@ __pycache__
 /.run/
 /*.skey
 /*.socket
+/.consistency-check-ts
 /.ssh_config
 /.ssh_key
 /state-demo/

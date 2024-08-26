@@ -58,8 +58,80 @@ checkEnvWithoutOverride := '''
 
 checkSshConfig := '''
   if not ('.ssh_config' | path exists) {
-    print "Please run `just save-ssh-config` first to create the .ssh_config file"
+    print $"(ansi "bg_light_red")Please run:(ansi reset) `just save-ssh-config` first to create the .ssh_config file"
     exit 1
+  }
+
+  let checkFile = '.consistency-check-ts'
+
+  # Checking modified timestamps to decide whether to eval nixosCfgs which costs ~0.5s per ssh command
+  let runCheck = if ($checkFile | path exists) {
+    let checkTs = (stat -c %Y $checkFile) | into int
+    let colmenaTs = (stat -c %Y flake/colmena.nix) | into int
+    let sshHostsTs = (stat -c %Y .ssh_config) | into int
+    let moduleIpsTs = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      (stat -c %Y flake/nixosModules/ips-DONT-COMMIT.nix) | into int
+    } else {
+      0
+    }
+
+    ($checkTs < $colmenaTs) or ($checkTs < $sshHostsTs) or ($checkTs < $moduleIpsTs)
+  } else {
+    true
+  }
+
+  # Sanity check nixosConfigurations, ssh hosts and module ips agree
+  if ($runCheck == true) {
+    print "Checking nixosCfg, sshCfg and ipModuleCfg for consistency"
+
+    def list-diff [left: list<any>, right: list<any>, lName: string, rName: string]: nothing -> table<item: any, where: string> {
+      let comparison = {
+        $lName: ($left | where $it not-in $right)
+        $rName: ($right | where $it not-in $left)
+        =: ($left | where $it in $right)
+      }
+
+      $comparison | transpose where item | flatten | select item where | sort-by item
+    }
+
+    mut consistent = true
+
+    let nixosCfg = (nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames') | from json
+    let sshCfg = (open .ssh_config | lines | parse --regex '^Host ([^*]+)$') | get capture0
+    let moduleIps = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      (open flake/nixosModules/ips-DONT-COMMIT.nix | parse --regex '    (.*) = {' | drop 1) | get capture0
+    } else {
+      []
+    }
+
+    let nix2ssh = list-diff $nixosCfg $sshCfg onlyInNixosCfg onlyInSshCfg | where where != "="
+    let nix2ips = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      list-diff $nixosCfg $moduleIps onlyInNixosCfg onlyInIpsModuleCfg | where where != "="
+    } else {
+      []
+    }
+
+    if ($nix2ssh | is-not-empty) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) NixosConfigurations \(($nixosCfg | length)\) differ from ssh hosts \(($sshCfg | length)\)"
+      print "         You may need to run `just save-ssh-config` or `just tf apply` to update the .ssh_config file."
+      print "         Differences found are:"
+      print $nix2ssh
+      print ""
+      $consistent = false
+    }
+
+    if ($nix2ips | is-not-empty) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) NixosConfigurations \(($nixosCfg | length)\) differ from ip module machines \(($moduleIps | length)\)"
+      print "         You may need to run `just update-ips` to update the flake/nixosModules/ips-DONT-COMMIT.nix file."
+      print "         Differences found are:"
+      print $nix2ips
+      print ""
+      $consistent = false
+    }
+
+    if ($consistent == true) {
+      touch $checkFile
+    }
   }
 '''
 

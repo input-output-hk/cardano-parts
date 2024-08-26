@@ -111,11 +111,13 @@ flake: {
                     ]
                 }
 
-              There will also be worth applied an auto-expire lifecycle so old snapshots don't accumulate.
-              The `13.3` after the "Prefix" below is to apply the policy only to the snapshots in the current schema subdirectory
-              and not to the main prefix directory, where schema 13.3 is the current schema at the time of this writing.
-              The dbsync team may wish to keep at least one copy of old schema snapshots for testing which is why this lifecycle
-              is only applied to the current schema subdirectory.
+              An auto-expire lifecycle should also be applied so old snapshots
+              don't accumulate. The `$SCHEMA` after the "Prefix" below is to
+              apply the policy only to the snapshots in the current schema
+              subdirectory and not to the main prefix directory. The dbsync
+              team may wish to keep at least one copy of old schema snapshots
+              for testing which is why this lifecycle is only applied to the
+              current schema subdirectory.
 
                 $ aws s3api get-bucket-lifecycle-configuration --bucket "$BUCKET" --output json
                 {
@@ -124,9 +126,9 @@ flake: {
                             "Expiration": {
                                 "Days": 60
                             },
-                            "ID": "Delete old 13.3 db-sync snapshots",
+                            "ID": "Delete old $SCHEMA db-sync snapshots",
                             "Filter": {
-                                "Prefix": "$PREFIX/13.3"
+                                "Prefix": "$PREFIX/$SCHEMA"
                             },
                             "Status": "Enabled"
                         }
@@ -144,6 +146,16 @@ flake: {
             '';
           };
 
+          manualTriggerFile = mkOption {
+            type = str;
+            default = "/tmp/trigger-manual-snapshot";
+            description = ''
+              The full path and filename of a trigger file, which if it exists
+              will start a snapshot creation and upload system on the next
+              startup of the cardano-db-sync-snapshots systemd service.
+            '';
+          };
+
           prefix = mkOption {
             type = str;
             default = null;
@@ -155,6 +167,12 @@ flake: {
                 s3://''${cfg.bucket}/''${cfg.prefix}/$SCHEMA/"
 
               Where the $SCHEMA above is interpolated from the snapshot name.
+
+              NOTE: Do *NOT* make an explicit schema folder via S3 UI or cli as
+              this will create a 0 byte sized file with no name to mark an
+              explicitly created directory which may not be rendered properly
+              by a landing page.  Once created, this 0 byte file cannot removed
+              without deleting everything in the folder.
             '';
           };
 
@@ -162,7 +180,7 @@ flake: {
             type = str;
             default = "root";
             description = ''
-              The user of the cardano-db-sync-snapshots service.";
+              The user of the cardano-db-sync-snapshots service.
               The user current defaults to root in order to conditionally restart cardano-db-sync from within itself.
             '';
           };
@@ -210,7 +228,7 @@ flake: {
                 User = cfg.user;
                 Group = cfg.group;
 
-                EnvironmentFile = config.sops.secrets.cardano-db-sync-snapshots.path;
+                EnvironmentFile = mkIf cfg.useSopsSecrets cfg.environmentFile;
 
                 ExecStart = getExe (pkgs.writeShellApplication {
                   name = "cardano-db-sync-snapshots";
@@ -259,8 +277,9 @@ flake: {
                     echo "Hours since last epoch are: $HOURS_SINCE_LAST_EPOCH"
                     echo "Hours until next epoch are: $HOURS_UNTIL_NEXT_EPOCH"
 
-                    if [ "$HOURS_SINCE_LAST_EPOCH" -le "1" ]; then
-                      echo "A new epoch has just started, attempting a snapshot and upload..."
+                    if [ "$HOURS_SINCE_LAST_EPOCH" -le "1" ] || [ -f "${cfg.manualTriggerFile}" ]; then
+                      echo "A new epoch has just started or a manual trigger has been issued, attempting a snapshot and upload..."
+                      rm -f "${cfg.manualTriggerFile}"
 
                       if ! [ -f "$RUNNING_FILE" ]; then
                         # Ensure node is synced
@@ -311,6 +330,7 @@ flake: {
                           for ARTIFACT in "$NEW_SNAPSHOT".sha256sum "$NEW_SNAPSHOT"; do
                             echo "Pushing artifact $ARTIFACT to s3://${cfg.bucket}/${cfg.prefix}/$SCHEMA/"
                             s3cmd put \
+                              --verbose \
                               --acl-public \
                               --multipart-chunk-size-mb=512 \
                               "$ARTIFACT" \
