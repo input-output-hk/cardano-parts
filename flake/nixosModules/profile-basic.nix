@@ -129,7 +129,16 @@
       nix = {
         package = inputs.nix.packages.${system}.nix;
         registry.nixpkgs.flake = inputs.nixpkgs;
-        optimise.automatic = true;
+
+        # Setting this true will typically induce iowait at ~50% level for
+        # several minutes each day on already IOPS constrained ec2 ebs gp3 and
+        # similarly capable machines, which in turn may impact performance for
+        # capability sensitive software.  While cardano-node itself doesn't
+        # appear to be impacted by this in terms of observable missedSlots on
+        # forgers or delayed headers reported by blockperf, this will be
+        # disabled as a precaution.
+        optimise.automatic = false;
+
         gc.automatic = true;
 
         settings = {
