@@ -421,7 +421,7 @@ in
             # TODO: Fix the missing meta/version info upstream
             (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-9-1-0-176f99e")
             # Until prometheus metrics are in master
-            # (mkPkg "blockperf" capkgs.blockperf-cardano-foundation-blockperf-main-3497385)
+            # (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-3497385)
             (mkPkg "blockperf" localFlake.inputs.blockperf.packages.${system}.blockperf)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-07-19-44b2fd5)
             (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-9-1-0-176f99e" // {version = "9.2.1.0";}))

@@ -77,16 +77,16 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1724437423,
-        "narHash": "sha256-A9NeWN+arDYD02hSSrf56U1WpsSTuE6saXhooXQu0kw=",
+        "lastModified": 1724876942,
+        "narHash": "sha256-6eNKTOjUL3qjdBsIO6t1vRLWelB8WdeledPZMSPUFAA=",
         "owner": "johnalotoski",
         "repo": "blockperf",
-        "rev": "db570e61fbd236e11d84c7f318767bd9c0238065",
+        "rev": "f6052337a7b3c7208d0e0658ba4d9b63671e8b47",
         "type": "github"
       },
       "original": {
         "owner": "johnalotoski",
-        "ref": "prom-mvp",
+        "ref": "prom",
         "repo": "blockperf",
         "type": "github"
       }

@@ -14,6 +14,7 @@
 #   config.services.blockperf.maskedIpList
 #   config.services.blockperf.name
 #   config.services.blockperf.package
+#   config.services.blockperf.port
 #   config.services.blockperf.secretsPathPrefix
 #
 # Tips:
@@ -30,7 +31,7 @@ flake: {
   }: let
     inherit (builtins) concatStringsSep;
     inherit (lib) escapeShellArgs hasSuffix getExe mkOption optional;
-    inherit (lib.types) int listOf package port str;
+    inherit (lib.types) int listOf nullOr package port str;
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
 
@@ -115,11 +116,10 @@ flake: {
         description = "The default blockperf package.";
       };
 
-      # TODO: Tie this to a systemd env var once upstream doesn't use a hardcoded port.
       port = mkOption {
-        type = port;
+        type = nullOr port;
         default = 8082;
-        description = "The default blockperf prometheus port.";
+        description = "The default blockperf prometheus port. Set to null to disable metrics.";
       };
 
       logFile = mkOption {
@@ -220,6 +220,12 @@ flake: {
         startLimitIntervalSec = 900;
 
         environment = {
+          # The port to publish metrics to
+          BLOCKPERF_METRICS_PORT =
+            if cfg.port == null
+            then "disabled"
+            else toString cfg.port;
+
           # Path to the cardano-node blockperf log file
           BLOCKPERF_NODE_LOGFILE = cfg.logFile;
 
@@ -283,6 +289,7 @@ flake: {
               echo -e "Blockperf machine masked ips:\n  ${concatStringsSep "\n  " cfg.maskedIpList}\n"
               echo -e "Blockperf machine masked dns (to be resolved):\n  ${concatStringsSep "\n  " cfg.maskedDnsList}\n"
               echo -e "Blockperf machine masked addresses string (resolved):\n  $BLOCKPERF_MASKED_ADDRESSES"
+              echo "Blockperf metrics port: $BLOCKPERF_METRICS_PORT"
               echo "Starting blockperf..."
               blockperf run
             '';
