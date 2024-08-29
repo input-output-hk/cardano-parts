@@ -481,7 +481,9 @@ flake: {
                              '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
                              '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
 
-            access_log syslog:server=unix:/dev/log x-fwd;
+            # To see all logs, including those already cached by varnish,
+            # remove `if=$loggable_varnish` from the following line:
+            access_log syslog:server=unix:/dev/log x-fwd if=$loggable_varnish;
 
             # Allow 1 topology request per 10 seconds.  Logs show clients
             # typically are not requesting this endpoint more than once every
