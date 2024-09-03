@@ -187,7 +187,6 @@
           },
           "links": [],
           "mappings": [],
-          "min": -125000,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -321,7 +320,6 @@
           },
           "links": [],
           "mappings": [],
-          "min": 150000,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -424,7 +422,6 @@
           },
           "links": [],
           "mappings": [],
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
