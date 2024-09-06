@@ -35,6 +35,26 @@
         description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes at a 2 minute rate resolution.";
       };
     }
+    {
+      alert = "cardano_node_mempool_high";
+      expr = "cardano_node_metrics_txsInMempool_int > 200";
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node transactions in mempool have been elevated for more than 10 minutes.";
+        description = "{{$labels.instance}}: cardano-node transactions in mempool have been greater than 200 for more than 10 minutes.";
+      };
+    }
+    {
+      alert = "cardano_node_mempool_high_new_tracing";
+      expr = "Mempool_TxsInMempool > 200";
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node transactions in mempool have been elevated for more than 10 minutes.";
+        description = "{{$labels.instance}}: cardano-node transactions in mempool have been greater than 200 for more than 10 minutes.";
+      };
+    }
     # Note: This alert will automatically disable after 6 hours (360 minutes) even if there are still no expected metrics available.
     {
       alert = "cardano_node_metric_missing";
