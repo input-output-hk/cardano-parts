@@ -481,8 +481,15 @@ flake: {
                              '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
                              '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
 
-            access_log syslog:server=unix:/dev/log x-fwd;
-            limit_req_zone $binary_remote_addr zone=apiPerIP:100m rate=1r/s;
+            # To see all logs, including those already cached by varnish,
+            # remove `if=$loggable_varnish` from the following line:
+            access_log syslog:server=unix:/dev/log x-fwd if=$loggable_varnish;
+
+            # Allow 1 topology request per 10 seconds.  Logs show clients
+            # typically are not requesting this endpoint more than once every
+            # 30 seconds and this endpoint resource also typically stays the
+            # same for several hours at a time between backend updates.
+            limit_req_zone $binary_remote_addr zone=topoRateLimitPerIp:100m rate=6r/m;
             limit_req_status 429;
 
             map $http_accept_language $lang {
@@ -557,7 +564,12 @@ flake: {
               in
                 {
                   "/".root = pkgs.runCommand "nginx-root-dir" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';
-                  "/relays".root = "/var/lib/registered-relays-dump";
+                  "/relays" = {
+                    root = "/var/lib/registered-relays-dump";
+                    extraConfig = ''
+                      limit_req zone=topoRateLimitPerIp;
+                    '';
+                  };
                 }
                 // recursiveUpdate (genAttrs endpoints (p: {
                   proxyPass = "http://127.0.0.1:6081${p}";

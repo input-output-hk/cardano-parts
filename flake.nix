@@ -31,19 +31,16 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
-    # Until prometheus metrics are in master
-    blockperf.url = "github:johnalotoski/blockperf/prom-mvp";
-
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
     # definitions found in flakeModule/pkgs.nix.
     cardano-db-sync-schema = {
-      url = "github:IntersectMBO/cardano-db-sync/13.4.0.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.5.0.2";
       flake = false;
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.4.0.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.5.0.2";
       flake = false;
     };
 
