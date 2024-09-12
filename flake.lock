@@ -1243,11 +1243,11 @@
     "opentofu-registry": {
       "flake": false,
       "locked": {
-        "lastModified": 1701811617,
-        "narHash": "sha256-0RcmJU6qkldb3VOEM37PG02D25LNaA12Oy794dr1Ih8=",
+        "lastModified": 1726172468,
+        "narHash": "sha256-j3D1lqvSbdRn2hoIa7delwgSDgQf2V8pg3s/pCyrygc=",
         "owner": "opentofu",
         "repo": "registry",
-        "rev": "3d8c146c42fccfcfe89d81a46cd4268bd39aa242",
+        "rev": "83a5a0c7639b178e1841a10976ca291452c851bf",
         "type": "github"
       },
       "original": {
