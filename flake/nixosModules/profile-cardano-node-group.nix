@@ -3,7 +3,6 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.services.cardano-node.shareIpv6Address
 #   config.services.cardano-node.totalCpuCount
 #   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.mithril-client.enable
@@ -40,7 +39,7 @@
 
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
-    inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
+    inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr hostAddrIpv6 nodeId;
     inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
@@ -105,16 +104,6 @@
     options = {
       services = {
         cardano-node = {
-          shareIpv6Address = mkOption {
-            type = bool;
-            default = true;
-            description = ''
-              Should instances on same machine share ipv6 address.
-              Default: true, sets ipv6HostAddr equal to ::1.
-              If false use address increments starting from instance index + 1.
-            '';
-          };
-
           shareNodeSocket = mkOption {
             type = bool;
             default = false;
@@ -340,11 +329,11 @@
         );
 
         hostAddr = mkDefault hostAddr;
-        ipv6HostAddr = mkIf (cfg.instances > 1) (
-          if cfg.shareIpv6Address
-          then "::1"
-          else (i: "::127.0.0.${toString (i + 1)}")
-        );
+
+        # Node will start on ipv4 only machines with a binding to ::/0, but it
+        # will also then consume resources unnecessarily by trying to bind to
+        # other ipv6 peers.
+        ipv6HostAddr = mkIf ((nixos.config.ips.publicIpv6 or "") != "") hostAddrIpv6;
 
         port = mkDefault cardanoNodePort;
         producers = mkDefault [];

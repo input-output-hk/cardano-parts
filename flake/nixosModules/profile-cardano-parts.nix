@@ -22,6 +22,7 @@
 #   config.cardano-parts.perNode.meta.enableAlertCount
 #   config.cardano-parts.perNode.meta.enableDns
 #   config.cardano-parts.perNode.meta.hostAddr
+#   config.cardano-parts.perNode.meta.hostAddrIpv6
 #   config.cardano-parts.perNode.meta.hostsList
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.blockperf
@@ -241,8 +242,14 @@ flake @ {moduleWithSystem, ...}: {
 
         hostAddr = mkOption {
           type = str;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node.";
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node for ipv4 binding.";
           default = "0.0.0.0";
+        };
+
+        hostAddrIpv6 = mkOption {
+          type = str;
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node for ipv6 binding.";
+          default = "0:0:0:0:0:0:0:0";
         };
 
         hostsList = mkOption {
