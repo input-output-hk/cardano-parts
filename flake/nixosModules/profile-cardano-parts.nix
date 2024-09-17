@@ -50,7 +50,7 @@ flake @ {moduleWithSystem, ...}: {
     ...
   }: let
     inherit (builtins) attrNames deepSeq elem head stringLength;
-    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair pipe recursiveUpdate types;
+    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair optionalString pipe recursiveUpdate types;
     inherit (types) anything attrsOf bool enum ints listOf oneOf package port nullOr str submodule;
     inherit (cfg.group) groupFlake;
     inherit (cfgPerNode.lib) topologyLib;
@@ -144,7 +144,7 @@ flake @ {moduleWithSystem, ...}: {
     metaSubmodule = submodule {
       options = {
         addressType = mkOption {
-          type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
+          type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"];
           description = mdDoc "The default addressType for topologyLib mkProducer function.";
           default = cfg.group.meta.addressType;
         };
@@ -330,7 +330,13 @@ flake @ {moduleWithSystem, ...}: {
             # Filter by hosts
             (filterAttrs (n: _: elem n hostsList))
 
-            # Abort on any duplicated ips across multiple machines
+            # Abort on any duplicated ips across machines in the scoped hosts
+            # list. Note that default subnets of default vpcs use overlapping
+            # cidr ranges and randomly duplicated privateIpv4 assignment in aws
+            # is possible. If a collision is detected, recreate the duplicated
+            # resource to remove the collision. Alternatively, opentofu cluster
+            # resource provisioning could be modified to use non-default
+            # resources at the expense of significant additional complexity.
             (ipAttrs:
               deepSeq (
                 let
@@ -338,7 +344,14 @@ flake @ {moduleWithSystem, ...}: {
                 in
                   map (ip:
                     if (count (ipCheck: ipCheck == ip) ipList) > 1
-                    then abort "ABORT: ${type} ${ip} has more than one occurrence.  Refer to nixosModule.ip-module in the downstream repo."
+                    then
+                      abort (
+                        "ABORT: ${type} ${ip} has more than one occurrence."
+                        + "  Refer to nixosModule.ip-module in the downstream repo."
+                        + optionalString (type == "privateIpv4")
+                        ("  Duplicated private ipv4 may be due to overlapping cidrs on aws default subnets and vpcs"
+                          + " in which case recreating one of the ip duplicated resources will resolve the conflict.")
+                      )
                     else null)
                   ipList
               )
@@ -363,6 +376,7 @@ flake @ {moduleWithSystem, ...}: {
         foldl' (acc: e: recursiveUpdate acc e) {} [
           (genHostsType "privateIpv4" "private-ipv4")
           (genHostsType "publicIpv4" "public-ipv4")
+          (genHostsType "publicIpv6" "public-ipv6")
         ]);
 
       # Enable deployed machines to be able to resolve the /etc/hosts entries created above in cardano-node topology files
