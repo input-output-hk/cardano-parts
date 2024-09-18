@@ -245,6 +245,7 @@ in
                     curl
                     deadnix
                     diffutils
+                    dig
                     fd
                     gawk
                     gnugrep
