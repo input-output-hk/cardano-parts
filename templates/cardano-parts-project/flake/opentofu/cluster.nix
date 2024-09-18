@@ -336,7 +336,9 @@ in {
                 # CIDR block allocation changes from /56 in the future.
                 ipv6_cidr_block = let
                   ipv6CidrBlock = "data.aws_vpc.${region}.ipv6_cidr_block";
-                in "\${cidrsubnet(${ipv6CidrBlock}, ${toString ipv6SubnetCidrBits} - parseint(tolist(regex(\"/([0-9]+)$\", ${ipv6CidrBlock}))[0], 10), each.key)}";
+                in
+                  "\${data.aws_vpc.${region}.ipv6_cidr_block == \"\" ? null :"
+                  + " cidrsubnet(${ipv6CidrBlock}, ${toString ipv6SubnetCidrBits} - parseint(tolist(regex(\"/([0-9]+)$\", ${ipv6CidrBlock}))[0], 10), each.key)}";
 
                 availability_zone = "\${each.value.availability_zone}";
               };
@@ -356,19 +358,22 @@ in {
           );
 
           aws_instance = mapNodes (
-            name: node:
+            name: node: let
+              inherit (node.aws) region;
+            in
               {
                 inherit (node.aws.instance) count instance_type;
-                provider = awsProviderFor node.aws.region;
-                ami = "\${data.aws_ami.nixos_${system}_${underscore node.aws.region}.id}";
+
+                provider = awsProviderFor region;
+                ami = "\${data.aws_ami.nixos_${system}_${underscore region}.id}";
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
 
-                ipv6_address_count = 1;
+                ipv6_address_count = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : 1}";
 
                 monitoring = true;
-                key_name = "\${aws_key_pair.bootstrap_${underscore node.aws.region}[0].key_name}";
+                key_name = "\${aws_key_pair.bootstrap_${underscore region}[0].key_name}";
                 vpc_security_group_ids = [
-                  "\${aws_security_group.common_${underscore node.aws.region}[0].id}"
+                  "\${aws_security_group.common_${underscore region}[0].id}"
                 ];
                 tags = {Name = name;} // node.aws.instance.tags or {};
 
