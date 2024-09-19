@@ -128,6 +128,18 @@
             ];
           };
 
+          metricsPrefix = mkOption {
+            type = str;
+            default = "cardano_node_metrics_";
+            description = ''
+              The prefix string for metrics names.
+
+              The default will normalize new tracing system metrics names to
+              legacy system metrics names so that two sets of grafana
+              dashboards are not required.
+            '';
+          };
+
           network = mkOption {
             type = attrsOf str;
             default = {
@@ -308,12 +320,31 @@
       systemd.services.cardano-tracer = {
         wantedBy = ["multi-user.target"];
         environment.HOME = "/var/lib/cardano-tracer";
+
+        # If cardano-tracer is not delayed in startup after cardano-node is
+        # restarted, metrics may not be picked up.
+        preStart = ''
+          set -uo pipefail
+          SOCKET="${config.services.cardano-node.socketPath 0}"
+
+          # Wait for the node socket
+          while true; do
+            [ -S "$SOCKET" ] && sleep 2 && break
+            echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
+            sleep 2
+          done
+        '';
+
         serviceConfig = {
           MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB)}M";
           LimitNOFILE = "65535";
 
           StateDirectory = "cardano-tracer";
           WorkingDirectory = "/var/lib/cardano-tracer";
+
+          # Wait up to a day for the node socket to appear on preStart.
+          # Allow long ledger replays and/or db-restore gunzip, including on slow systems.
+          TimeoutStartSec = 24 * 3600;
         };
       };
 
@@ -340,6 +371,8 @@
         };
 
         extraNodeInstanceConfig = i: {
+          TraceOptionMetricsPrefix = cfg.metricsPrefix;
+
           # This is important to set, otherwise tracer log files and RTView will get an ugly name.
           TraceOptionNodeName =
             if (i == 0)
