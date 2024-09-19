@@ -27,7 +27,7 @@
     }
     {
       alert = "cardano_node_blockheight_unchanged_new_tracing";
-      expr = "rate(ChainDB_BlockNum[2m]) == 0";
+      expr = "rate(cardano_node_metrics_blockNum_int[2m]) == 0";
       for = "10m";
       labels.severity = "page";
       annotations = {
@@ -47,7 +47,7 @@
     }
     {
       alert = "cardano_node_mempool_high_new_tracing";
-      expr = "Mempool_TxsInMempool > 200";
+      expr = "cardano_node_metrics_txsInMempool_int > 200";
       for = "10m";
       labels.severity = "page";
       annotations = {
@@ -69,7 +69,7 @@
     # Note: This alert will automatically disable after 6 hours (360 minutes) even if there are still no expected metrics available.
     {
       alert = "cardano_node_metric_missing_new_tracing";
-      expr = "(sum_over_time((ChainDB_BlockNum != bool 0)[360m:1m]) < bool 350) > 0 unless ChainDB_BlockNum";
+      expr = "(sum_over_time((cardano_node_metrics_blockNum_int != bool 0)[360m:1m]) < bool 350) > 0 unless cardano_node_metrics_blockNum_int";
       for = "1m";
       labels.severity = "page";
       annotations = {
