@@ -99,7 +99,7 @@ checkSshConfig := '''
     let nixosCfg = (nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames') | from json
 
     # Ssh config header manual changes can be made without breaking parsing as
-    # long as they come as the `Host *$` line. Host modifications can also be
+    # long as they come after the `Host *$` line. Host modifications can also be
     # made as long as any host changes come after the `  HostName .*$` line for
     # each respective host.
     let sshCfg = (open .ssh_config
