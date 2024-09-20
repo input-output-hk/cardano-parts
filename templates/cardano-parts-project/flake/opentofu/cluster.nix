@@ -184,7 +184,7 @@ in {
                 }
                 {
                   name = "architecture";
-                  values = [(builtins.head (lib.splitString "-" system))];
+                  values = [(builtins.head (splitString "-" system))];
                 }
               ];
             };
@@ -368,8 +368,6 @@ in {
                 ami = "\${data.aws_ami.nixos_${system}_${underscore region}.id}";
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
 
-                ipv6_address_count = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : 1}";
-
                 monitoring = true;
                 key_name = "\${aws_key_pair.bootstrap_${underscore region}[0].key_name}";
                 vpc_security_group_ids = [
@@ -401,8 +399,26 @@ in {
 
                 lifecycle = [{ignore_changes = ["ami" "user_data"];}];
               }
-              // lib.optionalAttrs (node.aws.instance ? availability_zone) {
+              // optionalAttrs (node.aws.instance ? availability_zone) {
                 inherit (node.aws.instance) availability_zone;
+              }
+              # Use nix declared ipv6 if available.
+              #
+              # NOTE: As of aws provider 5.66.0, switching from
+              # ipv6_address_count to ipv6_addresses will force an instance
+              # replacement. If a self-declared ipv6 is required but
+              # destroying and re-creating instances to change ipv6 is not
+              # acceptable, then until the bug is fixed, continue using
+              # auto-assignment only, manually change the ipv6 in the console
+              # ui, and run tf apply to update state.
+              #
+              # Ref: https://github.com/hashicorp/terraform-provider-aws/issues/39433
+              // optionalAttrs (node.aws.instance ? ipv6) {
+                ipv6_addresses = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : tolist([\"${node.aws.instance.ipv6}\"])}";
+              }
+              # Otherwise use aws ipv6 auto-assignment
+              // optionalAttrs (!(node.aws.instance ? ipv6)) {
+                ipv6_address_count = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : 1}";
               }
           );
 

@@ -44,6 +44,21 @@ in
         };
       };
 
+      # Declare a static ipv6.
+      #
+      # In the case that a staticIpv6 is not declared, aws will assign one
+      # automatically.
+      #
+      # NOTE: As of aws provider 5.66.0, switching from ipv6_address_count to
+      # ipv6_addresses will force an instance replacement. If a self-declared
+      # ipv6 is required but destroying and re-creating instances to change
+      # ipv6 is not acceptable, then until the bug is fixed, continue using
+      # auto-assignment only, manually change the ipv6 in the console ui, and
+      # run tf apply to update state.
+      #
+      # Ref: https://github.com/hashicorp/terraform-provider-aws/issues/39433
+      # staticIpv6 = ipv6: {aws.instance.ipv6 = ipv6;};
+
       # Cardano-node modules for group deployment
       node = {
         imports = [
