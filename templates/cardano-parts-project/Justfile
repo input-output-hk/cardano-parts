@@ -963,7 +963,7 @@ start-demo:
   echo "Finished sequence..."
   echo
 
-# Start a node for specific env
+# Start a local node for a specific env
 start-node ENV:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -974,7 +974,7 @@ start-node ENV:
     exit 1
   fi
 
-  # Stop any existing running node env for a clean restart
+  # Stop any existing running local node env for a clean restart
   just stop-node {{ENV}}
   echo "Starting cardano-node for envrionment {{ENV}}"
   mkdir -p "$STATEDIR"
@@ -1002,7 +1002,7 @@ start-node ENV:
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
   just set-default-cardano-env {{ENV}} "" "$PPID"
 
-# Stop all nodes
+# Stop all local nodes
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -1010,7 +1010,7 @@ stop-all:
     just stop-node $i
   done
 
-# Stop node for a specific env
+# Stop a local node for a specific env
 stop-node ENV:
   #!/usr/bin/env bash
   set -euo pipefail
