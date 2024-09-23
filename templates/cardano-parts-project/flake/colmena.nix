@@ -44,7 +44,9 @@ in
         };
       };
 
-      # Declare a static ipv6.
+      # Declare a static ipv6. This should only be used for public machines
+      # where ip exposure in committed code is acceptable and a vanity address
+      # is needed. Ie: don't use this for bps.
       #
       # In the case that a staticIpv6 is not declared, aws will assign one
       # automatically.

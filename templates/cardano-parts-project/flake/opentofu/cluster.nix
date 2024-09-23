@@ -402,7 +402,10 @@ in {
               // optionalAttrs (node.aws.instance ? availability_zone) {
                 inherit (node.aws.instance) availability_zone;
               }
-              # Use nix declared ipv6 if available.
+              # Use nix declared ipv6 if available.  This should only be used
+              # for public machines where ip exposure in committed code is
+              # acceptable and a vanity address is needed. Ie: don't use this
+              # for bps.
               #
               # NOTE: As of aws provider 5.66.0, switching from
               # ipv6_address_count to ipv6_addresses will force an instance
