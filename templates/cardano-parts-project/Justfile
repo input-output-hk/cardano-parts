@@ -789,7 +789,7 @@ ssh-config-example:
     HostName 1.2.3.5
 
   Host machine-example-2.ipv6
-    HostName ff00::02
+    HostName unavailable.ipv6
   EOF
 
 # Ssh using cluster bootstrap key
@@ -1303,6 +1303,12 @@ update-ips-example:
         privateIpv4 = "172.16.0.1";
         publicIpv4 = "1.2.3.4";
         publicIpv6 = "ff00::01";
+      };
+
+      machine-example-2 = {
+        privateIpv4 = "172.16.0.2";
+        publicIpv4 = "1.2.3.5";
+        publicIpv6 = "";
       };
     };
   in {
