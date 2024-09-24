@@ -20,11 +20,15 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 40,
+  "id": 24,
   "links": [],
   "liveNow": false,
   "panels": [
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -104,10 +108,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_ConnectionManager_DuplexConns{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_duplexConns_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -115,6 +125,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -194,10 +208,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_PeerSelection_Hot{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_peerSelection_hot_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -205,6 +225,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -284,10 +308,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_InboundGovernor_Hot{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_inboundGovernor_hot_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -295,6 +325,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -374,10 +408,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_ConnectionManager_UnidirectionalConns{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_unidirectionalConns_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -385,6 +425,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -464,10 +508,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_PeerSelection_Warm{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_peerSelection_warm_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -475,6 +525,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -554,10 +608,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_InboundGovernor_Warm{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_inboundGovernor_warm_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -565,6 +625,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -644,10 +708,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_ConnectionManager_InboundConns{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_inboundConns_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -655,6 +725,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -734,10 +808,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_PeerSelection_Cold{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_peerSelection_cold_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -745,6 +825,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -824,10 +908,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(BlockFetch_BlocksServed{environment=\"$environment\"}[1h])/rate(ChainDB_BlockNum{environment=\"$environment\"}[1h])",
+          "expr": "rate(cardano_node_metrics_served_block_counter{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\"}[1h])",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -835,6 +925,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -914,10 +1008,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Net_ConnectionManager_OutboundConns{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_outboundConns_int{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -925,6 +1025,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1004,10 +1108,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Blockfetch_Client_Blockdelay_cdfOne{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfOne{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1015,6 +1125,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1096,18 +1210,30 @@
       "pluginVersion": "8.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(quantile_over_time(0.5,Blockfetch_Client_Blockdelay{environment=\"$environment\"}[15m]))",
+          "expr": "avg(quantile_over_time(0.5,cardano_node_metrics_blockfetchclient_blockdelay_s{environment=\"$environment\"}[15m]))",
           "interval": "",
           "legendFormat": "P50",
+          "range": true,
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(quantile_over_time(0.95,Blockfetch_Client_Blockdelay{environment=\"$environment\"}[15m]))",
+          "expr": "avg(quantile_over_time(0.95,cardano_node_metrics_blockfetchclient_blockdelay_s{environment=\"$environment\"}[15m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "P95",
+          "range": true,
           "refId": "B"
         }
       ],
@@ -1205,6 +1331,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1284,10 +1414,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Blockfetch_Client_Blockdelay_cdfThree{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfThree{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1295,6 +1431,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1374,10 +1514,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(Blockfetch_Client_Lateblocks{environment=\"$environment\"}[1h])/rate(ChainDB_BlockNum{environment=\"$environment\"}[1h])",
+          "expr": "rate(cardano_node_metrics_blockfetchclient_lateblocks{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\"}[1h])",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1385,6 +1531,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1464,10 +1614,16 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "Blockfetch_Client_Blockdelay_cdfFive{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfThree{environment=\"$environment\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1476,18 +1632,19 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 38,
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "sanchonet",
           "value": "sanchonet"
         },
         "datasource": {
-          "type": "prometheus"
+          "type": "prometheus",
+          "uid": "mimir"
         },
         "definition": "label_values(environment)",
         "hide": 0,

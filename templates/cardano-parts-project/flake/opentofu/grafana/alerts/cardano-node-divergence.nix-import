@@ -9,11 +9,15 @@ let
     blockMetric =
       if useLegacyTracing
       then "cardano_node_metrics_blockNum_int"
-      else "ChainDB_BlockNum";
+      # Some new tracing system metrics have converged with legacy, but changes
+      # are still in progress, so leave these separated for now in case this
+      # diverge again before being finalized.
+      else "cardano_node_metrics_blockNum_int";
     slotMetric =
       if useLegacyTracing
       then "cardano_node_metrics_slotNum_int"
-      else "ChainDB_SlotNum";
+      # See comment above
+      else "cardano_node_metrics_slotNum_int";
   in {
     alert = "cardano_node_block_divergence_${env}${
       if useLegacyTracing

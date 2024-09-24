@@ -22,6 +22,7 @@
 #   config.cardano-parts.perNode.meta.enableAlertCount
 #   config.cardano-parts.perNode.meta.enableDns
 #   config.cardano-parts.perNode.meta.hostAddr
+#   config.cardano-parts.perNode.meta.hostAddrIpv6
 #   config.cardano-parts.perNode.meta.hostsList
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.blockperf
@@ -46,10 +47,11 @@ flake @ {moduleWithSystem, ...}: {
     lib,
     pkgs,
     nodes,
+    name,
     ...
   }: let
     inherit (builtins) attrNames deepSeq elem head stringLength;
-    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair pipe recursiveUpdate types;
+    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair optional optionalString pipe recursiveUpdate types;
     inherit (types) anything attrsOf bool enum ints listOf oneOf package port nullOr str submodule;
     inherit (cfg.group) groupFlake;
     inherit (cfgPerNode.lib) topologyLib;
@@ -143,7 +145,7 @@ flake @ {moduleWithSystem, ...}: {
     metaSubmodule = submodule {
       options = {
         addressType = mkOption {
-          type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
+          type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"];
           description = mdDoc "The default addressType for topologyLib mkProducer function.";
           default = cfg.group.meta.addressType;
         };
@@ -241,8 +243,14 @@ flake @ {moduleWithSystem, ...}: {
 
         hostAddr = mkOption {
           type = str;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node.";
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node for ipv4 binding.";
           default = "0.0.0.0";
+        };
+
+        hostAddrIpv6 = mkOption {
+          type = str;
+          description = mdDoc "The hostAddr to associate with the nixos cardano-node for ipv6 binding.";
+          default = "0:0:0:0:0:0:0:0";
         };
 
         hostsList = mkOption {
@@ -294,6 +302,8 @@ flake @ {moduleWithSystem, ...}: {
         isCardanoDensePool = mkBoolOpt;
       };
     };
+
+    gfModules = groupFlake.config.flake.nixosModules;
   in {
     options = {
       # Top level nixos module configuration attr for cardano-parts.
@@ -304,7 +314,9 @@ flake @ {moduleWithSystem, ...}: {
 
     config = {
       # The hosts file is case-insensitive, so switch from camelCase attr name to kebab-case
-      networking.hosts = mkIf (groupFlake.config.flake.nixosModules ? ips) (let
+      networking.hosts = mkIf (gfModules ? ips) (let
+        allIps = head gfModules.ips.imports;
+
         hostsList =
           # See hostsList type and description above
           # If hostsList is a list, use it directly
@@ -316,14 +328,20 @@ flake @ {moduleWithSystem, ...}: {
           else topologyLib.groupMachines nodes;
 
         genHostsType = type: suffix:
-          pipe (head groupFlake.config.flake.nixosModules.ips.imports) [
+          pipe allIps [
             # Filter empty values
             (filterAttrs (_: v: v.${type} != ""))
 
             # Filter by hosts
             (filterAttrs (n: _: elem n hostsList))
 
-            # Abort on any duplicated ips across multiple machines
+            # Abort on any duplicated ips across machines in the scoped hosts
+            # list. Note that default subnets of default vpcs use overlapping
+            # cidr ranges and randomly duplicated privateIpv4 assignment in aws
+            # is possible. If a collision is detected, recreate the duplicated
+            # resource to remove the collision. Alternatively, opentofu cluster
+            # resource provisioning could be modified to use non-default
+            # resources at the expense of significant additional complexity.
             (ipAttrs:
               deepSeq (
                 let
@@ -331,7 +349,14 @@ flake @ {moduleWithSystem, ...}: {
                 in
                   map (ip:
                     if (count (ipCheck: ipCheck == ip) ipList) > 1
-                    then abort "ABORT: ${type} ${ip} has more than one occurrence.  Refer to nixosModule.ip-module in the downstream repo."
+                    then
+                      abort (
+                        "ABORT: ${type} ${ip} has more than one occurrence."
+                        + "  Refer to nixosModule.ip-module in the downstream repo."
+                        + optionalString (type == "privateIpv4")
+                        ("  Duplicated private ipv4 may be due to overlapping cidrs on aws default subnets and vpcs"
+                          + " in which case recreating one of the ip duplicated resources will resolve the conflict.")
+                      )
                     else null)
                   ipList
               )
@@ -352,11 +377,12 @@ flake @ {moduleWithSystem, ...}: {
             (mapAttrs' (n: v: nameValuePair v.${type} ["${n}.${suffix}"]))
           ];
       in
-        # Merge ip types together in the hosts file declaration
-        foldl' (acc: e: recursiveUpdate acc e) {} [
-          (genHostsType "privateIpv4" "private-ipv4")
-          (genHostsType "publicIpv4" "public-ipv4")
-        ]);
+        # Merge ip types together in the hosts file declaration.
+        foldl' (acc: e: recursiveUpdate acc e) {} (
+          (optional (allIps.${name} ? privateIpv4) (genHostsType "privateIpv4" "private-ipv4"))
+          ++ (optional (allIps.${name} ? publicIpv4) (genHostsType "publicIpv4" "public-ipv4"))
+          ++ (optional (allIps.${name} ? publicIpv6) (genHostsType "publicIpv6" "public-ipv6"))
+        ));
 
       # Enable deployed machines to be able to resolve the /etc/hosts entries created above in cardano-node topology files
       services.dnsmasq.enable = true;

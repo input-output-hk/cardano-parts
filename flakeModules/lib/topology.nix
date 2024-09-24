@@ -34,11 +34,13 @@ with lib; rec {
     #   fqdn            ==> will record the producer as the nixosConfiguration machine name with cluster DNS suffix
     #   namePrivateIpv4 ==> will record the nixosConfiguration machine name with a `.private-ipv4` suffix
     #   namePublicIpv4  ==> will record the nixosConfiguration machine name with a `.public-ipv4` suffix
+    #   namePublicIpv6  ==> will record the nixosConfiguration machine name with a `.public-ipv6` suffix
     #   privateIpv4     ==> will record the actual private ipv4
-    #   publiceIpv4     ==> will record the actual public ipv4
+    #   publicIpv4     ==> will record the actual public ipv4
+    #   publicIpv6     ==> will record the actual public ipv6
     #
-    # Note that the use of addressType of name[Public|Private]Ipv4 will fail unless there is a corresponding /etc/hosts entry.
-    # The /etc/hosts configuration, by default, will only be set up with private and public ipv4 for machines in the same cardano-parts group
+    # Note that the use of addressType of name[Public|Private]Ipv[4|6] will fail unless there is a corresponding /etc/hosts entry.
+    # The /etc/hosts configuration, by default, will only be set up with private and public ipv[4|6] for machines in the same cardano-parts group
     # assuming that the nixosModules ips-module created locally in each downstream cardano-parts repo is available.
     #
     # See the following options for default configuration in module-cardano-part:
@@ -49,17 +51,17 @@ with lib; rec {
     addressType =
       if extraCfg ? addressType
       then
-        if elem extraCfg.addressType ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"]
+        if elem extraCfg.addressType ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"]
         then extraCfg.addressType
-        else abort "ABORT: producer addressType must be one of: fqdn, namePrivateIpv4, namePublicIpv4, privateIpv4, publicIpv4"
+        else abort "ABORT: producer addressType must be one of: fqdn, namePrivateIpv4, namePublicIpv4, namePublicIpv6, privateIpv4, publicIpv4, publicIpv6"
       else nodes.${producerName}.config.cardano-parts.perNode.meta.addressType;
 
     addressSelector = {
-      inherit (nodes.${producerName}.config.ips) privateIpv4 publicIpv4;
+      inherit (nodes.${producerName}.config.ips) privateIpv4 publicIpv4 publicIpv6;
       fqdn = "${producerName}.${domain}";
-      name = producerName;
       namePrivateIpv4 = "${producerName}.private-ipv4";
       namePublicIpv4 = "${producerName}.public-ipv4";
+      namePublicIpv6 = "${producerName}.public-ipv6";
     };
   in
     {

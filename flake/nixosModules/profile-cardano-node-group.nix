@@ -3,7 +3,6 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.services.cardano-node.shareIpv6Address
 #   config.services.cardano-node.totalCpuCount
 #   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.mithril-client.enable
@@ -40,7 +39,7 @@
 
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
-    inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr nodeId;
+    inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr hostAddrIpv6 nodeId;
     inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
@@ -49,6 +48,23 @@
     inherit (fromJSON (readFile ShelleyGenesisFile)) slotsPerKESPeriod;
 
     opsLib = self.cardano-parts.lib.opsLib pkgs;
+
+    numCeil = num: ceiling:
+      if num < ceiling
+      then num
+      else ceiling;
+
+    numFloor = num: floor:
+      if num > floor
+      then num
+      else floor;
+
+    # Ensure that cores per instance are between 2 and 8 inclusive, beyond
+    # which performance may degrade or cores are likely needed for other
+    # software.  Generally, hyperthreads are counted if present, although this
+    # depends on the provider that is reporting data to cpuCount.  It is, for
+    # example, true for aws instances.
+    cores = numCeil (numFloor (cpuCount / cfg.instances) 2) 8;
 
     # We don't use the mkTopology function directly from cardanoLib because that function
     # determines p2p usage based on network EnableP2P definition, whereas we wish to
@@ -88,16 +104,6 @@
     options = {
       services = {
         cardano-node = {
-          shareIpv6Address = mkOption {
-            type = bool;
-            default = true;
-            description = ''
-              Should instances on same machine share ipv6 address.
-              Default: true, sets ipv6HostAddr equal to ::1.
-              If false use address increments starting from instance index + 1.
-            '';
-          };
-
           shareNodeSocket = mkOption {
             type = bool;
             default = false;
@@ -323,11 +329,11 @@
         );
 
         hostAddr = mkDefault hostAddr;
-        ipv6HostAddr = mkIf (cfg.instances > 1) (
-          if cfg.shareIpv6Address
-          then "::1"
-          else (i: "::127.0.0.${toString (i + 1)}")
-        );
+
+        # Node will start on ipv4 only machines with a binding to ::/0, but it
+        # will also then consume resources unnecessarily by trying to bind to
+        # other ipv6 peers.
+        ipv6HostAddr = mkIf ((nixos.config.ips.publicIpv6 or "") != "") hostAddrIpv6;
 
         port = mkDefault cardanoNodePort;
         producers = mkDefault [];
@@ -372,12 +378,21 @@
           };
         };
 
-        # https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
+        # These RTS changes from nixos upstream defaults of: `-N2 -A16 -qg -qb`
+        # improve chainsync speed when -N >= 4 and minimize blockperf measured
+        # late delta_headers >= 10 seconds.  The primary factors in the late
+        # delta_header reduction were observed to be:
+        #   * -N >= 4 with a sufficiently sized machine
+        #   * -M is sufficiently high. ex: ~13 -> 24 GiB on mainnet lowered late blocks significantly
+        #   * -I3 may offer minimal benefit with low signal to noise
+        #   * Dropping of -qg -qb results in improved parallel Gen1 gc performance compared to historical perf
+        #
+        # RTS ref: https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
         rtsArgs = [
-          "-N${toString (cfg.totalCpuCount / cfg.instances)}"
+          # See the defn of cores above -- this will be constrained between 2 and 8, inclusive
+          "-N${toString cores}"
           "-A16m"
-          "-qg"
-          "-qb"
+          "-I3"
           "-M${toString (cfg.totalMaxHeapSizeMiB / cfg.instances)}M"
         ];
 

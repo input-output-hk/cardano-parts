@@ -158,11 +158,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1725544305,
-        "narHash": "sha256-QR96UoPQW3Y+o6pNeH5qF1j5pZfekNyAdWSJDtOF6K8=",
+        "lastModified": 1726686039,
+        "narHash": "sha256-STgHoKX9xvVyYq4aCtA6JDOGGvBjB/FWXBZm78YevAw=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "913a07b854f6cba600aac86ca5f55b4b337f64e9",
+        "rev": "d87a45698366a22be85f50da6f0546329c3450d0",
         "type": "github"
       },
       "original": {
@@ -1243,11 +1243,11 @@
     "opentofu-registry": {
       "flake": false,
       "locked": {
-        "lastModified": 1701811617,
-        "narHash": "sha256-0RcmJU6qkldb3VOEM37PG02D25LNaA12Oy794dr1Ih8=",
+        "lastModified": 1726172468,
+        "narHash": "sha256-j3D1lqvSbdRn2hoIa7delwgSDgQf2V8pg3s/pCyrygc=",
         "owner": "opentofu",
         "repo": "registry",
-        "rev": "3d8c146c42fccfcfe89d81a46cd4268bd39aa242",
+        "rev": "83a5a0c7639b178e1841a10976ca291452c851bf",
         "type": "github"
       },
       "original": {
@@ -1444,11 +1444,11 @@
         "terranix-examples": "terranix-examples"
       },
       "locked": {
-        "lastModified": 1684906298,
-        "narHash": "sha256-pNuJxmVMGbBHw7pa+Bx0HY0orXIXoyyAXOKuQ1zpfus=",
+        "lastModified": 1695406838,
+        "narHash": "sha256-xiUfVD6rtsVWFotVtUW3Q1nQh4obKzgvpN1wqZuGXvM=",
         "owner": "terranix",
         "repo": "terranix",
-        "rev": "c0dd15076856c6cb425795b8c7d5d37d3a1e922a",
+        "rev": "fc9077ca02ab5681935dbf0ecd725c4d889b9275",
         "type": "github"
       },
       "original": {

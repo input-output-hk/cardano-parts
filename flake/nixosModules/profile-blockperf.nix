@@ -262,13 +262,18 @@ flake: {
               NODE_CONFIG=$(grep -oP '   echo "--config \K(.*\.json)' "$START_SCRIPT")
               export BLOCKPERF_NODE_CONFIG="$NODE_CONFIG"
 
-              # Set our public IP using a generic resolver that is cloud/platform independent
-              PUBLIC_IP=$(dig +short @resolver1.opendns.com myip.opendns.com)
+              # Set our public IP preferably using the node's ip-module ip or a
+              # generic resolver that is cloud/platform independent.
+              PUBLIC_IP=${
+                if (config.ips.publicIpv4 or config.ips.publicIpv6 or "" != "")
+                then "\"${config.ips.publicIpv4 or config.ips.publicIpv6}\""
+                else "$(dig -4 +short @resolver1.opendns.com myip.opendns.com)"
+              }
               export BLOCKPERF_RELAY_PUBLIC_IP="$PUBLIC_IP"
 
               MASKED="${concatStringsSep "," cfg.maskedIpList}"
               for DNS in ${escapeShellArgs cfg.maskedDnsList}; do
-                IP=$(dig +short "$DNS")
+                IP=$(dig +short "$DNS" ANY)
                 if [ "$IP" != "" ]; then
                   MASKED+=",$IP"
                 else

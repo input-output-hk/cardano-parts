@@ -395,7 +395,7 @@ flake @ {
   metaSubmodule = submodule {
     options = {
       addressType = mkOption {
-        type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "privateIpv4" "publicIpv4"];
+        type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"];
         description = mdDoc "Cardano-parts cluster group default addressType for topologyLib mkProducer function.";
         default =
           if flake.config.flake.nixosModules ? ips

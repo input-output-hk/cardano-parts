@@ -1614,6 +1614,162 @@
       }
     },
     {
+      "InstanceType": "c7a.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 98304
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 196608
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.32xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 128,
+        "DefaultCores": 128,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 4096
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.medium",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 2048
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 1,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.metal-48xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7a.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
       "InstanceType": "c7g.12xlarge",
       "MemoryInfo":
       {
@@ -1822,6 +1978,19 @@
       }
     },
     {
+      "InstanceType": "c7gd.metal",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
       "InstanceType": "c7gd.xlarge",
       "MemoryInfo":
       {
@@ -1832,6 +2001,149 @@
         "DefaultVCpus": 4,
         "DefaultCores": 4,
         "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "c7i.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 98304
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 24,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 196608
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 4096
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.metal-24xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 196608
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.metal-48xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "c7i.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 2
       }
     },
     {
@@ -2017,6 +2329,19 @@
       }
     },
     {
+      "InstanceType": "dl2q.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
       "InstanceType": "f1.2xlarge",
       "MemoryInfo":
       {
@@ -2039,32 +2364,6 @@
       {
         "DefaultVCpus": 16,
         "DefaultCores": 8,
-        "DefaultThreadsPerCore": 2
-      }
-    },
-    {
-      "InstanceType": "g2.2xlarge",
-      "MemoryInfo":
-      {
-        "SizeInMiB": 15360
-      },
-      "VCpuInfo":
-      {
-        "DefaultVCpus": 8,
-        "DefaultCores": 4,
-        "DefaultThreadsPerCore": 2
-      }
-    },
-    {
-      "InstanceType": "g2.8xlarge",
-      "MemoryInfo":
-      {
-        "SizeInMiB": 61440
-      },
-      "VCpuInfo":
-      {
-        "DefaultVCpus": 32,
-        "DefaultCores": 16,
         "DefaultThreadsPerCore": 2
       }
     },
@@ -2706,6 +3005,19 @@
       }
     },
     {
+      "InstanceType": "i4i.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 24,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
       "InstanceType": "i4i.16xlarge",
       "MemoryInfo":
       {
@@ -2715,6 +3027,19 @@
       {
         "DefaultVCpus": 64,
         "DefaultCores": 32,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "i4i.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
         "DefaultThreadsPerCore": 2
       }
     },
@@ -2931,6 +3256,58 @@
       "MemoryInfo":
       {
         "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "inf2.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "inf2.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "inf2.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "inf2.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
       },
       "VCpuInfo":
       {
@@ -4812,6 +5189,162 @@
       }
     },
     {
+      "InstanceType": "m7a.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 196608
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.32xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 524288
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 128,
+        "DefaultCores": 128,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.medium",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 4096
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 1,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.metal-48xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "m7a.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
       "InstanceType": "m7g.12xlarge",
       "MemoryInfo":
       {
@@ -5020,6 +5553,19 @@
       }
     },
     {
+      "InstanceType": "m7gd.metal",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
       "InstanceType": "m7gd.xlarge",
       "MemoryInfo":
       {
@@ -5033,6 +5579,214 @@
       }
     },
     {
+      "InstanceType": "m7i-flex.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i-flex.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i-flex.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i-flex.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i-flex.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 196608
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 24,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.metal-24xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.metal-48xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "m7i.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
       "InstanceType": "mac1.metal",
       "MemoryInfo":
       {
@@ -5043,6 +5797,19 @@
         "DefaultVCpus": 12,
         "DefaultCores": 6,
         "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "mac2-m2.metal",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 24576
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 1
       }
     },
     {
@@ -6970,6 +7737,162 @@
       }
     },
     {
+      "InstanceType": "r7a.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 524288
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.32xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1048576
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 128,
+        "DefaultCores": 128,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1572864
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.medium",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 1,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.metal-48xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1572864
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7a.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
       "InstanceType": "r7g.12xlarge",
       "MemoryInfo":
       {
@@ -7090,7 +8013,7 @@
       "InstanceType": "r7gd.12xlarge",
       "MemoryInfo":
       {
-        "SizeInMiB": 262144
+        "SizeInMiB": 393216
       },
       "VCpuInfo":
       {
@@ -7142,7 +8065,7 @@
       "InstanceType": "r7gd.8xlarge",
       "MemoryInfo":
       {
-        "SizeInMiB": 196608
+        "SizeInMiB": 262144
       },
       "VCpuInfo":
       {
@@ -7178,7 +8101,449 @@
       }
     },
     {
+      "InstanceType": "r7gd.metal",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 524288
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
       "InstanceType": "r7gd.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r7i.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 24,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 524288
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1572864
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.metal-24xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.metal-48xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1572864
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7i.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 24,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 524288
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 4,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.32xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1048576
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 128,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.metal-16xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 524288
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.metal-32xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1048576
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 128,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r7iz.xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 32768
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 4,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "r8g.12xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 393216
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 48,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.16xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 524288
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 64,
+        "DefaultCores": 64,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.24xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.2xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 65536
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 8,
+        "DefaultCores": 8,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.48xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1572864
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.4xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 131072
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 16,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.8xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 262144
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 32,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.large",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 16384
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 2,
+        "DefaultCores": 2,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.medium",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 8192
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 1,
+        "DefaultCores": 1,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.metal-24xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 786432
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 96,
+        "DefaultCores": 96,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.metal-48xl",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 1572864
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 192,
+        "DefaultCores": 192,
+        "DefaultThreadsPerCore": 1
+      }
+    },
+    {
+      "InstanceType": "r8g.xlarge",
       "MemoryInfo":
       {
         "SizeInMiB": 32768
@@ -7559,6 +8924,19 @@
       "MemoryInfo":
       {
         "SizeInMiB": 12582912
+      },
+      "VCpuInfo":
+      {
+        "DefaultVCpus": 448,
+        "DefaultCores": 224,
+        "DefaultThreadsPerCore": 2
+      }
+    },
+    {
+      "InstanceType": "u-18tb1.112xlarge",
+      "MemoryInfo":
+      {
+        "SizeInMiB": 18874368
       },
       "VCpuInfo":
       {

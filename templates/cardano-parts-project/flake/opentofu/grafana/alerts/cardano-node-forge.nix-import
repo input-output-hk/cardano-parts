@@ -6,7 +6,10 @@ let
     kesPeriodsRemaining =
       if useLegacyTracing
       then "cardano_node_metrics_remainingKESPeriods_int"
-      else "KESInfo_remainingKESPeriods - KESInfo_operationalCertificateStartKESPeriod";
+      # Some new tracing system metrics have converged with legacy, but changes
+      # are still in progress, so leave these separated for now in case this
+      # diverge again before being finalized.
+      else "cardano_node_metrics_remainingKESPeriods_int";
   in {
     alert = "cardano_node_KES_expiration_metric_${toString periodNotice}period_notice${
       if useLegacyTracing
@@ -39,7 +42,7 @@ in {
     }
     {
       alert = "cardano_node_forge_blocks_missing_new_tracing";
-      expr = "increase(Forge_BlocksForgedNum[24h]) == 0";
+      expr = "increase(cardano_node_metrics_blocksForged_int[24h]) == 0";
       for = "1m";
       labels.severity = "page";
       annotations = {
@@ -63,7 +66,7 @@ in {
     }
     {
       alert = "cardano_node_forge_not_adopted_error_new_tracing";
-      expr = "sum_over_time(abs((Forge_ForgedSlotLast - Forge_ForgedSlotLast == bool 0) - 1)[1h:]) > 0";
+      expr = "sum_over_time(abs((cardano_node_metrics_forgedSlotLast_int - cardano_node_metrics_forgedSlotLast_int == bool 0) - 1)[1h:]) > 0";
       for = "1m";
       labels.severity = "page";
       annotations = {
@@ -75,7 +78,7 @@ in {
     }
     {
       alert = "cardano_node_cannot_forge_new_tracing";
-      expr = "increase(Forge_NodeCannotForgeNum[1h]) > 0";
+      expr = "increase(cardano_node_metrics_nodeCannotForge_int[1h]) > 0";
       for = "1m";
       labels.severity = "page";
       annotations = {
@@ -97,7 +100,7 @@ in {
     }
     {
       alert = "too_many_slot_leadership_checks_missed_new_tracing";
-      expr = "rate(Forge_SlotsMissed[5m]) * 1 > 0.5";
+      expr = "rate(cardano_node_metrics_slotsMissed_int[5m]) * 1 > 0.5";
       for = "2m";
       labels.severity = "page";
       annotations = {

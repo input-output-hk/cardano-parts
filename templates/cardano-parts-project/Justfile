@@ -97,34 +97,109 @@ checkSshConfig := '''
     mut consistent = true
 
     let nixosCfg = (nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames') | from json
-    let sshCfg = (open .ssh_config | lines | parse --regex '^Host ([^*]+)$') | get capture0
+
+    # Ssh config header manual changes can be made without breaking parsing as
+    # long as they come after the `Host *$` line. Host modifications can also be
+    # made as long as any host changes come after the `  HostName .*$` line for
+    # each respective host.
+    let sshCfg = (open .ssh_config
+      | parse --regex '(?m)Host (.*)\n\s+HostName (.*)'
+      | rename machine ip)
+
+    let ssh4Cfg = ($sshCfg
+      | where not ($it.machine | str ends-with ".ipv6")
+      | rename machine ipv4)
+
+    let ssh6Cfg = ($sshCfg
+      | where ($it.machine | str ends-with ".ipv6")
+      | rename machine ipv6
+      | update machine {$in | str replace '.ipv6' ''}
+      | update ipv6 {if ($in == "unavailable.ipv6") { null } else { $in }})
+
     let moduleIps = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
-      (open flake/nixosModules/ips-DONT-COMMIT.nix | parse --regex '    (.*) = {' | drop 1) | get capture0
+      (open flake/nixosModules/ips-DONT-COMMIT.nix
+        | parse --regex '(?ms)(.*)^  };\nin {.*'
+        | get capture0
+        | parse --regex '(?m)    (.*) = {$\n\s+privateIpv4 = \"(.*)";\n\s+publicIpv4 = \"(.*)";\n\s+publicIpv6 = \"(.*)";\n\s+};'
+        | rename machine privateIpv4 ipv4 ipv6)
+        | update ipv6 {if ($in == "") { null } else { $in }}
     } else {
       []
     }
 
-    let nix2ssh = list-diff $nixosCfg $sshCfg onlyInNixosCfg onlyInSshCfg | where where != "="
-    let nix2ips = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
-      list-diff $nixosCfg $moduleIps onlyInNixosCfg onlyInIpsModuleCfg | where where != "="
+    # Set up comparison between list of nixos config machine names and ssh ipv4 machine names
+    let nixCompareSsh4 = list-diff $nixosCfg ($ssh4Cfg | get machine) onlyInNixosCfg onlyInSshCfg | where where != "="
+
+    # Set up comparison between list of ssh public ipv4 and ssh public ipv6 machine names
+    let ssh4CompareSsh6 = list-diff ($ssh4Cfg | get machine) ($ssh6Cfg | get machine) onlyInSsh4Cfg onlyInSsh6Cfg | where where != "="
+
+    # Set up comparison between list of nixos config machine names and ip module machine names
+    let nixCompareIps = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      list-diff $nixosCfg ($moduleIps | get machine) onlyInNixosCfg onlyInIpsModuleCfg | where where != "="
     } else {
       []
     }
 
-    if ($nix2ssh | is-not-empty) {
-      print $"(ansi "bg_light_red")WARNING:(ansi reset) NixosConfigurations \(($nixosCfg | length)\) differ from ssh hosts \(($sshCfg | length)\)"
+    # Set up comparison between list of ssh public ipv4 and ip module public ipv4 values
+    let ssh4CompareIps4 = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      list-diff ($ssh4Cfg | get ipv4) ($moduleIps | get ipv4) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
+    } else {
+      []
+    }
+
+    # Set up comparison between list of ssh public ipv6 and ip module public ipv6 values
+    let ssh6CompareIps6 = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+      list-diff ($ssh6Cfg | get ipv6) ($moduleIps | get ipv6) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
+    } else {
+      []
+    }
+
+    # Validation output of any nixos config vs ssh ipv4 machine name differences
+    if ($nixCompareSsh4 | is-not-empty) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) NixosConfigurations \(($nixosCfg | length)\) differ from ssh hosts \(($ssh4Cfg | length)\)"
       print "         You may need to run `just save-ssh-config` or `just tf apply` to update the .ssh_config file."
       print "         Differences found are:"
-      print $nix2ssh
+      print $nixCompareSsh4
       print ""
       $consistent = false
     }
 
-    if ($nix2ips | is-not-empty) {
+    # Validation output of any nixos config vs ip module machine name differences
+    if ($nixCompareIps | is-not-empty) {
       print $"(ansi "bg_light_red")WARNING:(ansi reset) NixosConfigurations \(($nixosCfg | length)\) differ from ip module machines \(($moduleIps | length)\)"
       print "         You may need to run `just update-ips` to update the flake/nixosModules/ips-DONT-COMMIT.nix file."
       print "         Differences found are:"
-      print $nix2ips
+      print $nixCompareIps
+      print ""
+      $consistent = false
+    }
+
+    # Validation output of any ssh ipv4 vs ssh ipv6 machine name differences
+    if ($ssh4CompareSsh6 | is-not-empty) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) Ssh config for public ipv4 \(($ssh4Cfg | length)\) differs from ssh config for public ipv6 hosts \(($ssh6Cfg | length)\)"
+      print "         You may need to run `just save-ssh-config` or `just tf apply` to update the .ssh_config file."
+      print "         Differences found are:"
+      print $ssh4CompareSsh6
+      print ""
+      $consistent = false
+    }
+
+    # Validation output of any ssh public ipv4 vs ip module public ipv4 value differences
+    if ($ssh4CompareIps4 | is-not-empty) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) Ssh config for public ipv4 differs from ip module public ipv4 config:"
+      print "         You may need to run `just update-ips` to update the flake/nixosModules/ips-DONT-COMMIT.nix file."
+      print "         Differences found are:"
+      print $ssh4CompareIps4
+      print ""
+      $consistent = false
+    }
+
+    # Validation output of any ssh public ipv6 vs ip module public ipv6 value differences
+    if ($ssh6CompareIps6 | is-not-empty) {
+      print $"(ansi "bg_light_red")WARNING:(ansi reset) Ssh config for public ipv6 differs from ip module public ipv6 config:"
+      print "         You may need to run `just update-ips` to update the flake/nixosModules/ips-DONT-COMMIT.nix file."
+      print "         Differences found are:"
+      print $ssh6CompareIps6
       print ""
       $consistent = false
     }
@@ -371,6 +446,7 @@ list-machines:
   let nixosNodesDfr = (
     let nodeList = ($nixosNodes.stdout | from json);
     let sanitizedList = (if ($nodeList | is-empty) {$nodeList | insert 0 ""} else {$nodeList});
+
     $sanitizedList
       | insert 0 "machine"
       | each {|i| [$i] | into record}
@@ -380,12 +456,30 @@ list-machines:
   )
 
   let sshNodesDfr = (
-    let sshTable = ($sshNodes.stdout | from json | where ('HostName' in $it));
+    let ssh4Table = ($sshNodes.stdout
+      | from json
+      | where ('HostName' in $it) and not ($it.Host | str ends-with ".ipv6")
+      | rename Host pubIpv4
+    );
+
+    let ssh6Table = ($sshNodes.stdout
+      | from json
+      | where ('HostName' in $it) and ($it.Host | str ends-with ".ipv6")
+      | rename Host pubIpv6
+      | update Host {$in | str replace '.ipv6' ''}
+      | update pubIpv6 {if ($in == "unavailable.ipv6") { null } else { $in }}
+    );
+
+    let sshTable = ($ssh4Table
+      | dfr into-df
+      | dfr join -o ($ssh6Table | dfr into-df) Host Host
+    );
+
     if ($sshTable | is-empty) {
-      [[Host IP]; ["" ""]] | dfr into-df
+      [[Host pubIpv4 pubIpv6]; ["" "" ""]] | dfr into-df
     }
     else {
-      $sshTable | rename Host IP | dfr into-df
+      $sshTable
     }
   )
 
@@ -394,7 +488,14 @@ list-machines:
       | dfr join -o $sshNodesDfr machine Host
       | dfr sort-by machine
       | dfr into-nu
-      | update cells {|v| if $v == null {"Missing"} else {$v}}
+      | update inNixosCfg {if $in == null {$"(ansi bg_red)Missing(ansi reset)"} else {$in}}
+      | update pubIpv4 {if $in == null {$"(ansi bg_red)Missing(ansi reset)"} else {$in}}
+      | update pubIpv6 {|row|
+        if (
+          (($row.inNixosCfg | str contains "Missing") or ($row.pubIpv4 | str contains "Missing"))
+            and
+          ($row.ipv6 == null)
+        ) {$"(ansi bg_red)Missing(ansi reset)"} else {$in} }
       | where machine != ""
   )
 
@@ -662,6 +763,35 @@ ssh HOSTNAME *ARGS:
   {{checkSshConfig}}
   ssh -o LogLevel=ERROR -F .ssh_config {{HOSTNAME}} {{ARGS}}
 
+# Generate example .ssh_config code
+ssh-config-example:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "The following config example shows the expected struct of the \".ssh_config\" file."
+  echo "This may be used as a template if a custom .ssh_config file needs to be"
+  echo "created and managed manually, for example, in a non-aws environment."
+  echo
+  cat <<"EOF"
+  Host *
+    User root
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    ServerAliveCountMax 2
+    ServerAliveInterval 60
+
+  Host machine-example-1
+    HostName 1.2.3.4
+
+  Host machine-example-1.ipv6
+    HostName ff00::01
+
+  Host machine-example-2
+    HostName 1.2.3.5
+
+  Host machine-example-2.ipv6
+    HostName ff00::02
+  EOF
+
 # Ssh using cluster bootstrap key
 ssh-bootstrap HOSTNAME *ARGS:
   #!/usr/bin/env nu
@@ -682,12 +812,26 @@ ssh-for-each HOSTNAMES *ARGS:
 # List machine ips based on regex pattern
 ssh-list-ips PATTERN:
   #!/usr/bin/env nu
-  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | default "" HostName | where Host =~ "{{PATTERN}}" | get HostName | str join " "
+  scj dump /dev/stdout -c .ssh_config
+    | from json
+    | default "" Host
+    | default "" HostName
+    | where not ($it.Host | str ends-with ".ipv6")
+    | where Host =~ "{{PATTERN}}"
+    | get HostName
+    | str join " "
 
 # List machine names based on regex pattern
 ssh-list-names PATTERN:
   #!/usr/bin/env nu
-  scj dump /dev/stdout -c .ssh_config | from json | default "" Host | default "" HostName | where Host =~ "{{PATTERN}}" | get Host | str join " "
+  scj dump /dev/stdout -c .ssh_config
+    | from json
+    | default "" Host
+    | default "" HostName
+    | where not ($it.Host | str ends-with ".ipv6")
+    | where Host =~ "{{PATTERN}}"
+    | get Host
+    | str join " "
 
 # Start a fork to conway demo
 start-demo:
@@ -819,7 +963,7 @@ start-demo:
   echo "Finished sequence..."
   echo
 
-# Start a node for specific env
+# Start a local node for a specific env
 start-node ENV:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -830,7 +974,7 @@ start-node ENV:
     exit 1
   fi
 
-  # Stop any existing running node env for a clean restart
+  # Stop any existing running local node env for a clean restart
   just stop-node {{ENV}}
   echo "Starting cardano-node for envrionment {{ENV}}"
   mkdir -p "$STATEDIR"
@@ -858,7 +1002,7 @@ start-node ENV:
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
   just set-default-cardano-env {{ENV}} "" "$PPID"
 
-# Stop all nodes
+# Stop all local nodes
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -866,7 +1010,7 @@ stop-all:
     just stop-node $i
   done
 
-# Stop node for a specific env
+# Stop a local node for a specific env
 stop-node ENV:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -1061,22 +1205,42 @@ update-ips:
   let nodeCount = nix eval .#nixosConfigurations --raw --apply 'let f = x: toString (builtins.length (builtins.attrNames x)); in f'
   print $"Processing ip information for ($nodeCount) nixos machine configurations..."
 
-  let eipRecords = (tofu show -json
-    | from json
+  let tofuJson = (tofu show -json | from json)
+
+  let eipRecords = ($tofuJson
     | get values.root_module.resources
     | where type == "aws_eip"
   )
 
-  ($eipRecords
+  let instanceRecords = ($tofuJson
+    | get values.root_module.resources
+    | where type == "aws_instance"
+  )
+
+  let eipTable = ($eipRecords
+    | select name values.private_ip values.public_ip
+    | rename name private_ipv4 public_ipv4
+  )
+
+  let instanceTable = ($instanceRecords
+    | select name values.ipv6_addresses
+    | rename name public_ipv6
+    | update public_ipv6 {|row| if ($row.public_ipv6 | is-not-empty) {$row.public_ipv6.0} else {null}}
+  )
+
+  let ipTable = ($eipTable | merge $instanceTable)
+
+  ($ipTable
   | reduce --fold ["
     let
       all = {
     "]
-    {|eip, all|
-      $all | append $"
-    ($eip.name) = {
-      privateIpv4 = "($eip.values.private_ip)";
-      publicIpv4 = "($eip.values.public_ip)";
+    {|machine, acc|
+      $acc | append $"
+    ($machine.name) = {
+      privateIpv4 = "($machine.private_ipv4)";
+      publicIpv4 = "($machine.public_ipv4)";
+      publicIpv6 = "($machine.public_ipv6)";
     };"
     }
   | append "
@@ -1096,6 +1260,10 @@ update-ips:
           publicIpv4 = lib.mkOption {
             type = lib.types.str;
             default = all.${name}.publicIpv4 or "";
+          };
+          publicIpv6 = lib.mkOption {
+            type = lib.types.str;
+            default = all.${name}.publicIpv6 or "";
           };
         };
       };
@@ -1134,6 +1302,7 @@ update-ips-example:
       machine-example-1 = {
         privateIpv4 = "172.16.0.1";
         publicIpv4 = "1.2.3.4";
+        publicIpv6 = "ff00::01";
       };
     };
   in {
@@ -1151,6 +1320,10 @@ update-ips-example:
         publicIpv4 = lib.mkOption {
           type = lib.types.str;
           default = all.${name}.publicIpv4 or "";
+        };
+        publicIpv6 = lib.mkOption {
+          type = lib.types.str;
+          default = all.${name}.publicIpv6 or "";
         };
       };
     };
