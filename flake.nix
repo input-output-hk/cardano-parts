@@ -10,7 +10,7 @@
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
-    nix.url = "github:nixos/nix/2.19-maintenance";
+    nix.url = "github:nixos/nix/2.24-maintenance";
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;

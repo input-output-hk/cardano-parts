@@ -69,7 +69,8 @@
         jq
         lsof
         nano
-        neovim
+        # For nix >= 2.24 build compatibility
+        inputs.nixpkgs-unstable.legacyPackages.${system}.neovim
         ncdu
         # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a non-existent pkg failure
         inputs.nixpkgs.legacyPackages.${system}.nushellFull
