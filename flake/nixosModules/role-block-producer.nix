@@ -126,7 +126,7 @@ flake: {
 
         metricsPort = mkOption {
           type = port;
-          default = 9090;
+          default = 12778;
           description = "Set the port address to serve mithril-signer's built in prometheus metrics server.";
         };
 
