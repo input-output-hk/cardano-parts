@@ -428,8 +428,11 @@ in
             (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5" // {meta.mainProgram = "cardano-db-sync";}))
             (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5")
             (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5")
-            (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-9-1-0f9206e")
-            (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-9-1-0f9206e")
+            # (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-9-1-0f9206e")
+            # (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-9-1-0f9206e")
+            (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet")
+            (mkPkg "cardano-faucet-ng" localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet")
+
             (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-9-2-1-5d3da8a" // {version = "9.2.1";}))
             (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-9-2-1-5d3da8a" // {version = "9.2.1";}))
             (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-3-0-8ab5fd6)

@@ -20,6 +20,9 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
+    cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/ipv6-compat";
+    # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/ipv6-compat";
+
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
