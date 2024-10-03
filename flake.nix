@@ -20,9 +20,6 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
-    cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/ipv6-compat";
-    # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/ipv6-compat";
-
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
@@ -33,6 +30,10 @@
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+
+    # For tmp local faucet testing
+    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
+    # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
