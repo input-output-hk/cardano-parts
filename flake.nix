@@ -10,7 +10,7 @@
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
-    nix.url = "github:nixos/nix/2.19-maintenance";
+    nix.url = "github:nixos/nix/2.24-maintenance";
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
@@ -30,6 +30,10 @@
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+
+    # For tmp local faucet testing
+    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
+    # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync

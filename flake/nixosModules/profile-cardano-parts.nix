@@ -250,7 +250,7 @@ flake @ {moduleWithSystem, ...}: {
         hostAddrIpv6 = mkOption {
           type = str;
           description = mdDoc "The hostAddr to associate with the nixos cardano-node for ipv6 binding.";
-          default = "0:0:0:0:0:0:0:0";
+          default = "::0";
         };
 
         hostsList = mkOption {

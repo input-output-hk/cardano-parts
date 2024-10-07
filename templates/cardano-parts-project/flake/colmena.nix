@@ -73,6 +73,14 @@ in
         ];
       };
 
+      # mkCustomNode = flakeInput:
+      #   node
+      #   // {
+      #     cardano-parts.perNode = {
+      #       pkgs = {inherit (inputs.${flakeInput}.packages.x86_64-linux) cardano-cli cardano-node cardano-submit-api;};
+      #     };
+      #   };
+
       # Mithril signing config
       # mithrilRelay = {imports = [inputs.cardano-parts.nixosModules.profile-mithril-relay];};
       # declMRel = node: {services.mithril-signer.relayEndpoint = nixosConfigurations.${node}.config.ips.privateIpv4;};

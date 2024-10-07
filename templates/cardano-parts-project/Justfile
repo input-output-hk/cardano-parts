@@ -104,25 +104,29 @@ checkSshConfig := '''
     # each respective host.
     let sshCfg = (open .ssh_config
       | parse --regex '(?m)Host (.*)\n\s+HostName (.*)'
-      | rename machine ip)
+      | rename machine ip
+      | sort-by machine)
 
     let ssh4Cfg = ($sshCfg
       | where not ($it.machine | str ends-with ".ipv6")
-      | rename machine ipv4)
+      | rename machine pubIpv4
+      | sort-by machine)
 
     let ssh6Cfg = ($sshCfg
       | where ($it.machine | str ends-with ".ipv6")
-      | rename machine ipv6
+      | rename machine pubIpv6
       | update machine {$in | str replace '.ipv6' ''}
-      | update ipv6 {if ($in == "unavailable.ipv6") { null } else { $in }})
+      | update pubIpv6 {if ($in == "unavailable.ipv6") { null } else { $in }}
+      | sort-by machine)
 
     let moduleIps = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
       (open flake/nixosModules/ips-DONT-COMMIT.nix
         | parse --regex '(?ms)(.*)^  };\nin {.*'
         | get capture0
         | parse --regex '(?m)    (.*) = {$\n\s+privateIpv4 = \"(.*)";\n\s+publicIpv4 = \"(.*)";\n\s+publicIpv6 = \"(.*)";\n\s+};'
-        | rename machine privateIpv4 ipv4 ipv6)
-        | update ipv6 {if ($in == "") { null } else { $in }}
+        | rename machine privIpv4 pubIpv4 pubIpv6
+        | update pubIpv6 {if ($in == "") { null } else { $in }}
+        | sort-by machine)
     } else {
       []
     }
@@ -142,14 +146,14 @@ checkSshConfig := '''
 
     # Set up comparison between list of ssh public ipv4 and ip module public ipv4 values
     let ssh4CompareIps4 = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
-      list-diff ($ssh4Cfg | get ipv4) ($moduleIps | get ipv4) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
+      list-diff ($ssh4Cfg | get pubIpv4) ($moduleIps | get pubIpv4) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
     } else {
       []
     }
 
     # Set up comparison between list of ssh public ipv6 and ip module public ipv6 values
     let ssh6CompareIps6 = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
-      list-diff ($ssh6Cfg | get ipv6) ($moduleIps | get ipv6) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
+      list-diff ($ssh6Cfg | get pubIpv6) ($moduleIps | get pubIpv6) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
     } else {
       []
     }
@@ -249,15 +253,30 @@ default:
 
 # Deploy select machines
 apply *ARGS:
-  colmena apply --verbose --on {{ARGS}}
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  CLICOLOR_FORCE=1 colmena apply --impure --verbose --color always --on {{ARGS}} \
+    1> >(sed --regex '/.*colmena-assets-.*/ d; /.*• Added input .*/ {N;d}' >&1) \
+    2> >(sed --regex '/.*colmena-assets-.*/ d; /• Added input .*/ {N;d}' >&2)
 
 # Deploy all machines
 apply-all *ARGS:
-  colmena apply --verbose {{ARGS}}
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  CLICOLOR_FORCE=1 colmena apply --impure --verbose --color always {{ARGS}} \
+    1> >(sed --regex '/.*colmena-assets-.*/ d; /.*• Added input .*/ {N;d}' >&1) \
+    2> >(sed --regex '/.*colmena-assets-.*/ d; /• Added input .*/ {N;d}' >&2)
 
 # Deploy select machines with the bootstrap key
 apply-bootstrap *ARGS:
-  SSH_CONFIG_FILE=<(sed '6i IdentityFile .ssh_key' .ssh_config) colmena apply --verbose --on {{ARGS}}
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  sed '2i \ \ IdentityFile .ssh_key' .ssh_config > .ssh_config_bootstrap
+  SSH_CONFIG_FILE=".ssh_config_bootstrap" just apply {{ARGS}}
+  rm .ssh_config_bootstrap
 
 # Build a nixos configuration
 build-machine MACHINE *ARGS:
@@ -459,15 +478,18 @@ list-machines:
     let ssh4Table = ($sshNodes.stdout
       | from json
       | where ('HostName' in $it) and not ($it.Host | str ends-with ".ipv6")
+      | select Host HostName
       | rename Host pubIpv4
     );
 
     let ssh6Table = ($sshNodes.stdout
       | from json
       | where ('HostName' in $it) and ($it.Host | str ends-with ".ipv6")
+      | select Host HostName
       | rename Host pubIpv6
       | update Host {$in | str replace '.ipv6' ''}
       | update pubIpv6 {if ($in == "unavailable.ipv6") { null } else { $in }}
+      | select Host pubIpv6
     );
 
     let sshTable = ($ssh4Table
@@ -494,7 +516,7 @@ list-machines:
         if (
           (($row.inNixosCfg | str contains "Missing") or ($row.pubIpv4 | str contains "Missing"))
             and
-          ($row.ipv6 == null)
+          ($row.pubIpv6 == null)
         ) {$"(ansi bg_red)Missing(ansi reset)"} else {$in} }
       | where machine != ""
   )
@@ -771,6 +793,10 @@ ssh-config-example:
   echo "This may be used as a template if a custom .ssh_config file needs to be"
   echo "created and managed manually, for example, in a non-aws environment."
   echo
+  echo "Note that per host customization should come after the HostName line to preserve pattern parsing!"
+  echo
+  echo "---"
+  echo
   cat <<"EOF"
   Host *
     User root
@@ -781,6 +807,8 @@ ssh-config-example:
 
   Host machine-example-1
     HostName 1.2.3.4
+    # Per host customization should come after the HostName line to preserve pattern parsing
+    ProxyJump machine-example-2
 
   Host machine-example-1.ipv6
     HostName ff00::01
@@ -789,7 +817,7 @@ ssh-config-example:
     HostName 1.2.3.5
 
   Host machine-example-2.ipv6
-    HostName ff00::02
+    HostName unavailable.ipv6
   EOF
 
 # Ssh using cluster bootstrap key
@@ -807,7 +835,12 @@ ssh-for-all *ARGS:
 
 # Ssh for select
 ssh-for-each HOSTNAMES *ARGS:
-  colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  CLICOLOR_FORCE=1 colmena exec --impure --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}} \
+    1> >(sed --regex '/.*colmena-assets-.*/ d; /.*• Added input .*/ {N;d}' >&1) \
+    2> >(sed --regex '/.*colmena-assets-.*/ d; /• Added input .*/ {N;d}' >&2)
 
 # List machine ips based on regex pattern
 ssh-list-ips PATTERN:
@@ -1296,6 +1329,10 @@ update-ips-example:
   echo "This may be used as a template if a custom flake/nixosModules/ips-DONT-COMMIT.nix file"
   echo "needs to be created and managed manually, for example, in a non-aws environment."
   echo
+  echo "Note that the line ordering of privateIpv4, publicIpv4, publicIpv6 matters!"
+  echo
+  echo "---"
+  echo
   cat <<"EOF"
   let
     all = {
@@ -1303,6 +1340,12 @@ update-ips-example:
         privateIpv4 = "172.16.0.1";
         publicIpv4 = "1.2.3.4";
         publicIpv6 = "ff00::01";
+      };
+
+      machine-example-2 = {
+        privateIpv4 = "172.16.0.2";
+        publicIpv4 = "1.2.3.5";
+        publicIpv6 = "";
       };
     };
   in {

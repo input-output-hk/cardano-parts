@@ -12,6 +12,7 @@ __pycache__
 /*.socket
 /.consistency-check-ts
 /.ssh_config
+/.ssh_config_bootstrap
 /.ssh_key
 /state-demo/
 /.terraform*
