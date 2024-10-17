@@ -231,10 +231,10 @@ flake @ {moduleWithSystem, ...}: {
             job_name = "integrations/blockperf"
             metrics_path = "/"
 
-            // Normally we prefer 1 minute default; however, we need
+            // Normally we prefer 1 minute default however we need
             // higher frequency with blockperf to catch large block
             // header delays.
-            scrape_interval = "10s";
+            scrape_interval = "10s"
           }
 
           prometheus.relabel "integrations_blockperf" {
@@ -263,7 +263,7 @@ flake @ {moduleWithSystem, ...}: {
               // pattern match. Filtering can be configured from the
               // profile-cardano-custom-metrics nixosModule with the
               // `enableFilter` and `filter` options.
-              // filter = ["statsd_cardano*"];
+              // filter = ["statsd_cardano*"]
             }
             metrics_path = "/api/v1/allmetrics"
           }
