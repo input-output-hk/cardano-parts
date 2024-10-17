@@ -220,7 +220,7 @@ flake @ {moduleWithSystem, ...}: {
       };
 
       cardanoPartsComponentCfg = {
-        blockperf = concatStringsSep "\n" (optional (cfgSvc ? blockperf) ''
+        blockperf = optional (cfgSvc ? blockperf) ''
           // Blockperf integration component
           prometheus.scrape "integrations_blockperf" {
             targets = [{
@@ -229,14 +229,6 @@ flake @ {moduleWithSystem, ...}: {
             }]
             forward_to = [prometheus.relabel.integrations_blockperf.receiver]
             job_name = "integrations/blockperf"
-            params = {
-              format = ["prometheus"],
-              // Filtering here won't work as grafana-alloy encodes the
-              // pattern match. Filtering can be configured from the
-              // profile-cardano-custom-metrics nixosModule with the
-              // `enableFilter` and `filter` options.
-              // filter = ["statsd_cardano*"];
-            }
             metrics_path = "/"
 
             // Normally we prefer 1 minute default; however, we need
@@ -254,9 +246,9 @@ flake @ {moduleWithSystem, ...}: {
             }
           }
 
-        '');
+        '';
 
-        cardanoCustomMetrics = concatStringsSep "\n" (optional (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) ''
+        cardanoCustomMetrics = optional (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) ''
           // Cardano custom metrics integration component
           prometheus.scrape "integrations_cardano_custom_metrics" {
             targets = [{
@@ -276,9 +268,9 @@ flake @ {moduleWithSystem, ...}: {
             metrics_path = "/api/v1/allmetrics"
           }
 
-        '');
+        '';
 
-        cardanoDbSync = concatStringsSep "\n" (optional (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) ''
+        cardanoDbSync = optional (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) ''
           // Cardano-db-sync integration component
           prometheus.scrape "integrations_cardano_db_sync" {
             targets = [{
@@ -290,9 +282,9 @@ flake @ {moduleWithSystem, ...}: {
             metrics_path = "/"
           }
 
-        '');
+        '';
 
-        cardanoFaucet = concatStringsSep "\n" (optional (cfgSvc ? cardano-faucet && cfgSvc.cardano-faucet.enable) ''
+        cardanoFaucet = optional (cfgSvc ? cardano-faucet && cfgSvc.cardano-faucet.enable) ''
           // Cardano-faucet integration component
           prometheus.scrape "integrations_cardano_faucet" {
             targets = [{
@@ -304,9 +296,9 @@ flake @ {moduleWithSystem, ...}: {
             metrics_path = "/metrics"
           }
 
-        '');
+        '';
 
-        cardanoNode = concatStringsSep "\n" (optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable) (map (
+        cardanoNode = optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable) (map (
           i: let
             metricsPath =
               if cfgSvc.cardano-node.useLegacyTracing
@@ -339,9 +331,9 @@ flake @ {moduleWithSystem, ...}: {
             }
 
           ''
-        ) (range 0 (cfgSvc.cardano-node.instances - 1))));
+        ) (range 0 (cfgSvc.cardano-node.instances - 1)));
 
-        cardanoSmash = concatStringsSep "\n" (optional (cfgSvc ? cardano-smash) ''
+        cardanoSmash = optional (cfgSvc ? cardano-smash) ''
           // Cardano-smash integration component
           prometheus.scrape "integrations_cardano_smash" {
             targets = [{
@@ -353,9 +345,9 @@ flake @ {moduleWithSystem, ...}: {
             metrics_path = "/"
           }
 
-        '');
+        '';
 
-        mithrilSigner = concatStringsSep "\n" (optional (cfgSvc ? mithril-signer && cfgSvc.mithril-signer.enable && cfgSvc.mithril-signer.enableMetrics) ''
+        mithrilSigner = optional (cfgSvc ? mithril-signer && cfgSvc.mithril-signer.enable && cfgSvc.mithril-signer.enableMetrics) ''
           // Mithril-signer integration component
           prometheus.scrape "integrations_mithril_signer" {
             targets = [{
@@ -367,9 +359,9 @@ flake @ {moduleWithSystem, ...}: {
             metrics_path = "/metrics"
           }
 
-        '');
+        '';
 
-        nginxVts = concatStringsSep "\n" (optional (cfgSvc ? nginx-vhost-exporter && cfgSvc.nginx-vhost-exporter.enable) ''
+        nginxVts = optional (cfgSvc ? nginx-vhost-exporter && cfgSvc.nginx-vhost-exporter.enable) ''
           // Nginx-vts integration component
           prometheus.scrape "integrations_nginx_vts" {
             targets = [{
@@ -381,9 +373,9 @@ flake @ {moduleWithSystem, ...}: {
             metrics_path = "/status/format/prometheus"
           }
 
-        '');
+        '';
 
-        varnishCache = concatStringsSep "\n" (optional (cfgSvc.prometheus.exporters ? varnish && cfgSvc.prometheus.exporters.varnish.enable) ''
+        varnishCache = optional (cfgSvc.prometheus.exporters ? varnish && cfgSvc.prometheus.exporters.varnish.enable) ''
           // Varnish cache integration components
           prometheus.scrape "integrations_varnish_cache" {
             targets = [{
@@ -422,7 +414,7 @@ flake @ {moduleWithSystem, ...}: {
             }
           }
 
-        '');
+        '';
       };
 
       cfgSvc = config.services;
@@ -612,15 +604,17 @@ flake @ {moduleWithSystem, ...}: {
               #
               # Cardano-parts optional component configuration snippets
               #
-              + cardanoPartsComponentCfg.blockperf
-              + cardanoPartsComponentCfg.cardanoCustomMetrics
-              + cardanoPartsComponentCfg.cardanoDbSync
-              + cardanoPartsComponentCfg.cardanoFaucet
-              + cardanoPartsComponentCfg.cardanoNode
-              + cardanoPartsComponentCfg.cardanoSmash
-              + cardanoPartsComponentCfg.mithrilSigner
-              + cardanoPartsComponentCfg.nginxVts
-              + cardanoPartsComponentCfg.varnishCache
+              + concatStringsSep "\n" (
+                cardanoPartsComponentCfg.blockperf
+                ++ cardanoPartsComponentCfg.cardanoCustomMetrics
+                ++ cardanoPartsComponentCfg.cardanoDbSync
+                ++ cardanoPartsComponentCfg.cardanoFaucet
+                ++ cardanoPartsComponentCfg.cardanoNode
+                ++ cardanoPartsComponentCfg.cardanoSmash
+                ++ cardanoPartsComponentCfg.mithrilSigner
+                ++ cardanoPartsComponentCfg.nginxVts
+                ++ cardanoPartsComponentCfg.varnishCache
+              )
             );
         in
           (pkgs.runCommandNoCCLocal "alloy.config" {} ''
