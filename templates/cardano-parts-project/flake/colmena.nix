@@ -174,7 +174,7 @@ in
         inputs.cardano-parts.nixosModules.profile-cardano-parts
         inputs.cardano-parts.nixosModules.profile-basic
         inputs.cardano-parts.nixosModules.profile-common
-        inputs.cardano-parts.nixosModules.profile-grafana-agent
+        inputs.cardano-parts.nixosModules.profile-grafana-alloy
         nixosModules.common
         nixosModules.ip-module-check
       ];

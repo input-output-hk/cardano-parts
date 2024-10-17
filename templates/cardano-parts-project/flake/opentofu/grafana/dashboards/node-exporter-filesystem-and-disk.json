@@ -1077,7 +1077,7 @@
           "datasource": {
             "uid": "$datasource"
           },
-          "expr": "process_max_fds{job=~\"$job\",instance=~\"$instance\"}",
+          "expr": "process_max_fds{job=~\"$job\",instance=~\"$instance\"} or node_filefd_maximum{job=~\"$job\",instance=~\"$instance\"}",
           "format": "timeseries",
           "intervalFactor": 1,
           "legendFormat": "Maximum open file descriptors",
@@ -1087,7 +1087,7 @@
           "datasource": {
             "uid": "$datasource"
           },
-          "expr": "process_open_fds{job=~\"$job\",instance=~\"$instance\"}",
+          "expr": "process_open_fds{job=~\"$job\",instance=~\"$instance\"} or node_filefd_allocated{job=~\"$job\",instance=~\"$instance\"}",
           "format": "timeseries",
           "intervalFactor": 1,
           "legendFormat": "Open file descriptors",
