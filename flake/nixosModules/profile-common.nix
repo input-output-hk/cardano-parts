@@ -28,6 +28,7 @@
       imports = [
         inputs.sops-nix.nixosModules.default
         inputs.auth-keys-hub.nixosModules.auth-keys-hub
+        (inputs.nixpkgs-unstable.outPath + "/nixos/modules/services/monitoring/alloy.nix")
       ];
 
       programs = {

@@ -11,7 +11,7 @@ in {
   rule = [
     {
       alert = "unexpected_missing_machine";
-      expr = ''count(up{job="integrations/agent-check"}) < ${machines}'';
+      expr = ''count(up{job=~"integrations/(agent|alloy)-check"}) < ${machines}'';
       for = "5m";
       labels.severity = "page";
       annotations = {
@@ -21,7 +21,7 @@ in {
     }
     {
       alert = "unexpected_new_machine";
-      expr = ''count(up{job="integrations/agent-check"}) > ${machines}'';
+      expr = ''count(up{job=~"integrations/(agent|alloy)-check"}) > ${machines}'';
       for = "5m";
       labels.severity = "warning";
       annotations = {

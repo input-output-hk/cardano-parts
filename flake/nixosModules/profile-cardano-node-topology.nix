@@ -43,8 +43,7 @@
 
       topologyFns = with topologyLib; {
         edge =
-          # This can be simplified upon all machines deployed >= node 8.9.0
-          if cfgNode ? bootstrapPeers && cfgNode.bootstrapPeers != null
+          if cfgNode.bootstrapPeers != null
           then []
           else p2pEdgeNodes cfg.edgeNodes;
 
@@ -359,31 +358,26 @@
       };
 
       config = {
-        services.cardano-node =
-          {
-            extraNodeConfig = mkIf (cfg.role == "bp") roles.${cfg.role}.extraNodeConfig;
+        services.cardano-node = {
+          extraNodeConfig = mkIf (cfg.role == "bp") roles.${cfg.role}.extraNodeConfig;
 
-            producers = mkIf (cfg.role != null || cfg.enableProducers) (
-              if cfg.role != null
-              then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
-              else verboseTrace "producers" (topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers)
-            );
+          bootstrapPeers = mkIf (cfg.role == "bp") null;
 
-            publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
-              # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
-              if cfg.role != null
-              then verboseTrace "publicProducers" roles.${cfg.role}.publicProducers
-              else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
-            );
+          producers = mkIf (cfg.role != null || cfg.enableProducers) (
+            if cfg.role != null
+            then verboseTrace "producers" (roles.${cfg.role}.producers ++ extraNodeListProducers ++ extraProducers)
+            else verboseTrace "producers" (topologyFns.${cfg.producerTopologyFn} ++ extraNodeListProducers ++ extraProducers)
+          );
 
-            usePeersFromLedgerAfterSlot = mkIf (cfg.role == "bp") roles.${cfg.role}.usePeersFromLedgerAfterSlot;
-          }
-          # This can be simplified upon all machines deployed >= node 8.9.0
-          // optionalAttrs (cfgNode ? bootstrapPeers) {
-            bootstrapPeers =
-              mkIf (cfg.role == "bp")
-              null;
-          };
+          publicProducers = mkIf (cfg.role != null || cfg.enablePublicProducers) (
+            # Extra node list public producers and public producers for roles are included in the role defns due to selective mkForce use
+            if cfg.role != null
+            then verboseTrace "publicProducers" roles.${cfg.role}.publicProducers
+            else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
+          );
+
+          usePeersFromLedgerAfterSlot = mkIf (cfg.role == "bp") roles.${cfg.role}.usePeersFromLedgerAfterSlot;
+        };
       };
     };
 }

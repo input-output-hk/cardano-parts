@@ -3,6 +3,13 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.grafana-agent.logLevel
+#   config.services.grafana-agent.systemdEnableRestartMetrics
+#   config.services.grafana-agent.systemdEnableStartTimeMetrics
+#   config.services.grafana-agent.systemdEnableTaskMetrics
+#   config.services.grafana-agent.systemdUnitExclude
+#   config.services.grafana-agent.systemdUnitInclude
+#   config.services.grafana-agent.useSopsSecrets
 #
 # Tips:
 #   * This module provides a grafana-agent service and configures common application metrics hooks
@@ -47,6 +54,24 @@ flake: {
             description = "The default log level for grafana agent";
           };
 
+          systemdEnableRestartMetrics = mkOption {
+            type = bool;
+            default = true;
+            description = "Enables service unit metric service_restart_total collection.";
+          };
+
+          systemdEnableStartTimeMetrics = mkOption {
+            type = bool;
+            default = false;
+            description = "Enables service unit metric unit_start_time_seconds collection.";
+          };
+
+          systemdEnableTaskMetrics = mkOption {
+            type = bool;
+            default = false;
+            description = "Enables service unit tasks metrics unit_tasks_current and unit_tasks_max collection.";
+          };
+
           systemdUnitInclude = mkOption {
             type = str;
             default = "(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
@@ -65,22 +90,21 @@ flake: {
             '';
           };
 
-          systemdEnableTaskMetrics = mkOption {
-            type = bool;
-            default = false;
-            description = "Enables service unit tasks metrics unit_tasks_current and unit_tasks_max collection.";
-          };
-
-          systemdEnableRestartMetrics = mkOption {
+          useSopsSecrets = mkOption {
             type = bool;
             default = true;
-            description = "Enables service unit metric service_restart_total collection.";
-          };
+            description = ''
+              Whether to use the default configurated sops secrets if true,
+              or user defined secrets if false.
 
-          systemdEnableStartTimeMetrics = mkOption {
-            type = bool;
-            default = false;
-            description = "Enables service unit metric unit_start_time_seconds collection.";
+              If false, the following required secrets files, each containing
+              one secret indicated by filename will need to be provided to the
+              target machine either by additional module code or out of band:
+
+                /run/secrets/grafana-agent-metrics-url
+                /run/secrets/grafana-agent-metrics-username
+                /run/secrets/grafana-agent-metrics-password
+            '';
           };
         };
       };
@@ -104,10 +128,11 @@ flake: {
           };
         };
 
-        sops.secrets =
+        sops.secrets = mkIf cfg.useSopsSecrets (
           mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-url")
           // mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-username")
-          // mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-password");
+          // mkSopsSecret (mkSopsSecretParams "grafana-agent-metrics-password")
+        );
 
         services.grafana-agent = {
           enable = true;
