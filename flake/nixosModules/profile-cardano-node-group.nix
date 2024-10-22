@@ -316,12 +316,7 @@
           if
             (cfg.producers == [])
             && cfg.publicProducers == []
-            # The if can be dropped once a GA release is >= node 8.9.0 for `&& cfg.bootstrapPeers == null`
-            && (
-              if cfg ? bootstrapPeers
-              then cfg.bootstrapPeers == null
-              else true
-            )
+            && cfg.bootstrapPeers == null
             && (flatten (map cfg.instanceProducers iRange)) == []
             && (flatten (map cfg.instancePublicProducers iRange)) == []
           then mkTopology cardanoLib.environments.${environmentName}
