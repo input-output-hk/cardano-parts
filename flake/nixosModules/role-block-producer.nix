@@ -266,7 +266,7 @@ flake: {
                 runtimeInputs = with pkgs; [cardano-cli curl gnugrep jq];
                 text = ''
                   echo "Starting mithril-signer-verifier"
-                  POOL_ID=$(cardano-cli stake-pool id \
+                  POOL_ID=$(cardano-cli latest stake-pool id \
                     --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
                     --output-format bech32)
 
@@ -321,13 +321,13 @@ flake: {
 
         environment.shellAliases = {
           cardano-show-kes-period-info = ''
-            cardano-cli \
+            cardano-cli latest \
               query kes-period-info \
               --op-cert-file /run/secrets/cardano-node-operational-cert
           '';
 
           cardano-show-leadership-schedule = ''
-            cardano-cli \
+            cardano-cli latest \
               query leadership-schedule \
               --genesis ${ShelleyGenesisFile} \
               --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
@@ -336,21 +336,21 @@ flake: {
           '';
 
           cardano-show-pool-hash = ''
-            cardano-cli \
+            cardano-cli latest \
               stake-pool id \
               --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
               --output-format hex
           '';
 
           cardano-show-pool-id = ''
-            cardano-cli \
+            cardano-cli latest \
               stake-pool id \
               --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
               --output-format bech32
           '';
 
           cardano-show-pool-stake-snapshot = ''
-            cardano-cli \
+            cardano-cli latest \
               query stake-snapshot \
               --stake-pool-id "$(cardano-show-pool-id)"
           '';
