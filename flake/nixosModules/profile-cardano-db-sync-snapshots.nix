@@ -190,10 +190,17 @@ flake: {
             default = true;
             description = ''
               Whether to use the default configurated sops secrets if true,
-              or user defined secrets if false.
+              or user deployed secrets if false.
 
-              If false, any required secrets will need to be provided either
-              by additional module code or out of band.
+              If false, the secrets file will need to be provided to the target
+              machine either by additional module code or out of band and the
+              following option should be set with this secret's file path:
+
+                config.services.cardano-db-sync-snapshots.environmentFile
+
+              For consistency with sops secrets, a suggested secrets path is:
+
+                /run/secrets/cardano-db-sync-snapshots
             '';
           };
         };
@@ -228,7 +235,7 @@ flake: {
                 User = cfg.user;
                 Group = cfg.group;
 
-                EnvironmentFile = mkIf cfg.useSopsSecrets cfg.environmentFile;
+                EnvironmentFile = cfg.environmentFile;
 
                 ExecStart = getExe (pkgs.writeShellApplication {
                   name = "cardano-db-sync-snapshots";

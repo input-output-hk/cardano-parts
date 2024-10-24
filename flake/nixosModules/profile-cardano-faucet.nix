@@ -3,6 +3,7 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.cardano-faucet.useSopsSecrets
 #   config.services.nginx-vhost-exporter.address
 #   config.services.nginx-vhost-exporter.enable
 #   config.services.nginx-vhost-exporter.port
@@ -19,31 +20,55 @@ flake: {
     pkgs,
     ...
   }: let
+    inherit (lib) mkIf mkOption;
+    inherit (lib.types) bool;
+
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
 
     groupOutPath = groupFlake.self.outPath;
     groupCfg = config.cardano-parts.cluster.group;
     opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
+
+    cfg = config.services.cardano-faucet;
   in {
     imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
 
-    services = {
-      cardano-faucet = {
-        enable = true;
-        openFirewallNginx = true;
-      };
+    options.services.cardano-faucet = {
+      useSopsSecrets = mkOption {
+        type = bool;
+        default = true;
+        description = ''
+          Whether to use the default configurated sops secrets if true,
+          or user deployed secrets if false.
 
-      nginx-vhost-exporter.enable = true;
+          If false, the following required secret file will need to be provided
+          to the target machine either by additional module code or out of
+          band:
+
+            /run/secrets/cardano-faucet
+        '';
+      };
     };
 
-    sops.secrets = mkSopsSecret {
-      secretName = "cardano-faucet.json";
-      keyName = "${name}-faucet.json";
-      inherit groupOutPath groupName name;
-      fileOwner = "cardano-faucet";
-      fileGroup = "cardano-faucet";
-      restartUnits = ["cardano-faucet.service"];
+    config = {
+      services = {
+        cardano-faucet = {
+          enable = true;
+          openFirewallNginx = true;
+        };
+
+        nginx-vhost-exporter.enable = true;
+      };
+
+      sops.secrets = mkIf cfg.useSopsSecrets (mkSopsSecret {
+        secretName = "cardano-faucet.json";
+        keyName = "${name}-faucet.json";
+        inherit groupOutPath groupName name;
+        fileOwner = "cardano-faucet";
+        fileGroup = "cardano-faucet";
+        restartUnits = ["cardano-faucet.service"];
+      });
     };
   };
 }

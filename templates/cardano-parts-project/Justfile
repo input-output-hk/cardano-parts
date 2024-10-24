@@ -750,6 +750,15 @@ sops-decrypt-binary FILE:
   # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
 
+# Decrypt a file in place
+sops-decrypt-binary-in-place FILE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}} | sponge {{FILE}}
+
 # Encrypt a file in place
 sops-encrypt-binary FILE:
   #!/usr/bin/env bash
@@ -993,6 +1002,7 @@ start-demo:
   echo
 
   just query-tip demo
+  echo
   echo "Finished sequence..."
   echo
 
