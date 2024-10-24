@@ -16,6 +16,7 @@
 #   config.services.blockperf.package
 #   config.services.blockperf.port
 #   config.services.blockperf.secretsPathPrefix
+#   config.services.blockperf.useSopsSecrets
 #
 # Tips:
 #   * This is an add-on to the profile-cardano-node-group nixos service module
@@ -30,8 +31,8 @@ flake: {
     ...
   }: let
     inherit (builtins) concatStringsSep;
-    inherit (lib) escapeShellArgs hasSuffix getExe mkOption optional;
-    inherit (lib.types) int listOf nullOr package port str;
+    inherit (lib) escapeShellArgs hasSuffix getExe mkIf mkOption optional;
+    inherit (lib.types) bool int listOf nullOr package port str;
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
 
@@ -158,7 +159,27 @@ flake: {
       secretsPathPrefix = mkOption {
         type = str;
         default = "${groupOutPath}/secrets/monitoring";
-        description = "The path where the local encrypted secrets files will be obtained from.";
+        description = ''
+          The path where the local encrypted secrets files will be obtained
+          from if useSopsSecrets is true.
+        '';
+      };
+
+      useSopsSecrets = mkOption {
+        type = bool;
+        default = true;
+        description = ''
+          Whether to use the default configurated sops secrets if true,
+          or user deployed secrets if false.
+
+          If false, the following secrets files, each containing one secret
+          indicated by filename, will need to be provided to the target machine
+          either by additional module code or out of band:
+
+            /run/secrets/blockperf-amazon-ca.pem
+            /run/secrets/blockperf-client-cert.pem
+            /run/secrets/blockperf-client.key
+        '';
       };
     };
 
@@ -310,9 +331,10 @@ flake: {
       users.users.cardano-node.extraGroups = ["keys"];
 
       sops.secrets =
-        mkSopsSecret (mkSopsSecretParams "blockperf-client-cert.pem" cfg.clientCert)
-        // mkSopsSecret (mkSopsSecretParams "blockperf-client.key" cfg.clientKey)
-        // mkSopsSecret (mkSopsSecretParams "blockperf-amazon-ca.pem" cfg.amazonCa);
+        mkIf cfg.useSopsSecrets
+        (mkSopsSecret (mkSopsSecretParams "blockperf-client-cert.pem" cfg.clientCert)
+          // mkSopsSecret (mkSopsSecretParams "blockperf-client.key" cfg.clientKey)
+          // mkSopsSecret (mkSopsSecretParams "blockperf-amazon-ca.pem" cfg.amazonCa));
 
       assertions = [
         {

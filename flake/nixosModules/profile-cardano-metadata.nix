@@ -17,6 +17,7 @@
 #   config.services.cardano-metadata.postgresRamAvailableMiB
 #   config.services.cardano-metadata.serverAliases
 #   config.services.cardano-metadata.serverName
+#   config.services.cardano-metadata.useSopsSecrets
 #   config.services.cardano-metadata.varnishExporterPort
 #   config.services.cardano-metadata.varnishMaxPostSizeBodyKiB
 #   config.services.cardano-metadata.varnishMaxPostSizeCachableKiB
@@ -169,6 +170,21 @@ flake: {
             type = str;
             default = "${name}.${domain}";
             description = "The default server name for serving metadata server via nginx.";
+          };
+
+          useSopsSecrets = mkOption {
+            type = bool;
+            default = true;
+            description = ''
+              Whether to use the default configurated sops secrets if true,
+              or user deployed secrets if false.
+
+              If false, the following secret file, containing one secret
+              indicated by filename, will need to be provided to the target
+              machine either by additional module code or out of band:
+
+                /run/secrets/cardano-metadata-webhook
+            '';
           };
 
           varnishExporterPort = mkOption {
@@ -535,14 +551,14 @@ flake: {
           };
         };
 
-        sops.secrets = mkSopsSecret {
+        sops.secrets = mkIf cfg.useSopsSecrets (mkSopsSecret {
           secretName = "cardano-metadata-webhook";
           keyName = "${name}-metadata-webhook";
           inherit groupOutPath groupName name;
           fileOwner = "metadata-webhook";
           fileGroup = "metadata-webhook";
           restartUnits = ["metadata-webhook.service"];
-        };
+        });
       };
     };
 }

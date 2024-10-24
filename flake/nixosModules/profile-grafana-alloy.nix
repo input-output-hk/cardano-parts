@@ -572,7 +572,7 @@ flake @ {moduleWithSystem, ...}: {
             default = true;
             description = ''
               Whether to use the default configurated sops secrets if true,
-              or user defined secrets if false.
+              or user deployed secrets if false.
 
               If false, the following required secrets files, each containing
               one secret indicated by filename and without newline termination,
