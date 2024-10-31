@@ -166,7 +166,7 @@
                     WHERE pools_deleg_sum.view = active_pools.view
                   )
                   FROM active_pools
-                  ORDER by view;
+                  ORDER by lovelace_delegated DESC;
 
               -- Show pool info for a single pool, best viewed in extended view mode, \x
               PREPARE show_pool_info_fn AS
@@ -221,7 +221,7 @@
               PREPARE show_pool_stake_dist_fn (word31type) AS
                 SELECT pool_hash.view, SUM (amount) AS lovelace FROM epoch_stake
                   INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
-                  WHERE epoch_no = $1 GROUP BY pool_hash.id ORDER BY view;
+                  WHERE epoch_no = $1 GROUP BY pool_hash.id ORDER BY lovelace DESC;
 
               -- Show registered pools as of the current epoch
               PREPARE show_registered_pools AS
