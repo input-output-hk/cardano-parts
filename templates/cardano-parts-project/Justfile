@@ -411,11 +411,11 @@ dedelegate-pools ENV *IDXS=null:
       --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
       --delegation-index "$i"
 
-    TXID=$(eval "$CARDANO_CLI" transaction txid --tx-file tx-deleg-account-$i-restore.txsigned)
+    TXID=$(eval "$CARDANO_CLI" latest transaction txid --tx-file tx-deleg-account-$i-restore.txsigned)
     EXISTS="true"
 
     while [ "$EXISTS" = "true" ]; do
-      EXISTS=$(eval "$CARDANO_CLI" query tx-mempool tx-exists $TXID | jq -r .exists)
+      EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists)
       if [ "$EXISTS" = "true" ]; then
         echo "Pool de-delegation index $i tx still exists in the mempool, sleeping 5s: $TXID"
       else
@@ -590,7 +590,7 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli-ng"
   fi
 
-  eval "$CARDANO_CLI" query tip \
+  eval "$CARDANO_CLI" latest query tip \
     --socket-path "$STATEDIR/node-{{ENV}}.socket" \
     --testnet-magic "$MAGIC"
 

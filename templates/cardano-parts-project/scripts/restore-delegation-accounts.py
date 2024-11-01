@@ -19,6 +19,7 @@ import os
 import subprocess
 import tempfile
 from docopt import docopt
+from lib import cli
 from pathlib import Path
 
 arguments = docopt(__doc__, version="restore-delegation-accounts 0.0")
@@ -144,7 +145,7 @@ def generate_stake_skey(stake_xsk, file):
     cli_args = [
         "bash",
         "-c",
-        "cardano-cli key convert-cardano-address-key --shelley-stake-key"
+        "cardano-cli latest key convert-cardano-address-key --shelley-stake-key"
         f" --signing-key-file <(echo {stake_xsk})"
         f" --out-file {file.name}"
     ]
@@ -156,12 +157,17 @@ def generate_stake_skey(stake_xsk, file):
 
 
 def generate_stake_registration(stake_vkey, file):
+    network_args = []
+    pparams = cli.getPParamsJson(*network_args)
     cli_args = [
         "cardano-cli",
+        "latest",
         "stake-address",
         "registration-certificate",
         "--stake-verification-key",
         stake_vkey,
+        "--key-reg-deposit-amt",
+        str(pparams["stakeAddressDeposit"]),
         "--out-file",
         file.name,
     ]
@@ -173,12 +179,17 @@ def generate_stake_registration(stake_vkey, file):
 
 
 def generate_stake_deregistration(stake_vkey, file):
+    network_args = []
+    pparams = cli.getPParamsJson(*network_args)
     cli_args = [
         "cardano-cli",
+        "latest",
         "stake-address",
         "deregistration-certificate",
         "--stake-verification-key",
         stake_vkey,
+        "--key-reg-deposit-amt",
+        str(pparams["stakeAddressDeposit"]),
         "--out-file",
         file.name,
     ]
@@ -193,6 +204,7 @@ def get_largest_utxo_for_address(address):
     p = subprocess.run(
         [
             "cardano-cli",
+            "latest",
             "query",
             "utxo",
             "--out-file",
@@ -227,7 +239,7 @@ def signTx(tx_body, utxo_signing_key_str, stake_signing_key, out_file):
     cli_args = [
         "bash",
         "-c",
-        f"cardano-cli transaction sign --tx-body-file {tx_body.name}"
+        f"cardano-cli latest transaction sign --tx-body-file {tx_body.name}"
         f" --signing-key-file <(echo '{utxo_signing_key_str}')"
         f" --signing-key-file {stake_signing_key.name}"
         f" --out-file {out_file}"
@@ -236,7 +248,7 @@ def signTx(tx_body, utxo_signing_key_str, stake_signing_key, out_file):
     if p.returncode != 0:
         print(p.stderr)
         raise Exception("Unknown error signing transaction")
-    cli_args = ["cardano-cli", "transaction", "txid", "--tx-file", out_file]
+    cli_args = ["cardano-cli", "latest", "transaction", "txid", "--tx-file", out_file]
     p = subprocess.run(cli_args, input=None, capture_output=True, text=True)
     if p.returncode != 0:
         print(p.stderr)
@@ -247,6 +259,7 @@ def signTx(tx_body, utxo_signing_key_str, stake_signing_key, out_file):
 def sendTx(out_file):
     cli_args = [
         "cardano-cli",
+        "latest",
         "transaction",
         "submit",
         "--tx-file",
@@ -262,6 +275,7 @@ def sendTx(out_file):
 def get_reward_balance(stake_address):
     cli_args = [
         "cardano-cli",
+        "latest",
         "query",
         "stake-address-info",
         "--address",
@@ -314,9 +328,9 @@ def createRecoveryTx(
 
         cli_args = [
             "cardano-cli",
+            "latest",
             "transaction",
             "build-raw",
-            "--babbage-era",
 
             # Rich key biggest utxo tx
             "--tx-in",
