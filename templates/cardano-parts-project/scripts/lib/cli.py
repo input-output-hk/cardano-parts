@@ -11,6 +11,7 @@ def cardanoCliStr() -> str:
     else:
         return("cardano-cli")
 
+
 def createTransaction(start, end, txin, payments_txouts, utxo_address, utxo_signing_key_str, *network_args) -> tuple:
     payments_txout_args = []
     total_payments_spent = 0
@@ -110,11 +111,13 @@ def getPParams(*network_args) -> str:
     p.wait()
     return "pparams.json"
 
+
 def getPParamsJson(*network_args) -> Any:
     p = subprocess.Popen([cardanoCliStr(), "latest", "query", "protocol-parameters", *network_args, "--out-file", "/dev/stdout"], stdout=subprocess.PIPE)
     p.wait()
     output, _ = p.communicate()
     return json.loads(output)
+
 
 def getTTL(*network_args, addnl_sec=3600) -> int:
     p = subprocess.run([cardanoCliStr(), "latest", "query", "tip", *network_args], capture_output=True, text=True)
