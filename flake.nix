@@ -58,12 +58,12 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/jl/mn-relays-new";
+      url = "github:IntersectMBO/cardano-node/10.0.0-pre";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/mn-relays-new";
+      url = "github:IntersectMBO/cardano-node/10.0.0-pre";
       flake = false;
     };
 

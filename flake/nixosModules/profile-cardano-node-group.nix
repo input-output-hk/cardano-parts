@@ -194,7 +194,7 @@
           '';
 
           cardano-show-kes-period = ''
-            echo "Current KES period for environment ${environmentName}: $(($(cardano-cli query tip | jq .slot) / ${toString slotsPerKESPeriod}))"
+            echo "Current KES period for environment ${environmentName}: $(($(cardano-cli latest query tip | jq .slot) / ${toString slotsPerKESPeriod}))"
           '';
 
           cardano-show-p2p-conns = ''

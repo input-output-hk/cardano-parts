@@ -166,7 +166,7 @@
                     WHERE pools_deleg_sum.view = active_pools.view
                   )
                   FROM active_pools
-                  ORDER by view;
+                  ORDER by lovelace_delegated DESC;
 
               -- Show pool info for a single pool, best viewed in extended view mode, \x
               PREPARE show_pool_info_fn AS
@@ -195,6 +195,12 @@
                   WHERE ph.view = $1
                   ORDER BY pu.id DESC;
 
+              -- Show the pool stake distribution by epoch
+              PREPARE show_pool_stake_dist_fn (word31type) AS
+                SELECT pool_hash.view, SUM (amount) AS lovelace FROM epoch_stake
+                  INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
+                  WHERE epoch_no = $1 GROUP BY pool_hash.id ORDER BY lovelace DESC;
+
               -- Show pool networking information as of the most recent active epoch update; this includes retired pools
               PREPARE show_pools_network_info AS
                 WITH
@@ -217,11 +223,39 @@
                   LEFT JOIN ${offChainTable} ON ${offChainTable}.pmr_id = pool_update.meta_id
                   ORDER BY pool_hash.view;
 
-              -- Show the pool stake distribution by epoch
-              PREPARE show_pool_stake_dist_fn (word31type) AS
-                SELECT pool_hash.view, SUM (amount) AS lovelace FROM epoch_stake
-                  INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
-                  WHERE epoch_no = $1 GROUP BY pool_hash.id ORDER BY view;
+              -- Show pools over a threshold lovelace epoch stake which have not yet voted on a gov action
+              -- Arguments are: actionId, actionIdx, lovelaceThreshold
+              PREPARE show_pools_not_voted_fn (hash32type, word31type, lovelace) AS
+                WITH
+                  current_epoch AS (
+                    select max(epoch_no) as current_epoch from block),
+                  pool_epoch_stake AS (
+                    SELECT pool_hash.view, SUM (amount) AS lovelace FROM epoch_stake
+                      INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
+                      WHERE epoch_no = (select * from current_epoch) GROUP BY pool_hash.id ORDER BY lovelace DESC),
+                  pool_analyze AS (
+                    SELECT * FROM pool_epoch_stake
+                      WHERE lovelace >= $3),
+                  gov_tx_id AS (
+                    SELECT id FROM (SELECT * FROM tx WHERE hash = $1 AND block_index = $2) AS gov_tx),
+                  gov_action_id AS (
+                    SELECT id FROM gov_action_proposal WHERE tx_id = (SELECT * FROM gov_tx_id) AND index = $2),
+                  vote_table AS (
+                    SELECT DISTINCT ON (pool_voter) voting_procedure.id, pool_hash.view as pool_id, pool_voter, vote FROM voting_procedure
+                      INNER JOIN pool_hash ON voting_procedure.pool_voter = pool_hash.id
+                      WHERE gov_action_proposal_id = (SELECT * FROM gov_action_id) AND voter_role = 'SPO' ORDER BY pool_voter, id DESC),
+                  pool_vote_record AS (
+                    SELECT view AS pool_id, lovelace, vote_table.vote FROM pool_analyze
+                    LEFT JOIN vote_table ON pool_analyze.view = vote_table.pool_id),
+                  pools_not_voted AS (
+                    SELECT * FROM pool_vote_record WHERE vote IS NULL),
+                  pool_table AS (
+                    SELECT DISTINCT pool_hash.id, hash_raw, view AS pool_view, ticker_name FROM pool_hash
+                    LEFT JOIN off_chain_pool_data ON pool_hash.id = off_chain_pool_data.pool_id),
+                  result_table AS (
+                    SELECT pool_id, lovelace, vote, pool_table.ticker_name FROM pools_not_voted
+                    INNER JOIN pool_table ON pools_not_voted.pool_id = pool_table.pool_view)
+                 SELECT * FROM result_table ORDER BY lovelace DESC;
 
               -- Show registered pools as of the current epoch
               PREPARE show_registered_pools AS

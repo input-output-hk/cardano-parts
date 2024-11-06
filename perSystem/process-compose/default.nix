@@ -245,7 +245,7 @@ flake @ {inputs, ...}: {
 
           while true; do
             date -u --rfc-3339=seconds
-            "$CLI" query tip
+            "$CLI" latest query tip
             echo
             sleep 10
           done

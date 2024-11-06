@@ -344,7 +344,7 @@ flake: {
               }
 
               run() {
-                epoch=$(cardano-cli query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
+                epoch=$(cardano-cli latest query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
                 db_sync_epoch=$(psql -X -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
 
                 if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then

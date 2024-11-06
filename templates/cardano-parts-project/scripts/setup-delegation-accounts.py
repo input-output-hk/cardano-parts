@@ -22,6 +22,7 @@ import os
 import subprocess
 import tempfile
 from docopt import docopt
+from lib import cli
 from pathlib import Path
 
 arguments = docopt(__doc__, version='setup-delegation-accounts 0.0')
@@ -77,7 +78,7 @@ def derive_payment_address_cli_skey(payment_key_file_str):
     cli_args = [
         "bash",
         "-c",
-        "cardano-cli key verification-key"
+        "cardano-cli latest key verification-key"
         f" --signing-key-file <(echo '{payment_key_file_str}')"
         f" --verification-key-file {payment_vkey.name}"
     ]
@@ -87,6 +88,7 @@ def derive_payment_address_cli_skey(payment_key_file_str):
         raise Exception("Unknown error converting mnemonic to root key")
     cli_args = [
         "cardano-cli",
+        "latest",
         "address",
         "build",
         "--verification-key-file",
@@ -103,6 +105,7 @@ def derive_payment_address_cli_skey(payment_key_file_str):
 def derive_stake_address(stake):
   cli_args = [
       "cardano-address",
+      "latest",
       "address",
       "stake",
       "--network-tag",
@@ -117,6 +120,7 @@ def derive_stake_address(stake):
 def derive_payment_address(payment):
   cli_args = [
       "cardano-address",
+      "latest",
       "address",
       "payment",
       "--network-tag",
@@ -131,6 +135,7 @@ def derive_payment_address(payment):
 def derive_delegation_address(payment_address, stake_vkey):
   cli_args = [
       "cardano-address",
+      "latest",
       "address",
       "delegation",
       stake_vkey
@@ -173,12 +178,17 @@ def derive_child_key(key, derivation, public=False, chain_code=True):
     return skey
 
 def generateStakeRegistration(stake_vkey, file):
+  network_args = []
+  pparams = cli.getPParamsJson(*network_args)
   cli_args = [
       "cardano-cli",
+      "latest",
       "stake-address",
       "registration-certificate",
       "--stake-verification-key",
       stake_vkey,
+      "--key-reg-deposit-amt",
+      str(pparams["stakeAddressDeposit"]),
       "--out-file",
       file.name
   ]
@@ -194,9 +204,9 @@ def createTx(txin, stake_vkey, delegation_address, change_address, payment_signi
     new_lovelace = txin[1] - 2000000 - 200000 - delegation_amount
     cli_args = [
         "cardano-cli",
+        "latest",
         "transaction",
         "build-raw",
-        "--babbage-era",
         "--out-file",
         tx_body.name,
         "--tx-in",
@@ -219,7 +229,7 @@ def createTx(txin, stake_vkey, delegation_address, change_address, payment_signi
     return (f"{txid}#0", new_lovelace)
 
 def getLargestUtxoForAddress(address):
-    subprocess.run(["cardano-cli", "query", "utxo", "--out-file", "tmp_utxo.json", *network_args, "--address", address])
+    subprocess.run(["cardano-cli", "latest", "query", "utxo", "--out-file", "tmp_utxo.json", *network_args, "--address", address])
     f = open("tmp_utxo.json")
     utxo = json.load(f)
     if not utxo:
@@ -240,7 +250,7 @@ def signTx(tx_body, utxo_signing_key_str, out_file):
   cli_args = [
     "bash",
     "-c",
-    f"cardano-cli transaction sign --tx-body-file {tx_body.name}"
+    f"cardano-cli latest transaction sign --tx-body-file {tx_body.name}"
     f" --signing-key-file <(echo '{utxo_signing_key_str}')"
     f" --out-file {out_file}"
   ]
@@ -248,7 +258,7 @@ def signTx(tx_body, utxo_signing_key_str, out_file):
   if p.returncode != 0:
       print(p.stderr)
       raise Exception(f"Unknown error signing transaction")
-  cli_args = ["cardano-cli", "transaction", "txid", "--tx-file", out_file]
+  cli_args = ["cardano-cli", "latest", "transaction", "txid", "--tx-file", out_file]
   p = subprocess.run(cli_args, input=None, capture_output=True, text=True)
   if p.returncode != 0:
       print(p.stderr)
@@ -256,7 +266,7 @@ def signTx(tx_body, utxo_signing_key_str, out_file):
   return p.stdout.rstrip()
 
 def sendTx(out_file):
-  cli_args = [ "cardano-cli", "transaction", "submit", "--tx-file", out_file, *network_args]
+  cli_args = [ "cardano-cli", "latest", "transaction", "submit", "--tx-file", out_file, *network_args]
   p = subprocess.run(cli_args, input=None, capture_output=True, text=True)
   if p.returncode != 0:
       print(p.stderr)

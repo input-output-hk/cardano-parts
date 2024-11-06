@@ -3,6 +3,7 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.cardano-node.useSopsSecrets
 #   config.services.mithril-signer.enable
 #   config.services.mithril-signer.enableMetrics
 #   config.services.mithril-signer.metricsAddress
@@ -105,57 +106,83 @@ flake: {
 
       sopsPath = name: config.sops.secrets.${name}.path;
     in {
-      options.services.mithril-signer = {
-        enable = mkOption {
-          type = bool;
-          default = nodeCfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && nodeCfg.environments.${environmentName} ? mithrilSignerConfig;
-          description = "Enable this block producer to also run a mithril signer.";
+      options.services = {
+        cardano-node = {
+          useSopsSecrets = mkOption {
+            type = bool;
+            default = true;
+            description = ''
+              Whether to use the default configurated sops secrets if true,
+              or user deployed secrets if false.
+
+              If false, the following secrets files, each containing one secret
+              indicated by filename, will need to be provided to the target
+              machine when applicable either by additional module code or out of
+              band:
+
+                /run/secrets/cardano-node-bulk-credentials
+                /run/secrets/cardano-node-cold-verification
+                /run/secrets/cardano-node-delegation-cert
+                /run/secrets/cardano-node-kes-signing
+                /run/secrets/cardano-node-operational-cert
+                /run/secrets/cardano-node-signing
+                /run/secrets/cardano-node-vrf-signing
+            '';
+          };
         };
 
-        enableMetrics = mkOption {
-          type = bool;
-          default = true;
-          description = "Enable mithril-signer's built in prometheus metrics server.";
-        };
+        mithril-signer = {
+          enable = mkOption {
+            type = bool;
+            default = nodeCfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl && nodeCfg.environments.${environmentName} ? mithrilSignerConfig;
+            description = "Enable this block producer to also run a mithril signer.";
+          };
 
-        metricsAddress = mkOption {
-          type = str;
-          default = "127.0.0.1";
-          description = "Set the address to serve mithril-signer's built in prometheus metrics server.";
-        };
+          enableMetrics = mkOption {
+            type = bool;
+            default = true;
+            description = "Enable mithril-signer's built in prometheus metrics server.";
+          };
 
-        metricsPort = mkOption {
-          type = port;
-          default = 12778;
-          description = "Set the port address to serve mithril-signer's built in prometheus metrics server.";
-        };
+          metricsAddress = mkOption {
+            type = str;
+            default = "127.0.0.1";
+            description = "Set the address to serve mithril-signer's built in prometheus metrics server.";
+          };
 
-        relayEndpoint = mkOption {
-          type = str;
-          default = null;
-          description = ''
-            The relay endpoint the mithril signer must use in a production setup.
-            May be either a fully qualified DNS or an IP.
-            The port should not be included.
-          '';
-        };
+          metricsPort = mkOption {
+            type = port;
+            default = 12778;
+            description = "Set the port address to serve mithril-signer's built in prometheus metrics server.";
+          };
 
-        relayPort = mkOption {
-          type = port;
-          default = 3132;
-          description = "The relay port the mithril signer must use in a production setup.";
-        };
+          relayEndpoint = mkOption {
+            type = str;
+            default = null;
+            description = ''
+              The relay endpoint the mithril signer must use in a production setup.
+              May be either a fully qualified DNS or an IP.
+              The port should not be included.
+            '';
+          };
 
-        useRelay = mkOption {
-          type = bool;
-          default = true;
-          description = "Whether to use a proxy relay for requests to avoid leaking the block producer's IP.";
-        };
+          relayPort = mkOption {
+            type = port;
+            default = 3132;
+            description = "The relay port the mithril signer must use in a production setup.";
+          };
 
-        useSignerVerifier = mkOption {
-          type = bool;
-          default = true;
-          description = "Whether to use a daily run systemd service that will monitor for signed mithril certificates and fail if none are signed by the block producer.";
+          useRelay = mkOption {
+            type = bool;
+            default = true;
+            description = "Whether to use a proxy relay for requests to avoid leaking the block producer's IP.";
+          };
+
+          useSignerVerifier = mkOption {
+            type = bool;
+            default = true;
+            description = "Whether to use a daily run systemd service that will monitor for signed mithril certificates and fail if none are signed by the block producer.";
+          };
         };
       };
 
@@ -266,7 +293,7 @@ flake: {
                 runtimeInputs = with pkgs; [cardano-cli curl gnugrep jq];
                 text = ''
                   echo "Starting mithril-signer-verifier"
-                  POOL_ID=$(cardano-cli stake-pool id \
+                  POOL_ID=$(cardano-cli latest stake-pool id \
                     --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
                     --output-format bech32)
 
@@ -316,18 +343,17 @@ flake: {
           };
         };
 
-        sops.secrets = keysCfg.${Protocol};
-        users.users.cardano-node.extraGroups = ["keys"];
+        sops.secrets = mkIf config.services.cardano-node.useSopsSecrets keysCfg.${Protocol};
 
         environment.shellAliases = {
           cardano-show-kes-period-info = ''
-            cardano-cli \
+            cardano-cli latest \
               query kes-period-info \
               --op-cert-file /run/secrets/cardano-node-operational-cert
           '';
 
           cardano-show-leadership-schedule = ''
-            cardano-cli \
+            cardano-cli latest \
               query leadership-schedule \
               --genesis ${ShelleyGenesisFile} \
               --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
@@ -336,21 +362,21 @@ flake: {
           '';
 
           cardano-show-pool-hash = ''
-            cardano-cli \
+            cardano-cli latest \
               stake-pool id \
               --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
               --output-format hex
           '';
 
           cardano-show-pool-id = ''
-            cardano-cli \
+            cardano-cli latest \
               stake-pool id \
               --cold-verification-key-file /run/secrets/cardano-node-cold-verification \
               --output-format bech32
           '';
 
           cardano-show-pool-stake-snapshot = ''
-            cardano-cli \
+            cardano-cli latest \
               query stake-snapshot \
               --stake-pool-id "$(cardano-show-pool-id)"
           '';

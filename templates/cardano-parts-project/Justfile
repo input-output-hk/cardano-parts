@@ -34,7 +34,7 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$|demo$ ]]; then
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$|^demo$ ]]; then
     echo "Error: only node environments for demo, mainnet, preprod, preview, private, sanchonet and shelley-qa are supported"
     exit 1
   fi
@@ -371,7 +371,7 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ preprod$|preview$|private$|sanchonet$|shelley-qa$ ]]; then
+  if ! [[ "$ENV" =~ ^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$ ]]; then
     echo "Error: only node environments for preprod, preview, private, sanchonet and shelley-qa are supported"
     exit 1
   fi
@@ -393,9 +393,9 @@ dedelegate-pools ENV *IDXS=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ preprod$|preview$|shelley-qa$ ]]; then
+  elif [[ "$ENV" =~ ^preprod$|^preview$|^shelley-qa$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ private$|sanchonet$ ]]; then
+  elif [[ "$ENV" =~ ^private$|^sanchonet$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
   fi
 
@@ -411,11 +411,11 @@ dedelegate-pools ENV *IDXS=null:
       --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
       --delegation-index "$i"
 
-    TXID=$(eval "$CARDANO_CLI" transaction txid --tx-file tx-deleg-account-$i-restore.txsigned)
+    TXID=$(eval "$CARDANO_CLI" latest transaction txid --tx-file tx-deleg-account-$i-restore.txsigned)
     EXISTS="true"
 
     while [ "$EXISTS" = "true" ]; do
-      EXISTS=$(eval "$CARDANO_CLI" query tx-mempool tx-exists $TXID | jq -r .exists)
+      EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists)
       if [ "$EXISTS" = "true" ]; then
         echo "Pool de-delegation index $i tx still exists in the mempool, sleeping 5s: $TXID"
       else
@@ -584,13 +584,13 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ mainnet$|preprod$|preview$|shelley-qa$ ]]; then
+  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^shelley-qa$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ private$|sanchonet$|demo$ ]]; then
+  elif [[ "$ENV" =~ ^private$|^sanchonet$|^demo$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
   fi
 
-  eval "$CARDANO_CLI" query tip \
+  eval "$CARDANO_CLI" latest query tip \
     --socket-path "$STATEDIR/node-{{ENV}}.socket" \
     --testnet-magic "$MAGIC"
 
@@ -749,6 +749,15 @@ sops-decrypt-binary FILE:
   # Default to stdout decrypted output.
   # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
+
+# Decrypt a file in place
+sops-decrypt-binary-in-place FILE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{sopsConfigSetup}}
+  [ -n "${DEBUG:-}" ] && set -x
+
+  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}} | sponge {{FILE}}
 
 # Encrypt a file in place
 sops-encrypt-binary FILE:
@@ -993,6 +1002,7 @@ start-demo:
   echo
 
   just query-tip demo
+  echo
   echo "Finished sequence..."
   echo
 
@@ -1002,7 +1012,7 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$ ]]; then
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$ ]]; then
     echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
     exit 1
   fi
@@ -1012,7 +1022,7 @@ start-node ENV:
   echo "Starting cardano-node for envrionment {{ENV}}"
   mkdir -p "$STATEDIR"
 
-  if [[ "{{ENV}}" =~ mainnet$|preprod$|preview$ ]]; then
+  if [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
     UNSTABLE=false
     UNSTABLE_LIB=false
     UNSTABLE_MITHRIL=false
@@ -1179,7 +1189,7 @@ truncate-chain ENV SLOT:
   [ -n "${DEBUG:-}" ] && set -x
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ mainnet$|preprod$|preview$|private$|sanchonet$|shelley-qa$ ]]; then
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$ ]]; then
     echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet and shelley-qa are supported for truncate-chain recipe"
     exit 1
   fi
@@ -1205,7 +1215,7 @@ truncate-chain ENV SLOT:
   )
 
   nix run .#job-gen-env-config &> /dev/null
-  if [[ "{{ENV}}" =~ mainnet$|preprod$|preview$ ]]; then
+  if [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
     cp result/environments/config/{{ENV}}/*  "$STATEDIR/config/{{ENV}}/"
     chmod -R +w "$STATEDIR/config/{{ENV}}/"
     db-truncater "${TRUNC_ARGS[@]}"
@@ -1372,3 +1382,183 @@ update-ips-example:
     };
   }
   EOF
+
+# Generate and submit an SPO vote on a gov action
+vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{checkEnvWithoutOverride}}
+
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$|^demo$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet, shelley-qa and demo are supported"
+    exit 1
+  fi
+
+  just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
+
+  if [ "$(jq -re .syncProgress <<< "$(just query-tip {{ENV}})")" != "100.00" ]; then
+    echo "Please wait until the local tip of environment {{ENV}} is 100.00 before voting"
+    exit 1
+  fi
+
+  if ! [[ "{{VOTE}}" =~ ^yes$|^no$|^abstain$ ]]; then
+    echo "Error: VOTE arg must be one of \"yes\", \"no\" or \"abstain\""
+    exit 1
+  fi
+
+  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+    CARDANO_CLI="cardano-cli"
+  elif [ -n "${UNSTABLE:-}" ] && [ "${UNSTABLE:-}" != "true" ]; then
+    CARDANO_CLI="cardano-cli"
+  elif [ "${UNSTABLE:-}" = "true" ]; then
+    CARDANO_CLI="cardano-cli-ng"
+  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^shelley-qa$ ]]; then
+    CARDANO_CLI="cardano-cli"
+  elif [[ "$ENV" =~ ^private$|^sanchonet$ ]]; then
+    CARDANO_CLI="cardano-cli-ng"
+  fi
+
+  STATE_BEFORE=$(eval "$CARDANO_CLI" latest query gov-state)
+  ACTION_BEFORE=$(
+    jq -r \
+      --arg actionId {{ACTION_ID}} \
+      --arg actionIdx {{ACTION_IDX}} \
+      '.proposals | map(
+        select(
+          .actionId.txId == $actionId
+            and
+          .actionId.govActionIx == ($actionIdx | tonumber)
+        )
+      )' \
+      <<< "$STATE_BEFORE"
+  )
+
+  echo
+  echo "Governance action {{ACTION_ID}}#{{ACTION_IDX}} has the following associated gov state:"
+  echo
+  echo "$ACTION_BEFORE"
+  echo
+  read -p "Do you wish pool \"{{POOL}}\" in environment \"{{ENV}}\" to vote \"{{VOTE}}\" on this governance action [yY]? " -n 1 -r
+  echo
+  if ! [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting the vote."
+    exit 1
+  fi
+
+  FILE="{{POOL}}-{{ACTION_ID}}#{{ACTION_IDX}}"
+
+  # An assumption is made here that users have their secret cold as $POOL-cold.skey.
+  # The vkey may be listed in both the deploy and no-deploy poolgroup directories,
+  # so limit the output to the first match.
+  COLD_SKEY=$(fd --max-results 1 {{POOL}}-cold.skey secrets)
+  COLD_VKEY=$(fd --max-results 1 {{POOL}}-cold.vkey secrets)
+
+  # Assume secrets are properly encrypted
+  eval "$CARDANO_CLI" latest governance vote create \
+    --{{VOTE}} \
+    --governance-action-tx-id {{ACTION_ID}} \
+    --governance-action-index {{ACTION_IDX}} \
+    --cold-verification-key-file <(just sops-decrypt-binary "$COLD_VKEY") \
+    --out-file "$FILE.vote"
+
+  echo
+  echo "The created vote to be submitted is the following:"
+  echo
+  eval "$CARDANO_CLI" latest governance vote view \
+    --vote-file "$FILE.vote"
+  echo
+  echo
+  read -p "Do you wish to proceed with this vote [yY]? " -n 1 -r
+  echo
+  if ! [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting the vote."
+    exit 1
+  fi
+
+  RICH_ADDR=$(just sops-decrypt-binary secrets/envs/${ENV}/utxo-keys/rich-utxo.addr)
+
+  # Select the smallest available UTxO without native tokens attached and greater than 5 ADA automatically with jq:
+  RICH_UTXOS=$(eval "$CARDANO_CLI" latest query utxo --address "$RICH_ADDR" --out-file /dev/stdout)
+
+  TX_SELECTED=$(jq -r '.
+    | to_entries
+    | map(select((.value.value | length == 1) and .value.value.lovelace > 5000000))
+    | sort_by(.value.value.lovelace)[0]' <<< "$RICH_UTXOS"
+  )
+
+  TXIN=$(jq -r '.key' <<< "$TX_SELECTED")
+  TXVALUE=$(jq -r '.value.value.lovelace' <<< "$TX_SELECTED")
+
+  echo
+  echo "Selected rich key funding TX \"$TXIN\" with value $TXVALUE lovelace"
+
+  eval "$CARDANO_CLI" latest transaction build \
+    --tx-in "$TXIN" \
+    --change-address "$RICH_ADDR" \
+    --testnet-magic "$TESTNET_MAGIC" \
+    --vote-file "$FILE.vote" \
+    --witness-override 2 \
+    --out-file "$FILE.raw"
+
+  eval "$CARDANO_CLI" latest transaction sign \
+    --tx-body-file "$FILE.raw" \
+    --signing-key-file <(just sops-decrypt-binary secrets/envs/${ENV}/utxo-keys/rich-utxo.skey) \
+    --signing-key-file <(just sops-decrypt-binary "$COLD_SKEY") \
+    --testnet-magic "$TESTNET_MAGIC" \
+    --out-file "$FILE.signed"
+
+  TXID=$(eval "$CARDANO_CLI" latest transaction txid --tx-file "$FILE.signed")
+
+  echo
+  echo "The signed vote containing transaction with txid \"$TXID\" is the following:"
+  echo
+
+  eval "$CARDANO_CLI" debug transaction view --tx-file "$FILE.signed"
+
+  echo
+  echo
+  read -p "Do you wish to submit this vote to the {{ENV}} network [yY]? " -n 1 -r
+  echo
+  if ! [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting the vote."
+    exit 1
+  fi
+
+  echo
+  echo "Submitting the vote."
+
+  eval "$CARDANO_CLI" latest transaction submit --tx-file "$FILE.signed"
+
+  EXISTS="true"
+
+  while [ "$EXISTS" = "true" ]; do
+    EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists)
+    if [ "$EXISTS" = "true" ]; then
+      echo "Vote transaction still exists in the mempool, sleeping 5s: $TXID"
+    else
+      echo "Vote transaction has been removed from the mempool."
+    fi
+    sleep 5
+  done
+  echo
+  echo
+
+  STATE_AFTER=$(eval "$CARDANO_CLI" latest query gov-state)
+  ACTION_AFTER=$(
+    jq -r \
+      --arg actionId {{ACTION_ID}} \
+      --arg actionIdx {{ACTION_IDX}} \
+      '.proposals | map(
+        select(
+          .actionId.txId == $actionId
+            and
+          .actionId.govActionIx == ($actionIdx | tonumber)
+        )
+      )' \
+      <<< "$STATE_AFTER"
+  )
+
+  echo "Differences in gov action state before and after submitting the vote transaction with txid \"$TXID\" are:"
+  echo
+
+  icdiff -L beforeTxSubmission -L afterTxSubmission <(echo "$ACTION_BEFORE") <(echo "$ACTION_AFTER")
