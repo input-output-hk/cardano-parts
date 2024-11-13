@@ -424,10 +424,10 @@ in
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-08-11-ece92a2)
             (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-1-2-01bda2e" // {version = "10.1.1.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-1-2-01bda2e" // {version = "10.1.1.0";}))
-            (mkPkg "cardano-db-sync" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5" // {meta.mainProgram = "cardano-db-sync";}))
-            (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-0-pre-889f969" // {meta.mainProgram = "cardano-db-sync";}))
-            (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5")
-            (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-6-0-0-pre-889f969")
+            (mkPkg "cardano-db-sync" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9" // {meta.mainProgram = "cardano-db-sync";}))
+            (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9" // {meta.mainProgram = "cardano-db-sync";}))
+            (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9")
+            (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9")
 
             # For tmp local faucet testing:
             # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet")
@@ -438,8 +438,8 @@ in
             (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-10-1-2-01bda2e" // {version = "10.1.2";}))
             (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-10-1-2-01bda2e" // {version = "10.1.2";}))
             (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-3-0-8ab5fd6)
-            (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5)
-            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-0-pre-889f969)
+            (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9)
+            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9)
             (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-1-2-01bda2e")
             (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-1-2-01bda2e")
             (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-1-2-01bda2e")
@@ -462,9 +462,9 @@ in
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             # Mithril unstable tag is unavailable likely due to upstream tag moving; re-assign unstable tag to sanchonet when availability to capkgs returns
             (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2445-0-pre-67dc6e4 {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-6f6aed3 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-913172d {meta.mainProgram = "mithril-client";}))
             (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2445-0-pre-67dc6e4 {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-6f6aed3 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-913172d {meta.mainProgram = "mithril-signer";}))
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
           ];
         };
