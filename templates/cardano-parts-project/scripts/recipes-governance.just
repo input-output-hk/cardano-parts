@@ -95,7 +95,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       [ .committee | (to_entries[] | select(.value.hotCredsAuthStatus.tag == "MemberAuthorized") |
         [
           "\(.value.hotCredsAuthStatus.contents | keys[0])-\(.value.hotCredsAuthStatus.contents.keyHash // .value.hotCredsAuthStatus.contents.scriptHash)",
-          (if .value.hotCredsAuthStatus.tag == "MemberAuthorized" then 1 else 0 end)
+          1
         ]
       )
     ]' 2> /dev/null || true)
