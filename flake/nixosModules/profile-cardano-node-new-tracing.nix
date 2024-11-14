@@ -70,19 +70,13 @@
           # extraCliArgs    = opt    (listOf str) [] "Extra CLI args.";
 
           hasEKG = mkOption {
-            type = nullOr (listOf (attrsOf (either str port)));
-            default = [
-              # Preserve legacy EKG binding unless we have a reason to switch.
-              # Let's see how the updated nixos node service chooses for defaults.
-              {
-                epHost = "127.0.0.1";
-                epPort = 12788;
-              }
-              {
-                epHost = "127.0.0.1";
-                epPort = 12789;
-              }
-            ];
+            type = nullOr (attrsOf (either str port));
+            # Preserve legacy EKG binding unless we have a reason to switch.
+            # Let's see how the updated nixos node service chooses for defaults.
+            default = {
+              epHost = "127.0.0.1";
+              epPort = 12788;
+            };
           };
 
           hasPrometheus = mkOption {
