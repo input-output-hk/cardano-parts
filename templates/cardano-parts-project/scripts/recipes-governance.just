@@ -612,7 +612,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       ;;
   esac
 
-  OUTPUT=$(echo -e "Current Votes,Yes,No,Abstain,Threshold,Live-Pct,Accept\n")
+  OUTPUT="Current Votes,Yes,No,Abstain,Threshold,Live-Pct,Accept"
 
   if [ "$DREP_ACCEPT_ICON" != "" ]; then
     DREP_SUMMARY="Dreps,$ACTION_DREP_VOTE_YES_COUNT,$ACTION_DREP_VOTE_NO_COUNT,$ACTION_DREP_ABSTAIN_COUNT,$DREP_STAKE_THRESHOLD,$DREP_PCT,$DREP_ACCEPT_ICON"
