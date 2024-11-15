@@ -70,15 +70,15 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   echo
 
   CURRENT_EPOCH=$(jq -re .epoch <<< "$TIP")
-  GOV_STATE=$(eval "$CARDANO_CLI" latest query gov-state 2> /dev/stdout)
-  ACTION_STATE=$(jq -r ".proposals | to_entries[] | .value" 2> /dev/null <<< "$GOV_STATE")
+  GOV_STATE=$(eval "$CARDANO_CLI" latest query gov-state 2> /dev/null)
+  ACTION_STATE=$(jq -re ".proposals | to_entries[] | .value" 2> /dev/null <<< "$GOV_STATE")
   if ! ACTION=$(jq -re ". | select(.actionId.txId == \"$ACTION_UTXO\" and .actionId.govActionIx == $ACTION_IDX)" 2> /dev/null <<< "$ACTION_STATE"); then
     echo -e "${RED}ERROR:$OFF Action $ACTION_UTXO#$ACTION_IDX was not found in environment $ENV."
-    echo "       If this action id is confirmed to be correct, the action may have expired and is no longer seen in the gov state query."
+    echo "       If this action id is confirmed to be correct, the action may have expired and is no longer seen in the gov state query proposals key."
     exit 1
   fi
 
-  DREP_DIST=$(eval "$CARDANO_CLI" latest query drep-stake-distribution --all-dreps 2> /dev/stdout)
+  DREP_DIST=$(eval "$CARDANO_CLI" latest query drep-stake-distribution --all-dreps 2> /dev/null)
   DREP_STAKE_TOTAL=$(jq -r '[del(.[] | select(.[0] == "drep-alwaysAbstain" or .[0] == "drep-alwaysNoConfidence")) | .[][1]] | add' <<< "$DREP_DIST" 2> /dev/null)
   DREP_NOCONF_TOTAL=$(jq -r '(.[] | select(.[0] == "drep-alwaysNoConfidence") | .[1]) // 0' <<< "$DREP_DIST" 2> /dev/null)
   echo "Some potentially useful metrics:"
@@ -86,7 +86,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   echo "  DREP_STAKE_TOTAL: $DREP_STAKE_TOTAL"
   echo "  DREP_NOCONF_TOTAL: $DREP_NOCONF_TOTAL"
 
-  POOL_DIST=$(eval "$CARDANO_CLI" latest query spo-stake-distribution --all-spos 2> /dev/stdout)
+  POOL_DIST=$(eval "$CARDANO_CLI" latest query spo-stake-distribution --all-spos 2> /dev/null)
   POOL_STAKE_TOTAL=$(jq -r '[.[][1]] | add' <<< "$POOL_DIST" 2> /dev/null)
   echo "  POOL_STAKE_TOTAL: $POOL_STAKE_TOTAL"
 
