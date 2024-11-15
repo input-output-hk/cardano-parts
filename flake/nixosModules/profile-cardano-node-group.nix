@@ -340,6 +340,10 @@
             MaxConcurrencyDeadline = 4;
           }
           // optionalAttrs cfg.useLegacyTracing {
+            # In versions of cardano-node > `10.1.2`, legacy tracing will no longer be default.
+            # Until we are ready to use legacy tracing as default, set UseTraceDispatcher false.
+            UseTraceDispatcher = false;
+
             hasPrometheus = [cfg.hostAddr cardanoNodePrometheusExporterPort];
 
             # Use Journald output
