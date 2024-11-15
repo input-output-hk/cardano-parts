@@ -350,7 +350,10 @@
         # When cardano-node restarts, cardano-tracer will need to also be
         # started due to the `partOf` binding in the cardano-tracer systemd
         # declaration below.
-        cardano-node.wants = ["cardano-tracer.service"];
+        cardano-node = {
+          wants = ["cardano-tracer.service"];
+          before = ["cardano-tracer.service"];
+        };
 
         cardano-tracer = {
           wantedBy = ["multi-user.target"];
@@ -358,6 +361,7 @@
           # If cardano-node is stopped and restarted, cardano-tracer will fail to
           # export metrics again unless also restarted.
           partOf = ["cardano-node.service"];
+          after = ["cardano-node.service"];
 
           environment.HOME = "/var/lib/cardano-tracer";
 
