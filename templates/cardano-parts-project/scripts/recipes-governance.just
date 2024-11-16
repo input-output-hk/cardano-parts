@@ -92,7 +92,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
   COMMITTEE_DIST=$(eval "$CARDANO_CLI" latest query committee-state \
     | jq -r '
-      [ .committee | (to_entries[] | select(.value.hotCredsAuthStatus.tag == "MemberAuthorized") |
+      [ .committee | (to_entries[] | select(.value.hotCredsAuthStatus.tag == "MemberAuthorized" and .value.status == "Active") |
         [
           "\(.value.hotCredsAuthStatus.contents | keys[0])-\(.value.hotCredsAuthStatus.contents.keyHash // .value.hotCredsAuthStatus.contents.scriptHash)",
           1
@@ -104,7 +104,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     COMMITTEE_DIST="[]"
   fi
 
-  COMMITTEE_TOTAL=$(jq -r "([.[][1]] | add) // 0" <<< "$COMMITTEE_DIST" 2> /dev/null)
+  COMMITTEE_TOTAL=$(jq -r "length // 0" <<< "$COMMITTEE_DIST" 2> /dev/null)
   COMMITTEE_THRESHOLD=$(jq -r '"\(.committee.threshold)" // 0' <<< "$GOV_STATE" 2> /dev/null)
   COMMITTEE_THRESHOLD_TYPE=$(jq -r "type" <<< "$COMMITTEE_THRESHOLD" 2> /dev/null)
   echo "  COMMITTEE_TOTAL: $COMMITTEE_TOTAL"
@@ -195,35 +195,44 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
     # Calculate the acceptance percentage for the drep group
     if [ "$ACTION_TAG" != "NoConfidence" ]; then
-
       # Do a normal percentage calculation if not a `NoConfidence` action
       DREP_PCT=$(bc <<< "scale=2; 100.00 * $DREP_STAKE_YES / ($DREP_STAKE_TOTAL + $DREP_NOCONF_TOTAL - $DREP_STAKE_ABSTAIN)" 2> /dev/null)
-      [ "$DREP_PCT" == "" ] && DREP_PCT="0"
     else
-      # Or, if a NoConfidence action, the always no confidence counts as yes
+      # Or, if a `NoConfidence` action, the always no confidence counts as yes
       DREP_PCT=$(bc <<< "scale=2; 100.00 * ($DREP_STAKE_YES + $DREP_NOCONF_TOTAL) / ($DREP_STAKE_TOTAL - $DREP_STAKE_ABSTAIN)" 2> /dev/null)
     fi
+    [ "$DREP_PCT" == "" ] && DREP_PCT="0"
 
     # Generate lists with the pool hashes that are voted yes, no or abstain.
     {
       read -r POOL_HASH_YES
+      read -r POOL_HASH_NO
       read -r POOL_HASH_ABSTAIN
     } <<< "$(jq -r '
       "\(.stakePoolVotes | with_entries(select(.value | contains("Yes"))) | keys )",
+      "\(.stakePoolVotes | with_entries(select(.value | contains("No"))) | keys )",
       "\(.stakePoolVotes | with_entries(select(.value | contains("Abstain"))) | keys)"
     ' <<< "$ACTION" 2> /dev/null)"
 
     # Calculate the total power of the yes, no and abstain keys
     {
       read -r POOL_STAKE_YES
+      read -r POOL_STAKE_NO
       read -r POOL_STAKE_ABSTAIN
     } <<< "$(jq -r "
       ([ .[] | select(.[0]==${POOL_HASH_YES}[]) | .[1] ] | add) // 0,
+      ([ .[] | select(.[0]==${POOL_HASH_NO}[]) | .[1] ] | add) // 0,
       ([ .[] | select(.[0]==${POOL_HASH_ABSTAIN}[]) | .[1] ] | add) // 0
     " <<< "$POOL_DIST" 2> /dev/null)"
 
-    # Calculate the acceptance percentage for the Pool group
-    POOL_PCT=$(bc <<< "scale=2; (100.00 * $POOL_STAKE_YES) / ($POOL_STAKE_TOTAL - $POOL_STAKE_ABSTAIN)")
+    # Calculate the acceptance percentage for the pool group
+    # Ref: https://github.com/IntersectMBO/cardano-ledger/issues/4645
+    if [ "$ACTION_TAG" != "HardForkInitiation" ]; then
+      POOL_PCT=$(bc <<< "scale=2; 100.00 * $POOL_STAKE_YES / ($POOL_STAKE_YES + $POOL_STAKE_NO)")
+    else
+      POOL_PCT=$(bc <<< "scale=2; 100.00 * $POOL_STAKE_YES / ($POOL_STAKE_TOTAL - $POOL_STAKE_ABSTAIN)")
+    fi
+    [ "$POOL_PCT" == "" ] && POOL_PCT="0"
 
     # Generate lists with the committee hashes that are voted yes, no or abstain.
     {
