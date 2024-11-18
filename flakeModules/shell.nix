@@ -242,6 +242,7 @@ in
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
                     alejandra
+                    bc
                     curl
                     deadnix
                     diffutils
@@ -323,17 +324,20 @@ in
                       with localFlake.packages.${system}; [
                         age
                         awscli2
+                        cc-sign
                         localFlake.inputs.colmena.packages.${system}.colmena
                         graphviz
                         mdbook
                         mdbook-kroki-preprocessor
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
+                        orchestrator-cli
                         opentofu
                         postgresql
                         rain
                         sops
                         ssh-config-json
                         ssh-to-age
+                        tx-bundle
                         wireguard-tools
                       ]);
                 };

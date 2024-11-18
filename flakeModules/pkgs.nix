@@ -41,6 +41,7 @@
 #   perSystem.cardano-parts.pkgs.cardano-submit-api-ng
 #   perSystem.cardano-parts.pkgs.cardano-tracer
 #   perSystem.cardano-parts.pkgs.cardano-wallet
+#   perSystem.cardano-parts.pkgs.cc-sign
 #   perSystem.cardano-parts.pkgs.db-analyser
 #   perSystem.cardano-parts.pkgs.db-synthesizer
 #   perSystem.cardano-parts.pkgs.db-truncater
@@ -52,7 +53,9 @@
 #   perSystem.cardano-parts.pkgs.mithril-client-cli-ng
 #   perSystem.cardano-parts.pkgs.mithril-signer
 #   perSystem.cardano-parts.pkgs.mithril-signer-ng
+#   perSystem.cardano-parts.pkgs.orchestrator-cli
 #   perSystem.cardano-parts.pkgs.token-metadata-creator
+#   perSystem.cardano-parts.pkgs.tx-bundle
 #
 # Tips:
 #   * perSystem attrs are simply accessed through [config.]<...> from within system module context
@@ -419,53 +422,55 @@ in
         pkgsSubmodule = submodule {
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
-            (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-10-1-1-pre-4184f92")
+            (mkPkg "bech32" caPkgs.bech32-input-output-hk-cardano-node-10-1-2-01bda2e)
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-08-11-ece92a2)
-            (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-1-1-pre-4184f92" // {version = "10.1.0.0";}))
-            (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-1-1-pre-4184f92" // {version = "10.1.0.0";}))
-            (mkPkg "cardano-db-sync" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5" // {meta.mainProgram = "cardano-db-sync";}))
-            (mkPkg "cardano-db-sync-ng" (caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5" // {meta.mainProgram = "cardano-db-sync";}))
-            (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5")
-            (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5")
+            (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-10-1-2-01bda2e // {version = "10.1.1.0";}))
+            (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-10-1-2-01bda2e // {version = "10.1.1.0";}))
+            (mkPkg "cardano-db-sync" (recursiveUpdate caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9" {meta.mainProgram = "cardano-db-sync";}))
+            (mkPkg "cardano-db-sync-ng" (recursiveUpdate caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9" {meta.mainProgram = "cardano-db-sync";}))
+            (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9")
+            (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9")
 
             # For tmp local faucet testing:
             # (mkPkg "cardano-faucet" localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet")
             # (mkPkg "cardano-faucet-ng" localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet")
-            (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-9-2-78124cd")
-            (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-9-2-78124cd")
+            (mkPkg "cardano-faucet" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-1-2cccf6d")
+            (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-1-2cccf6d")
 
-            (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-10-1-1-pre-4184f92" // {version = "10.1.1";}))
-            (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-10-1-1-pre-4184f92" // {version = "10.1.1";}))
+            (mkPkg "cardano-node" (caPkgs.cardano-node-input-output-hk-cardano-node-10-1-2-01bda2e // {version = "10.1.2";}))
+            (mkPkg "cardano-node-ng" (caPkgs.cardano-node-input-output-hk-cardano-node-10-1-2-01bda2e // {version = "10.1.2";}))
             (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-3-0-8ab5fd6)
-            (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5)
-            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-5-0-2-fe05fc5)
-            (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-1-1-pre-4184f92")
+            (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9)
+            (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-1-5b131e9)
+            (mkPkg "cardano-submit-api" caPkgs.cardano-submit-api-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "cardano-submit-api-ng" caPkgs.cardano-submit-api-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "cardano-tracer" caPkgs.cardano-tracer-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "cardano-tracer-ng" caPkgs.cardano-tracer-input-output-hk-cardano-node-10-1-2-01bda2e)
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-08-11-ece92a2
               // {
                 pname = "cardano-wallet";
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
-            (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "db-analyser-ng" caPkgs."db-analyser-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "db-synthesizer" caPkgs."db-synthesizer-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "db-synthesizer-ng" caPkgs."db-synthesizer-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "db-truncater" caPkgs."db-truncater-input-output-hk-cardano-node-10-1-1-pre-4184f92")
-            (mkPkg "db-truncater-ng" caPkgs."db-truncater-input-output-hk-cardano-node-10-1-1-pre-4184f92")
+            (mkPkg "cc-sign" caPkgs.cc-sign-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
+            (mkPkg "db-analyser" caPkgs.db-analyser-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "db-analyser-ng" caPkgs.db-analyser-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "db-synthesizer" caPkgs.db-synthesizer-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "db-synthesizer-ng" caPkgs.db-synthesizer-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "db-truncater" caPkgs.db-truncater-input-output-hk-cardano-node-10-1-2-01bda2e)
+            (mkPkg "db-truncater-ng" caPkgs.db-truncater-input-output-hk-cardano-node-10-1-2-01bda2e)
             (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v0-80-0-26bf212)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
-            # Mithril unstable tag is unavailable likely due to upstream tag moving; re-assign unstable tag to sanchonet when availability to capkgs returns
-            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2442-0-pre-0d4d6bc {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-63e1204 {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2442-0-pre-0d4d6bc {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-63e1204 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2445-0-pre-67dc6e4 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-86abef9 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2445-0-pre-67dc6e4 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-86abef9 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "orchestrator-cli" caPkgs.orchestrator-cli-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
+            (mkPkg "tx-bundle" caPkgs.tx-bundle-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
           ];
         };
       in {
@@ -483,6 +488,7 @@ in
               (cfgPkgs)
               bech32
               blockperf
+              cc-sign
               cardano-address
               cardano-cli
               cardano-db-sync
@@ -504,7 +510,9 @@ in
               metadata-webhook
               mithril-client-cli
               mithril-signer
+              orchestrator-cli
               token-metadata-creator
+              tx-bundle
               ;
 
             # The `-ng` variants provide wrapped derivations to avoid cli collision with their non-wrapped, non-ng counterparts.

@@ -224,8 +224,8 @@
                   ORDER BY pool_hash.view;
 
               -- Show pools over a threshold lovelace epoch stake which have not yet voted on a gov action
-              -- Arguments are: actionId, actionIdx, lovelaceThreshold
-              PREPARE show_pools_not_voted_fn (hash32type, word31type, lovelace) AS
+              -- Arguments are: actionId (in hex, without the leading '\x' marker), actionIdx, lovelaceThreshold
+              PREPARE show_pools_not_voted_fn (text, word31type, lovelace) AS
                 WITH
                   current_epoch AS (
                     select max(epoch_no) as current_epoch from block),
@@ -237,7 +237,7 @@
                     SELECT * FROM pool_epoch_stake
                       WHERE lovelace >= $3),
                   gov_tx_id AS (
-                    SELECT id FROM (SELECT * FROM tx WHERE hash = $1 AND block_index = $2) AS gov_tx),
+                    SELECT id FROM (SELECT * FROM tx WHERE hash = DECODE($1::text, 'hex') AND block_index = $2) AS gov_tx),
                   gov_action_id AS (
                     SELECT id FROM gov_action_proposal WHERE tx_id = (SELECT * FROM gov_tx_id) AND index = $2),
                   vote_table AS (

@@ -70,19 +70,13 @@
           # extraCliArgs    = opt    (listOf str) [] "Extra CLI args.";
 
           hasEKG = mkOption {
-            type = nullOr (listOf (attrsOf (either str port)));
-            default = [
-              # Preserve legacy EKG binding unless we have a reason to switch.
-              # Let's see how the updated nixos node service chooses for defaults.
-              {
-                epHost = "127.0.0.1";
-                epPort = 12788;
-              }
-              {
-                epHost = "127.0.0.1";
-                epPort = 12789;
-              }
-            ];
+            type = nullOr (attrsOf (either str port));
+            # Preserve legacy EKG binding unless we have a reason to switch.
+            # Let's see how the updated nixos node service chooses for defaults.
+            default = {
+              epHost = "127.0.0.1";
+              epPort = 12788;
+            };
           };
 
           hasPrometheus = mkOption {
@@ -284,100 +278,118 @@
     };
 
     config = {
-      services.cardano-tracer = {
-        enable = true;
-        package = perNodeCfg.pkgs.cardano-tracer;
-        executable = lib.getExe perNodeCfg.pkgs.cardano-tracer;
-        acceptingSocket = "/tmp/forwarder.sock";
-        extraCliArgs = ["+RTS" "-M${toString cfg.totalMaxHeapSizeMiB}M" "-RTS"];
+      services = {
+        cardano-node = {
+          tracerSocketPathConnect = "/tmp/forwarder.sock";
 
-        configFile = builtins.toFile "cardano-tracer-config.json" (
-          builtins.toJSON ({
-              inherit (cfg) logging network;
+          # This removes most of the old tracing system config.
+          # It will only leave a minSeverity = "Critical" for the legacy system active.
+          useLegacyTracing = false;
 
-              networkMagic = protocolMagic;
+          # This appears to do nothing.
+          withCardanoTracer = true;
 
-              resourceFreq = null;
+          extraNodeConfig = {
+            # This option is what enables the new tracing/metrics system.
+            UseTraceDispatcher = true;
 
-              rotation = cfg.rotationCfg;
-            }
-            // optionalAttrs (cfg.hasEKG != null) {
-              # EKG interface uses the https scheme.
-              inherit (cfg) ekgRequestFreq hasEKG;
-            }
-            // optionalAttrs (cfg.hasPrometheus != null) {
-              # Metrics exporter with a scrape path of:
-              # http://$epHost:$epPort/$TraceOptionNodeName
-              inherit (cfg) hasPrometheus;
-            }
-            // optionalAttrs (cfg.hasRTView != null) {
-              # The real time viewer uses the https scheme.
-              inherit (cfg) hasRTView;
-            })
-        );
-      };
+            # Default options; further customization can be added per tracer.
+            TraceOptions =
+              {
+                "" = optionalAttrs (cfg.nodeDefaultTraceOptions != null) cfg.nodeDefaultTraceOptions;
+              }
+              // optionalAttrs (cfg.nodeExtraTraceOptions != null) cfg.nodeExtraTraceOptions;
+          };
 
-      systemd.services.cardano-tracer = {
-        wantedBy = ["multi-user.target"];
-        environment.HOME = "/var/lib/cardano-tracer";
+          extraNodeInstanceConfig = i: {
+            TraceOptionMetricsPrefix = cfg.metricsPrefix;
 
-        # If cardano-tracer is not delayed in startup after cardano-node is
-        # restarted, metrics may not be picked up.
-        preStart = ''
-          set -uo pipefail
-          SOCKET="${config.services.cardano-node.socketPath 0}"
+            # This is important to set, otherwise tracer log files and RTView will get an ugly name.
+            TraceOptionNodeName =
+              if (i == 0)
+              then name
+              else "${name}-${toString i}";
+          };
+        };
 
-          # Wait for the node socket
-          while true; do
-            [ -S "$SOCKET" ] && sleep 2 && break
-            echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
-            sleep 2
-          done
-        '';
+        cardano-tracer = {
+          enable = true;
+          package = perNodeCfg.pkgs.cardano-tracer;
+          executable = lib.getExe perNodeCfg.pkgs.cardano-tracer;
+          acceptingSocket = "/tmp/forwarder.sock";
+          extraCliArgs = ["+RTS" "-M${toString cfg.totalMaxHeapSizeMiB}M" "-RTS"];
 
-        serviceConfig = {
-          MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB)}M";
-          LimitNOFILE = "65535";
+          configFile = builtins.toFile "cardano-tracer-config.json" (
+            builtins.toJSON ({
+                inherit (cfg) logging network;
 
-          StateDirectory = "cardano-tracer";
-          WorkingDirectory = "/var/lib/cardano-tracer";
+                networkMagic = protocolMagic;
 
-          # Wait up to a day for the node socket to appear on preStart.
-          # Allow long ledger replays and/or db-restore gunzip, including on slow systems.
-          TimeoutStartSec = 24 * 3600;
+                resourceFreq = null;
+
+                rotation = cfg.rotationCfg;
+              }
+              // optionalAttrs (cfg.hasEKG != null) {
+                # EKG interface uses the https scheme.
+                inherit (cfg) ekgRequestFreq hasEKG;
+              }
+              // optionalAttrs (cfg.hasPrometheus != null) {
+                # Metrics exporter with a scrape path of:
+                # http://$epHost:$epPort/$TraceOptionNodeName
+                inherit (cfg) hasPrometheus;
+              }
+              // optionalAttrs (cfg.hasRTView != null) {
+                # The real time viewer uses the https scheme.
+                inherit (cfg) hasRTView;
+              })
+          );
         };
       };
 
-      services.cardano-node = {
-        tracerSocketPathConnect = "/tmp/forwarder.sock";
-
-        # This removes most of the old tracing system config.
-        # It will only leave a minSeverity = "Critical" for the legacy system active.
-        useLegacyTracing = false;
-
-        # This appears to do nothing.
-        withCardanoTracer = true;
-
-        extraNodeConfig = {
-          # This option is what enables the new tracing/metrics system.
-          UseTraceDispatcher = true;
-
-          # Default options; further customization can be added per tracer.
-          TraceOptions =
-            {
-              "" = optionalAttrs (cfg.nodeDefaultTraceOptions != null) cfg.nodeDefaultTraceOptions;
-            }
-            // optionalAttrs (cfg.nodeExtraTraceOptions != null) cfg.nodeExtraTraceOptions;
+      systemd.services = {
+        # When cardano-node restarts, cardano-tracer will need to also be
+        # started due to the `partOf` binding in the cardano-tracer systemd
+        # declaration below.
+        cardano-node = {
+          wants = ["cardano-tracer.service"];
+          before = ["cardano-tracer.service"];
         };
 
-        extraNodeInstanceConfig = i: {
-          TraceOptionMetricsPrefix = cfg.metricsPrefix;
+        cardano-tracer = {
+          wantedBy = ["multi-user.target"];
 
-          # This is important to set, otherwise tracer log files and RTView will get an ugly name.
-          TraceOptionNodeName =
-            if (i == 0)
-            then name
-            else "${name}-${toString i}";
+          # If cardano-node is stopped and restarted, cardano-tracer will fail to
+          # export metrics again unless also restarted.
+          partOf = ["cardano-node.service"];
+          after = ["cardano-node.service"];
+
+          environment.HOME = "/var/lib/cardano-tracer";
+
+          # If cardano-tracer is not delayed in startup after cardano-node is
+          # restarted, metrics may not be picked up.
+          preStart = ''
+            set -uo pipefail
+            SOCKET="${config.services.cardano-node.socketPath 0}"
+
+            # Wait for the node socket
+            while true; do
+              [ -S "$SOCKET" ] && sleep 2 && break
+              echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
+              sleep 2
+            done
+          '';
+
+          serviceConfig = {
+            MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB)}M";
+            LimitNOFILE = "65535";
+
+            StateDirectory = "cardano-tracer";
+            WorkingDirectory = "/var/lib/cardano-tracer";
+
+            # Wait up to a day for the node socket to appear on preStart.
+            # Allow long ledger replays and/or db-restore gunzip, including on slow systems.
+            TimeoutStartSec = 24 * 3600;
+          };
         };
       };
     };
