@@ -366,7 +366,7 @@ in {
             fi
 
             # Use the new create-testnet-data cli cmd
-            /nix/store/1lr14zrh8kqpdr7ssbladbj0af9angrh-cardano-cli-exe-cardano-cli-10.1.1.0/bin/cardano-cli alonzo  genesis create-testnet-data \
+            "''${CARDANO_CLI[@]}" genesis create-testnet-data \
               --genesis-keys "$NUM_GENESIS_KEYS" \
               --utxo-keys 1 \
               --total-supply "$MAX_SUPPLY" \
@@ -377,6 +377,23 @@ in {
               --spec-conway "$TEMPLATE_DIR/conway.json" \
               --start-time "$START_TIME" \
               --out-dir "$GENESIS_DIR"
+
+            # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide a byron genesis
+            "''${CARDANO_CLI_NO_ERA[@]}" byron genesis genesis \
+              --protocol-magic "$TESTNET_MAGIC" \
+              --start-time "$(date +%s -d "$START_TIME")" \
+              --k "$SECURITY_PARAM" \
+              --n-poor-addresses 0 \
+              --n-delegate-addresses "$NUM_GENESIS_KEYS" \
+              --total-balance "$MAX_SUPPLY" \
+              --delegate-share 0 \
+              --avvm-entry-count 0 \
+              --avvm-entry-balance 0 \
+              --protocol-parameters-file "$TEMPLATE_DIR/byron.json" \
+              --genesis-output-dir "$GENESIS_DIR/byron-config"
+
+            # Move the byron genesis into the same dir as shelley, alonzo, conway genesis files
+            mv "$GENESIS_DIR/byron-config/genesis.json" "$GENESIS_DIR/byron-genesis.json"
 
             # If initial funds is explicitly declared for the rich key, set it here
             if [ -n "''${INITIAL_FUNDS:-}" ]; then
@@ -434,8 +451,9 @@ in {
                 mv "genesis$((i + 1))/key.skey" "shelley.$(printf "%03d" "$i").skey"
                 mv "genesis$((i + 1))/key.vkey" "shelley.$(printf "%03d" "$i").vkey"
                 rmdir "genesis$((i + 1))/"
+
+                mv ../byron-config/genesis-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
               done
-                mv ../byron-gen-command/genesis-keys.000.key byron.000.key
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
@@ -450,10 +468,11 @@ in {
                 mv "delegate$((i + 1))/vrf.skey" "shelley.$(printf "%03d" "$i").vrf.skey"
                 mv "delegate$((i + 1))/vrf.vkey" "shelley.$(printf "%03d" "$i").vrf.vkey"
                 rmdir "delegate$((i + 1))/"
+
+                mv ../byron-config/delegate-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
+                mv ../byron-config/delegation-cert."$(printf "%03d" "$i")".json "byron.$(printf "%03d" "$i").cert.json"
               done
-              mv ../byron-gen-command/delegate-keys.000.key byron.000.key
-              mv ../byron-gen-command/delegation-cert.000.json byron.000.cert.json
-              rmdir ../byron-gen-command/
+              rmdir ../byron-config/
             popd &> /dev/null
 
             # Transform the rich key into a create-cardano compatible layout
