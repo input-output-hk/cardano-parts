@@ -97,6 +97,7 @@ in {
       updateProposalTemplate = ''
         # Inputs:
         #   [$DEBUG]
+        #   [$EPOCH]
         #   [$ERA] (deprecated `--$ERA-era` flag)
         #   [$ERA_CMD]
         #   [$FEE]
@@ -109,6 +110,7 @@ in {
         #   [$UNSTABLE]
         #   [$USE_DECRYPTION]
         #   [$USE_SHELL_BINS]
+        #   [$UTXO]
 
         if [ -z "''${FEE:-}" ]; then
           echo "Fee for update proposal tx is defaulting to 500000 lovelace"
@@ -121,30 +123,34 @@ in {
             --testnet-magic "$TESTNET_MAGIC"
         )
 
-        UTXO=$(
-          "''${CARDANO_CLI[@]}" query utxo \
-            --address "$CHANGE_ADDRESS" \
-            --testnet-magic "$TESTNET_MAGIC" \
-            --out-file /dev/stdout \
-          | jq -r --arg fee "$FEE" 'to_entries
-            |
-              [
-                sort_by(.value.value.lovelace)[]
-                  | select(.value.value > ($fee | tonumber))
-                  | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
-              ]
-            [0]'
-        )
+        if [ -z "''${UTXO:-}" ]; then
+          UTXO=$(
+            "''${CARDANO_CLI[@]}" query utxo \
+              --address "$CHANGE_ADDRESS" \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --out-file /dev/stdout \
+            | jq -r --arg fee "$FEE" 'to_entries
+              |
+                [
+                  sort_by(.value.value.lovelace)[]
+                    | select(.value.value > ($fee | tonumber))
+                    | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
+                ]
+              [0]'
+          )
+        fi
 
         TXIN=$(jq -r '.txin' <<< "$UTXO")
         TXVAL=$(jq -r '.amount' <<< "$UTXO")
         CHANGE=$((TXVAL - FEE))
 
-        EPOCH=$(
-          "''${CARDANO_CLI[@]}" query tip \
-            --testnet-magic "$TESTNET_MAGIC" \
-          | jq .epoch
-        )
+        if [ -z "''${EPOCH:-}" ]; then
+          EPOCH=$(
+            "''${CARDANO_CLI[@]}" query tip \
+              --testnet-magic "$TESTNET_MAGIC" \
+            | jq .epoch
+          )
+        fi
 
         echo "$TXIN" > /dev/null
         PROPOSAL_KEY_ARGS=()
@@ -366,6 +372,7 @@ in {
             fi
 
             # Use the new create-testnet-data cli cmd
+            mkdir -p "$GENESIS_DIR"
             "''${CARDANO_CLI[@]}" genesis create-testnet-data \
               --genesis-keys "$NUM_GENESIS_KEYS" \
               --utxo-keys 1 \
@@ -660,6 +667,7 @@ in {
             #   [$USE_DECRYPTION]
             #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
+            #   [$UTXO]
 
             [ -n "''${DEBUG:-}" ] && set -x
 
@@ -712,20 +720,22 @@ in {
               --out-file "$POOL_NAME"-reward-delegation.cert
 
             # Generate transaction
-            UTXO=$(
-              "''${CARDANO_CLI[@]}" query utxo \
-                --address "$CHANGE_ADDRESS" \
-                --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
-              | jq -r --arg fee "$FEE" 'to_entries
-                |
-                  [
-                    sort_by(.value.value.lovelace)[]
-                      | select(.value.value > ($fee | tonumber))
-                      | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
-                  ]
-                [0]'
-            )
+            if [ -z "''${UTXO:-}" ]; then
+              UTXO=$(
+                "''${CARDANO_CLI[@]}" query utxo \
+                  --address "$CHANGE_ADDRESS" \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --out-file /dev/stdout \
+                | jq -r --arg fee "$FEE" 'to_entries
+                  |
+                    [
+                      sort_by(.value.value.lovelace)[]
+                        | select(.value.value > ($fee | tonumber))
+                        | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
+                    ]
+                  [0]'
+              )
+            fi
 
             TXIN=$(jq -r '.txin' <<< "$UTXO")
             TXVAL=$(jq -r '.amount' <<< "$UTXO")
@@ -784,6 +794,7 @@ in {
             #   [$USE_DECRYPTION]
             #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
+            #   [$UTXO]
 
             [ -n "''${DEBUG:-}" ] && set -x
 
@@ -893,20 +904,22 @@ in {
             encrypt_check "$NO_DEPLOY_FILE"-reward-payment-stake.addr
 
             # Generate transaction
-            UTXO=$(
-              "''${CARDANO_CLI[@]}" query utxo \
-                --address "$CHANGE_ADDRESS" \
-                --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
-              | jq -r --arg fee "$FEE" 'to_entries
-                |
-                  [
-                    sort_by(.value.value.lovelace)[]
-                      | select(.value.value > ($fee | tonumber))
-                      | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
-                  ]
-                [0]'
-            )
+            if [ -z "''${UTXO:-}" ]; then
+              UTXO=$(
+                "''${CARDANO_CLI[@]}" query utxo \
+                  --address "$CHANGE_ADDRESS" \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --out-file /dev/stdout \
+                | jq -r --arg fee "$FEE" 'to_entries
+                  |
+                    [
+                      sort_by(.value.value.lovelace)[]
+                        | select(.value.value > ($fee | tonumber))
+                        | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
+                    ]
+                  [0]'
+              )
+            fi
 
             TXIN=$(jq -r '.txin' <<< "$UTXO")
             TXVAL=$(jq -r '.amount' <<< "$UTXO")
@@ -1050,6 +1063,7 @@ in {
           text = ''
             # Inputs:
             #   $BYRON_SIGNING_KEY
+            #   [$BYRON_UTXO]
             #   [$DEBUG]
             #   [$ERA] (deprecated `--$ERA-era` flag)
             #   [$ERA_CMD]
@@ -1065,17 +1079,20 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            BYRON_UTXO=$(
-              "''${CARDANO_CLI[@]}" query utxo \
-                --whole-utxo \
-                --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
-              | jq '
-                to_entries[]
-                | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
-                | select(.amount > 0)
-              '
-            )
+            if [ -z "''${BYRON_UTXO:-}" ]; then
+              BYRON_UTXO=$(
+                "''${CARDANO_CLI[@]}" query utxo \
+                  --whole-utxo \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --out-file /dev/stdout \
+                | jq '
+                  to_entries[]
+                  | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
+                  | select(.amount > 0)
+                '
+              )
+            fi
+
             FEE=200000
             SUPPLY=$(echo "$BYRON_UTXO" | jq -r '.amount - 200000')
             BYRON_ADDRESS=$(echo "$BYRON_UTXO" | jq -r '.address')
