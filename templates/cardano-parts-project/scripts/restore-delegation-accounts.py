@@ -156,9 +156,7 @@ def generate_stake_skey(stake_xsk, file):
     return
 
 
-def generate_stake_registration(stake_vkey, file):
-    network_args = []
-    pparams = cli.getPParamsJson(*network_args)
+def generate_stake_registration(stake_vkey, pparams, file):
     cli_args = [
         "cardano-cli",
         "latest",
@@ -178,9 +176,7 @@ def generate_stake_registration(stake_vkey, file):
     return
 
 
-def generate_stake_deregistration(stake_vkey, file):
-    network_args = []
-    pparams = cli.getPParamsJson(*network_args)
+def generate_stake_deregistration(stake_vkey, pparams, file):
     cli_args = [
         "cardano-cli",
         "latest",
@@ -199,6 +195,23 @@ def generate_stake_deregistration(stake_vkey, file):
         raise Exception("Unknown error generating deregistration certificate")
     return
 
+def generate_stake_vote_delegation(stake_vkey, file):
+    cli_args = [
+        "cardano-cli",
+        "latest",
+        "stake-address",
+        "vote-delegation-certificate",
+        "--stake-verification-key",
+        stake_vkey,
+        "--always-abstain",
+        "--out-file",
+        file.name,
+    ]
+    p = subprocess.run(cli_args, input=None, capture_output=True, text=True)
+    if p.returncode != 0:
+        print(p.stderr)
+        raise Exception("Unknown error generating deregistration certificate")
+    return
 
 def get_largest_utxo_for_address(address):
     p = subprocess.run(
@@ -291,10 +304,10 @@ def get_reward_balance(stake_address):
 
 def createRecoveryTx(
     txin,
+    pparams,
     stake_xsk,
     stake_vkey,
     stake_address,
-    delegation_address,
     rewards,
     change_address,
     payment_signing_key,
@@ -305,8 +318,8 @@ def createRecoveryTx(
          tempfile.NamedTemporaryFile("w+") as stake_skey, \
          tempfile.NamedTemporaryFile("w+") as tx_body:
 
-        generate_stake_deregistration(stake_vkey, stake_dereg_cert)
-        generate_stake_registration(stake_vkey, stake_reg_cert)
+        generate_stake_deregistration(stake_vkey, pparams, stake_dereg_cert)
+        generate_stake_registration(stake_vkey, pparams, stake_reg_cert)
         generate_stake_skey(stake_xsk, stake_skey)
 
         new_lovelace = (
@@ -368,6 +381,63 @@ def createRecoveryTx(
         txid = signTx(tx_body, payment_signing_key, stake_skey, out_file)
         return (f"{txid}#0", new_lovelace)
 
+def createVoteDelegationTx(
+    txin,
+    stake_xsk,
+    stake_vkey,
+    change_address,
+    payment_signing_key,
+    out_file,
+):
+    with tempfile.NamedTemporaryFile("w+") as stake_vote_deleg_cert, \
+         tempfile.NamedTemporaryFile("w+") as stake_skey, \
+         tempfile.NamedTemporaryFile("w+") as tx_body:
+
+        generate_stake_vote_delegation(stake_vkey, stake_vote_deleg_cert)
+        generate_stake_skey(stake_xsk, stake_skey)
+
+        new_lovelace = (
+            # Rich key utxo value in lovelace
+            txin[1]
+
+            # Estimated transaction fee (anything higher than the actual tx cost will be given back to the system)
+            - 200000
+        )
+
+        cli_args = [
+            "cardano-cli",
+            "latest",
+            "transaction",
+            "build-raw",
+
+            # Rich key biggest utxo tx
+            "--tx-in",
+            txin[0],
+
+            # Tx change back to the payment addr
+            "--tx-out",
+            f"{change_address}+{new_lovelace}",
+
+            # Estimated fee from above
+            "--fee",
+            "200000",
+
+            # Vote delegation certificate
+            "--certificate",
+            stake_vote_deleg_cert.name,
+
+            # Tmpfile prior to being signed
+            "--out-file",
+            tx_body.name,
+        ]
+        p = subprocess.run(cli_args, input=None, capture_output=True, text=True)
+        if p.returncode != 0:
+            print(p.stderr)
+            print(f"died at tx_body vote delegation creation: {out_file}")
+            raise Exception("Unknown error creating vote delegation transaction")
+        txid = signTx(tx_body, payment_signing_key, stake_skey, out_file)
+        return (f"{txid}#0", new_lovelace)
+
 
 if arguments["--wallet-mnemonic"]:
     with open(arguments["--wallet-mnemonic"], "r") as file:
@@ -383,6 +453,9 @@ else:
 with open(utxo_signing_key, "r") as file:
     utxo_signing_key_str = file.read()
 
+network_args = []
+pparams = cli.getPParamsJson(*network_args)
+pv_major = pparams["protocolVersion"]["major"]
 payment_addr = derive_payment_address_cli_skey(utxo_signing_key_str)
 txin = get_largest_utxo_for_address(payment_addr)
 stake_xsk = derive_child_key(wallet_account_skey, f"2/{d_idx}", public=False, chain_code=True)
@@ -400,9 +473,22 @@ print(f"stake_address = {stake_address}")
 print(f"delegation_address = {delegation_address}")
 print(f"rewards = {rewards}")
 print("")
-print("Building transaction...")
-txid = createRecoveryTx(txin, stake_xsk, stake_vkey, stake_address, delegation_address, rewards, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{d_idx}-restore.txsigned")
-print(f"txid = {txid}")
+print("Building transaction(s)...")
+
+# Protocol version 10 and greater require vote delegate to withdraw rewards
+if pv_major >= 10:
+    print(f"Funding txin = {txin}")
+    txid_abstain = createVoteDelegationTx(txin, stake_xsk, stake_vkey, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{d_idx}-always-abstain.txsigned")
+    print(f"Always abstain txid = {txid_abstain}")
+    txid_recovery = createRecoveryTx(txid_abstain, pparams, stake_xsk, stake_vkey, stake_address, rewards, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{d_idx}-restore.txsigned")
+    print(f"Recovery txid = {txid_recovery}")
+else:
+    print(f"Funding txin = {txin}")
+    txid_recovery = createRecoveryTx(txin, pparams, stake_xsk, stake_vkey, stake_address, rewards, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{d_idx}-restore.txsigned")
+    print(f"Recovery txid = {txid_recovery}")
 print("")
-print("Sending transaction...")
+
+print("Sending transaction(s)...")
+if pv_major >= 10:
+    sendTx(f"tx-deleg-account-{d_idx}-always-abstain.txsigned")
 sendTx(f"tx-deleg-account-{d_idx}-restore.txsigned")

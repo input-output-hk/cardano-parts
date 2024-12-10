@@ -58,12 +58,12 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/jl/10.1.2-svc-legacy-tracing";
+      url = "github:IntersectMBO/cardano-node";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/10.1.2-svc-legacy-tracing";
+      url = "github:IntersectMBO/cardano-node";
       flake = false;
     };
 

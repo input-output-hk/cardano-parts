@@ -922,10 +922,12 @@ start-demo:
     ERA_CMD="alonzo" \
       nix run .#job-gen-custom-node-config-data
   else
-    nix run .#job-gen-custom-node-config
+    ERA_CMD="alonzo" \
+      nix run .#job-gen-custom-node-config
   fi
 
-  nix run .#job-create-stake-pool-keys
+  ERA_CMD="alonzo" \
+    nix run .#job-create-stake-pool-keys
 
   if [ "$USE_DECRYPTION" = true ]; then
     BFT_CREDS=$(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)

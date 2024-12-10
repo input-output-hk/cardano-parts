@@ -293,6 +293,7 @@ in
                         cardano-address
                         cardano-cli
                         cardano-node
+                        cardano-testnet
                         cardano-wallet
                         db-analyser
                         db-synthesizer
@@ -303,6 +304,7 @@ in
                         # the wrapped binary to avoid cli name collision.
                         self'.packages.cardano-cli-ng
                         self'.packages.cardano-node-ng
+                        self'.packages.cardano-testnet-ng
                         self'.packages.db-analyser-ng
                         self'.packages.db-synthesizer-ng
                         self'.packages.db-truncater-ng
