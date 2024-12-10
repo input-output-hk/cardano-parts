@@ -1,0 +1,108 @@
+on:
+  pull_request:
+
+jobs:
+  nix-jobs-test:
+    name: "Test nix jobs"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+         ref: "${{github.head_ref || github.ref_name}}"
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = fetch-closure flakes nix-command
+            substituters = https://cache.iog.io https://cache.nixos.org/
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      - name: Test
+        run: |
+          nix --version
+
+          # Enable tracing
+          export DEBUG="true"
+
+          # Default base paths
+          export GENESIS_DIR="workbench"
+          export KEY_DIR="workbench/envs/custom"
+          export DATA_DIR="workbench/rundir"
+
+          # Fake testing UTxOs
+          export BYRON_UTXO='{
+            "txin":"1e6f026dfa9aa3deb43a7a4c64d9e002d3224ce707e2a4bb45b0a93e465a4e20#0",
+            "address":"2657WMsDfac6yNxPyqZPCamHhH8pfYAaMgXFTxsag4n3ttWqVAz2gxRMomvJJMyF4",
+            "amount":30000000000000000}'
+          export UTXO='{
+            "txin":"cde023e0da05739ebcfeb7ab3ffaa467fa38fb508eddcc2c10a78bf06ff23f2b#0",
+            "address":"addr_test1vzyhu8wp6sx85dukujyuk0ltvqzjfx6vlpvwdf9dla9zg8qlez2ut",
+            "amount":30000000000000000}'
+
+          # Fake testing epoch
+          export EPOCH="100"
+
+          # Other params
+          export BYRON_SIGNING_KEY="$KEY_DIR/utxo-keys/shelley.000.skey"
+          export ERA_CMD="alonzo"
+          export MAJOR_VERSION="7"
+          export NUM_GENESIS_KEYS="3"
+          export PAYMENT_KEY="$KEY_DIR/utxo-keys/rich-utxo"
+          export POOL_NAMES="sp-1 sp-2 sp-3"
+          export POOL_RELAY="test.local"
+          export POOL_RELAY_PORT="3001"
+          export STAKE_POOL_DIR="workbench/groups/stake-pools"
+          export SUBMIT_TX="false"
+          export TESTNET_MAGIC="42"
+          export UNSTABLE="false"
+          export UNSTABLE_LIB="false"
+          export USE_ENCRYPTION="false"
+          export USE_DECRYPTION="false"
+          export USE_NODE_CONFIG_BP="false"
+
+          JOB_SEQ=(
+            "job-gen-custom-node-config-data"
+            "job-create-stake-pool-keys"
+            "job-register-stake-pools"
+            "job-delegate-rewards-stake-key"
+            "job-update-proposal-hard-fork"
+          )
+
+          JOB_SEQ_LEGACY=(
+            "job-gen-custom-node-config"
+            "job-create-stake-pool-keys"
+            "job-move-genesis-utxo"
+            "job-register-stake-pools"
+            "job-delegate-rewards-stake-key"
+            "job-update-proposal-hard-fork"
+          )
+
+          RUN_TESTS() {
+            local JOBS=("$@")
+
+            rm -rf workbench
+            for i in ${JOBS[@]}; do
+              echo "Running nix job .#$i"
+              nix run ".#$i"
+            done
+          }
+
+          echo "Run nix job tests with release versioning..."
+          echo "Running legacy sequence tests..."
+          RUN_TESTS "${JOB_SEQ_LEGACY[@]}"
+
+          echo "Running sequence tests..."
+          RUN_TESTS "${JOB_SEQ[@]}"
+
+          echo "Now run nix job tests again with pre-release versioning..."
+          set -x
+          export UNSTABLE="true"
+          export UNSTABLE_LIB="true"
+          set +x
+
+          echo "Running legacy sequence tests on pre-release..."
+          RUN_TESTS "${JOB_SEQ_LEGACY[@]}"
+
+          echo "Running sequence tests on pre-release..."
+          RUN_TESTS "${JOB_SEQ[@]}"

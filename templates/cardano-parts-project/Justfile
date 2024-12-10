@@ -289,6 +289,29 @@ build-machines *ARGS:
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
   for node in $nodes {just build-machine $node {{ARGS}}}
 
+# Run a local cardano-testnet
+cardano-testnet isNg *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  if [ "{{isNg}}" = "true" ]; then
+    CARDANO_CLI=$(command -v cardano-cli-ng)
+    CARDANO_NODE=$(command -v cardano-node-ng)
+    CARDANO_TESTNET="cardano-testnet-ng"
+  elif [ "{{isNg}}" = "false" ]; then
+    CARDANO_CLI=$(command -v cardano-cli)
+    CARDANO_NODE=$(command -v cardano-node)
+    CARDANO_TESTNET="cardano-testnet"
+  else
+    echo "ERROR: isNg must be either true to use the pre-release (aka next generation or \"ng\") version of node and cli,"
+    echo "       or false to use the release version of node and cli."
+    exit 1
+  fi
+
+  export CARDANO_CLI
+  export CARDANO_NODE
+  eval "$CARDANO_TESTNET" {{ARGS}}
+
 # Deploy a cloudFormation stack
 cf STACKNAME:
   #!/usr/bin/env nu
@@ -922,10 +945,12 @@ start-demo:
     ERA_CMD="alonzo" \
       nix run .#job-gen-custom-node-config-data
   else
-    nix run .#job-gen-custom-node-config
+    ERA_CMD="alonzo" \
+      nix run .#job-gen-custom-node-config
   fi
 
-  nix run .#job-create-stake-pool-keys
+  ERA_CMD="alonzo" \
+    nix run .#job-create-stake-pool-keys
 
   if [ "$USE_DECRYPTION" = true ]; then
     BFT_CREDS=$(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
