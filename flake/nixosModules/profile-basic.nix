@@ -72,8 +72,8 @@
         # For nix >= 2.24 build compatibility
         inputs.nixpkgs-unstable.legacyPackages.${system}.neovim
         ncdu
-        # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a non-existent pkg failure
-        inputs.nixpkgs.legacyPackages.${system}.nushellFull
+        # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 24.11 causing missing features error
+        inputs.nixpkgs.legacyPackages.${system}.nushell
         parted
         pciutils
         procps
@@ -89,10 +89,6 @@
       ];
 
       programs = {
-        # Added to address openssh CVE-2024-6387
-        # Remove on the next nixpkgs major version update so openssh 9.8p1+ version is maintained
-        ssh.package = inputs.nixpkgs-unstable.legacyPackages.${system}.openssh;
-
         tmux = {
           enable = true;
           aggressiveResize = true;

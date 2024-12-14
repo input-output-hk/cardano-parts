@@ -409,7 +409,7 @@ flake: {
             startLimitIntervalSec = 0;
             serviceConfig = {
               User = "registered-relays-dump";
-              SupplementaryGroups = "cardano-node";
+              SupplementaryGroups = ["cardano-node"];
               StateDirectory = "registered-relays-dump";
               Restart = "always";
               RestartSec = "30s";
@@ -602,7 +602,7 @@ flake: {
         systemd.services.nginx.serviceConfig = {
           LimitNOFILE = 65535;
           LogNamespace = "nginx";
-          SupplementaryGroups = "registered-relays-dump";
+          SupplementaryGroups = ["registered-relays-dump"];
         };
 
         services.prometheus.exporters = {
