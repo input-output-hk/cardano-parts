@@ -14,8 +14,8 @@ in
     flake.colmena = let
       # Region defs:
       eu-central-1.aws.region = "eu-central-1";
-      eu-west-1.aws.region = "eu-west-1";
-      us-east-2.aws.region = "us-east-2";
+      # eu-west-1.aws.region = "eu-west-1";
+      # us-east-2.aws.region = "us-east-2";
 
       # Instance defs:
       t3a-small.aws.instance.instance_type = "t3a.small";
@@ -85,6 +85,62 @@ in
       # mithrilRelay = {imports = [inputs.cardano-parts.nixosModules.profile-mithril-relay];};
       # declMRel = node: {services.mithril-signer.relayEndpoint = nixosConfigurations.${node}.config.ips.privateIpv4;};
       # declMSigner = node: {services.mithril-relay.signerIp = nixosConfigurations.${node}.config.ips.privateIpv4;};
+
+      # Optimize tcp sysctl and route params for long distance transmission.
+      # Apply to one relay per pool group.
+      # Ref: https://forum.cardano.org/t/problem-with-increasing-blocksize-or-processing-requirements/140044
+      tcpTxOpt = {pkgs, ...}: {
+        boot.kernel.sysctl."net.ipv4.tcp_slow_start_after_idle" = 0;
+
+        systemd.services.tcp-tx-opt = {
+          after = ["network-online.target"];
+          wants = ["network-online.target"];
+          wantedBy = ["multi-user.target"];
+
+          path = with pkgs; [gnugrep iproute2];
+          script = ''
+            set -euo pipefail
+
+            APPEND_OPTS="initcwnd 42 initrwnd 42"
+
+            echo "Evalulating -4 default route options..."
+            DEFAULT_ROUTE=""
+            while [ "$DEFAULT_ROUTE" = "" ]; do
+              echo "Waiting for the -4 default route to populate..."
+              sleep 2
+              DEFAULT_ROUTE=$(ip route list default)
+            done
+
+            CHANGE_ROUTE() {
+              PROT="$1"
+              DEFAULT_ROUTE="$2"
+
+              echo "Current default $PROT route is: $DEFAULT_ROUTE"
+
+              if ! grep -q initcwnd <<< "$DEFAULT_ROUTE"; then
+                echo "Adding tcp window size options to the $PROT default route..."
+                eval ip "$PROT" route change "$DEFAULT_ROUTE" "$APPEND_OPTS"
+              else
+                echo "The $PROT default route already contains an initcwnd customization, skipping."
+              fi
+            }
+
+            CHANGE_ROUTE "-4" "$DEFAULT_ROUTE"
+
+            DEFAULT_ROUTE=$(ip -6 route list default)
+            if [ "$DEFAULT_ROUTE" = "" ]; then
+              echo "The -6 default route is not set, skipping."
+            else
+              CHANGE_ROUTE "-6" "$DEFAULT_ROUTE"
+            fi
+          '';
+
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+        };
+      };
 
       # Profiles
       pre = {imports = [inputs.cardano-parts.nixosModules.profile-pre-release];};
@@ -181,8 +237,8 @@ in
 
       preview1-bp-a-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node bp];};
       preview1-rel-a-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node rel];};
-      preview1-rel-b-1 = {imports = [eu-west-1 t3a-small (ebs 40) (group "preview1") node rel];};
-      preview1-rel-c-1 = {imports = [us-east-2 t3a-small (ebs 40) (group "preview1") node rel];};
+      preview1-rel-b-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node rel];};
+      preview1-rel-c-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node rel tcpTxOpt];};
       preview1-dbsync-a-1 = {imports = [eu-central-1 m5a-large (ebs 40) (group "preview1") dbsync smash];};
       preview1-faucet-a-1 = {imports = [eu-central-1 t3a-medium (ebs 40) (group "preview1") node faucet pre];};
     };
