@@ -180,7 +180,7 @@ in {
               filter = [
                 {
                   name = "name";
-                  values = ["nixos/24.05*"];
+                  values = ["nixos/24.11*"];
                 }
                 {
                   name = "architecture";

@@ -58,19 +58,19 @@ checkEnvWithoutOverride := '''
 '''
 
 checkSshConfig := '''
-  if not ('.ssh_config' | path exists) {
+  if not (".ssh_config" | path exists) {
     print $"(ansi "bg_light_red")Please run:(ansi reset) `just save-ssh-config` first to create the .ssh_config file"
     exit 1
   }
 
-  let checkFile = '.consistency-check-ts'
+  let checkFile = ".consistency-check-ts"
 
   # Checking modified timestamps to decide whether to eval nixosCfgs which costs ~0.5s per ssh command
   let runCheck = if ($checkFile | path exists) {
     let checkTs = (stat -c %Y $checkFile) | into int
     let colmenaTs = (stat -c %Y flake/colmena.nix) | into int
     let sshHostsTs = (stat -c %Y .ssh_config) | into int
-    let moduleIpsTs = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+    let moduleIpsTs = if ("flake/nixosModules/ips-DONT-COMMIT.nix" | path exists) {
       (stat -c %Y flake/nixosModules/ips-DONT-COMMIT.nix) | into int
     } else {
       0
@@ -89,7 +89,7 @@ checkSshConfig := '''
       let comparison = {
         $lName: ($left | where $it not-in $right)
         $rName: ($right | where $it not-in $left)
-        =: ($left | where $it in $right)
+        eq: ($left | where $it in $right)
       }
 
       $comparison | transpose where item | flatten | select item where | sort-by item
@@ -97,14 +97,15 @@ checkSshConfig := '''
 
     mut consistent = true
 
-    let nixosCfg = (nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames') | from json
+    let nixosCfg = (nix eval --json ".#nixosConfigurations" --apply "builtins.attrNames") | from json
 
     # Ssh config header manual changes can be made without breaking parsing as
     # long as they come after the `Host *$` line. Host modifications can also be
     # made as long as any host changes come after the `  HostName .*$` line for
     # each respective host.
     let sshCfg = (open .ssh_config
-      | parse --regex '(?m)Host (.*)\n\s+HostName (.*)'
+      | collect
+      | parse --regex `(?m)Host (.*)\n\s+HostName (.*)`
       | rename machine ip
       | sort-by machine)
 
@@ -116,45 +117,46 @@ checkSshConfig := '''
     let ssh6Cfg = ($sshCfg
       | where ($it.machine | str ends-with ".ipv6")
       | rename machine pubIpv6
-      | update machine {$in | str replace '.ipv6' ''}
-      | update pubIpv6 {if ($in == "unavailable.ipv6") { null } else { $in }}
+      | update machine {$in | str replace ".ipv6" ""}
+      | update pubIpv6 {if ($in == "unavailable.ipv6") {null} else {$in}}
       | sort-by machine)
 
-    let moduleIps = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
+    let moduleIps = if ("flake/nixosModules/ips-DONT-COMMIT.nix" | path exists) {
       (open flake/nixosModules/ips-DONT-COMMIT.nix
-        | parse --regex '(?ms)(.*)^  };\nin {.*'
+        | collect
+        | parse --regex `(?ms)(.*)^  };\nin {.*`
         | get capture0
-        | parse --regex '(?m)    (.*) = {$\n\s+privateIpv4 = \"(.*)";\n\s+publicIpv4 = \"(.*)";\n\s+publicIpv6 = \"(.*)";\n\s+};'
+        | parse --regex `(?m)    (.*) = {$\n\s+privateIpv4 = \"(.*)";\n\s+publicIpv4 = \"(.*)";\n\s+publicIpv6 = \"(.*)";\n\s+};`
         | rename machine privIpv4 pubIpv4 pubIpv6
-        | update pubIpv6 {if ($in == "") { null } else { $in }}
+        | update pubIpv6 {if ($in == "") {null} else {$in}}
         | sort-by machine)
     } else {
       []
     }
 
     # Set up comparison between list of nixos config machine names and ssh ipv4 machine names
-    let nixCompareSsh4 = list-diff $nixosCfg ($ssh4Cfg | get machine) onlyInNixosCfg onlyInSshCfg | where where != "="
+    let nixCompareSsh4 = list-diff $nixosCfg ($ssh4Cfg | get machine) onlyInNixosCfg onlyInSshCfg | where where != "eq"
 
     # Set up comparison between list of ssh public ipv4 and ssh public ipv6 machine names
-    let ssh4CompareSsh6 = list-diff ($ssh4Cfg | get machine) ($ssh6Cfg | get machine) onlyInSsh4Cfg onlyInSsh6Cfg | where where != "="
+    let ssh4CompareSsh6 = list-diff ($ssh4Cfg | get machine) ($ssh6Cfg | get machine) onlyInSsh4Cfg onlyInSsh6Cfg | where where != "eq"
 
     # Set up comparison between list of nixos config machine names and ip module machine names
-    let nixCompareIps = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
-      list-diff $nixosCfg ($moduleIps | get machine) onlyInNixosCfg onlyInIpsModuleCfg | where where != "="
+    let nixCompareIps = if ("flake/nixosModules/ips-DONT-COMMIT.nix" | path exists) {
+      list-diff $nixosCfg ($moduleIps | get machine) onlyInNixosCfg onlyInIpsModuleCfg | where where != "eq"
     } else {
       []
     }
 
     # Set up comparison between list of ssh public ipv4 and ip module public ipv4 values
-    let ssh4CompareIps4 = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
-      list-diff ($ssh4Cfg | get pubIpv4) ($moduleIps | get pubIpv4) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
+    let ssh4CompareIps4 = if ("flake/nixosModules/ips-DONT-COMMIT.nix" | path exists) {
+      list-diff ($ssh4Cfg | get pubIpv4) ($moduleIps | get pubIpv4) onlyInSshCfg onlyInIpsModuleCfg | where where != "eq"
     } else {
       []
     }
 
     # Set up comparison between list of ssh public ipv6 and ip module public ipv6 values
-    let ssh6CompareIps6 = if ('flake/nixosModules/ips-DONT-COMMIT.nix' | path exists) {
-      list-diff ($ssh6Cfg | get pubIpv6) ($moduleIps | get pubIpv6) onlyInSshCfg onlyInIpsModuleCfg | where where != "="
+    let ssh6CompareIps6 = if ("flake/nixosModules/ips-DONT-COMMIT.nix" | path exists) {
+      list-diff ($ssh6Cfg | get pubIpv6) ($moduleIps | get pubIpv6) onlyInSshCfg onlyInIpsModuleCfg | where where != "eq"
     } else {
       []
     }
@@ -288,6 +290,29 @@ build-machines *ARGS:
   #!/usr/bin/env nu
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
   for node in $nodes {just build-machine $node {{ARGS}}}
+
+# Run a local cardano-testnet
+cardano-testnet isNg *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  if [ "{{isNg}}" = "true" ]; then
+    CARDANO_CLI=$(command -v cardano-cli-ng)
+    CARDANO_NODE=$(command -v cardano-node-ng)
+    CARDANO_TESTNET="cardano-testnet-ng"
+  elif [ "{{isNg}}" = "false" ]; then
+    CARDANO_CLI=$(command -v cardano-cli)
+    CARDANO_NODE=$(command -v cardano-node)
+    CARDANO_TESTNET="cardano-testnet"
+  else
+    echo "ERROR: isNg must be either true to use the pre-release (aka next generation or \"ng\") version of node and cli,"
+    echo "       or false to use the release version of node and cli."
+    exit 1
+  fi
+
+  export CARDANO_CLI
+  export CARDANO_NODE
+  eval "$CARDANO_TESTNET" {{ARGS}}
 
 # Deploy a cloudFormation stack
 cf STACKNAME:
@@ -442,8 +467,16 @@ lint:
 
 # List machines
 list-machines:
-  #!/usr/bin/env nu
-  let nixosNodes = (do -i { ^nix eval --json '.#nixosConfigurations' --apply 'builtins.attrNames' } | complete)
+  #!/usr/bin/env bash
+
+  # Enable polars (dataframe) usage by calling nushell indirectly with a plugins option.
+  # Otherwise, the plugin registry can't seem to be initialized successfully from within the script.
+  # Ref: https://github.com/nushell/nushell/issues/14466
+  #
+  # Polars outer join equivalent to pandas dfr can likey be simplified in a future nushell release.
+  # Ref: https://github.com/nushell/nushell/issues/14572
+  nu --plugins [$NUSHELL_PLUGINS_POLARS] -c '
+  let nixosNodes = (do -i {^nix eval --json ".#nixosConfigurations" --apply "builtins.attrNames"} | complete)
   if $nixosNodes.exit_code != 0 {
      print "Nixos failed to evaluate the .#nixosConfigurations attribute."
      print "The output was:"
@@ -454,7 +487,7 @@ list-machines:
 
   {{checkSshConfig}}
 
-  let sshNodes = (do -i { ^scj dump /dev/stdout -c .ssh_config } | complete)
+  let sshNodes = (do -i {^scj dump /dev/stdout -c .ssh_config} | complete)
   if $sshNodes.exit_code != 0 {
      print "Ssh-config-json failed to evaluate the .ssh_config file."
      print "The output was:"
@@ -468,38 +501,40 @@ list-machines:
     let sanitizedList = (if ($nodeList | is-empty) {$nodeList | insert 0 ""} else {$nodeList});
 
     $sanitizedList
-      | insert 0 "machine"
-      | each {|i| [$i] | into record}
-      | headers
+      | wrap "machine"
       | each {|i| insert inNixosCfg {"yes"}}
-      | dfr into-df
+      | polars into-df
   )
 
   let sshNodesDfr = (
     let ssh4Table = ($sshNodes.stdout
       | from json
-      | where ('HostName' in $it) and not ($it.Host | str ends-with ".ipv6")
+      | where ("HostName" in $it) and not ($it.Host | str ends-with ".ipv6")
       | select Host HostName
       | rename Host pubIpv4
     );
 
     let ssh6Table = ($sshNodes.stdout
       | from json
-      | where ('HostName' in $it) and ($it.Host | str ends-with ".ipv6")
+      | where ("HostName" in $it) and ($it.Host | str ends-with ".ipv6")
       | select Host HostName
       | rename Host pubIpv6
-      | update Host {$in | str replace '.ipv6' ''}
-      | update pubIpv6 {if ($in == "unavailable.ipv6") { null } else { $in }}
+      | update Host {$in | str replace ".ipv6" ""}
+      | update pubIpv6 {if ($in == "unavailable.ipv6") {null} else {$in}}
       | select Host pubIpv6
     );
 
     let sshTable = ($ssh4Table
-      | dfr into-df
-      | dfr join -o ($ssh6Table | dfr into-df) Host Host
+      | polars into-df
+      | polars join -f ($ssh6Table | polars into-df) Host Host
+      | polars into-nu
+      | update Host {|i| default $i.Host_x}
+      | reject Host_x
+      | polars into-df
     );
 
     if ($sshTable | is-empty) {
-      [[Host pubIpv4 pubIpv6]; ["" "" ""]] | dfr into-df
+      [[Host pubIpv4 pubIpv6]; ["" "" ""]] | polars into-df
     }
     else {
       $sshTable
@@ -508,9 +543,13 @@ list-machines:
 
   (
     $nixosNodesDfr
-      | dfr join -o $sshNodesDfr machine Host
-      | dfr sort-by machine
-      | dfr into-nu
+      | polars join -f $sshNodesDfr machine Host
+      | polars into-nu
+      | update machine {|i| default $i.Host}
+      | reject Host
+      | polars into-df
+      | polars sort-by machine
+      | polars into-nu
       | update inNixosCfg {if $in == null {$"(ansi bg_red)Missing(ansi reset)"} else {$in}}
       | update pubIpv4 {if $in == null {$"(ansi bg_red)Missing(ansi reset)"} else {$in}}
       | update pubIpv6 {|row|
@@ -518,9 +557,9 @@ list-machines:
           (($row.inNixosCfg | str contains "Missing") or ($row.pubIpv4 | str contains "Missing"))
             and
           ($row.pubIpv6 == null)
-        ) {$"(ansi bg_red)Missing(ansi reset)"} else {$in} }
+        ) {$"(ansi bg_red)Missing(ansi reset)"} else {$in}}
       | where machine != ""
-  )
+  )'
 
 # Check mimir required config
 mimir-alertmanager-bootstrap:
@@ -922,10 +961,12 @@ start-demo:
     ERA_CMD="alonzo" \
       nix run .#job-gen-custom-node-config-data
   else
-    nix run .#job-gen-custom-node-config
+    ERA_CMD="alonzo" \
+      nix run .#job-gen-custom-node-config
   fi
 
-  nix run .#job-create-stake-pool-keys
+  ERA_CMD="alonzo" \
+    nix run .#job-create-stake-pool-keys
 
   if [ "$USE_DECRYPTION" = true ]; then
     BFT_CREDS=$(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
