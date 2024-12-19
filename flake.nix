@@ -9,8 +9,8 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
-    nix.url = "github:nixos/nix/2.24-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    nix.url = "github:nixos/nix/2.25-maintenance";
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
@@ -58,12 +58,12 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/jl/10.1.2-svc-legacy-tracing";
+      url = "github:IntersectMBO/cardano-node";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/10.1.2-svc-legacy-tracing";
+      url = "github:IntersectMBO/cardano-node";
       flake = false;
     };
 

@@ -105,7 +105,6 @@ def derive_payment_address_cli_skey(payment_key_file_str):
 def derive_stake_address(stake):
   cli_args = [
       "cardano-address",
-      "latest",
       "address",
       "stake",
       "--network-tag",
@@ -120,7 +119,6 @@ def derive_stake_address(stake):
 def derive_payment_address(payment):
   cli_args = [
       "cardano-address",
-      "latest",
       "address",
       "payment",
       "--network-tag",
@@ -135,7 +133,6 @@ def derive_payment_address(payment):
 def derive_delegation_address(payment_address, stake_vkey):
   cli_args = [
       "cardano-address",
-      "latest",
       "address",
       "delegation",
       stake_vkey

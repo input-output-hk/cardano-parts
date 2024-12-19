@@ -257,8 +257,9 @@ in
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
                     just
                     moreutils
-                    # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a non-existent pkg failure
-                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellFull
+                    # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a missing features failure
+                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell
+                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellPlugins.polars
                     patch
                     ripgrep
                     statix
@@ -287,12 +288,12 @@ in
                     ++ (with pkgs;
                       with cfgPkgs; [
                         b2sum
-                        # Currently marked as broken in nixpkgs-23.11 and nixpkgs-unstable
-                        # haskellPackages.cbor-tool
+                        haskellPackages.cbor-tool
                         bech32
                         cardano-address
                         cardano-cli
                         cardano-node
+                        cardano-testnet
                         cardano-wallet
                         db-analyser
                         db-synthesizer
@@ -303,6 +304,7 @@ in
                         # the wrapped binary to avoid cli name collision.
                         self'.packages.cardano-cli-ng
                         self'.packages.cardano-node-ng
+                        self'.packages.cardano-testnet-ng
                         self'.packages.db-analyser-ng
                         self'.packages.db-synthesizer-ng
                         self'.packages.db-truncater-ng
@@ -388,7 +390,7 @@ in
             (pkgs.writeShellApplication
               {
                 name = "menu-${id}";
-                runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellFull];
+                runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell];
 
                 text = let
                   minWidth =
@@ -447,6 +449,7 @@ in
                     selectScope id optionalString "enableHooks" "defaultHooks"
                     + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
                     + ''
+                      export NUSHELL_PLUGINS_POLARS="${getExe localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellPlugins.polars}"
                       [ -z "$NOMENU" ] && menu
                     '';
                 }

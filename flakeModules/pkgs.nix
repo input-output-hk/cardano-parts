@@ -39,6 +39,8 @@
 #   perSystem.cardano-parts.pkgs.cardano-smash-ng
 #   perSystem.cardano-parts.pkgs.cardano-submit-api
 #   perSystem.cardano-parts.pkgs.cardano-submit-api-ng
+#   perSystem.cardano-parts.pkgs.cardano-testnet
+#   perSystem.cardano-parts.pkgs.cardano-testnet-ng
 #   perSystem.cardano-parts.pkgs.cardano-tracer
 #   perSystem.cardano-parts.pkgs.cardano-wallet
 #   perSystem.cardano-parts.pkgs.cc-sign
@@ -445,6 +447,8 @@ in
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-4-0b7c281)
             (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-1-3-36871ba")
             (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-1-3-36871ba")
+            (mkPkg "cardano-testnet" caPkgs."cardano-testnet-input-output-hk-cardano-node-10-1-3-36871ba")
+            (mkPkg "cardano-testnet-ng" caPkgs."cardano-testnet-input-output-hk-cardano-node-10-1-3-36871ba")
             (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-1-3-36871ba")
             (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-1-3-36871ba")
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-11-18-9eb5f59
@@ -465,9 +469,9 @@ in
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2445-0-pre-67dc6e4 {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-e6922b8 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-490e2c9 {meta.mainProgram = "mithril-client";}))
             (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2445-0-pre-67dc6e4 {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-e6922b8 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-490e2c9 {meta.mainProgram = "mithril-signer";}))
             (mkPkg "orchestrator-cli" caPkgs.orchestrator-cli-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
             (mkPkg "tx-bundle" caPkgs.tx-bundle-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
@@ -498,6 +502,7 @@ in
               cardano-ogmios
               cardano-smash
               cardano-submit-api
+              cardano-testnet
               cardano-tracer
               cardano-wallet
               db-analyser
@@ -523,6 +528,7 @@ in
             cardano-node-ng = mkWrapper "cardano-node-ng" cfgPkgs.cardano-node-ng;
             cardano-smash-ng = mkWrapper "cardano-smash-ng" cfgPkgs.cardano-smash-ng;
             cardano-submit-api-ng = mkWrapper "cardano-submit-api-ng" cfgPkgs.cardano-submit-api-ng;
+            cardano-testnet-ng = mkWrapper "cardano-testnet-ng" cfgPkgs.cardano-testnet-ng;
             cardano-tracer-ng = mkWrapper "cardano-tracer-ng" cfgPkgs.cardano-tracer-ng;
             db-analyser-ng = mkWrapper "db-analyser-ng" cfgPkgs.db-analyser-ng;
             db-synthesizer-ng = mkWrapper "db-synthesizer-ng" cfgPkgs.db-synthesizer-ng;
