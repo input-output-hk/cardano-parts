@@ -256,21 +256,11 @@ default:
 
 # Deploy select machines
 apply *ARGS:
-  #!/usr/bin/env bash
-  set -euo pipefail
-
-  CLICOLOR_FORCE=1 colmena apply --impure --verbose --color always --on {{ARGS}} \
-    1> >(sed --regex '/.*colmena-assets-.*/ d; /.*• Added input .*/ {N;d}' >&1) \
-    2> >(sed --regex '/.*colmena-assets-.*/ d; /• Added input .*/ {N;d}' >&2)
+  colmena apply --verbose --experimental-flake-eval --on {{ARGS}}
 
 # Deploy all machines
 apply-all *ARGS:
-  #!/usr/bin/env bash
-  set -euo pipefail
-
-  CLICOLOR_FORCE=1 colmena apply --impure --verbose --color always {{ARGS}} \
-    1> >(sed --regex '/.*colmena-assets-.*/ d; /.*• Added input .*/ {N;d}' >&1) \
-    2> >(sed --regex '/.*colmena-assets-.*/ d; /• Added input .*/ {N;d}' >&2)
+  colmena apply --verbose --experimental-flake-eval {{ARGS}}
 
 # Deploy select machines with the bootstrap key
 apply-bootstrap *ARGS:
@@ -884,12 +874,7 @@ ssh-for-all *ARGS:
 
 # Ssh for select
 ssh-for-each HOSTNAMES *ARGS:
-  #!/usr/bin/env bash
-  set -euo pipefail
-
-  CLICOLOR_FORCE=1 colmena exec --impure --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}} \
-    1> >(sed --regex '/.*colmena-assets-.*/ d; /.*• Added input .*/ {N;d}' >&1) \
-    2> >(sed --regex '/.*colmena-assets-.*/ d; /• Added input .*/ {N;d}' >&2)
+  colmena exec --verbose --experimental-flake-eval --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
 
 # List machine ips based on regex pattern
 ssh-list-ips PATTERN:
