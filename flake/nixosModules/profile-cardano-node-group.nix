@@ -365,6 +365,7 @@
           startLimitIntervalSec = 900;
 
           serviceConfig = {
+            # The ~2.3% difference between M and MiB units is already included in the scaling factor
             MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
             LimitNOFILE = "65535";
 
@@ -392,7 +393,7 @@
           "-N${toString cores}"
           "-A16m"
           "-I3"
-          "-M${toString (cfg.totalMaxHeapSizeMiB / cfg.instances)}M"
+          "-M${toString (1.024 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M"
         ];
 
         systemdSocketActivation = false;
