@@ -301,6 +301,35 @@
                 SELECT 100 * (EXTRACT (epoch FROM (MAX (time) AT TIME ZONE 'UTC')) - EXTRACT (epoch FROM (MIN (time) AT TIME ZONE 'UTC')))
                   / (EXTRACT (epoch FROM (now () AT TIME ZONE 'UTC')) - EXTRACT (epoch FROM (MIN (time) AT TIME ZONE 'UTC')))
                   AS sync_percent FROM block;
+
+              -- Show the last month of voting activity by hour
+              PREPARE show_voting_by_hour AS
+                WITH
+                  cc AS (
+                    SELECT DATE_TRUNC('hour', time) AS time, count(*) AS cc_votes FROM block
+                      INNER JOIN tx ON block_id=block.id
+                      INNER JOIN voting_procedure ON tx_id=tx.id
+                      WHERE time BETWEEN (CURRENT_TIMESTAMP - INTERVAL '30 DAYS') AND CURRENT_TIMESTAMP
+                        AND voter_role='ConstitutionalCommittee'
+                      GROUP BY DATE_TRUNC('hour', time)),
+                  spo AS (
+                    SELECT DATE_TRUNC('hour', time) AS time, count(*) AS spo_votes FROM block
+                      INNER JOIN tx ON block_id=block.id
+                      INNER JOIN voting_procedure ON tx_id=tx.id
+                      WHERE time BETWEEN (CURRENT_TIMESTAMP - INTERVAL '30 DAYS') AND CURRENT_TIMESTAMP
+                        AND voter_role='SPO'
+                      GROUP BY DATE_TRUNC('hour', time)),
+                  drep AS (
+                    SELECT DATE_TRUNC('hour', time) AS time, count(*) AS drep_votes FROM block
+                      INNER JOIN tx ON block_id=block.id
+                      INNER JOIN voting_procedure ON tx_id=tx.id
+                      WHERE time BETWEEN (CURRENT_TIMESTAMP - INTERVAL '30 DAYS') AND CURRENT_TIMESTAMP
+                        AND voter_role='DRep'
+                      GROUP BY DATE_TRUNC('hour', time))
+                select COALESCE(cc.time, spo.time, drep.time) AS time, cc.cc_votes, spo.spo_votes, drep.drep_votes FROM cc
+                  FULL OUTER JOIN spo ON cc.time = spo.time
+                  FULL OUTER JOIN drep ON COALESCE(cc.time, spo.time) = drep.time
+                  ORDER BY time DESC;
             END IF;
           END IF;
         END$$;
