@@ -84,7 +84,11 @@ jobs:
             rm -rf workbench
             for i in ${JOBS[@]}; do
               echo "Running nix job .#$i"
-              nix run ".#$i"
+              if [ "$UNSTABLE" = "true" ] && [ "$i" = "job-gen-custom-node-config-data" ]; then
+                ERA_CMD="conway" nix run ".#$i"
+              else
+                nix run ".#$i"
+              fi
             done
           }
 
