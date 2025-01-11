@@ -880,15 +880,23 @@ in {
               fi
 
               # Generate stake registration and delegation certificate
+              if [ "$ERA_CMD" = "conway" ]; then
+                eraArgs=("--key-reg-deposit-amt" "$STAKE_ADDRESS_DEPOSIT")
+              else
+                eraArgs=()
+              fi
+
               "''${CARDANO_CLI[@]}" stake-address registration-certificate \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
-                --out-file "$POOL_NAME"-owner-registration.cert
+                --out-file "$POOL_NAME"-owner-registration.cert \
+                "''${eraArgs[@]}"
 
               # Include the shared wallet pool rewards registration certificate only once
               if [ "$i" = "0" ]; then
                 "''${CARDANO_CLI[@]}" stake-address registration-certificate \
                   --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
-                  --out-file "$POOL_NAME"-reward-registration.cert
+                  --out-file "$POOL_NAME"-reward-registration.cert \
+                  "''${eraArgs[@]}"
               fi
 
               # Generate stake delegation certificate
