@@ -1262,6 +1262,75 @@ in {
           '';
         };
 
+        job-retire-bootstrap-pool = writeShellApplication {
+          name = "job-retire-bootstrap-pool";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Inputs:
+            #   [$DEBUG]
+            #   [$BOOTSTRAP_POOL_DIR]
+            #   [$BOOTSTRAP_POOL_COLD_KEY]
+            #   [$BOOTSTRAP_POOL_PAYMENT_KEY]
+            #   [$BOOTSTRAP_POOL_STAKING_KEY]
+            #   [$EPOCH]
+            #   [$ERA_CMD]
+            #   $RICH_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_DECRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            EPOCH=''${EPOCH:-1}
+            BOOTSTRAP_POOL_DIR=''${BOOTSTRAP_POOL_DIR:-bootstrap-pool}
+
+            [ -z "''${BOOTSTRAP_POOL_COLD_KEY:-}" ] && BOOTSTRAP_POOL_COLD_KEY="$BOOTSTRAP_POOL_DIR/cold"
+            [ -z "''${BOOTSTRAP_POOL_PAYMENT_KEY:-}" ] && BOOTSTRAP_POOL_PAYMENT_KEY="$BOOTSTRAP_POOL_DIR/payment"
+            [ -z "''${BOOTSTRAP_POOL_STAKING_KEY:-}" ] && BOOTSTRAP_POOL_STAKING_KEY="$BOOTSTRAP_POOL_DIR/staking"
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            # There is only a single shelley delegator UTxO created as part of
+            # the job-gen-custom-node-config-data-ng workflow.
+            UTXO=$(
+              "''${CARDANO_CLI[@]}" query utxo \
+                --address "$(eval cat "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.addr")")" \
+                --testnet-magic "$TESTNET_MAGIC" \
+                --out-file /dev/stdout \
+              | jq -r 'to_entries[0].key'
+            )
+
+            # Apparently, the genesis-declared delegator stake key cannot be
+            # registered, deregistered or have rewards withdrawn, so we
+            # simply transfer the existing UTxO associated with the payment
+            # address and leave the typically small amount of rewards behind.
+            "''${CARDANO_CLI[@]}" stake-pool deregistration-certificate \
+              --cold-verification-key-file "$(decrypt_check "$BOOTSTRAP_POOL_COLD_KEY.vkey")" \
+              --epoch "$EPOCH" \
+              --out-file pool-dereg.cert
+
+            "''${CARDANO_CLI[@]}" transaction build \
+              --tx-in "$UTXO" \
+              --certificate-file pool-dereg.cert \
+              --change-address "$(eval cat "$(decrypt_check "$RICH_KEY.addr")")" \
+              --out-file tx.raw
+
+            "''${CARDANO_CLI[@]}" transaction sign \
+              --tx-body-file tx.raw \
+              --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_COLD_KEY.skey")" \
+              --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.skey")" \
+              --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_STAKING_KEY.skey")" \
+              --out-file tx.signed
+
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
+              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx.signed
+            fi
+          '';
+        };
+
         job-rotate-kes-pools = writeShellApplication {
           name = "job-rotate-kes-pools";
           runtimeInputs = stdPkgs;
