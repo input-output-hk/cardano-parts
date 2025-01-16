@@ -1331,17 +1331,17 @@ in {
               --certificate-file pool-dereg.cert \
               --fee "$FEE" \
               --tx-out "$CHANGE_ADDRESS+$CHANGE" \
-              --out-file tx.raw
+              --out-file retire-bootstrap.txbody
 
             "''${CARDANO_CLI[@]}" transaction sign \
-              --tx-body-file tx.raw \
+              --tx-body-file retire-bootstrap.txbody \
               --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_COLD_KEY.skey")" \
               --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.skey")" \
               --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_STAKING_KEY.skey")" \
-              --out-file tx.signed
+              --out-file retire-bootstrap.txsigned
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx.signed
+              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file retire-bootstrap.txsigned
             fi
           '';
         };
