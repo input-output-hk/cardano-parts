@@ -1274,12 +1274,14 @@ in {
             #   [$BOOTSTRAP_POOL_STAKING_KEY]
             #   [$EPOCH]
             #   [$ERA_CMD]
+            #   [$FEE]
             #   $RICH_KEY
             #   [$SUBMIT_TX]
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
             #   [$USE_SHELL_BINS]
+            #   [$UTXO]
 
             [ -n "''${DEBUG:-}" ] && set -x
 
@@ -1290,18 +1292,30 @@ in {
             [ -z "''${BOOTSTRAP_POOL_PAYMENT_KEY:-}" ] && BOOTSTRAP_POOL_PAYMENT_KEY="$BOOTSTRAP_POOL_DIR/payment"
             [ -z "''${BOOTSTRAP_POOL_STAKING_KEY:-}" ] && BOOTSTRAP_POOL_STAKING_KEY="$BOOTSTRAP_POOL_DIR/staking"
 
+            if [ -z "''${FEE:-}" ]; then
+              echo "Fee for retiring the bootstrap pool tx is defaulting to 300000 lovelace"
+              FEE="300000"
+            fi
+
             ${secretsFns}
             ${selectCardanoCli}
 
             # There is only a single shelley delegator UTxO created as part of
             # the job-gen-custom-node-config-data-ng workflow.
-            UTXO=$(
-              "''${CARDANO_CLI[@]}" query utxo \
-                --address "$(eval cat "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.addr")")" \
-                --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
-              | jq -r 'to_entries[0].key'
-            )
+            if [ -z "''${UTXO:-}" ]; then
+              UTXO=$(
+                "''${CARDANO_CLI[@]}" query utxo \
+                  --address "$(eval cat "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.addr")")" \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --out-file /dev/stdout \
+                | jq -r 'to_entries[]
+                  | [{"txin": .key, "address": .value.address, "amount": .value.value.lovelace}][0]'
+              )
+            fi
+            TXIN=$(jq -r '.txin' <<< "$UTXO")
+            TXVAL=$(jq -r '.amount' <<< "$UTXO")
+            CHANGE=$((TXVAL - FEE))
+            CHANGE_ADDRESS=$(eval cat "$(decrypt_check "$RICH_KEY.addr")")
 
             # Apparently, the genesis-declared delegator stake key cannot be
             # registered, deregistered or have rewards withdrawn, so we
@@ -1312,10 +1326,11 @@ in {
               --epoch "$EPOCH" \
               --out-file pool-dereg.cert
 
-            "''${CARDANO_CLI[@]}" transaction build \
-              --tx-in "$UTXO" \
+            "''${CARDANO_CLI[@]}" transaction build-raw \
+              --tx-in "$TXIN" \
               --certificate-file pool-dereg.cert \
-              --change-address "$(eval cat "$(decrypt_check "$RICH_KEY.addr")")" \
+              --fee "$FEE" \
+              --tx-out "$CHANGE_ADDRESS+$CHANGE" \
               --out-file tx.raw
 
             "''${CARDANO_CLI[@]}" transaction sign \

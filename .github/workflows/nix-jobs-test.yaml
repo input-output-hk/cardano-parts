@@ -45,6 +45,8 @@ jobs:
 
           # Other params
           export BYRON_SIGNING_KEY="$KEY_DIR/utxo-keys/shelley.000.skey"
+          export CARDANO_NODE_NETWORK_ID="42"
+          export CARDANO_NODE_SOCKET_PATH="$DATA_DIR/node.socket"
           export ERA_CMD="alonzo"
           export MAJOR_VERSION="7"
           export NUM_GENESIS_KEYS="3"
@@ -76,6 +78,14 @@ jobs:
             "job-register-stake-pools"
             "job-delegate-rewards-stake-key"
             "job-update-proposal-hard-fork"
+          )
+
+          JOB_SEQ_NG=(
+            "job-gen-custom-node-config-data-ng"
+            "job-create-stake-pool-keys"
+            "job-register-stake-pools"
+            "job-delegate-rewards-stake-key"
+            "job-retire-bootstrap-pool"
           )
 
           RUN_TESTS() {
@@ -110,3 +120,11 @@ jobs:
 
           echo "Running sequence tests on pre-release..."
           RUN_TESTS "${JOB_SEQ[@]}"
+
+          echo "Running next-gen sequence tests with pre-release versioning..."
+          set -x
+          export BOOTSTRAP_POOL_DIR="$KEY_DIR/bootstrap-pool"
+          export ERA_CMD="conway"
+          export RICH_KEY="$KEY_DIR/utxo-keys/rich-utxo"
+          set +x
+          RUN_TESTS "${JOB_SEQ_NG[@]}"
