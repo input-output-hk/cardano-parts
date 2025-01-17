@@ -340,6 +340,7 @@ in {
             #   [$TEMPLATE_DIR]
             #   [$TESTNET_MAGIC]
             #   [$UNSTABLE]
+            #   [$UNSTABLE_LIB]
             #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
@@ -385,22 +386,26 @@ in {
               --start-time "$START_TIME" \
               --out-dir "$GENESIS_DIR"
 
-            # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide a byron genesis
-            "''${CARDANO_CLI_NO_ERA[@]}" byron genesis genesis \
-              --protocol-magic "$TESTNET_MAGIC" \
-              --start-time "$(date +%s -d "$START_TIME")" \
-              --k "$SECURITY_PARAM" \
-              --n-poor-addresses 0 \
-              --n-delegate-addresses "$NUM_GENESIS_KEYS" \
-              --total-balance "$MAX_SUPPLY" \
-              --delegate-share 0 \
-              --avvm-entry-count 0 \
-              --avvm-entry-balance 0 \
-              --protocol-parameters-file "$TEMPLATE_DIR/byron.json" \
-              --genesis-output-dir "$GENESIS_DIR/byron-config"
+            # Remove when node release is > 10.1.4
+            if [ "''${UNSTABLE:-}" != "true" ]; then
+              # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide a byron genesis
+              # whereas -ng now does
+              "''${CARDANO_CLI_NO_ERA[@]}" byron genesis genesis \
+                --protocol-magic "$TESTNET_MAGIC" \
+                --start-time "$(date +%s -d "$START_TIME")" \
+                --k "$SECURITY_PARAM" \
+                --n-poor-addresses 0 \
+                --n-delegate-addresses "$NUM_GENESIS_KEYS" \
+                --total-balance "$MAX_SUPPLY" \
+                --delegate-share 0 \
+                --avvm-entry-count 0 \
+                --avvm-entry-balance 0 \
+                --protocol-parameters-file "$TEMPLATE_DIR/byron.json" \
+                --genesis-output-dir "$GENESIS_DIR/byron-config"
 
-            # Move the byron genesis into the same dir as shelley, alonzo, conway genesis files
-            mv "$GENESIS_DIR/byron-config/genesis.json" "$GENESIS_DIR/byron-genesis.json"
+              # Move the byron genesis into the same dir as shelley, alonzo, conway genesis files
+              mv "$GENESIS_DIR/byron-config/genesis.json" "$GENESIS_DIR/byron-genesis.json"
+            fi
 
             # If initial funds is explicitly declared for the rich key, set it here
             if [ -n "''${INITIAL_FUNDS:-}" ]; then
@@ -459,8 +464,17 @@ in {
                 mv "genesis$((i + 1))/key.vkey" "shelley.$(printf "%03d" "$i").vkey"
                 rmdir "genesis$((i + 1))/"
 
-                mv ../byron-config/genesis-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
+
+                # Remove when node release is > 10.1.4
+                if [ "''${UNSTABLE:-}" != "true" ]; then
+                  mv ../byron-config/genesis-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
+                fi
               done
+
+              # Remove if scope when node release is > 10.1.4
+              if [ "''${UNSTABLE:-}" = "true" ]; then
+                mv ../byron-gen-command/genesis-keys.000.key byron.000.key
+              fi
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
@@ -476,10 +490,20 @@ in {
                 mv "delegate$((i + 1))/vrf.vkey" "shelley.$(printf "%03d" "$i").vrf.vkey"
                 rmdir "delegate$((i + 1))/"
 
-                mv ../byron-config/delegate-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
-                mv ../byron-config/delegation-cert."$(printf "%03d" "$i")".json "byron.$(printf "%03d" "$i").cert.json"
+                # Remove when node release is > 10.1.4
+                if [ "''${UNSTABLE:-}" != "true" ]; then
+                  mv ../byron-config/delegate-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
+                  mv ../byron-config/delegation-cert."$(printf "%03d" "$i")".json "byron.$(printf "%03d" "$i").cert.json"
+                fi
               done
-              rmdir ../byron-config/
+              # Remove if scope and first case when node release is > 10.1.4
+              if [ "''${UNSTABLE:-}" != "true" ]; then
+                rmdir ../byron-config/
+              else
+                mv ../byron-gen-command/delegate-keys.000.key byron.000.key
+                mv ../byron-gen-command/delegation-cert.000.json byron.000.cert.json
+                rmdir ../byron-gen-command/
+              fi
             popd &> /dev/null
 
             # Transform the rich key into a create-cardano compatible layout
@@ -512,6 +536,257 @@ in {
               mv utxo-keys envs/"$ENV"/
               mv node-config.json ./*-genesis.json topology.json rundir/
             popd &> /dev/null
+
+            fd --type file . "$GENESIS_DIR/envs/$ENV"/ --exec bash -c 'encrypt_check {}'
+          '';
+        };
+
+        job-gen-custom-node-config-data-ng = writeShellApplication {
+          name = "job-gen-custom-node-config-data-ng";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ENV]
+            #   [$ERA_CMD]
+            #   [$GENESIS_DIR]
+            #   [$INITIAL_FUNDS]
+            #   [$MAX_SUPPLY]
+            #   [$NUM_GENESIS_KEYS]
+            #   [$SECURITY_PARAM]
+            #   [$SLOT_LENGTH]
+            #   [$START_TIME]
+            #   [$TEMPLATE_DIR]
+            #   [$TESTNET_MAGIC]
+            #   [$UNSTABLE]
+            #   [$UNSTABLE_LIB]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
+            export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
+            export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
+            export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
+            export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+
+            if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
+              export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
+            else
+              export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix}/cardano-lib/testnet-template"}
+            fi
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            ENV="''${ENV:-custom}"
+            ACTIVE_SLOTS_COEFF="0.050"
+            EPOCH_LENGTH=$(perl -E "say ((10 * $SECURITY_PARAM) / $ACTIVE_SLOTS_COEFF)")
+            SLOT_LENGTH_SEC=$(perl -E "say ($SLOT_LENGTH / 1000)")
+
+            # Maintain genesis available funds similar to prior testnets
+            INITIAL_FUNDS=''${INITIAL_FUNDS:-30000000000000000}
+
+            # Cardano-cli throws an error above this amount
+            MAX_SUPPLY=''${MAX_SUPPLY:-45000000000000000}
+
+            # Bootstrap stakepool delegation. Note that create-testnet-data
+            # will only delegate a fraction of this.  However, the difference
+            # is irrelevant as we typically retire the bootstrap stakepool
+            # once our standard replacement stakepools are spun up.
+            DELEGATED_SUPPLY=''${DELEGATED_SUPPLY:-1000000000}
+
+            # Use the new create-testnet-data cli cmd.
+            # One pool and delegator are required for the bootstrap pool.
+            mkdir -p "$GENESIS_DIR"
+            "''${CARDANO_CLI[@]}" genesis create-testnet-data \
+              --genesis-keys "$NUM_GENESIS_KEYS" \
+              --pools 1 \
+              --stake-delegators 1 \
+              --utxo-keys 1 \
+              --total-supply "$MAX_SUPPLY" \
+              --delegated-supply "$DELEGATED_SUPPLY" \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --spec-shelley "$TEMPLATE_DIR/shelley.json" \
+              --spec-alonzo "$TEMPLATE_DIR/alonzo.json" \
+              --spec-conway "$TEMPLATE_DIR/conway.json" \
+              --start-time "$START_TIME" \
+              --out-dir "$GENESIS_DIR"
+
+            # There is no create-testnet-data spec arg for byron yet, and no
+            # corresponding byron cli options, so purge the auto-generated
+            # non-avvm utxo manually.
+            jq --sort-keys \
+              '. += {"nonAvvmBalances":{}}' \
+              < "$GENESIS_DIR/byron-genesis.json" \
+              | sponge "$GENESIS_DIR/byron-genesis.json"
+
+            # Since we remove the byron non-avvm utxo above, we
+            # can also delete the corresponding byron delegator key
+            # for the bootstrap pool.
+            rm -vf "$GENESIS_DIR"/pools-keys/pool1/byron-*
+
+            # Let's also move the bootstrap key files to a more recognizable dir name
+            # and also merge the stake-delegators directory here.
+            mv "$GENESIS_DIR/pools-keys/pool1" "$GENESIS_DIR/bootstrap-pool"
+            mv "$GENESIS_DIR"/stake-delegators/delegator1/* "$GENESIS_DIR/bootstrap-pool/"
+            rm -rvf "$GENESIS_DIR/pools-keys" "$GENESIS_DIR/stake-delegators"
+
+            # For reference, create a payment address, stake address and rewards address files
+            "''${CARDANO_CLI[@]}" address build \
+              --payment-verification-key-file "$GENESIS_DIR/bootstrap-pool/payment.vkey" \
+              --staking-verification-key-file "$GENESIS_DIR/bootstrap-pool/staking.vkey" \
+              --testnet-magic "$TESTNET_MAGIC" \
+            > "$GENESIS_DIR/bootstrap-pool/payment.addr"
+
+            "''${CARDANO_CLI[@]}" stake-address build \
+              --staking-verification-key-file "$GENESIS_DIR/bootstrap-pool/staking.vkey" \
+              --testnet-magic "$TESTNET_MAGIC" \
+            > "$GENESIS_DIR/bootstrap-pool/staking.addr"
+
+            # By default the rewards go to the staking key; this key remains unregistered
+            "''${CARDANO_CLI[@]}" stake-address build \
+              --staking-verification-key-file "$GENESIS_DIR/bootstrap-pool/staking-reward.vkey" \
+              --testnet-magic "$TESTNET_MAGIC" \
+            > "$GENESIS_DIR/bootstrap-pool/staking-reward.addr"
+
+            chmod 0600 "$GENESIS_DIR"/bootstrap-pool/*.addr
+
+            # Generate a bootstrap pool bulk credentials file
+            pushd "$GENESIS_DIR/bootstrap-pool" &> /dev/null
+              cat opcert.cert vrf.skey kes.skey \
+                | jq -s \
+                | jq -s > bulk.creds.bootstrap.json
+              chmod 0600 bulk.creds.bootstrap.json
+            popd &> /dev/null
+
+            # Set the initial funds explicitly declared for the rich key
+            jq ".initialFunds[.initialFunds | to_entries | sort_by(.value)[-1].key] |= $INITIAL_FUNDS" \
+              < "$GENESIS_DIR/shelley-genesis.json" \
+              | sponge "$GENESIS_DIR/shelley-genesis.json"
+
+            # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide args for these
+            jq --sort-keys \
+              --argjson jsonUpdates "{
+                \"activeSlotsCoeff\": $ACTIVE_SLOTS_COEFF,
+                \"epochLength\": $EPOCH_LENGTH,
+                \"securityParam\": $SECURITY_PARAM,
+                \"slotLength\": $SLOT_LENGTH_SEC}" \
+              '. += $jsonUpdates | .protocolParams.protocolVersion = {"major": 9, "minor": 0}' \
+              < "$GENESIS_DIR/shelley-genesis.json" \
+              | sponge "$GENESIS_DIR/shelley-genesis.json"
+
+            # Obtain a base node config and topology
+            cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
+            cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
+            chmod +w "$GENESIS_DIR/node-config.json" "$GENESIS_DIR/topology.json"
+
+            # Set the node config for entering at Conway era
+            jq --sort-keys \
+              --argjson jsonUpdates '{
+                "LastKnownBlockVersion-Major": 9,
+                "LastKnownBlockVersion-Minor": 0,
+                "LastKnownBlockVersion-Alt": 0,
+                "TestAllegraHardForkAtEpoch": 0,
+                "TestAlonzoHardForkAtEpoch": 0,
+                "TestBabbageHardForkAtEpoch": 0,
+                "TestConwayHardForkAtEpoch": 0,
+                "TestMaryHardForkAtEpoch": 0,
+                "TestShelleyHardForkAtEpoch": 0}' \
+              '. += $jsonUpdates' \
+              < "$GENESIS_DIR/node-config.json" \
+              | sponge "$GENESIS_DIR/node-config.json"
+
+            # Also prettify the other json files prior to hash calcs
+            for i in byron-genesis alonzo-genesis conway-genesis topology; do
+              jq --sort-keys < "$GENESIS_DIR/$i.json" | sponge "$GENESIS_DIR/$i.json"
+            done
+
+            # Calculate genesis hashes and inject them into the node config file
+            HASH_BYRON=$("''${CARDANO_CLI_NO_ERA[@]}" byron genesis print-genesis-hash --genesis-json "$GENESIS_DIR/byron-genesis.json")
+            HASH_SHELLEY=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/shelley-genesis.json")
+            HASH_ALONZO=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/alonzo-genesis.json")
+            HASH_CONWAY=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/conway-genesis.json")
+            jq --sort-keys \
+              --arg hashByron "$HASH_BYRON" \
+              --arg hashShelley "$HASH_SHELLEY" \
+              --arg hashAlonzo "$HASH_ALONZO" \
+              --arg hashConway "$HASH_CONWAY" \
+              '. += {
+                ByronGenesisHash: $hashByron,
+                ShelleyGenesisHash: $hashShelley,
+                AlonzoGenesisHash: $hashAlonzo,
+                ConwayGenesisHash: $hashConway
+              }' \
+              < "$GENESIS_DIR/node-config.json" \
+              | sponge "$GENESIS_DIR/node-config.json"
+
+            # Remove unneeded readmes
+            fd -e md . "$GENESIS_DIR" -x rm -v
+
+            # Transform the genesis key subdirs into a create-cardano compatible layout
+            pushd "$GENESIS_DIR/genesis-keys" &> /dev/null
+              for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
+                mv "genesis$((i + 1))/key.skey" "shelley.$(printf "%03d" "$i").skey"
+                mv "genesis$((i + 1))/key.vkey" "shelley.$(printf "%03d" "$i").vkey"
+                rmdir -v "genesis$((i + 1))/"
+              done
+
+              mv ../byron-gen-command/genesis-keys.000.key byron.000.key
+            popd &> /dev/null
+
+            # Transform the delegate key subdirs into a create-cardano compatible layout
+            pushd "$GENESIS_DIR/delegate-keys" &> /dev/null
+              for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
+                mv "delegate$((i + 1))/kes.skey" "shelley.$(printf "%03d" "$i").kes.skey"
+                mv "delegate$((i + 1))/kes.vkey" "shelley.$(printf "%03d" "$i").kes.vkey"
+                mv "delegate$((i + 1))/key.skey" "shelley.$(printf "%03d" "$i").skey"
+                mv "delegate$((i + 1))/key.vkey" "shelley.$(printf "%03d" "$i").vkey"
+                mv "delegate$((i + 1))/opcert.cert" "shelley.$(printf "%03d" "$i").opcert.json"
+                mv "delegate$((i + 1))/opcert.counter" "shelley.$(printf "%03d" "$i").counter.json"
+                mv "delegate$((i + 1))/vrf.skey" "shelley.$(printf "%03d" "$i").vrf.skey"
+                mv "delegate$((i + 1))/vrf.vkey" "shelley.$(printf "%03d" "$i").vrf.vkey"
+                rmdir -v "delegate$((i + 1))/"
+              done
+            popd &> /dev/null
+
+            # Transform the rich key into a create-cardano compatible layout
+            mv "$GENESIS_DIR/utxo-keys/utxo1/utxo.skey" "$GENESIS_DIR/utxo-keys/rich-utxo.skey"
+            mv "$GENESIS_DIR/utxo-keys/utxo1/utxo.vkey" "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
+            rmdir -v "$GENESIS_DIR/utxo-keys/utxo1"
+
+            # Determine and save the rich key address
+            "''${CARDANO_CLI[@]}" address build \
+              --payment-verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey" \
+              --testnet-magic "$TESTNET_MAGIC" \
+              > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
+              chmod 0600 "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
+
+            # Generate a bft bulk credentials file
+            pushd "$GENESIS_DIR/delegate-keys" &> /dev/null
+              (for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
+                cat shelley.00"$i".{opcert.json,vrf.skey,kes.skey} | jq -s
+              done) | jq -s > bulk.creds.bft.json
+              chmod 0600 bulk.creds.bft.json
+            popd &> /dev/null
+
+            # Shape the genesis output directory to match secrets layout expected
+            # by cardano-parts for environments and groups. This makes for easier
+            # import of new environment secrets.
+            pushd "$GENESIS_DIR" &> /dev/null
+              mkdir -p envs/"$ENV" rundir
+              mv bootstrap-pool envs/"$ENV"/
+              mv delegate-keys envs/"$ENV"/
+              mv genesis-keys envs/"$ENV"/
+              mv utxo-keys envs/"$ENV"/
+              mv node-config.json ./*-genesis.json topology.json rundir/
+            popd &> /dev/null
+
+            # Clean up remaining files left by create-testnet-data
+            rm -vf "$GENESIS_DIR/byron.genesis.spec.json"
+            rmdir -v "$GENESIS_DIR/byron-gen-command"
 
             fd --type file . "$GENESIS_DIR/envs/$ENV"/ --exec bash -c 'encrypt_check {}'
           '';
@@ -856,15 +1131,23 @@ in {
               fi
 
               # Generate stake registration and delegation certificate
+              if [ "$ERA_CMD" = "conway" ]; then
+                eraArgs=("--key-reg-deposit-amt" "$STAKE_ADDRESS_DEPOSIT")
+              else
+                eraArgs=()
+              fi
+
               "''${CARDANO_CLI[@]}" stake-address registration-certificate \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
-                --out-file "$POOL_NAME"-owner-registration.cert
+                --out-file "$POOL_NAME"-owner-registration.cert \
+                "''${eraArgs[@]}"
 
               # Include the shared wallet pool rewards registration certificate only once
               if [ "$i" = "0" ]; then
                 "''${CARDANO_CLI[@]}" stake-address registration-certificate \
                   --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
-                  --out-file "$POOL_NAME"-reward-registration.cert
+                  --out-file "$POOL_NAME"-reward-registration.cert \
+                  "''${eraArgs[@]}"
               fi
 
               # Generate stake delegation certificate
@@ -975,6 +1258,90 @@ in {
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "''${POOLS[0]}"-tx-pool-reg.txsigned
+            fi
+          '';
+        };
+
+        job-retire-bootstrap-pool = writeShellApplication {
+          name = "job-retire-bootstrap-pool";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Inputs:
+            #   [$DEBUG]
+            #   [$BOOTSTRAP_POOL_DIR]
+            #   [$BOOTSTRAP_POOL_COLD_KEY]
+            #   [$BOOTSTRAP_POOL_PAYMENT_KEY]
+            #   [$BOOTSTRAP_POOL_STAKING_KEY]
+            #   [$EPOCH]
+            #   [$ERA_CMD]
+            #   [$FEE]
+            #   $RICH_KEY
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_DECRYPTION]
+            #   [$USE_SHELL_BINS]
+            #   [$UTXO]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            EPOCH=''${EPOCH:-1}
+            BOOTSTRAP_POOL_DIR=''${BOOTSTRAP_POOL_DIR:-bootstrap-pool}
+
+            [ -z "''${BOOTSTRAP_POOL_COLD_KEY:-}" ] && BOOTSTRAP_POOL_COLD_KEY="$BOOTSTRAP_POOL_DIR/cold"
+            [ -z "''${BOOTSTRAP_POOL_PAYMENT_KEY:-}" ] && BOOTSTRAP_POOL_PAYMENT_KEY="$BOOTSTRAP_POOL_DIR/payment"
+            [ -z "''${BOOTSTRAP_POOL_STAKING_KEY:-}" ] && BOOTSTRAP_POOL_STAKING_KEY="$BOOTSTRAP_POOL_DIR/staking"
+
+            if [ -z "''${FEE:-}" ]; then
+              echo "Fee for retiring the bootstrap pool tx is defaulting to 300000 lovelace"
+              FEE="300000"
+            fi
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            # There is only a single shelley delegator UTxO created as part of
+            # the job-gen-custom-node-config-data-ng workflow.
+            if [ -z "''${UTXO:-}" ]; then
+              UTXO=$(
+                "''${CARDANO_CLI[@]}" query utxo \
+                  --address "$(eval cat "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.addr")")" \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --out-file /dev/stdout \
+                | jq -r 'to_entries[]
+                  | [{"txin": .key, "address": .value.address, "amount": .value.value.lovelace}][0]'
+              )
+            fi
+            TXIN=$(jq -r '.txin' <<< "$UTXO")
+            TXVAL=$(jq -r '.amount' <<< "$UTXO")
+            CHANGE=$((TXVAL - FEE))
+            CHANGE_ADDRESS=$(eval cat "$(decrypt_check "$RICH_KEY.addr")")
+
+            # Apparently, the genesis-declared delegator stake key cannot be
+            # registered, deregistered or have rewards withdrawn, so we
+            # simply transfer the existing UTxO associated with the payment
+            # address and leave the typically small amount of rewards behind.
+            "''${CARDANO_CLI[@]}" stake-pool deregistration-certificate \
+              --cold-verification-key-file "$(decrypt_check "$BOOTSTRAP_POOL_COLD_KEY.vkey")" \
+              --epoch "$EPOCH" \
+              --out-file pool-dereg.cert
+
+            "''${CARDANO_CLI[@]}" transaction build-raw \
+              --tx-in "$TXIN" \
+              --certificate-file pool-dereg.cert \
+              --fee "$FEE" \
+              --tx-out "$CHANGE_ADDRESS+$CHANGE" \
+              --out-file retire-bootstrap.txbody
+
+            "''${CARDANO_CLI[@]}" transaction sign \
+              --tx-body-file retire-bootstrap.txbody \
+              --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_COLD_KEY.skey")" \
+              --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.skey")" \
+              --signing-key-file "$(decrypt_check "$BOOTSTRAP_POOL_STAKING_KEY.skey")" \
+              --out-file retire-bootstrap.txsigned
+
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
+              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file retire-bootstrap.txsigned
             fi
           '';
         };

@@ -5,7 +5,7 @@
     auth-keys-hub.url = "github:input-output-hk/auth-keys-hub";
     auth-keys-hub.inputs.nixpkgs.follows = "nixpkgs";
     colmena.inputs.nixpkgs.follows = "nixpkgs";
-    colmena.url = "github:zhaofengli/colmena/v0.4.0";
+    colmena.url = "github:zhaofengli/colmena";
     flake-parts.url = "github:hercules-ci/flake-parts";
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";

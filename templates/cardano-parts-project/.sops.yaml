@@ -50,7 +50,7 @@ creation_rules:
 
   # -------------------------------------------------------
   # State-demo functionality test
-  - path_regex: state-demo/(envs|groups)/.*$
+  - path_regex: state-demo(-ng)?/(envs|groups)/.*$
     key_groups:
     - age:
       - *sre
