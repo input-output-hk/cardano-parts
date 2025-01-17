@@ -48,7 +48,7 @@ If needed, a new secret can be generated with `age-keygen`.
 
 ## SSH
 
-If your credentials are correct, and the cluster is already bootstrapped with
+If your credentials are correct, and the cluster is already provisioned with
 openTofu infrastructure, you will be able to access SSH after creating an
 `./.ssh_config` using:
 
@@ -56,13 +56,22 @@ openTofu infrastructure, you will be able to access SSH after creating an
 
 With that you can then get started with:
 
-    # Listing machines
+    # List machines
     just list-machines
 
-    # Ssh to machines
+    # Ssh to a newly provisioned machine
+    just ssh-bootstrap $MACHINE
+
+    # Deploy to a newly provisioned machine
+    just apply-bootstrap $MACHINE
+
+    # Ssh to a machine already deployed
     just ssh $MACHINE
 
-    # Finding other operations recipes to use
+    # Deploy to a machine already deployed
+    just apply $MACHINE
+
+    # Find many other operations recipes to use
     just --list
 
 ## Cloudformation
@@ -112,7 +121,11 @@ To deploy changes on an OS level, we use the excellent
 
 All colmena configuration is in `./flake/colmena.nix`.
 
-To deploy a machine:
+To deploy a machine for the first time:
+
+    just apply-bootstrap $MACHINE
+
+To subsequently deploy a machine:
 
     just apply $MACHINE
 
@@ -130,4 +143,4 @@ Or simply decrypt a KMS or sops age secret with:
 
     sops -d ./secrets/github-token.enc
 
-See also the `just sops-<encrypt|decrypt>-binary` recipes for encrypting or decrypting age binary blobs.
+See also the `just sops-<encrypt|decrypt>-binary` and similar recipes for encrypting or decrypting age binary blobs.
