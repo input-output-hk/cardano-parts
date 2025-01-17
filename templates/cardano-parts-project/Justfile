@@ -942,8 +942,9 @@ start-demo:
   export SECURITY_PARAM=8
   export SLOT_LENGTH=100
   export START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds")
+
   if [ "$USE_CREATE_TESTNET_DATA" = true ]; then
-    ERA_CMD="alonzo" \
+    ERA_CMD="conway" \
       nix run .#job-gen-custom-node-config-data
   else
     ERA_CMD="alonzo" \
@@ -1025,6 +1026,107 @@ start-demo:
     ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
   echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
+  sleep 160
+  echo
+
+  just query-tip demo
+  echo
+  echo "Finished sequence..."
+  echo
+
+# Start a fork to conway demo using create-testnet-data-ng job
+start-demo-ng:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  just stop-node demo
+
+  {{stateDir}}
+
+  echo "Cleaning state-demo-ng..."
+  if [ -d state-demo-ng ]; then
+    chmod -R +w state-demo-ng
+    rm -rf state-demo-ng
+  fi
+
+  echo "Generating state-demo-ng config..."
+
+  export ENV=custom
+  export GENESIS_DIR=state-demo-ng
+  export KEY_DIR=state-demo-ng/envs/custom
+  export DATA_DIR=state-demo-ng/rundir
+
+  export CARDANO_NODE_SOCKET_PATH="$STATEDIR/node-demo.socket"
+  export TESTNET_MAGIC=42
+
+  export NUM_GENESIS_KEYS=3
+  export POOL_NAMES="sp-1 sp-2 sp-3"
+  export STAKE_POOL_DIR=state-demo-ng/groups/stake-pools
+
+  export BULK_CREDS=state-demo-ng/bulk.creds.all.json
+  export PAYMENT_KEY=state-demo-ng/envs/custom/utxo-keys/rich-utxo
+
+  export UNSTABLE=true
+  export UNSTABLE_LIB=true
+  export USE_ENCRYPTION=true
+  export USE_DECRYPTION=true
+  export USE_NODE_CONFIG_BP=false
+  export USE_CREATE_TESTNET_DATA=true
+  export DEBUG=true
+
+  export SECURITY_PARAM=8
+  export SLOT_LENGTH=100
+  export START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds")
+
+  export ERA_CMD=conway
+
+  nix run .#job-gen-custom-node-config-data-ng
+
+  nix run .#job-create-stake-pool-keys
+
+  if [ "$USE_DECRYPTION" = true ]; then
+    BOOTSTRAP_CREDS=$(just sops-decrypt-binary "$KEY_DIR"/bootstrap-pool/bulk.creds.bootstrap.json)
+    POOL_CREDS=$(just sops-decrypt-binary "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+  else
+    BOOTSTRAP_CREDS=$(cat "$KEY_DIR"/bootstrap-pool/bulk.creds.bootstrap.json)
+    POOL_CREDS=$(cat "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
+  fi
+  (
+    jq -r '.[]' <<< "$BOOTSTRAP_CREDS"
+    jq -r '.[]' <<< "$POOL_CREDS"
+  ) | jq -s > "$BULK_CREDS"
+
+  echo "Start cardano-node in the background. Run \"just stop-node demo\" to stop"
+  NODE_CONFIG="$DATA_DIR/node-config.json" \
+    NODE_TOPOLOGY="$DATA_DIR/topology.json" \
+    SOCKET_PATH="$STATEDIR/node-demo.socket" \
+    nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-demo.log" & echo $! > "$STATEDIR/node-demo.pid" &
+  just set-default-cardano-env demo "" "$PPID"
+  echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
+  sleep 30
+  echo
+
+  echo "Registering stake pools..."
+  POOL_RELAY=demo-ng.local \
+    POOL_RELAY_PORT=3001 \
+    nix run .#job-register-stake-pools
+  echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 7)))"
+  sleep 10
+  echo
+
+  echo "Delegating rewards stake key..."
+  nix run .#job-delegate-rewards-stake-key
+  echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 7)))"
+  sleep 10
+  echo
+
+  echo "Retiring the bootstrap pool..."
+  BOOTSTRAP_POOL_DIR="$KEY_DIR/bootstrap-pool" \
+    RICH_KEY="$KEY_DIR/utxo-keys/rich-utxo" \
+    nix run .#job-retire-bootstrap-pool
+  sleep 10
+  echo
+
+  echo "Sleeping 160 seconds for the bootstrap pool to retire, until $(date -d  @$(($(date +%s) + 160)))"
   sleep 160
   echo
 

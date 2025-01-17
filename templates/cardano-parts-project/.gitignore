@@ -15,6 +15,7 @@ __pycache__
 /.ssh_config_bootstrap
 /.ssh_key
 /state-demo/
+/state-demo-ng/
 /.terraform*
 /terraform.tf.json
 /treefmt.toml
