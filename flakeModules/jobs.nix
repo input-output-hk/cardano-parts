@@ -307,6 +307,11 @@ in {
               > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
               chmod 0600 "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
 
+            # Remove once the cardano-node new tracing is default in nixosModules.
+            jq '. += {UseTraceDispatcher: false}' \
+              < "$GENESIS_DIR/node-config.json" \
+              | sponge "$GENESIS_DIR/node-config.json"
+
             # Shape the genesis output directory to match secrets layout expected
             # by cardano-parts for environments and groups. This makes for easier
             # import of new environment secrets.
@@ -449,7 +454,8 @@ in {
                 ByronGenesisHash: $hashByron,
                 ShelleyGenesisHash: $hashShelley,
                 AlonzoGenesisHash: $hashAlonzo,
-                ConwayGenesisHash: $hashConway
+                ConwayGenesisHash: $hashConway,
+                UseTraceDispatcher: false
               }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
@@ -694,7 +700,8 @@ in {
                 "TestBabbageHardForkAtEpoch": 0,
                 "TestConwayHardForkAtEpoch": 0,
                 "TestMaryHardForkAtEpoch": 0,
-                "TestShelleyHardForkAtEpoch": 0}' \
+                "TestShelleyHardForkAtEpoch": 0,
+                "UseTraceDispatcher": false}' \
               '. += $jsonUpdates' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
