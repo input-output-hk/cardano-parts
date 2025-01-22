@@ -464,15 +464,16 @@ in
             (mkPkg "db-synthesizer-ng" caPkgs."db-synthesizer-input-output-hk-cardano-node-10-1-4-1f63dbf")
             (mkPkg "db-truncater" caPkgs."db-truncater-input-output-hk-cardano-node-10-1-4-1f63dbf")
             (mkPkg "db-truncater-ng" caPkgs."db-truncater-input-output-hk-cardano-node-10-1-4-1f63dbf")
+            (mkPkg "isd" caPkgs.isd-isd-project-isd-v0-2-0-44bfbe7)
             (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v0-80-0-26bf212)
             (mkPkg "metadata-server" caPkgs.metadata-server-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-sync" caPkgs.metadata-sync-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2450-0-pre-c6c7eba {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-ed0e96f {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-98407cd {meta.mainProgram = "mithril-client";}))
             (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2450-0-pre-c6c7eba {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-ed0e96f {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-98407cd {meta.mainProgram = "mithril-signer";}))
             (mkPkg "orchestrator-cli" caPkgs.orchestrator-cli-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
             (mkPkg "tx-bundle" caPkgs.tx-bundle-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
@@ -510,6 +511,7 @@ in
               db-synthesizer
               db-truncater
               process-compose
+              isd
               metadata-server
               metadata-sync
               metadata-validator-github
