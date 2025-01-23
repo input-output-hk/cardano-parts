@@ -981,8 +981,8 @@ start-demo:
     BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
       ERA_CMD="alonzo" \
       nix run .#job-move-genesis-utxo
-    echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
-    sleep 7
+    echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
+    sleep 10
     echo
   fi
 
@@ -991,15 +991,15 @@ start-demo:
     POOL_RELAY_PORT=3001 \
     ERA_CMD="alonzo" \
     nix run .#job-register-stake-pools
-  echo "Sleeping 7 seconds until $(date -d  @$(($(date +%s) + 7)))"
-  sleep 7
+  echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
+  sleep 10
   echo
 
   echo "Delegating rewards stake key..."
   ERA_CMD="alonzo" \
     nix run .#job-delegate-rewards-stake-key
-  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
-  sleep 160
+  echo "Sleeping 100 seconds until $(date -d  @$(($(date +%s) + 100)))"
+  sleep 100
   echo
 
   echo "Forking to babbage..."
