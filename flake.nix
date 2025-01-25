@@ -29,7 +29,9 @@
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    # iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/peerSnapshotFile";
+    # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/peerSnapshotFile";
 
     # For node upcoming release testing
     cardano-node-10p2.url = "github:IntersectMBO/cardano-node/nm/maint_10.2";
@@ -62,12 +64,12 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node";
+      url = "github:IntersectMBO/cardano-node/nm/maint_10.2";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node";
+      url = "github:IntersectMBO/cardano-node/nm/maint_10.2";
       flake = false;
     };
 
