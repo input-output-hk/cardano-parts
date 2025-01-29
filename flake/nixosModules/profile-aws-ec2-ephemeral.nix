@@ -13,11 +13,15 @@
 #   config.aws.ec2.ephemeral.raidCfgFile
 #   config.aws.ec2.ephemeral.raidDevice
 #   config.aws.ec2.ephemeral.serviceName
+#   config.aws.ec2.ephemeral.specialEphemeralInstanceTypePrefixes
 #   config.aws.ec2.ephemeral.symlinkTarget
 #
 # Tips:
-#   * This module modifies handles formatting and mounting of single or multiple ephemeral block devices in aws ec2
-#   * This module creates a RAID0 array if multiple ephemeral block devices are available
+#   * This module modifies handles formatting and mounting of single or
+#     multiple NVMe ephemeral block devices in aws ec2.
+#
+#   * This module creates a RAID0 array if multiple ephemeral block devices are
+#     available.
 #
 # Notes:
 #   A number of approaches for mounting ephemeral aws ec2 instance
@@ -55,8 +59,17 @@ flake: {
     pkgs,
     ...
   }: let
-    inherit (lib) getExe mkForce mkOption;
+    inherit (builtins) head;
+    inherit (lib) any getExe hasInfix hasPrefix mkForce mkIf mkOption splitString;
     inherit (lib.types) bool enum listOf str;
+    inherit (config.aws.instance) instance_type;
+
+    isDiskBackedStorageType = t: hasInfix "d" (head (splitString "." t));
+    isSpecialType = t: any (_: _) (map (e: hasPrefix e t) cfg.specialEphemeralInstanceTypePrefixes);
+
+    # NVMe containing ephemeral instance types generally need to have a "d" in
+    # the instance type, or belong to a special class.
+    hasEphemeral = isDiskBackedStorageType instance_type || isSpecialType instance_type;
 
     cfg = config.services.aws.ec2.ephemeral;
   in {
@@ -172,6 +185,16 @@ flake: {
         '';
       };
 
+      specialEphemeralInstanceTypePrefixes = mkOption {
+        type = listOf str;
+        default = ["i3" "i7" "trn1"];
+        description = ''
+          Aws ec2 instance type prefixes which contain ephemeral NVMe block
+          devices without also containing the standard `d` identifier in the
+          instance type for disk backed storage.
+        '';
+      };
+
       symlinkTarget = mkOption {
         type = str;
         default = "/dev/ephemeral";
@@ -181,7 +204,7 @@ flake: {
       };
     };
 
-    config = {
+    config = mkIf hasEphemeral {
       fileSystems = {
         "${cfg.label}" = {
           inherit (cfg) fsType label mountPoint;
@@ -244,7 +267,7 @@ flake: {
                 # Check ephemeral storage is available
                 if [ "$NUM_BD" -eq "0" ]; then
                   echo "No ephemeral block devices found, aborting."
-                  exit 1
+                  exit 0
                 fi
 
                 # Check if all ephemeral storage is empty
