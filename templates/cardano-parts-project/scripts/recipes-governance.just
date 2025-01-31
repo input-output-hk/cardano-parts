@@ -100,6 +100,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     | jq -re "[ .[] | select( .[1].expiry >= $EPOCH ) | [\"drep-\(.[0] | keys[0])-\(.[0] | to_entries[].value)\", (.[1].stake // 0)]]" 2> /dev/null)
   DREP_PWR_ACTIVE=$(jq -re "[.[][1]] | add // 0" <<< "$DREP_PWR_DIST" 2> /dev/null)
   DREP_STAKE_TOTAL=$(jq -re '[del(.[] | select(.[0] == "drep-alwaysAbstain" or .[0] == "drep-alwaysNoConfidence")) | .[][1]] | add' <<< "$DREP_DIST" 2> /dev/null)
+  DREP_NOCONF_COUNT=$(jq -re '[.[] | select(.[0] == "drep-alwaysNoConfidence") | .[1]] | length' <<< "$DREP_DIST" 2> /dev/null)
   DREP_NOCONF_TOTAL=$(jq -re '(.[] | select(.[0] == "drep-alwaysNoConfidence") | .[1]) // 0' <<< "$DREP_DIST" 2> /dev/null)
   echo "Some potentially useful metrics:"
   echo "  CURRENT_EPOCH: $CURRENT_EPOCH"
@@ -384,7 +385,9 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       echo
 
       DREP_STAKE_THRESHOLD="n/a"
+      DREP_THRESHOLD_TOTAL="n/a"
       POOL_STAKE_THRESHOLD="n/a"
+      POOL_THRESHOLD_TOTAL="n/a"
       COMMITTEE_THRESHOLD="n/a"
 
       DREP_ACCEPT_ICON="$GREEN_NA"
@@ -456,6 +459,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
         *"maxBlockBodySize"*|*"maxTxSize"*|*"maxBlockHeaderSize"*|*"maxValueSize"*|*"maxBlockExecutionUnits"*|*"txFeePerByte"*|*"txFeeFixed"*|*"utxoCostPerByte"*|*"govActionDeposit"*|*"minFeeRefScriptCostPerByte"*)
           POOL_STAKE_THRESHOLD=$(jq -re '.poolVotingThresholds.ppSecurityGroup // 0' <<< "${PPARAMS}" 2> /dev/null)
           POOL_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $POOL_STAKE_THRESHOLD")
+          POOL_THRESHOLD_TOTAL=$(bc <<< "$POOL_STAKE_THRESHOLD * $POOL_TOTAL / 100")
           THRESHOLD_CHECK "POOL" "$POOL_PCT" "$POOL_STAKE_THRESHOLD"
           echo -e "A parameter from the ${GREEN}SECURITY$OFF group is present ► ${BLUE}StakePools must vote$OFF"
           ;;&
@@ -492,6 +496,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       fi
 
       DREP_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $DREP_STAKE_THRESHOLD")
+      DREP_THRESHOLD_TOTAL=$(bc <<< "$DREP_STAKE_THRESHOLD * $DREP_TOTAL / 100")
       if [ "$PROT_MAJOR_VER" -ge 10 ]; then
         THRESHOLD_CHECK "DREP" "$DREP_PCT" "$DREP_STAKE_THRESHOLD"
       fi
@@ -524,6 +529,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
       DREP_STAKE_THRESHOLD=$(jq -re '.dRepVotingThresholds.updateToConstitution // 0' <<< "$PPARAMS" 2> /dev/null)
       DREP_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $DREP_STAKE_THRESHOLD")
+      DREP_THRESHOLD_TOTAL=$(bc <<< "$DREP_STAKE_THRESHOLD * $DREP_TOTAL / 100")
       THRESHOLD_CHECK "DREP" "$DREP_PCT" "$DREP_STAKE_THRESHOLD"
 
       POOL_ACCEPT_ICON=""
@@ -559,11 +565,13 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
             read -r NUMERATOR
             read -r DENOMINATOR
           } <<< "$(jq -re '.numerator // "-", .denominator // "-"' <<< "$COMMITTEE_THRESHOLD")"
-          echo -e "Approval of a governance measure requires $NUMERATOR out of $DENOMINATOR ($(bc <<< "scale=0; ($NUMERATOR * 100 / $DENOMINATOR) / 1")%) of the votes of committee members.$OFF\n"
+          COMMITTEE_THRESHOLD=$(bc <<< "scale=0; ($NUMERATOR * 100 / $DENOMINATOR) / 1")
+          echo -e "Approval of a governance measure requires $NUMERATOR out of $DENOMINATOR ($COMMITEE_THRESHOLD%) of the votes of committee members.$OFF\n"
           ;;
 
         "number")
-          echo -e "Approval of a governance measure requires $(bc <<< "scale=0; ($COMMITTEE_THRESHOLD * 100) / 1")% of the votes of committee members.$OFF\n"
+          COMMITTEE_THRESHOLD=$(bc <<< "scale=0; $COMMITTEE_THRESHOLD * 100")
+          echo -e "Approval of a governance measure requires $COMMITTEE_THRESHOLD% of the votes of committee members.$OFF\n"
           ;;
       esac
 
@@ -576,8 +584,11 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
       REM_HASHES_RENDER=$(jq -re "
         .[1][] // []
-          | to_entries[]
-          | \"Remove $GREEN\(.key)$OFF ◄ $RED\(.value)$OFF\"
+          | to_entries as \$entries
+          | if (\$entries | length > 0)
+            then \"Remove $GREEN\(\$entries | .key)$OFF ◄ $RED\(\$entries | .value)$OFF\"
+            else \"No removals\"
+            end
       " <<< "$ACTION_CONTENTS" 2> /dev/null)
 
       echo -e "$ADD_HASHES_RENDER"
@@ -589,9 +600,11 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       } <<< "$(jq -re '.dRepVotingThresholds.committeeNormal // 0, .poolVotingThresholds.committeeNormal // 0' <<< "$PPARAMS" 2> /dev/null)"
 
       DREP_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $DREP_STAKE_THRESHOLD")
+      DREP_THRESHOLD_TOTAL=$(bc <<< "$DREP_STAKE_THRESHOLD * $DREP_TOTAL / 100")
       THRESHOLD_CHECK "DREP" "$DREP_PCT" "$DREP_STAKE_THRESHOLD"
 
       POOL_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $POOL_STAKE_THRESHOLD")
+      POOL_THRESHOLD_TOTAL=$(bc <<< "$POOL_STAKE_THRESHOLD * $POOL_TOTAL / 100")
       THRESHOLD_CHECK "POOL" "$POOL_PCT" "$POOL_STAKE_THRESHOLD"
 
       COMMITTEE_ACCEPT_ICON="";
@@ -615,9 +628,11 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       ' <<< "$PPARAMS" 2> /dev/null)"
 
       DREP_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $DREP_STAKE_THRESHOLD")
+      DREP_THRESHOLD_TOTAL=$(bc <<< "$DREP_STAKE_THRESHOLD * $DREP_TOTAL / 100")
       THRESHOLD_CHECK "DREP" "$DREP_PCT" "$DREP_STAKE_THRESHOLD"
 
       POOL_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $POOL_STAKE_THRESHOLD")
+      POOL_THRESHOLD_TOTAL=$(bc <<< "$POOL_STAKE_THRESHOLD * $POOL_TOTAL / 100")
       THRESHOLD_CHECK "POOL" "$POOL_PCT" "$POOL_STAKE_THRESHOLD"
 
       COMMITTEE_ACCEPT_ICON=""
@@ -677,6 +692,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
       DREP_STAKE_THRESHOLD=$(jq -re '.dRepVotingThresholds.treasuryWithdrawal // 0' <<< "$PPARAMS" 2> /dev/null)
       DREP_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $DREP_STAKE_THRESHOLD")
+      DREP_THRESHOLD_TOTAL=$(bc <<< "$DREP_STAKE_THRESHOLD * $DREP_TOTAL / 100")
       if [ "$PROT_MAJOR_VER" -ge 10 ]; then
         THRESHOLD_CHECK "DREP" "$DREP_PCT" "$DREP_STAKE_THRESHOLD"
       fi
@@ -790,6 +806,8 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   export CARDANO_NODE_NETWORK_ID="$MAGIC"
   export TESTNET_MAGIC="$MAGIC"
   echo
+
+  [ -n "${DEBUG:-}" ] && set -x
 
   if [ "$(jq -re .syncProgress <<< "$(just query-tip {{ENV}})")" != "100.00" ]; then
     echo "Please wait until the local tip of environment {{ENV}} is 100.00 before voting"
@@ -927,7 +945,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   EXISTS="true"
 
   while [ "$EXISTS" = "true" ]; do
-    EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -re .exists)
+    EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists)
     if [ "$EXISTS" = "true" ]; then
       echo "Vote transaction still exists in the mempool, sleeping 5s: $TXID"
     else
