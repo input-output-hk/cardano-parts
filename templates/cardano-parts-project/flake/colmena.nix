@@ -228,6 +228,7 @@ in
 
       defaults.imports = [
         inputs.cardano-parts.nixosModules.module-aws-ec2
+        inputs.cardano-parts.nixosModules.profile-aws-ec2-ephemeral
         inputs.cardano-parts.nixosModules.profile-cardano-parts
         inputs.cardano-parts.nixosModules.profile-basic
         inputs.cardano-parts.nixosModules.profile-common
