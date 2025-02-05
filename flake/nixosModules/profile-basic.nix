@@ -11,7 +11,10 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.profile-basic = moduleWithSystem ({system}: {
+  flake.nixosModules.profile-basic = moduleWithSystem ({
+    self',
+    system,
+  }: {
     config,
     name,
     pkgs,
@@ -62,9 +65,10 @@
         glances
         helix
         htop
-        ijq
         icdiff
+        ijq
         iptables
+        self'.packages.isd
         jiq
         jq
         lsof
@@ -74,6 +78,7 @@
         ncdu
         # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 24.11 causing missing features error
         inputs.nixpkgs.legacyPackages.${system}.nushell
+        nvme-cli
         parted
         pciutils
         procps
