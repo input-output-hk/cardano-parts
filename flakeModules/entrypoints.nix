@@ -9,9 +9,9 @@ in {
       system,
       ...
     }: let
-      inherit (builtins) attrNames;
+      inherit (builtins) attrNames elem;
       inherit (lib) boolToString concatStringsSep escapeShellArgs getExe;
-      inherit (opsLib) generateStaticHTMLConfigs mithrilVerifyingPools;
+      inherit (opsLib) generateStaticHTMLConfigs mithrilAllowedNetworks mithrilVerifyingPools;
 
       cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
       cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
@@ -23,6 +23,10 @@ in {
       copyEnvsTemplate = cardanoLib: let
         inherit (cardanoLib) environments;
         envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
+        isMithrilEnv = env:
+          boolToString (
+            environments.${env} ? mithrilAggregatorEndpointUrl && elem env mithrilAllowedNetworks
+          );
       in ''
         # Prepare standard env configs
         ENVS=(${escapeShellArgs (attrNames environments)})
@@ -37,7 +41,7 @@ in {
             map (
               env:
                 "declare -A MITHRIL_CFG_${env}\n"
-                + "MITHRIL_CFG_${env}[MITHRIL_ENV]=\"${boolToString (environments.${env} ? mithrilAggregatorEndpointUrl)}\"\n"
+                + "MITHRIL_CFG_${env}[MITHRIL_ENV]=\"${isMithrilEnv env}\"\n"
                 + "MITHRIL_CFG_${env}[AGG_ENDPOINT]=\"${environments.${env}.mithrilAggregatorEndpointUrl or ""}\"\n"
                 + "MITHRIL_CFG_${env}[GENESIS_VKEY]=\"${environments.${env}.mithrilGenesisVerificationKey or ""}\"\n"
                 + "MITHRIL_CFG_${env}[VERIFYING_POOLS]=\"${concatStringsSep "|" (mithrilVerifyingPools.${env} or [])}\"\n"
