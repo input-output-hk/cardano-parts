@@ -3,18 +3,18 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
-#   config.aws.ec2.ephemeral.enablePostMountService
-#   config.aws.ec2.ephemeral.fsOpts
-#   config.aws.ec2.ephemeral.fsType
-#   config.aws.ec2.ephemeral.label
-#   config.aws.ec2.ephemeral.mountPoint
-#   config.aws.ec2.ephemeral.postMountScript
-#   config.aws.ec2.ephemeral.postMountServiceName
-#   config.aws.ec2.ephemeral.raidCfgFile
-#   config.aws.ec2.ephemeral.raidDevice
-#   config.aws.ec2.ephemeral.serviceName
-#   config.aws.ec2.ephemeral.specialEphemeralInstanceTypePrefixes
-#   config.aws.ec2.ephemeral.symlinkTarget
+#   config.services.aws.ec2.ephemeral.enablePostMountService
+#   config.services.aws.ec2.ephemeral.fsOpts
+#   config.services.aws.ec2.ephemeral.fsType
+#   config.services.aws.ec2.ephemeral.label
+#   config.services.aws.ec2.ephemeral.mountPoint
+#   config.services.aws.ec2.ephemeral.postMountScript
+#   config.services.aws.ec2.ephemeral.postMountServiceName
+#   config.services.aws.ec2.ephemeral.raidCfgFile
+#   config.services.aws.ec2.ephemeral.raidDevice
+#   config.services.aws.ec2.ephemeral.serviceName
+#   config.services.aws.ec2.ephemeral.specialEphemeralInstanceTypePrefixes
+#   config.services.aws.ec2.ephemeral.symlinkTarget
 #
 # Tips:
 #   * This module modifies handles formatting and mounting of single or

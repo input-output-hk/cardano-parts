@@ -12,36 +12,31 @@
 {inputs, ...}: {
   flake.nixosModules.module-aws-ec2 = {lib, ...}: let
     inherit (lib) mkDefault mkOption types;
-    inherit (types) anything nullOr str submodule;
+    inherit (types) anything nullOr str;
   in {
     imports = [
       "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
     ];
 
     options = {
-      aws = mkOption {
-        default = null;
-        type = types.nullOr (submodule {
-          options = {
-            instance = mkOption {
-              type = anything;
-            };
+      aws = {
+        instance = mkOption {
+          type = anything;
+        };
 
-            region = mkOption {
-              type = str;
-            };
+        region = mkOption {
+          type = str;
+        };
 
-            route53 = mkOption {
-              default = null;
-              type = nullOr anything;
-            };
-          };
-
-          config = {
-            instance.count = mkDefault 1;
-          };
-        });
+        route53 = mkOption {
+          default = null;
+          type = nullOr anything;
+        };
       };
+    };
+
+    config = {
+      aws.instance.count = mkDefault 1;
     };
   };
 }

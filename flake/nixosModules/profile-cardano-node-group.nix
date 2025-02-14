@@ -7,6 +7,7 @@
 #   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.mithril-client.enable
 #   config.services.mithril-client.aggregatorEndpointUrl
+#   config.services.mithril-client.allowedNetworks
 #   config.services.mithril-client.genesisVerificationKey
 #   config.services.mithril-client.snapshotDigest
 #   config.services.mithril-client.verifyingPools
@@ -32,7 +33,7 @@
     nodeResources,
     ...
   }: let
-    inherit (builtins) fromJSON readFile;
+    inherit (builtins) elem fromJSON readFile;
     inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkIf mkOption optional optionalAttrs optionalString range recursiveUpdate types;
     inherit (types) bool float ints listOf oneOf str;
     inherit (nodeResources) cpuCount memMiB;
@@ -43,7 +44,7 @@
     inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
-    inherit (opsLib) mithrilVerifyingPools;
+    inherit (opsLib) mithrilAllowedNetworks mithrilVerifyingPools;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
     inherit (fromJSON (readFile ShelleyGenesisFile)) slotsPerKESPeriod;
 
@@ -87,6 +88,7 @@
       else legacyTopology;
 
     iRange = range 0 (cfg.instances - 1);
+    isMithrilEnv = cfgMithril.enable && elem environmentName cfgMithril.allowedNetworks;
 
     cfg = nixos.config.services.cardano-node;
     cfgMithril = nixos.config.services.mithril-client;
@@ -137,6 +139,14 @@
             description = "The mithril aggregator endpoint url.";
           };
 
+          allowedNetworks = mkOption {
+            type = listOf str;
+            default = mithrilAllowedNetworks;
+            description = ''
+              A list of cardano networks permitted to use mithril snapshots.
+            '';
+          };
+
           genesisVerificationKey = mkOption {
             type = str;
             default = cfg.environments.${environmentName}.mithrilGenesisVerificationKey or "";
@@ -184,7 +194,7 @@
           self'.packages.db-synthesizer-ng
           self'.packages.db-truncater-ng
         ]
-        ++ optional cfgMithril.enable mithril-client-cli;
+        ++ optional isMithrilEnv mithril-client-cli;
 
       environment = {
         shellAliases = {
@@ -211,9 +221,9 @@
             CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
             TESTNET_MAGIC = toString protocolMagic;
           }
-          // optionalAttrs cfgMithril.enable {
-            AGGREGATOR_ENDPOINT = mkIf cfgMithril.enable cfgMithril.aggregatorEndpointUrl;
-            GENESIS_VERIFICATION_KEY = mkIf cfgMithril.enable cfgMithril.genesisVerificationKey;
+          // optionalAttrs isMithrilEnv {
+            AGGREGATOR_ENDPOINT = cfgMithril.aggregatorEndpointUrl;
+            GENESIS_VERIFICATION_KEY = cfgMithril.genesisVerificationKey;
           };
       };
 
@@ -457,9 +467,9 @@
               serviceConfig = {
                 ExecStartPre = getExe (pkgs.writeShellApplication {
                   name = "cardano-node-pre-start";
-                  runtimeInputs = with pkgs; [curl gnugrep gnutar jq gzip] ++ optional cfgMithril.enable mithril-client-cli;
+                  runtimeInputs = with pkgs; [curl gnugrep gnutar jq gzip] ++ optional isMithrilEnv mithril-client-cli;
                   text = let
-                    mithril-client-bootstrap = optionalString cfgMithril.enable ''
+                    mithril-client-bootstrap = optionalString isMithrilEnv ''
                       if ! [ -d "$DB_DIR" ]; then
                         DIGEST="${cfgMithril.snapshotDigest}"
 
@@ -541,7 +551,8 @@
                     }"
                     cd "$STATE_DIRECTORY"
 
-                    # Legacy: if a db-restore.tar.gz file exists, use it to replace state of the first node instance
+                    # Legacy: if a db-restore.tar.gz file exists, use it to
+                    # replace state of the first node instance.
                     if [ -f db-restore.tar.gz ] && [ "$INSTANCE" == "0" ]; then
                       echo "Restoring database from db-restore.tar.gz to $DB_DIR"
                       rm -rf "$DB_DIR"
@@ -549,7 +560,10 @@
                       rm db-restore.tar.gz
                     fi
 
-                    # Mithril-client bootstrap code will follow if nixos option service.mithril-client.enable is true
+                    # Mithril-client bootstrap code will follow if nixos option
+                    # service.mithril-client.enable is true and the list of
+                    # nixos option service.mithril-client.allowedNetworks
+                    # includes this cardano configuration's network name.
                     ${mithril-client-bootstrap}
                   '';
                 });

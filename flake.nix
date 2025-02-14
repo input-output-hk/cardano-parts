@@ -25,7 +25,7 @@
     services-flake.url = "github:juspay/services-flake";
 
     # Cardano related inputs
-    capkgs.url = "github:input-output-hk/capkgs";
+    capkgs.url = "github:input-output-hk/capkgs/input-addressed";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
