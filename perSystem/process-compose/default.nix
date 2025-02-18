@@ -43,27 +43,6 @@ flake @ {inputs, ...}: {
         isNodeNg = false;
         magic = getMagic "preview";
       };
-      private = {
-        isCardanoLibNg = true;
-        isDbsyncNg = true;
-        isMithrilNg = true;
-        isNodeNg = true;
-        magic = getMagic "private";
-      };
-      sanchonet = {
-        isCardanoLibNg = true;
-        isDbsyncNg = true;
-        isMithrilNg = true;
-        isNodeNg = true;
-        magic = getMagic "sanchonet";
-      };
-      shelley-qa = {
-        isCardanoLibNg = true;
-        isDbsyncNg = true;
-        isMithrilNg = true;
-        isNodeNg = true;
-        magic = getMagic "shelley-qa";
-      };
     };
 
     envVer = env: binCfg:
@@ -418,9 +397,6 @@ flake @ {inputs, ...}: {
       run-process-compose-dbsync-mainnet = mkDbsyncStack "mainnet";
       run-process-compose-dbsync-preprod = mkDbsyncStack "preprod";
       run-process-compose-dbsync-preview = mkDbsyncStack "preview";
-      run-process-compose-dbsync-private = mkDbsyncStack "private";
-      run-process-compose-dbsync-sanchonet = mkDbsyncStack "sanchonet";
-      run-process-compose-dbsync-shelley-qa = mkDbsyncStack "shelley_qa";
       run-process-compose-node-stack = mkNodeStack;
     };
   };

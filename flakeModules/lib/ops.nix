@@ -78,7 +78,7 @@ with lib; rec {
     ];
 
   # An allow list of networks permitted to use mithril snapshots
-  mithrilAllowedNetworks = ["preprod" "preview" "sanchonet"];
+  mithrilAllowedNetworks = ["preprod" "preview"];
 
   # A default list of IOG pools which will be used to verify IOG signature(s) on mithril snapshots
   # prior to mithril client use when config.mithril-client.verifySnapshotSignature is enabled.
@@ -100,12 +100,6 @@ with lib; rec {
       "pool12yrhvezsrqxlafahf02ka28a4a3qxgcgkylku4vqjg385jh60wa"
       "pool19ta77tu28f3y7m6yjgnqlcs98ak6a0vvtlcn7mc52azpwr4l2xt"
       "pool1u2pl6kx4yc77lnyapnveykkpnj07fmc7pd66fa40fvx3khw7cua"
-    ];
-
-    sanchonet = [
-      "pool13lr6wv9m55el9ahscn8qmutc80gq9m5ajgawjstj3v5rqm7fpd9"
-      "pool1h722gdd6kx782me0v9zresnds4ajugneq0vl9a0ju7mgvemezdf"
-      "pool1m840r7thpj9mxhw33hud3g9jkvjvm00wkw89ul8t06nngjewl6m"
     ];
   };
 }

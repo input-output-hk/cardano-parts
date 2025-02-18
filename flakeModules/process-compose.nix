@@ -13,9 +13,6 @@ in {
           run-process-compose-dbsync-mainnet
           run-process-compose-dbsync-preprod
           run-process-compose-dbsync-preview
-          run-process-compose-dbsync-private
-          run-process-compose-dbsync-sanchonet
-          run-process-compose-dbsync-shelley-qa
           run-process-compose-node-stack
           ;
       };

@@ -204,8 +204,12 @@ in {
             cp -r ${envCfgs cardanoLibNg} $out/environments-pre
 
             chmod +w $out/{environments,environments-pre}/config
-            mv $out/environments/config/shelley_qa $out/environments/config/shelley-qa
-            mv $out/environments-pre/config/shelley_qa $out/environments-pre/config/shelley-qa
+
+            # Shelley_qa env will be removed from iohk-nix in the near future
+            if [ -d "$out/environments/config/shelley_qa" ]; then
+              mv $out/environments/config/shelley_qa $out/environments/config/shelley-qa
+              mv $out/environments-pre/config/shelley_qa $out/environments-pre/config/shelley-qa
+            fi
           '';
         in
           writeShellApplication {
