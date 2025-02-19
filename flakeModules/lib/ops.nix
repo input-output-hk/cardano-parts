@@ -34,8 +34,8 @@ with lib; rec {
     '';
 
   mkCardanoLib = system: nixpkgs: flakeRef:
-  # Remove the dead testnet environment until it is removed from iohk-nix
-    removeByPath ["environments" "testnet"]
+  # Remove the dead shelley_qa and testnet environments until they are removed from iohk-nix.
+    removeManyByPath [["environments" "shelley_qa"] ["environments" "testnet"]]
     (import nixpkgs {
       inherit system;
       overlays = map (
@@ -76,6 +76,15 @@ with lib; rec {
         update = filterAttrs (n: _: n != (last pathList));
       }
     ];
+
+  removeManyByPath = listofPathLists:
+    updateManyAttrsByPath (map (
+        pathList: {
+          path = init pathList;
+          update = filterAttrs (n: _: n != (last pathList));
+        }
+      )
+      listofPathLists);
 
   # An allow list of networks permitted to use mithril snapshots
   mithrilAllowedNetworks = ["preprod" "preview"];

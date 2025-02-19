@@ -72,17 +72,18 @@
   inherit (lib) filterAttrs init last mdDoc mkOption updateManyAttrsByPath;
   inherit (lib.types) anything attrsOf functionTo package path str submodule;
 
-  removeByPath = pathList:
-    updateManyAttrsByPath [
-      {
-        path = init pathList;
-        update = filterAttrs (n: _: n != (last pathList));
-      }
-    ];
+  removeManyByPath = listofPathLists:
+    updateManyAttrsByPath (map (
+        pathList: {
+          path = init pathList;
+          update = filterAttrs (n: _: n != (last pathList));
+        }
+      )
+      listofPathLists);
 
   mkCardanoLib = system: flakeRef:
-  # Remove the dead testnet environment until it is removed from iohk-nix
-    removeByPath ["environments" "testnet"]
+  # Remove the dead shelley_qa and testnet environments until they are removed from iohk-nix.
+    removeManyByPath [["environments" "shelley_qa"] ["environments" "testnet"]]
     (import localFlake.inputs.nixpkgs {
       inherit system;
       overlays = map (

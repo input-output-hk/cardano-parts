@@ -302,7 +302,7 @@ flake @ {inputs, ...}: {
     };
 
     mkDbsyncStack = env: let
-      # To accomodate legacy shelley_qa env naming in iohk-nix
+      # To accomodate legacy shelley_qa env naming in iohk-nix, and any other env names introduced with `_` in the future
       env' = toHyphen env;
 
       # $TMPDIR needs to be exported in the preHook, otherwise the
