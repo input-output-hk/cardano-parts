@@ -82,8 +82,9 @@
       listofPathLists);
 
   mkCardanoLib = system: flakeRef:
-  # Remove the dead shelley_qa and testnet environments until they are removed from iohk-nix.
-    removeManyByPath [["environments" "shelley_qa"] ["environments" "testnet"]]
+  # If dead environments need to be filtered from iohk-nix, add them here
+  # as list items of ["environments" "$DEAD_ENV_NAME"].
+    removeManyByPath []
     (import localFlake.inputs.nixpkgs {
       inherit system;
       overlays = map (

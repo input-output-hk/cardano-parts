@@ -28,8 +28,8 @@
     capkgs.url = "github:input-output-hk/capkgs/input-addressed";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/env-reduce";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/env-reduce";
 
     # For tmp local faucet testing
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
