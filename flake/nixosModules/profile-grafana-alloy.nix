@@ -4,6 +4,7 @@
 #
 # Attributes available on nixos module import:
 #   config.services.alloy.enableLiveDebugging
+#   config.services.alloy.extraAlloyConfig
 #   config.services.alloy.labels
 #   config.services.alloy.logLevel
 #   config.services.alloy.prometheusExporterUnixNodeSetCollectors
@@ -428,6 +429,14 @@ flake @ {moduleWithSystem, ...}: {
             description = "Whether to enable live debugging for grafana alloy.";
           };
 
+          extraAlloyConfig = mkOption {
+            type = str;
+            default = "";
+            description = ''
+              Extra configuration appended to the /etc/alloy/config.alloy file prior to formatting.
+            '';
+          };
+
           labels = mkOption {
             type = attrsOf str;
             default = {
@@ -615,6 +624,7 @@ flake @ {moduleWithSystem, ...}: {
                 ++ cardanoPartsComponentCfg.nginxVts
                 ++ cardanoPartsComponentCfg.varnishCache
               )
+              + cfg.extraAlloyConfig
             );
         in
           (pkgs.runCommandNoCCLocal "alloy.config" {} ''
