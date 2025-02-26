@@ -1,26 +1,31 @@
 let
   domain = "\${data.aws_route53_zone.selected.name}";
+  zoneId = "\${data.aws_route53_zone.selected.zone_id}";
 
-  mkResource = {
+  mkCname = {
     name,
     records ? [],
     ttl ? "300",
     type ? "CNAME",
-    zone_id ? "\${data.aws_route53_zone.selected.zone_id}"
-  }: {
-    inherit
-      name
-      records
-      ttl
-      type
-      zone_id;
-  };
+    zone_id ? zoneId
+  }:  {inherit name records ttl type zone_id;};
+
+  mkSrv = {
+    name,
+    records ? [],
+    ttl ? "300",
+    type ? "SRV",
+    zone_id ? zoneId
+  }:  {inherit name records ttl type zone_id;};
 in {
   # Resource attribute names must be unique for route53 resources in the cluster and therefore
   # should not be named after machines or book or group multivalue DNS names.
   #
   # Prefixing the resource attribute with the record type will avoid any namespace issues.
 
-  # Example
-  # cname_foo = mkResource {name = "foo.${domain}"; records = ["bar.${domain}"];};
+  # Example CNAME record resource.
+  # cname_foo = mkCname {name = "foo.${domain}"; records = ["bar.${domain}"];};
+
+  # Example SRV record resource, where network could be substituted with any of preview, preprod or mainnet.
+  # srv_network = mkSrv {name = "_cardano-network._tcp.${domain}"; records = ["0 10 3001 network1-rel-a-1.${domain}"];};
 }
