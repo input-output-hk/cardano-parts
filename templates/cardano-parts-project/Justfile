@@ -761,7 +761,7 @@ show-nameservers:
   print $"Nameservers for domain: ($domain) \(hosted zone id: ($id)) are:"
   print ($ns | to text)
 
-# Decrypt a file to stdout
+# Decrypt a file to stdout using .sops.yaml rules
 sops-decrypt-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -772,7 +772,7 @@ sops-decrypt-binary FILE:
   # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
 
-# Decrypt a file in place
+# Decrypt a file in place using .sops.yaml rules
 sops-decrypt-binary-in-place FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -781,7 +781,7 @@ sops-decrypt-binary-in-place FILE:
 
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}} | sponge {{FILE}}
 
-# Encrypt a file in place
+# Encrypt a file in place using .sops.yaml rules
 sops-encrypt-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -792,7 +792,7 @@ sops-encrypt-binary FILE:
   # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
-# Rotate sops encryption
+# Rotate sops encryption using .sops.yaml rules
 sops-rotate-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
