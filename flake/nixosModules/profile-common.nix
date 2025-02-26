@@ -114,7 +114,7 @@
           };
 
           # On boot SOPS runs in stage 2 without networking.
-          # For repositories using KMS sops secrets, this prevent KMS from working,
+          # For repositories using KMS sops secrets, this prevents KMS from working,
           # so we repeat the activation script until decryption succeeds.
           #
           # Sops-nix module does provide a systemd restart and reload hook for

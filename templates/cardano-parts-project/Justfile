@@ -35,8 +35,8 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$|^demo$ ]]; then
-    echo "Error: only node environments for demo, mainnet, preprod, preview, private, sanchonet and shelley-qa are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^demo$ ]]; then
+    echo "Error: only node environments for demo, mainnet, preprod and preview are supported"
     exit 1
   fi
 
@@ -46,12 +46,6 @@ checkEnvWithoutOverride := '''
     MAGIC="1"
   elif [ "$ENV" = "preview" ]; then
     MAGIC="2"
-  elif [ "$ENV" = "shelley-qa" ]; then
-    MAGIC="3"
-  elif [ "$ENV" = "sanchonet" ]; then
-    MAGIC="4"
-  elif [ "$ENV" = "private" ]; then
-    MAGIC="5"
   elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
   fi
@@ -387,8 +381,8 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$ ]]; then
-    echo "Error: only node environments for preprod, preview, private, sanchonet and shelley-qa are supported"
+  if ! [[ "$ENV" =~ ^preprod$|^preview$ ]]; then
+    echo "Error: only node environments for preprod and preview are supported"
     exit 1
   fi
 
@@ -409,10 +403,8 @@ dedelegate-pools ENV *IDXS=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ ^preprod$|^preview$|^shelley-qa$ ]]; then
+  elif [[ "$ENV" =~ ^preprod$|^preview$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ ^private$|^sanchonet$ ]]; then
-    CARDANO_CLI="cardano-cli-ng"
   fi
 
   echo
@@ -591,7 +583,7 @@ query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
   QUERIED=0
-  for i in mainnet preprod preview private shelley-qa sanchonet demo; do
+  for i in mainnet preprod preview demo; do
     TIP=$(just query-tip $i 2>&1) && {
       echo "Environment: $i"
       echo "$TIP"
@@ -614,9 +606,9 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^shelley-qa$ ]]; then
+  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ ^private$|^sanchonet$|^demo$ ]]; then
+  elif [[ "$ENV" =~ ^demo$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
   fi
 
@@ -769,7 +761,7 @@ show-nameservers:
   print $"Nameservers for domain: ($domain) \(hosted zone id: ($id)) are:"
   print ($ns | to text)
 
-# Decrypt a file to stdout
+# Decrypt a file to stdout using .sops.yaml rules
 sops-decrypt-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -780,7 +772,7 @@ sops-decrypt-binary FILE:
   # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
 
-# Decrypt a file in place
+# Decrypt a file in place using .sops.yaml rules
 sops-decrypt-binary-in-place FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -789,7 +781,7 @@ sops-decrypt-binary-in-place FILE:
 
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}} | sponge {{FILE}}
 
-# Encrypt a file in place
+# Encrypt a file in place using .sops.yaml rules
 sops-encrypt-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -800,7 +792,7 @@ sops-encrypt-binary FILE:
   # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
   sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
 
-# Rotate sops encryption
+# Rotate sops encryption using .sops.yaml rules
 sops-rotate-binary FILE:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -1141,8 +1133,8 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet and shelley-qa are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, and preview are supported for start-node recipe"
     exit 1
   fi
 
@@ -1178,7 +1170,7 @@ start-node ENV:
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
-  for i in mainnet preprod preview private shelley-qa sanchonet demo; do
+  for i in mainnet preprod preview demo; do
     just stop-node $i
   done
 
@@ -1318,8 +1310,8 @@ truncate-chain ENV SLOT:
   [ -n "${DEBUG:-}" ] && set -x
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^private$|^sanchonet$|^shelley-qa$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview, private, sanchonet and shelley-qa are supported for truncate-chain recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, and preview are supported for truncate-chain recipe"
     exit 1
   fi
 

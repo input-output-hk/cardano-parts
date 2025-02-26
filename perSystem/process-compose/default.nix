@@ -7,10 +7,10 @@ flake @ {inputs, ...}: {
     system,
     ...
   }: let
-    inherit (builtins) attrNames fromJSON readFile;
+    inherit (builtins) attrNames elem fromJSON readFile;
     inherit (lib) concatStringsSep concatMapStringsSep foldl' mkForce optionalString recursiveUpdate replaceStrings;
     inherit (cardanoLib) environments;
-    inherit (opsLib) generateStaticHTMLConfigs mithrilVerifyingPools;
+    inherit (opsLib) generateStaticHTMLConfigs mithrilAllowedNetworks mithrilVerifyingPools;
 
     cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
     cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
@@ -42,27 +42,6 @@ flake @ {inputs, ...}: {
         isMithrilNg = false;
         isNodeNg = false;
         magic = getMagic "preview";
-      };
-      private = {
-        isCardanoLibNg = true;
-        isDbsyncNg = true;
-        isMithrilNg = true;
-        isNodeNg = true;
-        magic = getMagic "private";
-      };
-      sanchonet = {
-        isCardanoLibNg = true;
-        isDbsyncNg = true;
-        isMithrilNg = true;
-        isNodeNg = true;
-        magic = getMagic "sanchonet";
-      };
-      shelley-qa = {
-        isCardanoLibNg = true;
-        isDbsyncNg = true;
-        isMithrilNg = true;
-        isNodeNg = true;
-        magic = getMagic "shelley-qa";
       };
     };
 
@@ -115,7 +94,10 @@ flake @ {inputs, ...}: {
 
     mithril-client-bootstrap = env: let
       inherit ((envs env).${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
-      isMithrilEnv = (envs env).${toUnderscore env} ? mithrilAggregatorEndpointUrl;
+      isMithrilEnv =
+        (envs env).${toUnderscore env}
+        ? mithrilAggregatorEndpointUrl
+        && elem env mithrilAllowedNetworks;
     in
       optionalString isMithrilEnv ''
         # The following environment variables may be used to modify default process compose mithril behavior:
@@ -150,7 +132,7 @@ flake @ {inputs, ...}: {
               fi
 
               SNAPSHOTS_COUNT=$(jq '. | length' <<< "$SNAPSHOTS_JSON")
-              VERIFYING_POOLS="''${MITRHIL_VERIFYING_POOLS_${env}:-${concatStringsSep "|" mithrilVerifyingPools.${env}}}"
+              VERIFYING_POOLS="''${MITHRIL_VERIFYING_POOLS_${env}:-${concatStringsSep "|" mithrilVerifyingPools.${env}}}"
               VERIFIED_SIGNED="false"
               IDX=0
 
@@ -212,7 +194,7 @@ flake @ {inputs, ...}: {
         runtimeInputs = with pkgs; [curl gnugrep jq];
         text = ''
           # Mithril bootstrap code will follow if the environment supports mithril.
-          # This can be disabled set setting either MITHRIL_DISABLE or MITRHIL_DISABLE_${env} env vars.
+          # This can be disabled set setting either MITHRIL_DISABLE or MITHRIL_DISABLE_${env} env vars.
           ${mithril-client-bootstrap env}
 
           ${config.cardano-parts.pkgs."cardano-node${envVer env "isNodeNg"}"}/bin/cardano-node run +RTS -N -RTS \
@@ -294,7 +276,7 @@ flake @ {inputs, ...}: {
                   echo "  nix develop github:input-output-hk/cardano-parts#devShells.x86_64-linux.ops"
                   echo
                   echo "If an environment supports Mithril, it will be used to sync client state."
-                  echo "Mithril syncing can be disabled by setting either of MITHRIL_DISABLE or MITRHIL_DISABLE_\$ENV env vars."
+                  echo "Mithril syncing can be disabled by setting either of MITHRIL_DISABLE or MITHRIL_DISABLE_\$ENV env vars."
                   echo
                   echo "Connection parameters for each environment are:"
                   echo
@@ -320,7 +302,7 @@ flake @ {inputs, ...}: {
     };
 
     mkDbsyncStack = env: let
-      # To accomodate legacy shelley_qa env naming in iohk-nix
+      # To accomodate legacy shelley_qa env naming in iohk-nix, and any other env names introduced with `_` in the future
       env' = toHyphen env;
 
       # $TMPDIR needs to be exported in the preHook, otherwise the
@@ -415,9 +397,6 @@ flake @ {inputs, ...}: {
       run-process-compose-dbsync-mainnet = mkDbsyncStack "mainnet";
       run-process-compose-dbsync-preprod = mkDbsyncStack "preprod";
       run-process-compose-dbsync-preview = mkDbsyncStack "preview";
-      run-process-compose-dbsync-private = mkDbsyncStack "private";
-      run-process-compose-dbsync-sanchonet = mkDbsyncStack "sanchonet";
-      run-process-compose-dbsync-shelley-qa = mkDbsyncStack "shelley_qa";
       run-process-compose-node-stack = mkNodeStack;
     };
   };

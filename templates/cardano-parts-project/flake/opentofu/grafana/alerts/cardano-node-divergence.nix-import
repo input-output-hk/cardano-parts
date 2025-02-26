@@ -44,9 +44,6 @@ in {
     (mkDivergenceAlert {env = "mainnet";})
     (mkDivergenceAlert {env = "preprod";})
     (mkDivergenceAlert {env = "preview";})
-    (mkDivergenceAlert {env = "private";})
-    (mkDivergenceAlert {env = "sanchonet";})
-    (mkDivergenceAlert {env = "shelley-qa";})
     (mkDivergenceAlert {
       env = "mainnet";
       useLegacyTracing = false;
@@ -57,18 +54,6 @@ in {
     })
     (mkDivergenceAlert {
       env = "preview";
-      useLegacyTracing = false;
-    })
-    (mkDivergenceAlert {
-      env = "private";
-      useLegacyTracing = false;
-    })
-    (mkDivergenceAlert {
-      env = "sanchonet";
-      useLegacyTracing = false;
-    })
-    (mkDivergenceAlert {
-      env = "shelley-qa";
       useLegacyTracing = false;
     })
   ];

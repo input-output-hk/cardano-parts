@@ -235,7 +235,7 @@ with
     select distinct view from (
       select view from faucet_pool_not_perf
       -- No longer automatically include pools over :lovelace for dedelegation as:
-      --  a) some network faucets now use pool deleg amounts other than 1M, ex: sanchonet/private @ 10M pool deleg
+      --  a) some historical network faucets have used pool deleg amounts other than 1M, ex: sanchonet/private @ 10M pool deleg
       --  b) if large pools are performing well, de-delegating will drop chain density further which may not be desirable
       -- union
       -- select view from faucet_pool_over_lt
