@@ -104,11 +104,17 @@
         };
       };
 
+      # With the introduction of SRV records, the port field is optional in the
+      # json struct, and if missing or set to null, the address will be treated
+      # as a SRV record.
       mkBasicProducers = producer: let
         extraCfg = removeAttrs producer ["address" "port"];
       in
         {
-          accessPoints = [{inherit (producer) address port;}];
+          accessPoints = [
+            ({inherit (producer) address;}
+              // optionalAttrs (producer ? port && producer.port != null) {inherit (producer) port;})
+          ];
         }
         // extraCfg;
 
@@ -256,6 +262,10 @@
               Additional attributes beyond address and port in the attribute set will be appended
               as extra config to the accessPoint list.
 
+              If the port is not provided or set to null, it will not be
+              included in the json converted struct and node will consider the
+              address to be an SRV record.
+
               If further customization is required add the extra producers directly to the
               services.cardano-node.producers option.
             '';
@@ -278,6 +288,10 @@
 
               Additional attributes beyond address and port in the attribute set will be appended
               as extra config to the accessPoints list.
+
+              If the port is not provided or set to null, it will not be
+              included in the json converted struct and node will consider the
+              address to be an SRV record.
 
               If further customization is required, add the extra public producers directly to the
               services.cardano-node.publicProducers option.
