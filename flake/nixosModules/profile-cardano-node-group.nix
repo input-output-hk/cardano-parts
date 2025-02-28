@@ -187,6 +187,7 @@
         [
           config.cardano-parts.pkgs.bech32
           cardano-cli
+          cardano-node
           config.cardano-parts.pkgs.db-analyser
           config.cardano-parts.pkgs.db-synthesizer
           config.cardano-parts.pkgs.db-truncater
