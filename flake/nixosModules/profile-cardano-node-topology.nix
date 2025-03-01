@@ -101,7 +101,7 @@
             TargetNumberOfRootPeers = 100;
           };
           publicProducers = mkForce (extraNodeListPublicProducers ++ extraPublicProducers);
-          usePeersFromLedgerAfterSlot = -1;
+          useLedgerAfterSlot = -1;
         };
       };
 
@@ -393,7 +393,7 @@
             else verboseTrace "publicProducers" (topologyFns.${cfg.publicProducerTopologyFn} ++ extraNodeListPublicProducers ++ extraPublicProducers)
           );
 
-          usePeersFromLedgerAfterSlot = mkIf (cfg.role == "bp") roles.${cfg.role}.usePeersFromLedgerAfterSlot;
+          useLedgerAfterSlot = mkIf (cfg.role == "bp") roles.${cfg.role}.useLedgerAfterSlot;
         };
       };
     };

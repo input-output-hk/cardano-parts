@@ -79,9 +79,7 @@
       };
 
       p2pTopology = mkEdgeTopologyP2P {
-        inherit (env) edgeNodes;
-
-        useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
+        inherit (env) edgeNodes useLedgerAfterSlot;
       };
     in
       if cfg.useNewTopology
