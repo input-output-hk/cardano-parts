@@ -21,6 +21,7 @@
 #   config.cardano-parts.perNode.meta.cardano-node-service
 #   config.cardano-parts.perNode.meta.cardano-ogmios-service
 #   config.cardano-parts.perNode.meta.cardano-smash-service
+#   config.cardano-parts.perNode.meta.cardano-submit-api-service
 #   config.cardano-parts.perNode.meta.cardano-tracer-service
 #   config.cardano-parts.perNode.meta.enableAlertCount
 #   config.cardano-parts.perNode.meta.enableDns
@@ -243,6 +244,12 @@ flake @ {moduleWithSystem, ...}: {
           type = str;
           description = mdDoc "The cardano-smash-service import path string.";
           default = cfg.group.meta.cardano-smash-service;
+        };
+
+        cardano-submit-api-service = mkOption {
+          type = str;
+          description = mdDoc "The cardano-submit-api-service import path string.";
+          default = cfg.group.meta.cardano-submit-api-service;
         };
 
         cardano-tracer-service = mkOption {
