@@ -224,11 +224,27 @@
     "cardano-db-sync-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1723218274,
-        "narHash": "sha256-V5QOzobpDLd+EALSYryThfSjlWEpJnt7rBug8heh91E=",
+        "lastModified": 1739727473,
+        "narHash": "sha256-J1d+qpU7m9PHRP8owaEZKDCl9xacw3ZJOeNAcLkoyng=",
         "owner": "IntersectMBO",
         "repo": "cardano-db-sync",
-        "rev": "dbea349bfee8159bf443ce6fdeec4d3670ac3e70",
+        "rev": "0f1d93f9b868caaf14c6cd0e77991e63c07c067f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "repo": "cardano-db-sync",
+        "type": "github"
+      }
+    },
+    "cardano-db-sync-service-ng": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1739727473,
+        "narHash": "sha256-J1d+qpU7m9PHRP8owaEZKDCl9xacw3ZJOeNAcLkoyng=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-db-sync",
+        "rev": "0f1d93f9b868caaf14c6cd0e77991e63c07c067f",
         "type": "github"
       },
       "original": {
@@ -274,16 +290,16 @@
     "cardano-node-service-ng": {
       "flake": false,
       "locked": {
-        "lastModified": 1745954148,
-        "narHash": "sha256-Moth/2BOCWDdgXrOX6fv2rykqe4zR9POjC+g4dlUqqc=",
+        "lastModified": 1745972988,
+        "narHash": "sha256-UEfNRlD/ffoIdgN2ICefExs8hMwyBpZorDHF0rVIwjc=",
         "owner": "IntersectMBO",
         "repo": "cardano-node",
-        "rev": "420c94fbb075146c6ec7fba78c5b0482fafe72dd",
+        "rev": "20e921ccfc502d4fa19bbc18062f4bf0102df16b",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "10.4.1",
+        "ref": "jl/new-tracing-service",
         "repo": "cardano-node",
         "type": "github"
       }
@@ -321,19 +337,70 @@
         "type": "github"
       }
     },
-    "cardano-tracer-service": {
+    "cardano-submit-api-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1717175013,
-        "narHash": "sha256-b89kXIvJNRwz60fsRtZ7M1islKcVcl2+cSo7IkZu7ko=",
+        "lastModified": 1739399665,
+        "narHash": "sha256-j59d23Bv3TCC4xjXDhPLtCDNRDA9V4VWLeBiVEzYgbA=",
         "owner": "IntersectMBO",
         "repo": "cardano-node",
-        "rev": "ebb8be83e16b4e2a62e70bd8575013271e4b1886",
+        "rev": "52b708f37cd3dc92a188717deae2a6a60117f696",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "jl/tracer-service",
+        "ref": "10.2.1",
+        "repo": "cardano-node",
+        "type": "github"
+      }
+    },
+    "cardano-submit-api-service-ng": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1739399665,
+        "narHash": "sha256-j59d23Bv3TCC4xjXDhPLtCDNRDA9V4VWLeBiVEzYgbA=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-node",
+        "rev": "52b708f37cd3dc92a188717deae2a6a60117f696",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "10.2.1",
+        "repo": "cardano-node",
+        "type": "github"
+      }
+    },
+    "cardano-tracer-service": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1740791973,
+        "narHash": "sha256-A5y7FHVDWij7UDXq2Mwr+OfddEAtLhgj1MUERFhuiVo=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-node",
+        "rev": "6b5908d9b2ba4bd9bf39cd68625c43e32641afba",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "jl/new-tracing-service",
+        "repo": "cardano-node",
+        "type": "github"
+      }
+    },
+    "cardano-tracer-service-ng": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1740791973,
+        "narHash": "sha256-A5y7FHVDWij7UDXq2Mwr+OfddEAtLhgj1MUERFhuiVo=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-node",
+        "rev": "6b5908d9b2ba4bd9bf39cd68625c43e32641afba",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "jl/new-tracing-service",
         "repo": "cardano-node",
         "type": "github"
       }
@@ -813,15 +880,16 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1745582862,
-        "narHash": "sha256-dMoJ6yHcRvUcB66nofzfAtmVxnDg8oPW3wiVtimXT/o=",
+        "lastModified": 1745972087,
+        "narHash": "sha256-KM6MyIeb1fQcLUzCgI4uk10H7Cj3AthM6AEM36JUM2g=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "5c16fdfc45deda7a4ccf964b6dfa1c3cab72f1f7",
+        "rev": "8319cbe0c308ab30b21d544965240966162f55ca",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "jl/new-tracing",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -1255,16 +1323,16 @@
     },
     "nixpkgs_5": {
       "locked": {
-        "lastModified": 1684171562,
-        "narHash": "sha256-BMUWjVWAUdyMWKk0ATMC9H0Bv4qAV/TXwwPUvTiC5IQ=",
+        "lastModified": 1740683541,
+        "narHash": "sha256-t1NxrPg8UJCZQ039zSMYB5//XluEdwACTDIxDK31R1I=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "55af203d468a6f5032a519cba4f41acf5a74b638",
+        "rev": "2bc8d3dcc2eb6f7d23590b52042e274eda02318e",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "release-22.11",
+        "ref": "release-24.11",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -1388,11 +1456,15 @@
         "cardano-db-sync-schema": "cardano-db-sync-schema",
         "cardano-db-sync-schema-ng": "cardano-db-sync-schema-ng",
         "cardano-db-sync-service": "cardano-db-sync-service",
+        "cardano-db-sync-service-ng": "cardano-db-sync-service-ng",
         "cardano-metadata-service": "cardano-metadata-service",
         "cardano-node-service": "cardano-node-service",
         "cardano-node-service-ng": "cardano-node-service-ng",
         "cardano-ogmios-service": "cardano-ogmios-service",
+        "cardano-submit-api-service": "cardano-submit-api-service",
+        "cardano-submit-api-service-ng": "cardano-submit-api-service-ng",
         "cardano-tracer-service": "cardano-tracer-service",
+        "cardano-tracer-service-ng": "cardano-tracer-service-ng",
         "cardano-wallet-service": "cardano-wallet-service",
         "colmena": "colmena",
         "empty-flake": "empty-flake",
