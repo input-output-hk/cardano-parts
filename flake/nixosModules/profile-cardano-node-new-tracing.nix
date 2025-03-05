@@ -288,9 +288,6 @@
           # It will only leave a minSeverity = "Critical" for the legacy system active.
           useLegacyTracing = false;
 
-          # This appears to do nothing.
-          withCardanoTracer = true;
-
           extraNodeConfig = {
             # This option is what enables the new tracing/metrics system.
             UseTraceDispatcher = true;

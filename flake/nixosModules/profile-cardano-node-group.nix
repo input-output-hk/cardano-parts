@@ -66,7 +66,7 @@
     # software.  Generally, hyperthreads are counted if present, although this
     # depends on the provider that is reporting data to cpuCount.  It is, for
     # example, true for aws instances.
-    cores = numCeil (numFloor (cpuCount / cfg.instances) 2) 8;
+    cores = numCeil (numFloor (cpuCount / cfgNode.instances) 2) 8;
 
     # We don't use the mkTopology function directly from cardanoLib because that function
     # determines p2p usage based on network EnableP2P definition, whereas we wish to
@@ -82,15 +82,15 @@
         inherit (env) edgeNodes useLedgerAfterSlot;
       };
     in
-      if cfg.useNewTopology
+      if cfgNode.useNewTopology
       then p2pTopology
       else legacyTopology;
 
-    iRange = range 0 (cfg.instances - 1);
+    iRange = range 0 (cfgNode.instances - 1);
     isMithrilEnv = cfgMithril.enable && elem environmentName cfgMithril.allowedNetworks;
     isMithrilAncillary = cfgMithril.enable && elem environmentName cfgMithril.allowedAncillary;
 
-    cfg = nixos.config.services.cardano-node;
+    cfgNode = nixos.config.services.cardano-node;
     cfgMithril = nixos.config.services.mithril-client;
   in {
     key = ./profile-cardano-node-group.nix;
@@ -108,6 +108,16 @@
     options = {
       services = {
         cardano-node = {
+          ngTracer = mkOption {
+            type = bool;
+            default = false;
+            description = ''
+              Temporary bool to indicate with to migrate to the next-gen
+              (-ng) tracing system using the new iohk-nix envs, new
+              cardano-node tracing service.
+            '';
+          };
+
           shareNodeSocket = mkOption {
             type = bool;
             default = false;
@@ -119,7 +129,7 @@
 
           totalCpuCount = mkOption {
             type = ints.positive;
-            default = min cpuCount (2 * cfg.instances);
+            default = min cpuCount (2 * cfgNode.instances);
           };
 
           totalMaxHeapSizeMiB = mkOption {
@@ -131,13 +141,13 @@
         mithril-client = {
           enable = mkOption {
             type = bool;
-            default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl;
+            default = cfgNode.environments.${environmentName} ? mithrilAggregatorEndpointUrl;
             description = "Allow mithril-client to bootstrap cardano-node chain state.";
           };
 
           aggregatorEndpointUrl = mkOption {
             type = str;
-            default = cfg.environments.${environmentName}.mithrilAggregatorEndpointUrl or "";
+            default = cfgNode.environments.${environmentName}.mithrilAggregatorEndpointUrl or "";
             description = "The mithril aggregator endpoint url.";
           };
 
@@ -159,13 +169,13 @@
 
           ancillaryVerificationKey = mkOption {
             type = str;
-            default = cfg.environments.${environmentName}.mithrilAncillaryVerificationKey or "";
+            default = cfgNode.environments.${environmentName}.mithrilAncillaryVerificationKey or "";
             description = "The mithril ancillary verification key.";
           };
 
           genesisVerificationKey = mkOption {
             type = str;
-            default = cfg.environments.${environmentName}.mithrilGenesisVerificationKey or "";
+            default = cfgNode.environments.${environmentName}.mithrilGenesisVerificationKey or "";
             description = "The mithril genesis verification key.";
           };
 
@@ -214,7 +224,7 @@
           self'.packages.snapshot-converter-ng
         ]
         ++ optional isMithrilEnv mithril-client-cli
-        ++ optional (!cfg.useLegacyTracing) cardano-tracer;
+        ++ optional (!cfgNode.useLegacyTracing) cardano-tracer;
 
       environment = {
         shellAliases = {
@@ -238,7 +248,7 @@
             CARDANO_NODE_NETWORK_ID = toString protocolMagic;
             CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
             CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
-            CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
+            CARDANO_NODE_SOCKET_PATH = cfgNode.socketPath 0;
             TESTNET_MAGIC = toString protocolMagic;
           }
           // optionalAttrs isMithrilEnv {
@@ -269,7 +279,7 @@
 
           # Once the new tracing system is default, this can be simplified and iohk-nix updated.
           nodeConfig = mkForce (
-            if cfg.useLegacyTracing
+            if cfgNode.useLegacyTracing
             then cardanoLib.environments.${environmentName}.nodeConfigLegacy
             else cardanoLib.environments.${environmentName}.nodeConfig
             # else
@@ -346,14 +356,16 @@
           useSystemdReload = mkDefault true;
           topology = mkDefault (
             if
-              (cfg.producers == [])
-              && cfg.publicProducers == []
-              && cfg.bootstrapPeers == null
-              && (flatten (map cfg.instanceProducers iRange)) == []
-              && (flatten (map cfg.instancePublicProducers iRange)) == []
+              (cfgNode.producers == [])
+              && cfgNode.publicProducers == []
+              && cfgNode.bootstrapPeers == null
+              && (flatten (map cfgNode.instanceProducers iRange)) == []
+              && (flatten (map cfgNode.instancePublicProducers iRange)) == []
             then mkTopology cardanoLib.environments.${environmentName}
             else null
           );
+
+          tracerSocketPathConnect = mkIf cfgNode.ngTracer "/tmp/forwarder.sock";
 
           hostAddr = mkDefault hostAddr;
 
@@ -371,12 +383,12 @@
               # The maximum number of used peers when fetching newly forged blocks
               MaxConcurrencyDeadline = 4;
             }
-            // optionalAttrs cfg.useLegacyTracing {
+            // optionalAttrs cfgNode.useLegacyTracing {
               # In versions of cardano-node > `10.1.2`, legacy tracing will no longer be default.
               # Until we are ready to use legacy tracing as default, set UseTraceDispatcher false.
               UseTraceDispatcher = false;
 
-              hasPrometheus = [cfg.hostAddr cardanoNodePrometheusExporterPort];
+              hasPrometheus = [cfgNode.hostAddr cardanoNodePrometheusExporterPort];
 
               # Use Journald output
               setupScribes = [
@@ -391,7 +403,7 @@
             };
 
           extraNodeInstanceConfig = i:
-            optionalAttrs (! cfg.useLegacyTracing) {
+            optionalAttrs (!cfgNode.useLegacyTracing) {
               TraceOptionNodeName =
                 if (i == 0)
                 then name
@@ -406,7 +418,7 @@
 
             serviceConfig = {
               # The ~2.3% difference between M and MiB units is already included in the scaling factor
-              MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
+              MemoryMax = "${toString (1.15 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M";
               LimitNOFILE = "65535";
 
               # Ensure quick restarts on any condition
@@ -433,26 +445,33 @@
             "-N${toString cores}"
             "-A16m"
             "-I3"
-            "-M${toString (1.024 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M"
+            "-M${toString (1.024 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M"
           ];
 
           systemdSocketActivation = false;
         };
 
-        cardano-tracer = mkIf (!cfg.useLegacyTracing) {
-          enable = true;
-          cardanoNodePackages = mkDefault cardano-node-pkgs;
-        };
+        # While in a transition from legacy new tracing to ng new tracing, any
+        # profile which imports `profile-cardano-node-group` will also have
+        # to import some version of the cardano-tracer service.
+        cardano-tracer =
+          if cfgNode.ngTracer
+          then {
+            enable = true;
+            package = mkDefault cardano-tracer;
+            cardanoNodePackages = mkDefault cardano-node-pkgs;
+            resourceFreq = mkDefault 60 * 1000;
+          }
+          else {};
       };
-
       systemd.services = let
         serviceName = i:
-          if cfg.instances == 1
+          if cfgNode.instances == 1
           then "cardano-node"
           else "cardano-node-${toString i}";
       in
         {
-          cardano-node-socket-share = mkIf cfg.shareNodeSocket {
+          cardano-node-socket-share = mkIf cfgNode.shareNodeSocket {
             after = ["cardano-node.service"];
             wants = ["cardano-node.service"];
             partOf = ["cardano-node.service"];
@@ -468,7 +487,7 @@
                 name = "cardano-node-socket-share";
                 runtimeInputs = with pkgs; [inotify-tools];
                 text = ''
-                  TARGET="${cfg.socketPath 0}"
+                  TARGET="${cfgNode.socketPath 0}"
                   NAME=$(basename "$TARGET")
                   DIR=$(dirname "$TARGET")
 
@@ -640,7 +659,7 @@
 
       assertions = [
         {
-          assertion = cpuCount >= 2 * cfg.instances;
+          assertion = cpuCount >= 2 * cfgNode.instances;
           message = ''The CPU count on the machine "${name}" will be less 2 per cardano-node instance; performance may be degraded.'';
         }
       ];
