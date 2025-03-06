@@ -90,6 +90,7 @@
 
     cfgNode = nixos.config.services.cardano-node;
     cfgMithril = nixos.config.services.mithril-client;
+    cfgTracer = nixos.config.services.cardano-tracer;
   in {
     # Leave the import of the upstream cardano-node service for
     # cardano-parts consuming repos so that service import can be customized.
@@ -345,7 +346,7 @@
             else null
           );
 
-          tracerSocketPathConnect = mkIf cfgNode.ngTracer "/tmp/forwarder.sock";
+          tracerSocketPathConnect = mkIf cfgNode.ngTracer cfgTracer.acceptingSocket;
 
           hostAddr = mkDefault hostAddr;
 
@@ -440,7 +441,7 @@
             enable = true;
             package = mkDefault cardano-tracer;
             cardanoNodePackages = mkDefault cardano-node-pkgs;
-            resourceFreq = mkDefault 60 * 1000;
+            resourceFreq = mkDefault (60 * 1000);
           }
           else {};
       };
