@@ -142,12 +142,15 @@
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
+      # New tracing via cardano-parts
+      url = "github:IntersectMBO/cardano-node/jl/tracer-service";
+      # url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
       # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service";
       flake = false;
     };
 
     cardano-tracer-service-ng = {
+      # New tracing via iohk-nix, cardano-node ng tracing service, cardano-parts
       url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
       # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service";
       flake = false;

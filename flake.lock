@@ -285,16 +285,16 @@
     "cardano-tracer-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1750274327,
-        "narHash": "sha256-eJble5dz62eE0VNmHJhoYJn/xowHSbvlkcJtfwO8QH0=",
+        "lastModified": 1717175013,
+        "narHash": "sha256-b89kXIvJNRwz60fsRtZ7M1islKcVcl2+cSo7IkZu7ko=",
         "owner": "IntersectMBO",
         "repo": "cardano-node",
-        "rev": "7e86a3633f52e160ea3f81721642688903505782",
+        "rev": "ebb8be83e16b4e2a62e70bd8575013271e4b1886",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "jl/new-tracing-service",
+        "ref": "jl/tracer-service",
         "repo": "cardano-node",
         "type": "github"
       }
