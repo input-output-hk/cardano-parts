@@ -28,13 +28,16 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/new-tracing";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/new-tracing";
     # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/new-tracing";
 
     # For tmp local faucet testing
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
+
+    # For tmp node testing
+    cardano-node-next-tracing.url = "github:input-output-hk/cardano-node/new-tracing/next-release";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
@@ -100,14 +103,17 @@
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
+      # New tracing via cardano-parts
+      url = "github:IntersectMBO/cardano-node/jl/tracer-service";
+      # url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
       # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service";
       flake = false;
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
-      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service";
+      # New tracing via iohk-nix, cardano-node ng tracing service, cardano-parts
+      # url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
+      url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service";
       flake = false;
     };
 
