@@ -465,16 +465,20 @@ in
             (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-1-2cccf6d")
 
             (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.2.1";}))
-            (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.2.1";}))
+            # (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.2.1";}))
+            (mkPkg "cardano-node-ng" localFlake.inputs.cardano-node-next-tracing.packages.x86_64-linux.cardano-node)
             (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-3-0-8ab5fd6)
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-5-cb61094)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-5-cb61094)
             (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-2-1-52b708f")
-            (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-2-1-52b708f")
+            # (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-2-1-52b708f")
+            (mkPkg "cardano-submit-api-ng" localFlake.inputs.cardano-node-next-tracing.packages.x86_64-linux.cardano-submit-api)
             (mkPkg "cardano-testnet" caPkgs."cardano-testnet-input-output-hk-cardano-node-10-2-1-52b708f")
-            (mkPkg "cardano-testnet-ng" caPkgs."cardano-testnet-input-output-hk-cardano-node-10-2-1-52b708f")
+            # (mkPkg "cardano-testnet-ng" caPkgs."cardano-testnet-input-output-hk-cardano-node-10-2-1-52b708f")
+            (mkPkg "cardano-testnet-ng" localFlake.inputs.cardano-node-next-tracing.packages.x86_64-linux.cardano-testnet)
             (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-2-1-52b708f")
-            (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-2-1-52b708f")
+            # (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-2-1-52b708f")
+            (mkPkg "cardano-tracer-ng" localFlake.inputs.cardano-node-next-tracing.packages.x86_64-linux.cardano-tracer)
             (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-11-18-9eb5f59
               // {
                 pname = "cardano-wallet";
