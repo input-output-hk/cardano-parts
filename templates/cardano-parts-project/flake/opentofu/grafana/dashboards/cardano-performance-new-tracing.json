@@ -31,8 +31,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -114,8 +113,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -127,8 +125,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -145,8 +142,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -246,8 +242,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -259,8 +254,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -277,8 +271,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The total number of the active delegations.",
       "fieldConfig": {
@@ -361,8 +354,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "avg(cardano_node_metrics_delegMapSize_int{environment=\"$environment\"})",
@@ -379,8 +371,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The total number of UTxO entries.",
       "fieldConfig": {
@@ -463,8 +454,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "avg(cardano_node_metrics_utxoSize_int{environment=\"$environment\"})",
@@ -480,8 +470,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -610,8 +599,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -625,8 +613,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -640,8 +627,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -655,8 +641,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -675,8 +660,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -760,8 +744,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -780,8 +763,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -866,8 +848,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -885,8 +866,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -967,8 +947,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -982,8 +961,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1000,8 +978,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1082,8 +1059,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1095,8 +1071,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1113,8 +1088,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1195,8 +1169,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1209,8 +1182,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1239,8 +1211,7 @@
           "value": "mainnet"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "mimir"
+          "type": "prometheus"
         },
         "definition": "label_values(cardano_node_metrics_blockNum_int,environment)",
         "hide": 0,
