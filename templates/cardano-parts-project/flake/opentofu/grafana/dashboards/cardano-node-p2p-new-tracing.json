@@ -26,8 +26,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -109,8 +108,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -126,8 +124,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -209,8 +206,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -226,8 +222,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -309,8 +304,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -326,8 +320,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -409,8 +402,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -426,8 +418,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -509,8 +500,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -526,8 +516,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -609,8 +598,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -626,8 +614,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -709,8 +696,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -726,8 +712,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -809,8 +794,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -826,8 +810,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -909,8 +892,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -926,8 +908,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1009,8 +990,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1026,8 +1006,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1109,8 +1088,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1126,8 +1104,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1211,8 +1188,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1224,8 +1200,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1332,8 +1307,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1415,8 +1389,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1432,8 +1405,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1515,8 +1487,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1532,8 +1503,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1615,8 +1585,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1643,8 +1612,7 @@
           "value": "sanchonet"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "mimir"
+          "type": "prometheus"
         },
         "definition": "label_values(environment)",
         "hide": 0,

@@ -1914,8 +1914,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The cardano-node uptime",
       "fieldConfig": {
@@ -2026,8 +2025,7 @@
           "value": "preprod"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "mimir"
+          "type": "prometheus"
         },
         "definition": "label_values(cardano_node_metrics_blockNum_int,environment)",
         "hide": 0,
