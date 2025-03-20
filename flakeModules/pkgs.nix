@@ -444,7 +444,7 @@ in
 
             (mkPkg "cardano-node" (caPkgs."cardano-node-input-output-hk-cardano-node-10-1-4-1f63dbf" // {version = "10.1.4";}))
             (mkPkg "cardano-node-ng" (caPkgs."cardano-node-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.2.1";}))
-            (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-3-0-8ab5fd6)
+            (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-11-2-df5971a)
             (mkPkg "cardano-smash" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-4-0b7c281)
             (mkPkg "cardano-smash-ng" caPkgs.cardano-smash-server-no-basic-auth-input-output-hk-cardano-db-sync-13-6-0-4-0b7c281)
             (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-input-output-hk-cardano-node-10-1-4-1f63dbf")
@@ -520,6 +520,7 @@ in
               metadata-webhook
               mithril-client-cli
               mithril-signer
+              ogmios
               orchestrator-cli
               token-metadata-creator
               tx-bundle

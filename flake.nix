@@ -73,7 +73,7 @@
     };
 
     cardano-ogmios-service = {
-      url = "github:input-output-hk/cardano-ogmios/ogmios-6-3-0";
+      url = "github:input-output-hk/cardano-ogmios";
       flake = false;
     };
 

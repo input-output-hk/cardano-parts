@@ -276,16 +276,15 @@
     "cardano-ogmios-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1716597207,
-        "narHash": "sha256-4VirdOf0nO9b0TBon3MgUxjk1PFg+6ToXE3JirDvTlk=",
+        "lastModified": 1742411890,
+        "narHash": "sha256-88HQQ9uUCBs2aMDWzUplt/LsGyC033ErAGDJKC8tZjk=",
         "owner": "input-output-hk",
         "repo": "cardano-ogmios",
-        "rev": "2031861815ea18c543d2f7b65d4965003e26a2c9",
+        "rev": "df5971a932f349f9cd2a6c5f40c39023adbdb77e",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "ogmios-6-3-0",
         "repo": "cardano-ogmios",
         "type": "github"
       }
