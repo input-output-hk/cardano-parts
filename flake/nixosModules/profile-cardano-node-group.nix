@@ -459,6 +459,7 @@
           if cfgNode.ngTracer
           then {
             enable = true;
+            environment = environmentName;
             package = mkDefault cardano-tracer;
             cardanoNodePackages = mkDefault cardano-node-pkgs;
             resourceFreq = mkDefault (60 * 1000);
