@@ -302,7 +302,9 @@ flake @ {moduleWithSystem, ...}: {
         cardanoNode = optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable) (map (
           i: let
             metricsPath =
-              if cfgSvc.cardano-node.useLegacyTracing || (!cfgSvc.cardano-node.useLegacyTracing && cfgSvc.cardano-node.ngTracer)
+              # Use once PrometheusSimple is available in >= node 10.3
+              # if cfgSvc.cardano-node.useLegacyTracing || (!cfgSvc.cardano-node.useLegacyTracing && cfgSvc.cardano-node.ngTracer)
+              if cfgSvc.cardano-node.useLegacyTracing
               then "/metrics"
               else "/${(cfgSvc.cardano-node.extraNodeInstanceConfig i).TraceOptionNodeName}";
 
@@ -314,6 +316,10 @@ flake @ {moduleWithSystem, ...}: {
             target =
               if cfgSvc.cardano-node.useLegacyTracing
               then "${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"
+              # Use once PrometheusSimple is available in >= node 10.3
+              # else "${hostAddr}:${toString cardanoNodePrometheusExporterPort}";
+              else if cfgSvc.cardano-node.ngTracer
+              then "${hostAddr}:${toString 12808}"
               else "${hostAddr}:${toString cardanoNodePrometheusExporterPort}";
 
             toUnderscore = s: replaceStrings ["-"] ["_"] s;
