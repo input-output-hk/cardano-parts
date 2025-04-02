@@ -278,10 +278,10 @@
           # Also review iohk-nix and cardano-node nixos service related changes.
           useLegacyTracing = mkDefault true;
 
-          # Once the new tracing system is default, this can be simplified and iohk-nix updated.
+          # Once the new tracing system is default, this can be simplified and iohk-nix updated and the `or` removed
           nodeConfig = mkForce (
             if cfgNode.useLegacyTracing
-            then cardanoLib.environments.${environmentName}.nodeConfigLegacy
+            then cardanoLib.environments.${environmentName}.nodeConfigLegacy or cardanoLib.environments.${environmentName}.nodeConfig
             else cardanoLib.environments.${environmentName}.nodeConfig
             # else
             #   # Reference: https://github.com/IntersectMBO/cardano-node/blob/master/nix/workbench/service/tracing.nix
