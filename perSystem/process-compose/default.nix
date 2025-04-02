@@ -220,7 +220,7 @@ flake @ {inputs, ...}: {
             sleep 5
           done
 
-          while ! "$CLI" ping -c 1 -u "$SOCKET" -m "${envBinCfgs.${env}.magic}" &> /dev/null; do
+          while ! "$CLI" query tip --socket-path "$SOCKET" --testnet-magic "${envBinCfgs.${env}.magic}" &> /dev/null; do
             echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for the socket to become active at $SOCKET"
             sleep 5
           done
