@@ -194,7 +194,7 @@ flake: {
             extraNodeConfig.PeerSharing = false;
             extraNodeConfig.TargetNumberOfRootPeers = 100;
             publicProducers = mkForce [];
-            usePeersFromLedgerAfterSlot = -1;
+            useLedgerAfterSlot = -1;
           };
 
         systemd = {

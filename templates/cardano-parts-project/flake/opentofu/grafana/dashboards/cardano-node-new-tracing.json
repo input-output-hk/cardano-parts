@@ -31,8 +31,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -134,8 +133,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -236,8 +234,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -341,8 +338,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -442,8 +438,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Calculated at a 1 hr averaging window",
       "fieldConfig": {
@@ -557,8 +552,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -660,8 +654,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -761,8 +754,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -860,8 +852,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -961,8 +952,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1087,8 +1077,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1345,8 +1334,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1626,8 +1614,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "KES periods remaining",
       "fieldConfig": {
@@ -1938,8 +1925,7 @@
           "value": "sanchonet"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "mimir"
+          "type": "prometheus"
         },
         "definition": "label_values(cardano_node_metrics_blockNum_int,environment)",
         "hide": 0,
