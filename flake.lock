@@ -588,14 +588,18 @@
     "cardano-tracer-service-ng": {
       "flake": false,
       "locked": {
-        "lastModified": 1745973262,
-        "narHash": "sha256-HM3N2Ngfk12rdAZzeIZIr6w2kNqAPVS7XWJEWmOAJbI=",
-        "path": "/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service",
-        "type": "path"
+        "lastModified": 1745972988,
+        "narHash": "sha256-UEfNRlD/ffoIdgN2ICefExs8hMwyBpZorDHF0rVIwjc=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-node",
+        "rev": "20e921ccfc502d4fa19bbc18062f4bf0102df16b",
+        "type": "github"
       },
       "original": {
-        "path": "/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service",
-        "type": "path"
+        "owner": "IntersectMBO",
+        "ref": "jl/new-tracing-service",
+        "repo": "cardano-node",
+        "type": "github"
       }
     },
     "cardano-wallet-service": {
@@ -1486,15 +1490,16 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1745582862,
-        "narHash": "sha256-dMoJ6yHcRvUcB66nofzfAtmVxnDg8oPW3wiVtimXT/o=",
+        "lastModified": 1745972201,
+        "narHash": "sha256-f8jTn8EET4fKaxrmzFUkq+x4KuR+osqQZmVJrcXKRgE=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "5c16fdfc45deda7a4ccf964b6dfa1c3cab72f1f7",
+        "rev": "35d7dcb8b0ad8882cc2df5012dec317003286eb6",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "jl/legacy-tracing-transition",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -2229,16 +2234,16 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1684171562,
-        "narHash": "sha256-BMUWjVWAUdyMWKk0ATMC9H0Bv4qAV/TXwwPUvTiC5IQ=",
+        "lastModified": 1740683541,
+        "narHash": "sha256-t1NxrPg8UJCZQ039zSMYB5//XluEdwACTDIxDK31R1I=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "55af203d468a6f5032a519cba4f41acf5a74b638",
+        "rev": "2bc8d3dcc2eb6f7d23590b52042e274eda02318e",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "release-22.11",
+        "ref": "release-24.11",
         "repo": "nixpkgs",
         "type": "github"
       }
