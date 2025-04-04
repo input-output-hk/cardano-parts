@@ -3,6 +3,7 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
+#   flake.cardano-parts.pkgs.special.blockfrost-platform-service
 #   flake.cardano-parts.pkgs.special.cardanoLib
 #   flake.cardano-parts.pkgs.special.cardanoLibCustom
 #   flake.cardano-parts.pkgs.special.cardanoLibNg
@@ -24,6 +25,7 @@
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.cardano-address
+#   perSystem.cardano-parts.pkgs.blockfrost-platform
 #   perSystem.cardano-parts.pkgs.blockperf
 #   perSystem.cardano-parts.pkgs.cardano-cli
 #   perSystem.cardano-parts.pkgs.cardano-cli-ng
@@ -271,6 +273,12 @@
         };
       };
 
+      blockfrost-platform-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default blockfrost-platform-service import path string.";
+        default = "${localFlake.inputs.blockfrost-platform-service}/nix/nixos";
+      };
+
       cardano-db-sync-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
@@ -428,6 +436,12 @@ in
             # TODO: Fix the missing meta/version info upstream
             (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-10-2-1-52b708f")
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
+            (
+              mkPkg "blockfrost-platform"
+              # FIXME: once <https://github.com/input-output-hk/capkgs/pull/4> is merged
+              # This is the 0.0.2 release:
+              (builtins.getFlake "github:blockfrost/blockfrost-platform/e06029b9da747fa5daa027605a918fc9fe103b7c").packages.x86_64-linux.default
+            )
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-11-18-9eb5f59)
             (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.4.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.4.0.0";}))
@@ -495,6 +509,7 @@ in
             inherit
               (cfgPkgs)
               bech32
+              blockfrost-platform
               blockperf
               cc-sign
               cardano-address
