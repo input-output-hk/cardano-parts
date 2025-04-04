@@ -32,6 +32,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePrometheusExporterPort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoSmashDelistedPools
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.blockfrost-platform-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-db-sync-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-faucet-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-metadata-service
@@ -45,6 +46,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.environmentName
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.hostsList
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.blockperf
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.blockfrost-platform
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-cli
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync-pkgs
@@ -427,6 +429,12 @@ flake @ {
         default = [];
       };
 
+      blockfrost-platform-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group blockfrost-platform-service import path string.";
+        default = cfg.pkgs.special.blockfrost-platform-service;
+      };
+
       cardano-db-sync-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
@@ -517,6 +525,12 @@ flake @ {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default blockperf package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockperf);
+      };
+
+      blockfrost-platform = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default blockfrost-platform package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockfrost-platform);
       };
 
       cardano-cli = mkOption {

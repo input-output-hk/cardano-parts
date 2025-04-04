@@ -77,6 +77,11 @@
       flake = false;
     };
 
+    blockfrost-platform-service = {
+      url = "github:blockfrost/blockfrost-platform/pull/273/head";
+      flake = false;
+    };
+
     cardano-tracer-service = {
       url = "github:IntersectMBO/cardano-node/jl/tracer-service";
       flake = false;
