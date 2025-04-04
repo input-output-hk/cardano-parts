@@ -273,7 +273,8 @@ in
                 extraCfg.pkgs = mkOption {
                   default =
                     config.cardano-parts.shell.min.pkgs
-                    ++ localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
+                    # FIXME: revert, `nix-2.17.0` can’t build `blockfrost-platform`
+                    ++ builtins.filter (a: a ? pname && a.pname != "nix") localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
                     ++ (with pkgs; [
                       ghcid
                     ]);
@@ -290,6 +291,7 @@ in
                         b2sum
                         haskellPackages.cbor-tool
                         bech32
+                        blockfrost-platform
                         cardano-address
                         cardano-cli
                         cardano-node
@@ -350,7 +352,8 @@ in
                 extraCfg.pkgs = mkOption {
                   default =
                     config.cardano-parts.shell.ops.pkgs
-                    ++ localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
+                    # FIXME: revert, `nix-2.17.0` can’t build `blockfrost-platform`
+                    ++ builtins.filter (a: a ? pname && a.pname != "nix") localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
                     ++ (with pkgs; [
                       ghcid
                     ]);

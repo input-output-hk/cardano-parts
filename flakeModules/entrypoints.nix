@@ -102,7 +102,7 @@ in {
 
             DB_DIR="$DATA_DIR/db-''${ENVIRONMENT:-custom}"
 
-            # The following environment variables may be used to modify default process compose mithril behavior:
+            # XXX: The following environment variables may be used to modify default process compose mithril behavior:
             #   MITHRIL_DISABLE
             #   MITHRIL_SNAPSHOT_DIGEST
             #   MITHRIL_VERIFY_SNAPSHOT

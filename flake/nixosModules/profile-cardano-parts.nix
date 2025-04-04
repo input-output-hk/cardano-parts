@@ -8,6 +8,7 @@
 #   config.cardano-parts.perNode.lib.opsLib
 #   config.cardano-parts.perNode.lib.topologyLib
 #   config.cardano-parts.perNode.meta.addressType
+#   config.cardano-parts.perNode.meta.blockfrost-platform-service
 #   config.cardano-parts.perNode.meta.cardanoDbSyncPrometheusExporterPort
 #   config.cardano-parts.perNode.meta.cardanoNodePort
 #   config.cardano-parts.perNode.meta.cardanoNodePrometheusExporterPort
@@ -148,6 +149,12 @@ flake @ {moduleWithSystem, ...}: {
           type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"];
           description = mdDoc "The default addressType for topologyLib mkProducer function.";
           default = cfg.group.meta.addressType;
+        };
+
+        blockfrost-platform-service = mkOption {
+          type = str;
+          description = mdDoc "The blockfrost-platform-service import path string.";
+          default = cfg.group.meta.blockfrost-platform-service;
         };
 
         cardanoDbSyncPrometheusExporterPort = mkOption {
