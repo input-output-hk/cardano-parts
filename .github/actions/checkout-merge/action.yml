@@ -1,0 +1,82 @@
+name: Checkout and merge PR
+
+description: >
+  Checkout base and PR branch, create local merge commit with smart shallow
+  fetch. Works in manual dispatch, PR, push and schedule contexts. Compatible
+  with fork PRs.
+
+inputs:
+  base_ref:
+    description: 'Base branch ref (typically github.event.pull_request.base.ref)'
+    required: true
+
+  head_ref:
+    description: 'The head branch ref of the PR (typically github.head_ref || github.ref_name)'
+    required: true
+
+  pr_number:
+    description: 'PR number (typically github.event.pull_request.number)'
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.pr_number != ''
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        git config --local user.name "GitHub Actions"
+        git config --local user.email "actions@github.com"
+        git fetch --no-tags --depth=10 origin ${{ inputs.base_ref }}
+        git fetch --no-tags --depth=10 origin pull/${{ inputs.pr_number }}/head:pr
+
+        # Check if this is a fork PR
+        if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+
+          echo "Detected forked PR -- adding fork remote."
+          PR_REMOTE=$(gh pr view ${{ inputs.pr_number }} --json headRepositoryOwner,headRepository \
+            --jq '"\(.headRepositoryOwner.login)/\(.headRepository.name)"')
+
+          if [ -n "$PR_REMOTE" ]; then
+            git remote add fork "https://github.com/$PR_REMOTE"
+            git fetch fork "${{ inputs.head_ref }}"
+            UPSTREAM="fork"
+          else
+            UPSTREAM="origin"
+          fi
+        else
+          echo "Detected same-repo PR."
+          UPSTREAM="origin"
+        fi
+
+        git fetch --no-tags --depth=10 "$UPSTREAM" "refs/heads/${{ inputs.head_ref }}:refs/remotes/$UPSTREAM/${{ inputs.head_ref }}"
+
+        git checkout -b ${{ inputs.head_ref }} FETCH_HEAD
+        if git merge --no-ff --no-edit pr; then
+          echo "Merge succeeded."
+        else
+          echo "Merge failed, possibly due to shallow history. Retrying with deeper fetch..."
+          git fetch --unshallow || git fetch --depth=50
+
+          if git merge --no-ff --no-edit pr; then
+            echo "Merge succeeded after deeper fetch."
+          else
+            echo "Merge conflict detected."
+            exit 1
+          fi
+        fi
+
+        echo "Merged commit HEAD is:"
+        git rev-parse HEAD
+        git log -1 --oneline
+
+        echo "Setting upstream branch to: $UPSTREAM/${{ inputs.head_ref }}"
+        git branch --set-upstream-to="$UPSTREAM/${{ inputs.head_ref }}" HEAD
+
+        echo "Confirmation of upstream:"
+        git status -sb
+      shell: bash
+
+    - if: inputs.pr_number == ''
+      run: echo "Not a PR event -- no merge required"
+      shell: bash

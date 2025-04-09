@@ -1,5 +1,19 @@
 on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional PR number, for maintainer use
+        required: false
+
+  push:
+    branches:
+      - main
+
   pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   nix-jobs-test:
@@ -8,8 +22,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # This step allows for maintainer workflow dispatch of forked PRs with a
+      # declared PR input number.
+      - name: Detect PR context
+        id: detect-pr
+        uses: ./.github/actions/detect-pr
+
+      # For PRs, checkout a merge base, including for forked PRs.
+      - name: Checkout and merge PR
+        uses: ./.github/actions/checkout-merge
         with:
-         ref: "${{github.head_ref || github.ref_name}}"
+          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
+          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
+          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
+
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
@@ -18,6 +45,7 @@ jobs:
             experimental-features = fetch-closure flakes nix-command
             substituters = https://cache.iog.io https://cache.nixos.org/
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
       - name: Test
         run: |
           nix --version
