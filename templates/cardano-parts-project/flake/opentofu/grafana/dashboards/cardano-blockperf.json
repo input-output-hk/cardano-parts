@@ -31,8 +31,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The block number of latest sample.",
       "fieldConfig": {
@@ -135,8 +134,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Total block delay.",
       "fieldConfig": {
@@ -240,8 +238,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The time from when a block was forged until received.",
       "fieldConfig": {
@@ -345,8 +342,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The time between when the header was received until the block request was sent.",
       "fieldConfig": {
@@ -450,8 +446,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The time between when the block request was sent until the block response was received.",
       "fieldConfig": {
@@ -555,8 +550,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "The time for adopting the block.",
       "fieldConfig": {
@@ -660,8 +654,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Smoothed to a 1 minute window.",
       "fieldConfig": {
@@ -765,8 +758,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Cardano-node ping latency measured from localhost with cardano-cli ping",
       "fieldConfig": {
@@ -867,8 +859,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Over a 1 hr window.",
       "fieldConfig": {
@@ -972,8 +963,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Valid samples collected.",
       "fieldConfig": {
@@ -1076,8 +1066,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Invalid samples discarded.",
       "fieldConfig": {
@@ -1191,8 +1180,7 @@
           "value": "mainnet"
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "mimir"
+          "type": "prometheus"
         },
         "definition": "label_values(cardano_node_metrics_blockNum_int,environment)",
         "hide": 0,
@@ -1224,8 +1212,7 @@
           ]
         },
         "datasource": {
-          "type": "prometheus",
-          "uid": "mimir"
+          "type": "prometheus"
         },
         "definition": "label_values(blockperf_block_no,instance)",
         "hide": 0,

@@ -91,34 +91,105 @@
               PREPARE show_current_forging AS
                 WITH
                   current_epoch AS (
-                    SELECT MAX(epoch_no) AS current_epoch FROM block),
+                    SELECT MAX(epoch_no) AS epoch_no FROM block
+                  ),
+
                   epoch_blocks AS (
-                    SELECT COUNT(block.block_no) AS epoch_blocks, pool_hash.view AS pool_view FROM block
+                    SELECT
+                      COUNT(block.block_no) AS epoch_blocks,
+                      pool_hash.view AS pool_view
+                    FROM block
                       INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
                       INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
-                      WHERE block.epoch_no = (SELECT * FROM current_epoch)
-                      GROUP BY pool_hash.view),
+                      INNER JOIN current_epoch ON block.epoch_no = current_epoch.epoch_no
+                    GROUP BY pool_hash.view
+                  ),
+
                   last_blocks AS (
-                    SELECT distinct on (pool_hash.view) block.block_no AS last_block, block.time AS last_block_time, pool_hash.view AS pool_view FROM block
+                    SELECT DISTINCT ON (pool_hash.view)
+                      block.block_no AS last_block,
+                      block.time AS last_block_time,
+                      pool_hash.view AS pool_view
+                    FROM block
                       INNER JOIN slot_leader ON block.slot_leader_id = slot_leader.id
                       INNER JOIN pool_hash ON slot_leader.pool_hash_id = pool_hash.id
-                      ORDER BY pool_hash.view ASC, block.block_no desc),
+                    ORDER BY pool_hash.view, block.block_no DESC
+                  ),
+
                   current_epoch_stake AS (
-                    SELECT SUM(amount) AS epoch_stake FROM epoch_stake
-                      WHERE epoch_no = (SELECT * FROM current_epoch))
+                    SELECT SUM(amount) AS total_stake
+                    FROM epoch_stake
+                    INNER JOIN current_epoch ON epoch_stake.epoch_no = current_epoch.epoch_no
+                  ),
+
+                  latest_pool_update AS (
+                    SELECT DISTINCT ON (hash_id)
+                      id AS pool_update_id,
+                      hash_id,
+                      meta_id
+                    FROM pool_update
+                    ORDER BY hash_id, id DESC
+                  ),
+
+                  latest_off_chain_data AS (
+                    SELECT DISTINCT ON (pool_id)
+                      pool_id,
+                      pmr_id,
+                      ticker_name
+                    FROM off_chain_pool_data
+                    ORDER BY pool_id, pmr_id DESC
+                  ),
+
+                  latest_pool_relay AS (
+                    SELECT DISTINCT ON (update_id)
+                      update_id,
+                      dns_name
+                    FROM pool_relay
+                    WHERE dns_name IS NOT NULL
+                    ORDER BY update_id, id DESC
+                  ),
+
+                  latest_pool_metadata_ref AS (
+                    SELECT DISTINCT ON (pool_id)
+                      pool_id,
+                      url
+                    FROM pool_metadata_ref
+                    ORDER BY pool_id, id DESC
+                  )
+
                 SELECT
-                  (SELECT * FROM current_epoch),
+                  current_epoch.epoch_no AS current_epoch,
                   pool_hash.view AS pool_id,
-                  SUM(amount) AS lovelace,
-                  ROUND(SUM(amount) / (SELECT * FROM current_epoch_stake) * 100, 3) AS stake_pct,
-                  (SELECT epoch_blocks FROM epoch_blocks WHERE epoch_blocks.pool_view = pool_hash.view),
-                  (SELECT last_block FROM last_blocks WHERE last_blocks.pool_view = pool_hash.view),
-                  (SELECT last_block_time FROM last_blocks WHERE last_blocks.pool_view = pool_hash.view)
+                  COALESCE(
+                    latest_off_chain_data.ticker_name,
+                    latest_pool_relay.dns_name,
+                    latest_pool_metadata_ref.url
+                  ) AS ticker_or_dns_or_url,
+                  ROUND(SUM(epoch_stake.amount) / 1e12, 2) AS "M_Ada",
+                  ROUND(SUM(epoch_stake.amount) / MAX(current_epoch_stake.total_stake) * 100, 3) AS stake_pct,
+                  epoch_blocks.epoch_blocks,
+                  last_blocks.last_block,
+                  last_blocks.last_block_time
                 FROM epoch_stake
+                  INNER JOIN current_epoch ON epoch_stake.epoch_no = current_epoch.epoch_no
                   INNER JOIN pool_hash ON epoch_stake.pool_id = pool_hash.id
-                  WHERE epoch_no = (SELECT * FROM current_epoch)
-                    GROUP BY pool_hash.id
-                    ORDER BY lovelace DESC;
+                  LEFT JOIN latest_pool_update ON latest_pool_update.hash_id = pool_hash.id
+                  LEFT JOIN latest_off_chain_data ON latest_off_chain_data.pmr_id = latest_pool_update.meta_id
+                  LEFT JOIN latest_pool_relay ON latest_pool_relay.update_id = latest_pool_update.pool_update_id
+                  LEFT JOIN latest_pool_metadata_ref ON latest_pool_metadata_ref.pool_id = pool_hash.id
+                  LEFT JOIN epoch_blocks ON epoch_blocks.pool_view = pool_hash.view
+                  LEFT JOIN last_blocks ON last_blocks.pool_view = pool_hash.view
+                  CROSS JOIN current_epoch_stake
+                GROUP BY
+                  current_epoch.epoch_no,
+                  pool_hash.view,
+                  latest_off_chain_data.ticker_name,
+                  latest_pool_relay.dns_name,
+                  latest_pool_metadata_ref.url,
+                  epoch_blocks.epoch_blocks,
+                  last_blocks.last_block,
+                  last_blocks.last_block_time
+                ORDER BY "M_Ada" DESC;
 
               -- Show the number of blocks made per epoch across all epochs by one pool
               PREPARE show_pool_block_history_by_epoch_fn (varchar) AS
