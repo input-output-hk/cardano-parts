@@ -273,8 +273,7 @@ in
                 extraCfg.pkgs = mkOption {
                   default =
                     config.cardano-parts.shell.min.pkgs
-                    # FIXME: revert, `nix-2.17.0` can’t build `blockfrost-platform`
-                    ++ builtins.filter (a: a ? pname && a.pname != "nix") localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
+                    ++ localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
                     ++ (with pkgs; [
                       ghcid
                     ]);
@@ -352,8 +351,7 @@ in
                 extraCfg.pkgs = mkOption {
                   default =
                     config.cardano-parts.shell.ops.pkgs
-                    # FIXME: revert, `nix-2.17.0` can’t build `blockfrost-platform`
-                    ++ builtins.filter (a: a ? pname && a.pname != "nix") localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
+                    ++ localFlake.inputs.haskell-nix.devShells.${system}.default.buildInputs
                     ++ (with pkgs; [
                       ghcid
                     ]);
