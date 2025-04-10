@@ -1,0 +1,80 @@
+name: Detect PR context
+
+description: >
+  Detects pull request context, outputs PR number, refs, and trust level.
+  Compatible with fork PRs.
+
+outputs:
+  base_ref:
+    description: Base branch ref
+    value: ${{ steps.internal-detect-pr.outputs.base_ref }}
+
+  event_name:
+    description: GitHub event name
+    value: ${{ steps.internal-detect-pr.outputs.event_name }}
+
+  head_ref:
+    description: Head branch ref
+    value: ${{ steps.internal-detect-pr.outputs.head_ref }}
+
+  is_trusted:
+    description: Trusted status
+    value: ${{ steps.internal-detect-pr.outputs.is_trusted }}
+
+  pr_number:
+    description: Pull request number, if applicable
+    value: ${{ steps.internal-detect-pr.outputs.pr_number }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect context
+      env:
+        GH_TOKEN: ${{ github.token }}
+      id: internal-detect-pr
+      run: |
+        HEAD_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+        REPO="${{ github.repository }}"
+
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "PR context detected."
+          echo "pr_number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          echo "head_ref=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
+          echo "base_ref=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+
+          if [ "$HEAD_REPO" = "$REPO" ]; then
+            echo "is_trusted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_trusted=false" >> "$GITHUB_OUTPUT"
+          fi
+
+        elif [ -n "${{ github.event.inputs.pr_number }}" ]; then
+          echo "Manual dispatch detected."
+
+          PR_DATA=$(gh pr view ${{ github.event.inputs.pr_number }} --repo "$REPO" \
+            --json headRefName,baseRefName -q '{ "head_ref": .headRefName, "base_ref": .baseRefName }')
+
+          HEAD_REF=$(jq -r .head_ref <<< "$PR_DATA")
+          BASE_REF=$(jq -r .base_ref <<< "$PR_DATA")
+
+          echo "pr_number=${{ github.event.inputs.pr_number }}" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$HEAD_REF" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$BASE_REF" >> "$GITHUB_OUTPUT"
+          echo "is_trusted=true" >> "$GITHUB_OUTPUT"
+
+        else
+          echo "No PR context detected. Using default branch."
+          echo "head_ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "base_ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "is_trusted=true" >> "$GITHUB_OUTPUT"
+        fi
+      shell: bash
+
+    - name: Print detected context
+      run: |
+        echo "Event: ${{ github.event_name }}"
+        echo "PR number: ${{ steps.internal-detect-pr.outputs.pr_number }}"
+        echo "Head ref: ${{ steps.internal-detect-pr.outputs.head_ref }}"
+        echo "Base ref: ${{ steps.internal-detect-pr.outputs.base_ref }}"
+        echo "Trusted run: ${{ steps.internal-detect-pr.outputs.is_trusted }}"
+      shell: bash
