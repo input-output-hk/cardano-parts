@@ -28,7 +28,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/genesis-cfg";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/legacy-tracing-transition";
     # iohk-nix.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/genesis-cfg";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/new-tracing";
     # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/new-tracing";

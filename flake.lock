@@ -1712,16 +1712,16 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1743700525,
-        "narHash": "sha256-Lql0s3Occ6gKLvjcqTPK6vW4l1jwNn/UV7uaVpB/jTg=",
+        "lastModified": 1744317223,
+        "narHash": "sha256-7ZsO82G7rI7thr/sF78TRwacIoxa1LWl/PeqkpANW/8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "6ec40c890be7313ff45425330be9249e00a393af",
+        "rev": "c3cad493cddf569ecd3dbb727ed8dbb4af36b160",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "jl/genesis-cfg",
+        "ref": "jl/legacy-tracing-transition",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -2499,16 +2499,16 @@
     },
     "nixpkgs_10": {
       "locked": {
-        "lastModified": 1684171562,
-        "narHash": "sha256-BMUWjVWAUdyMWKk0ATMC9H0Bv4qAV/TXwwPUvTiC5IQ=",
+        "lastModified": 1740683541,
+        "narHash": "sha256-t1NxrPg8UJCZQ039zSMYB5//XluEdwACTDIxDK31R1I=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "55af203d468a6f5032a519cba4f41acf5a74b638",
+        "rev": "2bc8d3dcc2eb6f7d23590b52042e274eda02318e",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "release-22.11",
+        "ref": "release-24.11",
         "repo": "nixpkgs",
         "type": "github"
       }
