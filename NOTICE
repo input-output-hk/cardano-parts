@@ -1,4 +1,4 @@
-Copyright 2023 Input Output Global Inc (IOG)
+Copyright 2023-2025 Input Output Global Inc (IOG)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -11,3 +11,24 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+Attribution Notice:
+
+This project may include third-party materials. These materials will be listed
+below as they are incorporated.
+
+# Example template for attribution when third-party files are added:
+#
+# - File originally from [Original Project Name] repository:
+#   https://github.com/username/original-repo
+#   Licensed under the Apache License, Version 2.0.
+
+Downstream projects may include various files from this repository. These files
+are provided under the same license terms and may be used, copied, modified,
+and distributed in accordance with the Apache License, Version 2.0.
+
+The specific files incorporated from this repository into downstream projects
+may change over time. Downstream users are encouraged to include appropriate
+attribution in their own NOTICE or documentation files where applicable.
+
+No endorsement by the original authors is implied.
