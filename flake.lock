@@ -74,16 +74,15 @@
     "blockfrost-platform-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1743771926,
-        "narHash": "sha256-EOg/tCAJKPmK1xKBeetlGDQuKRrioct3InXej7QymMo=",
+        "lastModified": 1744287517,
+        "narHash": "sha256-0PSDq5rT0SvvSQ3TMnc1vjhrefMlIwt1d2eO06OUrVM=",
         "owner": "blockfrost",
         "repo": "blockfrost-platform",
-        "rev": "8638d10bf41b495660df44840a8ff3cc6c5757c3",
+        "rev": "9480822973bc156cda3b1bca9e92d70fa9a1a3dc",
         "type": "github"
       },
       "original": {
         "owner": "blockfrost",
-        "ref": "pull/273/head",
         "repo": "blockfrost-platform",
         "type": "github"
       }

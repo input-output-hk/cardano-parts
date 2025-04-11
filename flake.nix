@@ -78,7 +78,7 @@
     };
 
     blockfrost-platform-service = {
-      url = "github:blockfrost/blockfrost-platform/pull/273/head";
+      url = "github:blockfrost/blockfrost-platform";
       flake = false;
     };
 
