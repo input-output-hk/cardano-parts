@@ -24,9 +24,9 @@
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
-#   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.blockfrost-platform
 #   perSystem.cardano-parts.pkgs.blockperf
+#   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
 #   perSystem.cardano-parts.pkgs.cardano-cli-ng
 #   perSystem.cardano-parts.pkgs.cardano-db-sync
@@ -117,6 +117,12 @@
 
   specialPkgsSubmodule = submodule {
     options = {
+      blockfrost-platform-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default blockfrost-platform-service import path string.";
+        default = "${localFlake.inputs.blockfrost-platform-service}/nix/nixos";
+      };
+
       cardanoLib = mkOption {
         type = anything;
         description = mdDoc ''
@@ -271,12 +277,6 @@
           cardano-submit-api = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api-ng);
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
         };
-      };
-
-      blockfrost-platform-service = mkOption {
-        type = str;
-        description = mdDoc "The cardano-parts default blockfrost-platform-service import path string.";
-        default = "${localFlake.inputs.blockfrost-platform-service}/nix/nixos";
       };
 
       cardano-db-sync-service = mkOption {
@@ -435,8 +435,8 @@ in
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
             (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-10-2-1-52b708f")
-            (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
             (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-2-e06029b)
+            (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-11-18-9eb5f59)
             (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.4.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.4.0.0";}))

@@ -28,11 +28,11 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.opsLib
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.addressType
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.blockfrost-platform-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoDbSyncPrometheusExporterPort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePrometheusExporterPort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoSmashDelistedPools
-#   flake.cardano-parts.cluster.groups.<default|name>.meta.blockfrost-platform-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-db-sync-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-faucet-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-metadata-service
@@ -405,6 +405,12 @@ flake @ {
           else "fqdn";
       };
 
+      blockfrost-platform-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group blockfrost-platform-service import path string.";
+        default = cfg.pkgs.special.blockfrost-platform-service;
+      };
+
       cardanoDbSyncPrometheusExporterPort = mkOption {
         type = port;
         description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
@@ -427,12 +433,6 @@ flake @ {
         type = listOf str;
         description = mdDoc "Cardano-parts cluster group cardano-smash delisted pools.";
         default = [];
-      };
-
-      blockfrost-platform-service = mkOption {
-        type = str;
-        description = mdDoc "Cardano-parts cluster group blockfrost-platform-service import path string.";
-        default = cfg.pkgs.special.blockfrost-platform-service;
       };
 
       cardano-db-sync-service = mkOption {
@@ -521,16 +521,16 @@ flake @ {
 
   pkgsSubmodule = submodule {
     options = {
-      blockperf = mkOption {
-        type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default blockperf package.";
-        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockperf);
-      };
-
       blockfrost-platform = mkOption {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default blockfrost-platform package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockfrost-platform);
+      };
+
+      blockperf = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default blockperf package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockperf);
       };
 
       cardano-cli = mkOption {
