@@ -28,6 +28,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.opsLib
 #   flake.cardano-parts.cluster.groups.<default|name>.lib.topologyLib
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.addressType
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.blockfrost-platform-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoDbSyncPrometheusExporterPort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePrometheusExporterPort
@@ -45,6 +46,7 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.environmentName
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.hostsList
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.blockperf
+#   flake.cardano-parts.cluster.groups.<default|name>.pkgs.blockfrost-platform
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-cli
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync
 #   flake.cardano-parts.cluster.groups.<default|name>.pkgs.cardano-db-sync-pkgs
@@ -403,6 +405,12 @@ flake @ {
           else "fqdn";
       };
 
+      blockfrost-platform-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group blockfrost-platform-service import path string.";
+        default = cfg.pkgs.special.blockfrost-platform-service;
+      };
+
       cardanoDbSyncPrometheusExporterPort = mkOption {
         type = port;
         description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
@@ -513,6 +521,12 @@ flake @ {
 
   pkgsSubmodule = submodule {
     options = {
+      blockfrost-platform = mkOption {
+        type = functionTo package;
+        description = mdDoc "Cardano-parts cluster group default blockfrost-platform package.";
+        default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockfrost-platform);
+      };
+
       blockperf = mkOption {
         type = functionTo package;
         description = mdDoc "Cardano-parts cluster group default blockperf package.";

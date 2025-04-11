@@ -3,6 +3,7 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
+#   flake.cardano-parts.pkgs.special.blockfrost-platform-service
 #   flake.cardano-parts.pkgs.special.cardanoLib
 #   flake.cardano-parts.pkgs.special.cardanoLibCustom
 #   flake.cardano-parts.pkgs.special.cardanoLibNg
@@ -23,8 +24,9 @@
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
-#   perSystem.cardano-parts.pkgs.cardano-address
+#   perSystem.cardano-parts.pkgs.blockfrost-platform
 #   perSystem.cardano-parts.pkgs.blockperf
+#   perSystem.cardano-parts.pkgs.cardano-address
 #   perSystem.cardano-parts.pkgs.cardano-cli
 #   perSystem.cardano-parts.pkgs.cardano-cli-ng
 #   perSystem.cardano-parts.pkgs.cardano-db-sync
@@ -115,6 +117,12 @@
 
   specialPkgsSubmodule = submodule {
     options = {
+      blockfrost-platform-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default blockfrost-platform-service import path string.";
+        default = "${localFlake.inputs.blockfrost-platform-service}/nix/nixos";
+      };
+
       cardanoLib = mkOption {
         type = anything;
         description = mdDoc ''
@@ -427,6 +435,7 @@ in
           options = foldl' recursiveUpdate {} [
             # TODO: Fix the missing meta/version info upstream
             (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-10-2-1-52b708f")
+            (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-2-e06029b)
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
             (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-11-18-9eb5f59)
             (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.4.0.0";}))
@@ -472,10 +481,10 @@ in
             (mkPkg "metadata-validator-github" caPkgs.metadata-validator-github-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "metadata-webhook" caPkgs.metadata-webhook-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d)
             (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-2513-0-pre-1fb85a7 {meta.mainProgram = "mithril-client";}))
-            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-0d66de9 {meta.mainProgram = "mithril-client";}))
+            (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-c2b3494 {meta.mainProgram = "mithril-client";}))
             # To update once capkgs builds and caches 2506 signer successfully
             (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2513-0-pre-1fb85a7 {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-0d66de9 {meta.mainProgram = "mithril-signer";}))
+            (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-c2b3494 {meta.mainProgram = "mithril-signer";}))
             (mkPkg "orchestrator-cli" caPkgs.orchestrator-cli-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
             (mkPkg "tx-bundle" caPkgs.tx-bundle-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
@@ -495,6 +504,7 @@ in
             inherit
               (cfgPkgs)
               bech32
+              blockfrost-platform
               blockperf
               cc-sign
               cardano-address

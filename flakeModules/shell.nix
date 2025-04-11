@@ -290,6 +290,7 @@ in
                         b2sum
                         haskellPackages.cbor-tool
                         bech32
+                        blockfrost-platform
                         cardano-address
                         cardano-cli
                         cardano-node

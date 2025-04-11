@@ -71,6 +71,22 @@
         "type": "github"
       }
     },
+    "blockfrost-platform-service": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1744287517,
+        "narHash": "sha256-0PSDq5rT0SvvSQ3TMnc1vjhrefMlIwt1d2eO06OUrVM=",
+        "owner": "blockfrost",
+        "repo": "blockfrost-platform",
+        "rev": "9480822973bc156cda3b1bca9e92d70fa9a1a3dc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "blockfrost",
+        "repo": "blockfrost-platform",
+        "type": "github"
+      }
+    },
     "blst": {
       "flake": false,
       "locked": {
@@ -158,11 +174,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1743612537,
-        "narHash": "sha256-BYLK37BKUCOK2Fos3XzLiIDgORVHeepDO5/HwJm0lug=",
+        "lastModified": 1744253041,
+        "narHash": "sha256-sqLdsTncR+FXxRC+fID8Zj+jkP6djC+EeF0Pabx7+u4=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "d4b494b3d9a3811eac67c0558ce1d805b69f229e",
+        "rev": "55e6885aff7c6dcc5aa5fba9abd3805e222cdb46",
         "type": "github"
       },
       "original": {
@@ -1367,6 +1383,7 @@
     "root": {
       "inputs": {
         "auth-keys-hub": "auth-keys-hub",
+        "blockfrost-platform-service": "blockfrost-platform-service",
         "capkgs": "capkgs",
         "cardano-db-sync-schema": "cardano-db-sync-schema",
         "cardano-db-sync-schema-ng": "cardano-db-sync-schema-ng",
