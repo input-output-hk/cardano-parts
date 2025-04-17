@@ -91,6 +91,8 @@ in {
           CARDANO_CLI_NO_ERA=("eval" "${lib.getExe cfgPkgs.cardano-cli}")
         fi
 
+        # Some code paths may not use the era bundled cli
+        # shellcheck disable=SC2034
         CARDANO_CLI=("''${CARDANO_CLI_NO_ERA[@]}" "''${ERA_CMD:+$ERA_CMD}")
       '';
 
@@ -118,14 +120,14 @@ in {
         fi
 
         CHANGE_ADDRESS=$(
-          "''${CARDANO_CLI[@]}" address build \
+          "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
             --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
             --testnet-magic "$TESTNET_MAGIC"
         )
 
         if [ -z "''${UTXO:-}" ]; then
           UTXO=$(
-            "''${CARDANO_CLI[@]}" query utxo \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
               --address "$CHANGE_ADDRESS" \
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file /dev/stdout \
@@ -146,7 +148,7 @@ in {
 
         if [ -z "''${EPOCH:-}" ]; then
           EPOCH=$(
-            "''${CARDANO_CLI[@]}" query tip \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest query tip \
               --testnet-magic "$TESTNET_MAGIC" \
             | jq .epoch
           )
@@ -164,32 +166,28 @@ in {
         function create_proposal {
           TARGET_EPOCH="$1"
 
-          "''${CARDANO_CLI[@]}" governance action create-protocol-parameters-update \
+          "''${CARDANO_CLI_NO_ERA[@]}" legacy governance create-update-proposal \
             --epoch "$TARGET_EPOCH" \
             "''${PROPOSAL_ARGS[@]}" \
             "''${PROPOSAL_KEY_ARGS[@]}" \
             --out-file update.proposal
 
-          "''${CARDANO_CLI[@]}" transaction build-raw ''${ERA:+$ERA} \
+          "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
             --tx-in "$TXIN" \
             --tx-out "$CHANGE_ADDRESS+$CHANGE" \
             --fee "$FEE" \
             --update-proposal-file update.proposal \
-            --out-file tx-proposal.txbody
-
-          "''${CARDANO_CLI[@]}" transaction sign \
-            --tx-body-file tx-proposal.txbody \
-            --out-file tx-proposal.txsigned \
             --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
-            "''${SIGNING_ARGS[@]}"
+            "''${SIGNING_ARGS[@]}" \
+            --out-file tx-proposal.txsigned
         }
 
         create_proposal "$EPOCH"
 
         if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-          if ! "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned; then
+          if ! "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned; then
             create_proposal $((EPOCH + 1))
-            "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-proposal.txsigned
           fi
         fi
       '';
@@ -260,7 +258,7 @@ in {
             ENV="''${ENV:-custom}"
 
             mkdir -p "$GENESIS_DIR"
-            "''${CARDANO_CLI[@]}" genesis create-cardano \
+            "''${CARDANO_CLI_NO_ERA[@]}" legacy genesis create-cardano \
               --genesis-dir "$GENESIS_DIR" \
               --gen-genesis-keys "$NUM_GENESIS_KEYS" \
               --gen-utxo-keys 1 \
@@ -280,7 +278,7 @@ in {
             pushd "$GENESIS_DIR/genesis-keys" &> /dev/null
               for ((i=0; i < "$NUM_GENESIS_KEYS"; i++)); do
                 mv shelley.00"$i".vkey shelley.00"$i".vkey-ext
-                "''${CARDANO_CLI[@]}" key non-extended-key \
+                "''${CARDANO_CLI_NO_ERA[@]}" latest key non-extended-key \
                   --extended-verification-key-file shelley.00"$i".vkey-ext \
                   --verification-key-file shelley.00"$i".vkey
               done
@@ -295,11 +293,11 @@ in {
 
             cp "$TEMPLATE_DIR/topology-empty-p2p.json" "$GENESIS_DIR/topology.json"
 
-            "''${CARDANO_CLI[@]}" address key-gen \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-gen \
               --signing-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.skey" \
               --verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
 
-            "''${CARDANO_CLI[@]}" address build \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
               --payment-verification-key-file "$GENESIS_DIR/utxo-keys/rich-utxo.vkey" \
               --testnet-magic "$TESTNET_MAGIC" \
               > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
@@ -834,12 +832,12 @@ in {
             # Extract reward address vkey
             cardano-address key from-recovery-phrase Shelley < "$STAKE_POOL_DIR"/owner.mnemonic \
               | cardano-address key child 1852H/1815H/"0"H/2/0 \
-              | "''${CARDANO_CLI[@]}" key convert-cardano-address-key --shelley-stake-key \
+              | "''${CARDANO_CLI_NO_ERA[@]}" latest key convert-cardano-address-key --shelley-stake-key \
                 --signing-key-file /dev/stdin --out-file /dev/stdout \
               | tee "$STAKE_POOL_DIR"/reward-stake.skey \
-              | "''${CARDANO_CLI[@]}" key verification-key --signing-key-file /dev/stdin \
+              | "''${CARDANO_CLI_NO_ERA[@]}" latest key verification-key --signing-key-file /dev/stdin \
                 --verification-key-file /dev/stdout \
-              | "''${CARDANO_CLI[@]}" key non-extended-key \
+              | "''${CARDANO_CLI_NO_ERA[@]}" latest key non-extended-key \
                 --extended-verification-key-file /dev/stdin \
                 --verification-key-file "$STAKE_POOL_DIR"/reward-stake.vkey
 
@@ -855,30 +853,30 @@ in {
               # Extract stake skey/vkey needed for pool registration and delegation
               cardano-address key from-recovery-phrase Shelley < "$NO_DEPLOY_FILE"-owner.mnemonic \
                 | cardano-address key child 1852H/1815H/"$((i + 1))"H/2/0 \
-                | "''${CARDANO_CLI[@]}" key convert-cardano-address-key --shelley-stake-key \
+                | "''${CARDANO_CLI_NO_ERA[@]}" latest key convert-cardano-address-key --shelley-stake-key \
                   --signing-key-file /dev/stdin \
                   --out-file /dev/stdout \
                 | tee "$NO_DEPLOY_FILE"-owner-stake.skey \
-                | "''${CARDANO_CLI[@]}" key verification-key \
+                | "''${CARDANO_CLI_NO_ERA[@]}" latest key verification-key \
                   --signing-key-file /dev/stdin \
                   --verification-key-file /dev/stdout \
-                | "''${CARDANO_CLI[@]}" key non-extended-key \
+                | "''${CARDANO_CLI_NO_ERA[@]}" latest key non-extended-key \
                   --extended-verification-key-file /dev/stdin \
                   --verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey
 
               # Generate stake addresses for owner and reward
-              "''${CARDANO_CLI[@]}" stake-address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address build \
                 --stake-verification-key-file "$NO_DEPLOY_FILE"-owner-stake.vkey \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file "$NO_DEPLOY_FILE"-owner-stake.addr
 
-              "''${CARDANO_CLI[@]}" stake-address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address build \
                 --stake-verification-key-file "$NO_DEPLOY_FILE"-reward-stake.vkey \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file "$NO_DEPLOY_FILE"-reward-stake.addr
 
               # Generate cold, vrf and kes keys
-              "''${CARDANO_CLI[@]}" node key-gen \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest node key-gen \
                 --cold-signing-key-file "$NO_DEPLOY_FILE"-cold.skey \
                 --verification-key-file "$NO_DEPLOY_FILE"-cold.vkey \
                 --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter
@@ -886,21 +884,21 @@ in {
               # Block producers require a copy of the cold.vkey for convienence shell aliases.
               cp "$NO_DEPLOY_FILE"-cold.vkey "$DEPLOY_FILE"-cold.vkey
 
-              "''${CARDANO_CLI[@]}" node key-gen-VRF \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest node key-gen-VRF \
                 --signing-key-file "$DEPLOY_FILE"-vrf.skey \
                 --verification-key-file "$DEPLOY_FILE"-vrf.vkey
 
-              "''${CARDANO_CLI[@]}" node key-gen-KES \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest node key-gen-KES \
                 --signing-key-file "$DEPLOY_FILE"-kes.skey \
                 --verification-key-file "$DEPLOY_FILE"-kes.vkey
 
               # Generate stake id
-              "''${CARDANO_CLI[@]}" stake-pool id \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest stake-pool id \
                 --cold-verification-key-file "$NO_DEPLOY_FILE"-cold.vkey \
                 --out-file "$NO_DEPLOY_FILE"-pool.id
 
               # Generate opcert
-              "''${CARDANO_CLI[@]}" node issue-op-cert \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest node issue-op-cert \
                 --kes-period "''${CURRENT_KES_PERIOD:-0}" \
                 --kes-verification-key-file "$DEPLOY_FILE"-kes.vkey \
                 --operational-certificate-issue-counter-file "$NO_DEPLOY_FILE"-cold.counter \
@@ -979,7 +977,7 @@ in {
             mkdir -p "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"
 
             CHANGE_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
@@ -994,7 +992,7 @@ in {
               ERA_MOD="stake-"
             fi
 
-            "''${CARDANO_CLI[@]}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
+            "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
               --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
               --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
               --out-file "$POOL_NAME"-reward-delegation.cert
@@ -1002,7 +1000,7 @@ in {
             # Generate transaction
             if [ -z "''${UTXO:-}" ]; then
               UTXO=$(
-                "''${CARDANO_CLI[@]}" query utxo \
+                "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                   --address "$CHANGE_ADDRESS" \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --out-file /dev/stdout \
@@ -1030,21 +1028,32 @@ in {
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-reward-stake.skey")")
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-cold.skey")")
 
-            "''${CARDANO_CLI[@]}" transaction build-raw \
-              --tx-in "$TXIN" \
-              --tx-out "$CHANGE_ADDRESS+$CHANGE" \
-              --fee "$FEE" \
-              "''${BUILD_TX_ARGS[@]}" \
-              --out-file "$POOL_NAME"-tx-pool-deleg.txbody
+            if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
+              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
+                --tx-in "$TXIN" \
+                --tx-out "$CHANGE_ADDRESS+$CHANGE" \
+                --fee "$FEE" \
+                --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
+                "''${BUILD_TX_ARGS[@]}" \
+                "''${SIGN_TX_ARGS[@]}" \
+                --out-file "$POOL_NAME"-tx-pool-deleg.txsigned
+            else
+              "''${CARDANO_CLI[@]}" transaction build-raw \
+                --tx-in "$TXIN" \
+                --tx-out "$CHANGE_ADDRESS+$CHANGE" \
+                --fee "$FEE" \
+                "''${BUILD_TX_ARGS[@]}" \
+                --out-file "$POOL_NAME"-tx-pool-deleg.txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
-              --tx-body-file "$POOL_NAME"-tx-pool-deleg.txbody \
-              --out-file "$POOL_NAME"-tx-pool-deleg.txsigned \
-              --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
-              "''${SIGN_TX_ARGS[@]}"
+              "''${CARDANO_CLI[@]}" transaction sign \
+                --tx-body-file "$POOL_NAME"-tx-pool-deleg.txbody \
+                --out-file "$POOL_NAME"-tx-pool-deleg.txsigned \
+                --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
+                "''${SIGN_TX_ARGS[@]}"
+            fi
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "$POOL_NAME"-tx-pool-deleg.txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "$POOL_NAME"-tx-pool-deleg.txsigned
             fi
           '';
         };
@@ -1116,7 +1125,7 @@ in {
 
             NUM_POOLS=$((''${#POOLS[@]}))
             CHANGE_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
@@ -1128,10 +1137,10 @@ in {
 
               if [ -n "''${POOL_METADATA_BASE_URL:-}" ]; then
                 POOL_METADATA_URL="$POOL_METADATA_BASE_URL/$POOL_NAME.json"
-                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI[@]}" stake-pool metadata-hash --pool-metadata-file /dev/stdin)
+                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI_NO_ERA[@]}" latest stake-pool metadata-hash --pool-metadata-file /dev/stdin)
                 METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
               elif [ -n "''${POOL_METADATA_URL:-}" ]; then
-                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI[@]}" stake-pool metadata-hash --pool-metadata-file /dev/stdin)
+                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI_NO_ERA[@]}" latest stake-pool metadata-hash --pool-metadata-file /dev/stdin)
                 METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
               fi
 
@@ -1142,14 +1151,14 @@ in {
                 eraArgs=()
               fi
 
-              "''${CARDANO_CLI[@]}" stake-address registration-certificate \
+              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address registration-certificate \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-registration.cert \
                 "''${eraArgs[@]}"
 
               # Include the shared wallet pool rewards registration certificate only once
               if [ "$i" = "0" ]; then
-                "''${CARDANO_CLI[@]}" stake-address registration-certificate \
+                "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address registration-certificate \
                   --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                   --out-file "$POOL_NAME"-reward-registration.cert \
                   "''${eraArgs[@]}"
@@ -1162,28 +1171,49 @@ in {
                 ERA_MOD="stake-"
               fi
 
-              "''${CARDANO_CLI[@]}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
-                --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
-                --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
-                --out-file "$POOL_NAME"-owner-delegation.cert
+              if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
+                "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
+                  --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
+                  --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
+                  --out-file "$POOL_NAME"-owner-delegation.cert
 
-              "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
-                --testnet-magic "$TESTNET_MAGIC" \
-                --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
-                --pool-cost 500000000 \
-                --pool-margin 1 \
-                --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
-                --pool-pledge "$POOL_PLEDGE" \
-                --single-host-pool-relay "$POOL_RELAY" \
-                --pool-relay-port "$POOL_RELAY_PORT" \
-                --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
-                --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
-                "''${METADATA_ARGS[@]}" \
-                --out-file "$POOL_NAME"-registration.cert
+                "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-pool registration-certificate \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
+                  --pool-cost 500000000 \
+                  --pool-margin 1 \
+                  --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
+                  --pool-pledge "$POOL_PLEDGE" \
+                  --single-host-pool-relay "$POOL_RELAY" \
+                  --pool-relay-port "$POOL_RELAY_PORT" \
+                  --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+                  --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
+                  "''${METADATA_ARGS[@]}" \
+                  --out-file "$POOL_NAME"-registration.cert
+              else
+                "''${CARDANO_CLI[@]}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
+                  --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
+                  --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
+                  --out-file "$POOL_NAME"-owner-delegation.cert
+
+                "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
+                  --pool-cost 500000000 \
+                  --pool-margin 1 \
+                  --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
+                  --pool-pledge "$POOL_PLEDGE" \
+                  --single-host-pool-relay "$POOL_RELAY" \
+                  --pool-relay-port "$POOL_RELAY_PORT" \
+                  --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+                  --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
+                  "''${METADATA_ARGS[@]}" \
+                  --out-file "$POOL_NAME"-registration.cert
+              fi
             done
 
             # Generate the reward payment address
-            "''${CARDANO_CLI[@]}" address build \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
               --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
               --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
               --testnet-magic "$TESTNET_MAGIC" \
@@ -1194,7 +1224,7 @@ in {
             # Generate transaction
             if [ -z "''${UTXO:-}" ]; then
               UTXO=$(
-                "''${CARDANO_CLI[@]}" query utxo \
+                "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                   --address "$CHANGE_ADDRESS" \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --out-file /dev/stdout \
@@ -1224,7 +1254,7 @@ in {
               NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
               STAKE_POOL_ADDR=$(
-                "''${CARDANO_CLI[@]}" address build \
+                "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --testnet-magic "$TESTNET_MAGIC" \
@@ -1248,21 +1278,32 @@ in {
               SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-owner-stake.skey")")
             done
 
-            "''${CARDANO_CLI[@]}" transaction build-raw \
-              --tx-in "$TXIN" \
-              --tx-out "$CHANGE_ADDRESS+$CHANGE" \
-              --fee "$FEE" \
-              "''${BUILD_TX_ARGS[@]}" \
-              --out-file "''${POOLS[0]}"-tx-pool-reg.txbody
+            if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
+              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
+                --tx-in "$TXIN" \
+                --tx-out "$CHANGE_ADDRESS+$CHANGE" \
+                --fee "$FEE" \
+                --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
+                "''${BUILD_TX_ARGS[@]}" \
+                "''${SIGN_TX_ARGS[@]}" \
+                --out-file "''${POOLS[0]}"-tx-pool-reg.txsigned
+            else
+              "''${CARDANO_CLI[@]}" transaction build-raw \
+                --tx-in "$TXIN" \
+                --tx-out "$CHANGE_ADDRESS+$CHANGE" \
+                --fee "$FEE" \
+                "''${BUILD_TX_ARGS[@]}" \
+                --out-file "''${POOLS[0]}"-tx-pool-reg.txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
-              --tx-body-file "''${POOLS[0]}"-tx-pool-reg.txbody \
-              --out-file "''${POOLS[0]}"-tx-pool-reg.txsigned \
-              --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
-              "''${SIGN_TX_ARGS[@]}"
+              "''${CARDANO_CLI[@]}" transaction sign \
+                --tx-body-file "''${POOLS[0]}"-tx-pool-reg.txbody \
+                --out-file "''${POOLS[0]}"-tx-pool-reg.txsigned \
+                --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
+                "''${SIGN_TX_ARGS[@]}"
+            fi
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "''${POOLS[0]}"-tx-pool-reg.txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "''${POOLS[0]}"-tx-pool-reg.txsigned
             fi
           '';
         };
@@ -1453,7 +1494,7 @@ in {
 
             if [ -z "''${BYRON_UTXO:-}" ]; then
               BYRON_UTXO=$(
-                "''${CARDANO_CLI[@]}" query utxo \
+                "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                   --whole-utxo \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --out-file /dev/stdout \
@@ -1468,27 +1509,37 @@ in {
             FEE=200000
             SUPPLY=$(echo "$BYRON_UTXO" | jq -r '.amount - 200000')
             BYRON_ADDRESS=$(echo "$BYRON_UTXO" | jq -r '.address')
+
             PAYMENT_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
             TXIN=$(echo "$BYRON_UTXO" | jq -r '.txin')
 
-            "''${CARDANO_CLI[@]}" transaction build-raw ''${ERA:+$ERA} \
-              --tx-in "$TXIN" \
-              --tx-out "$PAYMENT_ADDRESS+$SUPPLY" \
-              --fee "$FEE" \
-              --out-file tx-byron.txbody
+            if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
+              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
+                --tx-in "$TXIN" \
+                --tx-out "$PAYMENT_ADDRESS+$SUPPLY" \
+                --fee "$FEE" \
+                --signing-key-file "$(decrypt_check "$BYRON_SIGNING_KEY")" \
+                --out-file tx-byron.txsigned
+            else
+              "''${CARDANO_CLI[@]}" transaction build-raw ''${ERA:+$ERA} \
+                --tx-in "$TXIN" \
+                --tx-out "$PAYMENT_ADDRESS+$SUPPLY" \
+                --fee "$FEE" \
+                --out-file tx-byron.txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
-              --tx-body-file tx-byron.txbody \
-              --out-file tx-byron.txsigned \
-              --address "$BYRON_ADDRESS" \
-              --signing-key-file "$(decrypt_check "$BYRON_SIGNING_KEY")"
+              "''${CARDANO_CLI[@]}" transaction sign \
+                --tx-body-file tx-byron.txbody \
+                --out-file tx-byron.txsigned \
+                --address "$BYRON_ADDRESS" \
+                --signing-key-file "$(decrypt_check "$BYRON_SIGNING_KEY")"
+            fi
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-byron.txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-byron.txsigned
             fi
           '';
         };
