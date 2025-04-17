@@ -37,9 +37,6 @@
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
 
-    # For tmp node testing
-    cardano-node-next-tracing.url = "github:input-output-hk/cardano-node/10.3.1";
-
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
     # definitions found in flakeModule/pkgs.nix.
