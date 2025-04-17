@@ -437,7 +437,7 @@ in
             (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-10-2-1-52b708f")
             (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-2-e06029b)
             (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
-            (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2024-11-18-9eb5f59)
+            (mkPkg "cardano-address" caPkgs.cardano-address-cardano-foundation-cardano-wallet-v2025-03-31-1649791)
             (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-2-1-52b708f" // {version = "10.4.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-3-1-b3f237b" // {version = "10.7.0.0";}))
             (mkPkg "cardano-db-sync" (recursiveUpdate caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-5-cb61094" {meta.mainProgram = "cardano-db-sync";}))
@@ -462,12 +462,12 @@ in
             (mkPkg "cardano-testnet-ng" caPkgs."cardano-testnet-input-output-hk-cardano-node-10-3-1-b3f237b")
             (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-2-1-52b708f")
             (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-3-1-b3f237b")
-            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2024-11-18-9eb5f59
+            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2025-03-31-1649791
               // {
                 pname = "cardano-wallet";
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
-            (mkPkg "cc-sign" caPkgs.cc-sign-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
+            (mkPkg "cc-sign" caPkgs.cc-sign-IntersectMBO-credential-manager-0-1-3-0-2d82213)
             (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-10-2-1-52b708f")
             (mkPkg "db-analyser-ng" caPkgs."db-analyser-input-output-hk-cardano-node-10-3-1-b3f237b")
             (mkPkg "db-synthesizer" caPkgs."db-synthesizer-input-output-hk-cardano-node-10-2-1-52b708f")
@@ -484,9 +484,9 @@ in
             (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs.mithril-client-cli-input-output-hk-mithril-unstable-1abf70c {meta.mainProgram = "mithril-client";}))
             (mkPkg "mithril-signer" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-2513-0-pre-1fb85a7 {meta.mainProgram = "mithril-signer";}))
             (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs.mithril-signer-input-output-hk-mithril-unstable-1abf70c {meta.mainProgram = "mithril-signer";}))
-            (mkPkg "orchestrator-cli" caPkgs.orchestrator-cli-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
+            (mkPkg "orchestrator-cli" caPkgs.orchestrator-cli-IntersectMBO-credential-manager-0-1-3-0-2d82213)
             (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs.token-metadata-creator-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d {meta.mainProgram = "token-metadata-creator";}))
-            (mkPkg "tx-bundle" caPkgs.tx-bundle-IntersectMBO-credential-manager-0-1-2-0-081cc8c)
+            (mkPkg "tx-bundle" caPkgs.tx-bundle-IntersectMBO-credential-manager-0-1-3-0-2d82213)
           ];
         };
       in {
