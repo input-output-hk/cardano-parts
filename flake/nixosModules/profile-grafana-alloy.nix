@@ -302,7 +302,7 @@ flake @ {moduleWithSystem, ...}: {
         cardanoNode = optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable) (map (
           i: let
             metricsPath =
-              if cfgSvc.cardano-node.useLegacyTracing
+              if cfgSvc.cardano-node.useLegacyTracing || (!cfgSvc.cardano-node.useLegacyTracing && cfgSvc.cardano-node.ngTracer)
               then "/metrics"
               else "/${(cfgSvc.cardano-node.extraNodeInstanceConfig i).TraceOptionNodeName}";
 
@@ -313,6 +313,8 @@ flake @ {moduleWithSystem, ...}: {
 
             target =
               if cfgSvc.cardano-node.useLegacyTracing
+              then "${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"
+              else if cfgSvc.cardano-node.ngTracer
               then "${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"
               else "${hostAddr}:${toString cardanoNodePrometheusExporterPort}";
 
