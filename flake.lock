@@ -107,16 +107,16 @@
     "blst_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1691598027,
-        "narHash": "sha256-oqljy+ZXJAXEB/fJtmB8rlAr4UXM+Z2OkDa20gpILNA=",
+        "lastModified": 1739372843,
+        "narHash": "sha256-IlbNMLBjs/dvGogcdbWQIL+3qwy7EXJbIDpo4xBd4bY=",
         "owner": "supranational",
         "repo": "blst",
-        "rev": "3dd0f804b1819e5d03fb22ca2e6fac105932043a",
+        "rev": "8c7db7fe8d2ce6e76dc398ebd4d475c0ec564355",
         "type": "github"
       },
       "original": {
         "owner": "supranational",
-        "ref": "v0.3.11",
+        "ref": "v0.3.14",
         "repo": "blst",
         "type": "github"
       }
@@ -174,11 +174,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1744253041,
-        "narHash": "sha256-sqLdsTncR+FXxRC+fID8Zj+jkP6djC+EeF0Pabx7+u4=",
+        "lastModified": 1744812235,
+        "narHash": "sha256-nSkYnKE96haOnsGWLogO21zI8VfCkp3pNBtds39H8pA=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "55e6885aff7c6dcc5aa5fba9abd3805e222cdb46",
+        "rev": "6ae543a69dfa33389ddee43564ee412b0cceaf4b",
         "type": "github"
       },
       "original": {
@@ -341,16 +341,16 @@
     "cardano-wallet-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1709323258,
-        "narHash": "sha256-O5u0V7XHY/9umFV6/R4JBk8Zu3sBnmuMCK++XGVwQ2Q=",
+        "lastModified": 1743395731,
+        "narHash": "sha256-SdSIgci9IP2tmxiIs9YC/JtF4ih/Vyd7mU4G7/DesHo=",
         "owner": "cardano-foundation",
         "repo": "cardano-wallet",
-        "rev": "e69616ba776f4a52173ead423141d234e03d468f",
+        "rev": "1649791d8e9f14c8c97bd15a5687319672025652",
         "type": "github"
       },
       "original": {
         "owner": "cardano-foundation",
-        "ref": "v2024-03-01",
+        "ref": "v2025-03-31",
         "repo": "cardano-wallet",
         "type": "github"
       }
@@ -813,11 +813,11 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1740527380,
-        "narHash": "sha256-0sF0RUsnFVdRMoS9amtRQs6TnCFynDFdbzn8zBLD5Bg=",
+        "lastModified": 1744130217,
+        "narHash": "sha256-Lql0s3Occ6gKLvjcqTPK6vW4l1jwNn/UV7uaVpB/jTg=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "ea26f2ca1686656d89bb5760f717f713168cd5a5",
+        "rev": "dd47887a0482bfb1399c9da77175933876d0f4ab",
         "type": "github"
       },
       "original": {

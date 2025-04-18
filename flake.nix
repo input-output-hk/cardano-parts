@@ -88,7 +88,7 @@
     };
 
     cardano-wallet-service = {
-      url = "github:cardano-foundation/cardano-wallet/v2024-03-01";
+      url = "github:cardano-foundation/cardano-wallet/v2025-03-31";
       flake = false;
     };
 

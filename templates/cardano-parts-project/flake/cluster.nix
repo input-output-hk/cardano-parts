@@ -30,7 +30,7 @@
       # Update basic info about the cluster here.
       # This will be used for generic resource tagging where possible.
 
-      # organization = "iog";
+      # organization = "ioe";
       # tribe = "coretech";
       # function = "cardano-parts";
       # repo = "https://github.com/input-output-hk/UPDATE_ME";

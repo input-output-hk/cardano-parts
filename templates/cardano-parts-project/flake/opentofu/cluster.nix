@@ -32,7 +32,12 @@ with lib; let
   underscore = replaceStrings ["-"] ["_"];
 
   nixosConfigurations = mapAttrs (_: node: node.config) config.flake.nixosConfigurations;
-  nodes = filterAttrs (_: node: node.aws != null && node.aws.instance.count > 0) nixosConfigurations;
+  nodes =
+    filterAttrs (
+      name: node:
+        (builtins.traceVerbose "Evaluating machine: ${name}" node.aws != null) && node.aws.instance.count > 0
+    )
+    nixosConfigurations;
   dnsEnabledNodes = filterAttrs (_: node: node.cardano-parts.perNode.meta.enableDns) nodes;
 
   mapNodes = f: mapAttrs f nodes;

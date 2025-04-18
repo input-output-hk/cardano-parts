@@ -1,4 +1,4 @@
-Copyright 2023 Input Output Global Inc (IOG)
+Copyright [yyyy] [name of copyright owner]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -11,3 +11,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+Attribution Notice:
+
+This project includes materials from the upstream cardano-parts repository:
+https://github.com/input-output-hk/cardano-parts
+
+Attribution for cardano-parts files are maintained in the cardano-parts
+repository NOTICE file. No per-file attribution is required unless explicitly
+noted.
+
+Files from the cardano-parts repository have been included under the same
+license terms and may have been modified.
+
+The set of incorporated files may change over time. For details, refer to the
+commit history or repository documentation.
+
+No endorsement by the original authors is implied.

@@ -928,14 +928,13 @@ start-demo:
   export USE_ENCRYPTION=true
   export USE_DECRYPTION=true
   export USE_NODE_CONFIG_BP=false
-  export USE_CREATE_TESTNET_DATA=false
   export DEBUG=true
 
   export SECURITY_PARAM=8
   export SLOT_LENGTH=100
   export START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds")
 
-  if [ "$USE_CREATE_TESTNET_DATA" = true ]; then
+  if [ "${USE_CREATE_TESTNET_DATA:-false}" = true ]; then
     ERA_CMD="conway" \
       nix run .#job-gen-custom-node-config-data
   else
@@ -968,8 +967,8 @@ start-demo:
   sleep 30
   echo
 
-  if [ "$USE_CREATE_TESTNET_DATA" = false ]; then
-    echo "Moving genesis utxo..."
+  if [ "${USE_CREATE_TESTNET_DATA:-false}" = false ]; then
+    echo "Moving genesis utxo in epoch 0..."
     BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
       ERA_CMD="alonzo" \
       nix run .#job-move-genesis-utxo
@@ -978,7 +977,7 @@ start-demo:
     echo
   fi
 
-  echo "Registering stake pools..."
+  echo "Registering stake pools in epoch 0..."
   POOL_RELAY=demo.local \
     POOL_RELAY_PORT=3001 \
     ERA_CMD="alonzo" \
@@ -987,38 +986,49 @@ start-demo:
   sleep 10
   echo
 
-  echo "Delegating rewards stake key..."
+  WAIT_FOR_TIP() {
+    TYPE="$1"
+    TARGET="$2"
+    EPOCH="$1"
+
+    while true; do
+        [ "$(jq -re ".$TYPE" <<< "$(just query-tip demo)")" = "$TARGET" ] && break;
+      sleep 2
+    done
+  }
+
+  echo "Delegating rewards stake key in epoch 0..."
   ERA_CMD="alonzo" \
     nix run .#job-delegate-rewards-stake-key
-  echo "Sleeping 100 seconds until $(date -d  @$(($(date +%s) + 100)))"
-  sleep 100
+  echo "Sleeping until epoch 1"
+  WAIT_FOR_TIP "epoch" "1"
   echo
 
-  echo "Forking to babbage..."
+  echo "Forking to babbage in epoch 1..."
   just query-tip demo
   MAJOR_VERSION=7 \
     ERA_CMD="alonzo" \
     nix run .#job-update-proposal-hard-fork
-  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
-  sleep 160
+  echo "Sleeping until babbage"
+  WAIT_FOR_TIP "era" "Babbage"
   echo
 
-  echo "Forking to babbage (intra-era)..."
+  echo "Forking to babbage (intra-era) in epoch 2..."
   just query-tip demo
   MAJOR_VERSION=8 \
     ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
-  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
-  sleep 160
+  echo "Sleeping until epoch 3"
+  WAIT_FOR_TIP "epoch" "3"
   echo
 
-  echo "Forking to conway..."
+  echo "Forking to conway in epoch 3..."
   just query-tip demo
   MAJOR_VERSION=9 \
     ERA_CMD="babbage" \
     nix run .#job-update-proposal-hard-fork
-  echo "Sleeping 160 seconds until $(date -d  @$(($(date +%s) + 160)))"
-  sleep 160
+  echo "Sleeping until epoch conway"
+  WAIT_FOR_TIP "era" "Conway"
   echo
 
   just query-tip demo
@@ -1118,8 +1128,19 @@ start-demo-ng:
   sleep 10
   echo
 
-  echo "Sleeping 160 seconds for the bootstrap pool to retire, until $(date -d  @$(($(date +%s) + 160)))"
-  sleep 160
+  WAIT_FOR_TIP() {
+    TYPE="$1"
+    TARGET="$2"
+    EPOCH="$1"
+
+    while true; do
+        [ "$(jq -re ".$TYPE" <<< "$(just query-tip demo)")" = "$TARGET" ] && break;
+      sleep 2
+    done
+  }
+
+  echo "Sleeping until epoch 1 when the bootstrap pool retires"
+  WAIT_FOR_TIP "epoch" "1"
   echo
 
   just query-tip demo

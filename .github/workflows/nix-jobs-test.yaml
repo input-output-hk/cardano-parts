@@ -130,12 +130,14 @@ jobs:
             done
           }
 
-          echo "Run nix job tests with release versioning..."
-          echo "Running legacy sequence tests..."
-          RUN_TESTS "${JOB_SEQ_LEGACY[@]}"
-
-          echo "Running sequence tests..."
-          RUN_TESTS "${JOB_SEQ[@]}"
+          # Pause release tests on versions < node 10.3.1
+          # Re-enable when node release is >= 10.3.1
+          # echo "Run nix job tests with release versioning..."
+          # echo "Running legacy sequence tests..."
+          # RUN_TESTS "${JOB_SEQ_LEGACY[@]}"
+          #
+          # echo "Running sequence tests..."
+          # RUN_TESTS "${JOB_SEQ[@]}"
 
           echo "Now run nix job tests again with pre-release versioning..."
           set -x

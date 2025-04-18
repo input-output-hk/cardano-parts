@@ -26,8 +26,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Signer registration success epoch.",
       "fieldConfig": {
@@ -110,8 +109,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -132,8 +130,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Signer registration success since startup.",
       "fieldConfig": {
@@ -216,8 +213,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -239,8 +235,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Signer registration errors since startup.",
       "fieldConfig": {
@@ -323,8 +318,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -344,8 +338,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Signature registration success epoch.",
       "fieldConfig": {
@@ -428,8 +421,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -449,8 +441,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Signature registration success since startup.",
       "fieldConfig": {
@@ -533,8 +524,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -555,8 +545,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "Signature registration errors since startup.",
       "fieldConfig": {
@@ -639,8 +628,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -660,8 +648,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "State machine cycles since startup.",
       "fieldConfig": {
@@ -744,8 +731,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -765,8 +751,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "State machine cycle success since startup.",
       "fieldConfig": {
@@ -849,8 +834,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "mithril_signer_runtime_cycle_success_since_startup{environment=\"$environment\"}",
@@ -866,8 +850,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "mimir"
+        "type": "prometheus"
       },
       "description": "State machine cycle errors since startup.",
       "fieldConfig": {
@@ -950,8 +933,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
