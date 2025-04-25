@@ -93,6 +93,8 @@
     cfg = nixos.config.services.cardano-node;
     cfgMithril = nixos.config.services.mithril-client;
   in {
+    key = ./profile-cardano-node-group.nix;
+
     # Leave the import of the upstream cardano-node service for
     # cardano-parts consuming repos so that service import can be customized.
     #
