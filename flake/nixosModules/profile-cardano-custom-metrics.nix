@@ -24,6 +24,8 @@
     perNodeCfg = config.cardano-parts.perNode;
     cfg = config.services.cardano-custom-metrics;
   in {
+    key = ./profile-cardano-custom-metrics.nix;
+
     options.services.cardano-custom-metrics = {
       address = mkOption {
         type = str;
