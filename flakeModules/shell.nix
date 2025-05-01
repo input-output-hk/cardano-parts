@@ -300,6 +300,7 @@ in
                         db-synthesizer
                         db-truncater
                         mithril-client-cli
+                        # snapshot-converter
 
                         # The packages derivations of the `-ng` pkgs provide
                         # the wrapped binary to avoid cli name collision.
@@ -310,6 +311,7 @@ in
                         self'.packages.db-synthesizer-ng
                         self'.packages.db-truncater-ng
                         self'.packages.mithril-client-cli-ng
+                        self'.packages.snapshot-converter-ng
 
                         gdb
                         process-compose
