@@ -438,7 +438,8 @@ in
             # TODO: Fix the missing meta/version info upstream
             (mkPkg "bech32" caPkgs."bech32-input-output-hk-cardano-node-10-3-1-b3f237b")
             (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-2-e06029b)
-            (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
+            # (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
+            (mkPkg "blockperf" localFlake.inputs.blockperf.packages.x86_64-linux.blockperf)
             (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-0-3749045")
             (mkPkg "cardano-cli" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-3-1-b3f237b" // {version = "10.7.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-input-output-hk-cardano-node-10-4-1-420c94f" // {version = "10.8.0.0";}))
