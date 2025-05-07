@@ -21,6 +21,8 @@
 
       cfg = config.services.nginx-vhost-exporter;
     in {
+      key = ./module-nginx-vhost-exporter.nix;
+
       options = {
         services.nginx-vhost-exporter = {
           address = mkOption {

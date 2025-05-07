@@ -54,6 +54,8 @@ flake: {
     in {
       imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
 
+      key = ./profile-cardano-smash.nix;
+
       options = {
         services.cardano-smash = {
           acmeEmail = mkOption {

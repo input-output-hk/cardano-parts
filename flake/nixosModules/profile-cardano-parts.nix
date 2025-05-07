@@ -312,6 +312,8 @@ flake @ {moduleWithSystem, ...}: {
 
     gfModules = groupFlake.config.flake.nixosModules;
   in {
+    key = ./profile-cardano-node-parts.nix;
+
     options = {
       # Top level nixos module configuration attr for cardano-parts.
       cardano-parts = mkOption {

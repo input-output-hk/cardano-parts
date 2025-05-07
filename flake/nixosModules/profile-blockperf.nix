@@ -56,6 +56,8 @@ flake: {
     cfg = config.services.blockperf;
     cfgNode = config.services.cardano-node;
   in {
+    key = ./profile-blockperf.nix;
+
     options.services.blockperf = {
       amazonCa = mkOption {
         type = nullOr str;

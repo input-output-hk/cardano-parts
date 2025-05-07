@@ -421,6 +421,8 @@ flake @ {moduleWithSystem, ...}: {
       cfgSvc = config.services;
       cfg = config.services.alloy;
     in {
+      key = ./profile-grafana-alloy.nix;
+
       options = {
         services.alloy = {
           enableLiveDebugging = mkOption {

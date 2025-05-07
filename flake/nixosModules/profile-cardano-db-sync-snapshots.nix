@@ -52,6 +52,8 @@ flake: {
       cfgDbsync = config.services.cardano-db-sync;
       cfgNode = config.services.cardano-node;
     in {
+      key = ./profile-cardano-db-sync-snapshots.nix;
+
       options = {
         services.cardano-db-sync-snapshots = {
           bucket = mkOption {
