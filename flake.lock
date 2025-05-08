@@ -194,11 +194,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1745964727,
-        "narHash": "sha256-LwB4HecO7OBmDE6fmyvgWA94brr2QahmJyXYFPhFjbk=",
+        "lastModified": 1746627884,
+        "narHash": "sha256-wcu/pOW54b2t+tL8bzW7pcGNTzKGEbeAzCkScZzT3Ig=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "6caad863e99a819f2858d246429641c339113531",
+        "rev": "5645b1f13ecc500569754284b5f2ad2772c637d0",
         "type": "github"
       },
       "original": {
@@ -830,15 +830,16 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1744130217,
-        "narHash": "sha256-Lql0s3Occ6gKLvjcqTPK6vW4l1jwNn/UV7uaVpB/jTg=",
+        "lastModified": 1746650586,
+        "narHash": "sha256-zK/E+LZaasg4KqMHoHhdGBoQeQcWRVXyvqtlcmB3Klo=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "dd47887a0482bfb1399c9da77175933876d0f4ab",
+        "rev": "bb35ae48fac40b76f0ebbc6bcb6cabcf4d433a7e",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "jl/mithril-ancillary-key",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -851,15 +852,16 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1745582862,
-        "narHash": "sha256-dMoJ6yHcRvUcB66nofzfAtmVxnDg8oPW3wiVtimXT/o=",
+        "lastModified": 1746650586,
+        "narHash": "sha256-zK/E+LZaasg4KqMHoHhdGBoQeQcWRVXyvqtlcmB3Klo=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "5c16fdfc45deda7a4ccf964b6dfa1c3cab72f1f7",
+        "rev": "bb35ae48fac40b76f0ebbc6bcb6cabcf4d433a7e",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "jl/mithril-ancillary-key",
         "repo": "iohk-nix",
         "type": "github"
       }

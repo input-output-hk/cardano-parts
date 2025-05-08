@@ -28,8 +28,8 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/mithril-ancillary-key";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/mithril-ancillary-key";
 
     # For tmp local testing pins
     blockperf.url = "github:johnalotoski/blockperf/preview-network";
