@@ -986,7 +986,7 @@ in {
             NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
             # Generate stake delegation certificate
-            if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" == "legacy" ]; then
+            if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" = "legacy" ]; then
               unset ERA_MOD
             else
               ERA_MOD="stake-"
@@ -1165,7 +1165,7 @@ in {
               fi
 
               # Generate stake delegation certificate
-              if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" == "legacy" ]; then
+              if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" = "legacy" ]; then
                 unset ERA_MOD
               else
                 ERA_MOD="stake-"
@@ -1816,22 +1816,22 @@ in {
             SIGN_TX_ARGS=()
             VOTE_ARGS=()
 
-            if [ "$ROLE" == "spo" ]; then
+            if [ "$ROLE" = "spo" ]; then
               VOTE_ARGS+=("--cold-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
-            elif [ "$ROLE" == "drep" ]; then
+            elif [ "$ROLE" = "drep" ]; then
               VOTE_ARGS+=("--drep-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
-            elif [ "$ROLE" == "cc" ]; then
+            elif [ "$ROLE" = "cc" ]; then
               VOTE_ARGS+=("--cc-hot-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
             else
               echo "ROLE must be one of: spo, drep or cc"
               exit 1
             fi
 
-            if [ "$DECISION" == "yes" ]; then
+            if [ "$DECISION" = "yes" ]; then
               VOTE_ARGS+=("--yes")
-            elif [ "$DECISION" == "no" ]; then
+            elif [ "$DECISION" = "no" ]; then
               VOTE_ARGS+=("--no")
-            elif [ "$DECISION" == "abstain" ]; then
+            elif [ "$DECISION" = "abstain" ]; then
               VOTE_ARGS+=("--abstain")
             else
               echo "DECISION must be one of: yes, no or abstain"

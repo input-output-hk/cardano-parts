@@ -37,6 +37,8 @@
 
       cfg = nixos.config.services.cardano-db-sync;
     in {
+      key = ./profile-cardano-db-sync.nix;
+
       options = {
         services.cardano-db-sync = {
           additionalDbUsers = mkOption {

@@ -10,6 +10,8 @@
   flake.nixosModules.role-relay = nixos: let
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort;
   in {
-    networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
+    key = ./role-relay.nix;
+
+    config.networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
   };
 }

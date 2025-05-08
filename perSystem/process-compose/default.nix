@@ -8,9 +8,9 @@ flake @ {inputs, ...}: {
     ...
   }: let
     inherit (builtins) attrNames elem fromJSON readFile;
-    inherit (lib) concatStringsSep concatMapStringsSep foldl' mkForce optionalString recursiveUpdate replaceStrings;
+    inherit (lib) boolToString concatStringsSep concatMapStringsSep foldl' mkForce optionalString recursiveUpdate replaceStrings;
     inherit (cardanoLib) environments;
-    inherit (opsLib) generateStaticHTMLConfigs mithrilAllowedNetworks mithrilVerifyingPools;
+    inherit (opsLib) generateStaticHTMLConfigs mithrilAllowedAncillaryNetworks mithrilAllowedNetworks mithrilVerifyingPools;
 
     cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
     cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
@@ -93,7 +93,13 @@ flake @ {inputs, ...}: {
     '';
 
     mithril-client-bootstrap = env: let
-      inherit ((envs env).${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilGenesisVerificationKey;
+      inherit ((envs env).${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilAncillaryVerificationKey mithrilGenesisVerificationKey;
+
+      isMithrilAncillary =
+        (envs env).${toUnderscore env}
+        ? mithrilAggregatorEndpointUrl
+        && elem env mithrilAllowedAncillaryNetworks;
+
       isMithrilEnv =
         (envs env).${toUnderscore env}
         ? mithrilAggregatorEndpointUrl
@@ -102,10 +108,14 @@ flake @ {inputs, ...}: {
       optionalString isMithrilEnv ''
         # The following environment variables may be used to modify default process compose mithril behavior:
         #   MITHRIL_DISABLE
+        #   MITHRIL_DISABLE_ANCILLARY
+        #   MITHRIL_DISABLE_ANCILLARY_${env}
         #   MITHRIL_DISABLE_${env}
         #   MITHRIL_SNAPSHOT_DIGEST_${env}
         #   MITHRIL_VERIFY_SNAPSHOT_${env}
         #   MITHRIL_VERIFYING_POOLS_${env}
+        [ -n "''${DEBUG:-}" ] && set -x
+
         if [ -z "''${MITHRIL_DISABLE:-}" ] && [ -z "''${MITHRIL_DISABLE_${env}:-}" ]; then
           MITHRIL_CLIENT="${config.cardano-parts.pkgs."mithril-client-cli${envVer env "isMithrilNg"}"}/bin/mithril-client"
           DB_DIR="${stateDir}/${env}/cardano-node/db"
@@ -120,7 +130,7 @@ flake @ {inputs, ...}: {
             TMPSTATE="''${DB_DIR}-mithril"
             rm -rf "$TMPSTATE"
 
-            if [ "''${MITHRIL_VERIFY_SNAPSHOT_${env}:-true}" == "true" ]; then
+            if [ "''${MITHRIL_VERIFY_SNAPSHOT_${env}:-true}" = "true" ]; then
               if [ "$DIGEST" = "latest" ]; then
                 # If digest is "latest" search through all available recent snaps for signing verification.
                 SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" cardano-db snapshot list --json)
@@ -168,8 +178,18 @@ flake @ {inputs, ...}: {
             fi
 
             if [ "$CONTINUE" = "true" ]; then
-              echo "Bootstrapping cardano-node state from mithril"
+              echo "Bootstrapping cardano-node state from mithril..."
               echo "To disable mithril syncing, set MITHRIL_DISABLE or MITHRIL_DISABLE_${env} env vars"
+
+              # shellcheck disable=SC2050
+              if [ "${boolToString isMithrilAncillary}" = "true" ] && [ -z "''${MITHRIL_DISABLE_ANCILLARY:-}" ] && [ -z "''${MITHRIL_DISABLE_ANCILLARY_${env}:-}" ]; then
+                ANCILLARY_ARGS=("--include-ancillary" "--ancillary-verification-key" "${mithrilAncillaryVerificationKey}")
+                echo "Bootstrapping using ancillary state..."
+                echo "To disable ancillary state, set MITHRIL_DISABLE_ANCILLARY or MITHRIL_DISABLE_ANCILLARY_${env} env vars"
+              else
+                echo "Bootstrapping without ancillary state..."
+              fi
+
               "$MITHRIL_CLIENT" --version
               "$MITHRIL_CLIENT" \
                 -vvv \
@@ -177,7 +197,8 @@ flake @ {inputs, ...}: {
                 download \
                 "$DIGEST" \
                 --download-dir "$TMPSTATE" \
-                --genesis-verification-key "${mithrilGenesisVerificationKey}"
+                --genesis-verification-key "${mithrilGenesisVerificationKey}" \
+                ''${ANCILLARY_ARGS:+''${ANCILLARY_ARGS[@]}}
               mv "$TMPSTATE/db" "$DB_DIR"
               rm -rf "$TMPSTATE"
               echo "Mithril bootstrap complete for $DB_DIR"

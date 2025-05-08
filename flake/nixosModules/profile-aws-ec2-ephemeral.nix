@@ -73,6 +73,8 @@ flake: {
 
     cfg = config.services.aws.ec2.ephemeral;
   in {
+    key = ./profile-aws-ec2-ephemeral.nix;
+
     options.services.aws.ec2.ephemeral = {
       enablePostMountService = mkOption {
         type = bool;

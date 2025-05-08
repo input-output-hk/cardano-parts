@@ -50,6 +50,8 @@ flake: {
     in {
       imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
 
+      key = ./profile-cardano-webserver.nix;
+
       options = {
         services.cardano-webserver = {
           acmeEmail = mkOption {

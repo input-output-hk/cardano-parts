@@ -47,6 +47,8 @@
     #   )
     # ];
 
+    key = ./profile-cardano-node-new-tracing.nix;
+
     options = {
       services = {
         cardano-tracer = {

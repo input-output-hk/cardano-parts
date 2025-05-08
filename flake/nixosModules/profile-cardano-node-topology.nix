@@ -134,6 +134,8 @@
       cfgNode = config.services.cardano-node;
       cfg = config.services.cardano-node-topology;
     in {
+      key = ./profile-cardano-node-topology.nix;
+
       options = {
         services.cardano-node-topology = {
           allowList = mkOption {

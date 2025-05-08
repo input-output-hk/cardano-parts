@@ -36,6 +36,8 @@ flake: {
 
     cfg = config.services.tcpdump;
   in {
+    key = ./profile-tcpdump.nix;
+
     options = {
       services.tcpdump = {
         bucketName = mkOption {

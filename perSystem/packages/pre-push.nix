@@ -56,7 +56,7 @@
           done
 
           set -x
-          nix build "''${checks[@]}"
+          nix build "''${checks[@]}" --no-link
         '';
       };
     };

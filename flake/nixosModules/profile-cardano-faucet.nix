@@ -34,6 +34,8 @@ flake: {
   in {
     imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
 
+    key = ./profile-cardano-faucet.nix;
+
     options.services.cardano-faucet = {
       useSopsSecrets = mkOption {
         type = bool;

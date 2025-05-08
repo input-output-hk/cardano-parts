@@ -46,6 +46,8 @@ flake: {
       cfgSvc = config.services;
       cfg = config.services.grafana-agent;
     in {
+      key = ./profile-grafana-agent.nix;
+
       options = {
         services.grafana-agent = {
           logLevel = mkOption {

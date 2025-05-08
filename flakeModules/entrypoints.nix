@@ -11,7 +11,7 @@ in {
     }: let
       inherit (builtins) attrNames elem;
       inherit (lib) boolToString concatStringsSep escapeShellArgs getExe;
-      inherit (opsLib) generateStaticHTMLConfigs mithrilAllowedNetworks mithrilVerifyingPools;
+      inherit (opsLib) generateStaticHTMLConfigs mithrilAllowedAncillaryNetworks mithrilAllowedNetworks mithrilVerifyingPools;
 
       cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
       cardanoLibNg = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
@@ -22,7 +22,14 @@ in {
       # Copy the environment configs from iohk-nix into our jobs at runtime
       copyEnvsTemplate = cardanoLib: let
         inherit (cardanoLib) environments;
+
         envCfgs = generateStaticHTMLConfigs pkgs cardanoLib environments;
+
+        isMithrilAncillary = env:
+          boolToString (
+            environments.${env} ? mithrilAggregatorEndpointUrl && elem env mithrilAllowedAncillaryNetworks
+          );
+
         isMithrilEnv = env:
           boolToString (
             environments.${env} ? mithrilAggregatorEndpointUrl && elem env mithrilAllowedNetworks
@@ -44,6 +51,8 @@ in {
                 + "MITHRIL_CFG_${env}[MITHRIL_ENV]=\"${isMithrilEnv env}\"\n"
                 + "MITHRIL_CFG_${env}[AGG_ENDPOINT]=\"${environments.${env}.mithrilAggregatorEndpointUrl or ""}\"\n"
                 + "MITHRIL_CFG_${env}[GENESIS_VKEY]=\"${environments.${env}.mithrilGenesisVerificationKey or ""}\"\n"
+                + "MITHRIL_CFG_${env}[ANCILLARY_ENV]=\"${isMithrilAncillary env}\"\n"
+                + "MITHRIL_CFG_${env}[ANCILLARY_VKEY]=\"${environments.${env}.mithrilAncillaryVerificationKey or ""}\"\n"
                 + "MITHRIL_CFG_${env}[VERIFYING_POOLS]=\"${concatStringsSep "|" (mithrilVerifyingPools.${env} or [])}\"\n"
             )
             (attrNames environments)
@@ -70,6 +79,8 @@ in {
           # of other declared but unused mithril related env vars.
           excludeShellChecks = ["SC2034"];
           text = ''
+            [ -n "''${DEBUG:-}" ] && set -x
+
             [ -z "''${DATA_DIR:-}" ] && echo "DATA_DIR env var must be set -- aborting" && exit 1
 
             mkdir -p "$DATA_DIR/config/custom"
@@ -104,6 +115,7 @@ in {
 
             # The following environment variables may be used to modify default process compose mithril behavior:
             #   MITHRIL_DISABLE
+            #   MITHRIL_DISABLE_ANCILLARY
             #   MITHRIL_SNAPSHOT_DIGEST
             #   MITHRIL_VERIFY_SNAPSHOT
             #   MITHRIL_VERIFYING_POOLS
@@ -115,7 +127,7 @@ in {
                 echo "''${POINTER[$2]}"
               }
 
-              if [ "$(mithrilAttr "$ENVIRONMENT" "MITHRIL_ENV")" == "true" ]; then
+              if [ "$(mithrilAttr "$ENVIRONMENT" "MITHRIL_ENV")" = "true" ]; then
                 if [ "''${UNSTABLE_MITHRIL:-}" = "true" ]; then
                   MITHRIL_CLIENT="${config.cardano-parts.pkgs.mithril-client-cli-ng}/bin/mithril-client"
                 else
@@ -133,7 +145,7 @@ in {
                   TMPSTATE="''${DB_DIR}/node-mithril"
                   rm -rf "$TMPSTATE"
 
-                  if [ "''${MITHRIL_VERIFY_SNAPSHOT:-true}" == "true" ]; then
+                  if [ "''${MITHRIL_VERIFY_SNAPSHOT:-true}" = "true" ]; then
                     if [ "$DIGEST" = "latest" ]; then
                       # If digest is "latest" search through all available recent snaps for signing verification.
                       SNAPSHOTS_JSON=$("$MITHRIL_CLIENT" cardano-db snapshot list --json)
@@ -182,8 +194,17 @@ in {
                   fi
 
                   if [ "$CONTINUE" = "true" ]; then
-                    echo "Bootstrapping cardano-node state from mithril"
+                    echo "Bootstrapping cardano-node state from mithril..."
                     echo "To disable mithril syncing, set MITHRIL_DISABLE env var"
+
+                    if [ "$(mithrilAttr "$ENVIRONMENT" "ANCILLARY_ENV")" = "true" ] && [ -z "''${MITHRIL_DISABLE_ANCILLARY:-}" ]; then
+                      ANCILLARY_ARGS=("--include-ancillary" "--ancillary-verification-key" "$(mithrilAttr "$ENVIRONMENT" "ANCILLARY_VKEY")")
+                      echo "Bootstrapping using ancillary state..."
+                      echo "To disable ancillary state, set MITHRIL_DISABLE_ANCILLARY env var"
+                    else
+                      echo "Bootstrapping without ancillary state..."
+                    fi
+
                     "$MITHRIL_CLIENT" --version
                     "$MITHRIL_CLIENT" \
                       -vvv \
@@ -191,7 +212,8 @@ in {
                       download \
                       "$DIGEST" \
                       --download-dir "$TMPSTATE" \
-                      --genesis-verification-key "$(mithrilAttr "$ENVIRONMENT" "GENESIS_VKEY")"
+                      --genesis-verification-key "$(mithrilAttr "$ENVIRONMENT" "GENESIS_VKEY")" \
+                      ''${ANCILLARY_ARGS:+''${ANCILLARY_ARGS[@]}}
                     mv "$TMPSTATE/db" "$DB_DIR/node"
                     rm -rf "$TMPSTATE"
                     echo "Mithril bootstrap complete for $DB_DIR/node"

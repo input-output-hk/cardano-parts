@@ -87,8 +87,9 @@ with lib; rec {
       )
       listofPathLists);
 
-  # An allow list of networks permitted to use mithril snapshots
-  mithrilAllowedNetworks = ["preprod" "preview"];
+  # An allow list of networks permitted to use mithril snapshots and ancillary state
+  mithrilAllowedNetworks = ["preprod" "preview" "mainnet"];
+  mithrilAllowedAncillaryNetworks = ["preprod" "preview"];
 
   # A default list of IOG pools which will be used to verify IOG signature(s) on mithril snapshots
   # prior to mithril client use when config.mithril-client.verifySnapshotSignature is enabled.

@@ -56,21 +56,28 @@ flake: {
     cfg = config.services.blockperf;
     cfgNode = config.services.cardano-node;
   in {
+    key = ./profile-blockperf.nix;
+
     options.services.blockperf = {
-      name = mkOption {
-        type = str;
+      amazonCa = mkOption {
+        type = nullOr str;
         default = null;
-        description = "The blockperf client identifier provided by Cardano Foundation.";
+        description = ''
+          The filename of the local encrypted amazon CA in PEM format.
+
+          Path to the Amazon CA file in PEM format, sourced from:
+            https://www.amazontrust.com/repository/AmazonRootCA1.pem
+        '';
       };
 
       clientCert = mkOption {
-        type = str;
+        type = nullOr str;
         default = null;
         description = "The filename of the local encrypted client certificate.";
       };
 
       clientKey = mkOption {
-        type = str;
+        type = nullOr str;
         default = null;
         description = "The filename of the local encrypted client key.";
       };
@@ -100,15 +107,10 @@ flake: {
         '';
       };
 
-      amazonCa = mkOption {
-        type = str;
-        default = "blockperf-amazon-ca.pem.enc";
-        description = ''
-          The filename of the local encrypte amazon CA in PEM format.
-
-          Path to the Amazon CA file in PEM format, sourced from:
-            https://www.amazontrust.com/repository/AmazonRootCA1.pem
-        '';
+      name = mkOption {
+        type = nullOr str;
+        default = null;
+        description = "The blockperf client identifier provided by Cardano Foundation.";
       };
 
       package = mkOption {
@@ -121,6 +123,18 @@ flake: {
         type = nullOr port;
         default = 8082;
         description = "The default blockperf prometheus port. Set to null to disable metrics.";
+      };
+
+      publish = mkOption {
+        type = bool;
+        default = true;
+        description = ''
+          Whether to enable publishing of block performance to Cardano Foundation.
+
+          For testnets and throwaway machines, it may be desirable to set this
+          false and only collect block performance prometheus metrics for
+          internal analysis.
+        '';
       };
 
       logFile = mkOption {
@@ -183,7 +197,8 @@ flake: {
       };
     };
 
-    config = {
+    # Blockperf does not yet work with the new tracing system
+    config = mkIf config.services.cardano-node.useLegacyTracing {
       environment.systemPackages = [cfg.package];
 
       services.cardano-node = {
@@ -241,6 +256,12 @@ flake: {
         startLimitIntervalSec = 900;
 
         environment = {
+          # Whether to publish to CF upstream
+          BLOCKPERF_PUBLISH =
+            if cfg.publish
+            then "True"
+            else "False";
+
           # The port to publish metrics to
           BLOCKPERF_METRICS_PORT =
             if cfg.port == null
@@ -251,17 +272,35 @@ flake: {
           BLOCKPERF_NODE_LOGFILE = cfg.logFile;
 
           # The client identifier; will be given to you with the certificates
-          BLOCKPERF_NAME = cfg.name;
+          BLOCKPERF_NAME =
+            if cfg.name == null
+            then ""
+            else cfg.name;
 
           # Path to the client certificate file
-          BLOCKPERF_CLIENT_CERT = sopsPath "blockperf-client-cert.pem";
+          BLOCKPERF_CLIENT_CERT =
+            if cfg.clientCert == null
+            then ""
+            else if cfg.useSopsSecrets
+            then sopsPath "blockperf-client-cert.pem"
+            else "/run/secrets/blockperf-client-cert.pem";
 
           # Path to the client key file
-          BLOCKPERF_CLIENT_KEY = sopsPath "blockperf-client.key";
+          BLOCKPERF_CLIENT_KEY =
+            if cfg.clientKey == null
+            then ""
+            else if cfg.useSopsSecrets
+            then sopsPath "blockperf-client.key"
+            else "/run/secrets/blockperf-client.key";
 
           # Path to the Amazon CA file in PEM format, find it here:
           #   https://www.amazontrust.com/repository/AmazonRootCA1.pem
-          BLOCKPERF_AMAZON_CA = sopsPath "blockperf-amazon-ca.pem";
+          BLOCKPERF_AMAZON_CA =
+            if cfg.amazonCa == null
+            then ""
+            else if cfg.useSopsSecrets
+            then sopsPath "blockperf-amazon-ca.pem"
+            else "/run/secrets/blockperf-amazon-ca.pem";
         };
 
         serviceConfig = {
@@ -309,6 +348,11 @@ flake: {
               BLOCKPERF_MASKED_ADDRESSES="$MASKED"
               export BLOCKPERF_MASKED_ADDRESSES
 
+              echo "Blockperf publishing is: ${
+                if cfg.publish
+                then "Enabled"
+                else "Disabled"
+              }"
               echo "Blockperf machine Amazon CA: $BLOCKPERF_AMAZON_CA"
               echo "Blockperf machine client cert: $BLOCKPERF_CLIENT_CERT"
               echo "Blockperf machine client key: $BLOCKPERF_CLIENT_KEY"
