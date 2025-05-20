@@ -1069,6 +1069,7 @@ in {
             #   [$FEE]
             #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
+            #   [$POOL_MARGIN]
             #   [$POOL_METADATA_BASE_URL]
             #   [$POOL_METADATA_URL]
             #   $POOL_NAMES
@@ -1096,6 +1097,11 @@ in {
             if [ -z "''${FEE:-}" ]; then
               echo "Fee for stake pool registration tx is defaulting to 300000 lovelace"
               FEE="300000"
+            fi
+
+            if [ -z "''${POOL_MARGIN:-}" ]; then
+              echo "Pool margin is defaulting to 1"
+              POOL_MARGIN="1"
             fi
 
             if [ -z "''${POOL_NAMES:-}" ]; then
@@ -1181,7 +1187,7 @@ in {
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                   --pool-cost 500000000 \
-                  --pool-margin 1 \
+                  --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
                   --single-host-pool-relay "$POOL_RELAY" \
@@ -1200,7 +1206,7 @@ in {
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                   --pool-cost 500000000 \
-                  --pool-margin 1 \
+                  --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
                   --single-host-pool-relay "$POOL_RELAY" \
