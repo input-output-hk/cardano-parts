@@ -329,6 +329,7 @@ in
                       with localFlake.packages.${system}; [
                         age
                         awscli2
+                        ssm-session-manager-plugin
                         cc-sign
                         localFlake.inputs.colmena.packages.${system}.colmena
                         graphviz
