@@ -277,34 +277,34 @@
     "cardano-node-service": {
       "flake": false,
       "locked": {
-        "lastModified": 1739399665,
-        "narHash": "sha256-j59d23Bv3TCC4xjXDhPLtCDNRDA9V4VWLeBiVEzYgbA=",
-        "owner": "IntersectMBO",
+        "lastModified": 1746450573,
+        "narHash": "sha256-Szhph7YncIbQ+/QmqzSW61WLConBa8XIA6K/3A8mP00=",
+        "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "52b708f37cd3dc92a188717deae2a6a60117f696",
+        "rev": "0983ac29304aadac74a5604eeefa76cfbcc91611",
         "type": "github"
       },
       "original": {
-        "owner": "IntersectMBO",
-        "ref": "10.2.1",
+        "owner": "input-output-hk",
         "repo": "cardano-node",
+        "rev": "0983ac29304aadac74a5604eeefa76cfbcc91611",
         "type": "github"
       }
     },
     "cardano-node-service-ng": {
       "flake": false,
       "locked": {
-        "lastModified": 1745954148,
-        "narHash": "sha256-Moth/2BOCWDdgXrOX6fv2rykqe4zR9POjC+g4dlUqqc=",
+        "lastModified": 1746450573,
+        "narHash": "sha256-Szhph7YncIbQ+/QmqzSW61WLConBa8XIA6K/3A8mP00=",
         "owner": "IntersectMBO",
         "repo": "cardano-node",
-        "rev": "420c94fbb075146c6ec7fba78c5b0482fafe72dd",
+        "rev": "0983ac29304aadac74a5604eeefa76cfbcc91611",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "10.4.1",
         "repo": "cardano-node",
+        "rev": "0983ac29304aadac74a5604eeefa76cfbcc91611",
         "type": "github"
       }
     },
@@ -830,16 +830,15 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1746650586,
-        "narHash": "sha256-zK/E+LZaasg4KqMHoHhdGBoQeQcWRVXyvqtlcmB3Klo=",
+        "lastModified": 1747796208,
+        "narHash": "sha256-ZUBNrv+lO0CWhnN0R0ZiG/eIB+W5pnyAGsxf/lozECo=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "bb35ae48fac40b76f0ebbc6bcb6cabcf4d433a7e",
+        "rev": "281f635b01f8fe843baefe010a694f67041c0848",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "jl/mithril-ancillary-key",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -852,16 +851,15 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1746650586,
-        "narHash": "sha256-zK/E+LZaasg4KqMHoHhdGBoQeQcWRVXyvqtlcmB3Klo=",
+        "lastModified": 1747796208,
+        "narHash": "sha256-ZUBNrv+lO0CWhnN0R0ZiG/eIB+W5pnyAGsxf/lozECo=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "bb35ae48fac40b76f0ebbc6bcb6cabcf4d433a7e",
+        "rev": "281f635b01f8fe843baefe010a694f67041c0848",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "jl/mithril-ancillary-key",
         "repo": "iohk-nix",
         "type": "github"
       }

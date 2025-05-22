@@ -28,8 +28,8 @@
     capkgs.url = "github:input-output-hk/capkgs";
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/mithril-ancillary-key";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/mithril-ancillary-key";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # For tmp local testing pins
     blockperf.url = "github:johnalotoski/blockperf/preview-network";
@@ -60,12 +60,14 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/10.2.1";
+      # Until node >= 10.5.0 is tagged, this commit allows the service to work on nixpkgs >= 25.05
+      url = "github:input-output-hk/cardano-node/0983ac29304aadac74a5604eeefa76cfbcc91611";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.4.1";
+      # Until node >= 10.5.0 is tagged, this commit allows the service to work on nixpkgs >= 25.05
+      url = "github:IntersectMBO/cardano-node/0983ac29304aadac74a5604eeefa76cfbcc91611";
       flake = false;
     };
 
