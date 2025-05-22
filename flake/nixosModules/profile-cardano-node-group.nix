@@ -212,7 +212,7 @@
           self'.packages.db-analyser-ng
           self'.packages.db-synthesizer-ng
           self'.packages.db-truncater-ng
-          # self'.packages.snapshot-converter
+          self'.packages.snapshot-converter
           self'.packages.snapshot-converter-ng
         ]
         ++ optional isMithrilEnv mithril-client-cli;

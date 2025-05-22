@@ -300,7 +300,7 @@ in
                         db-synthesizer
                         db-truncater
                         mithril-client-cli
-                        # snapshot-converter
+                        snapshot-converter
 
                         # The packages derivations of the `-ng` pkgs provide
                         # the wrapped binary to avoid cli name collision.
