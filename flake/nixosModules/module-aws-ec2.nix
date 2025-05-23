@@ -18,6 +18,8 @@
       "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
     ];
 
+    key = ./module-aws-ec2.nix;
+
     options = {
       aws = {
         instance = mkOption {

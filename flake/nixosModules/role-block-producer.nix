@@ -106,6 +106,8 @@ flake: {
 
       sopsPath = name: config.sops.secrets.${name}.path;
     in {
+      key = ./role-block-producer.nix;
+
       options.services = {
         cardano-node = {
           useSopsSecrets = mkOption {

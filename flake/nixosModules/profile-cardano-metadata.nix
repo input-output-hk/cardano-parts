@@ -64,6 +64,8 @@ flake: {
     in {
       imports = [flake.config.flake.nixosModules.module-nginx-vhost-exporter];
 
+      key = ./profile-cardano-metadata.nix;
+
       options = {
         services.cardano-metadata = {
           acmeEmail = mkOption {

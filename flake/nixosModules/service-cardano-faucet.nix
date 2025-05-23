@@ -38,6 +38,8 @@
 
       cfg = nixos.config.services.cardano-faucet;
     in {
+      key = ./service-cardano-faucet.nix;
+
       options = {
         services.cardano-faucet = {
           acmeEmail = mkOption {

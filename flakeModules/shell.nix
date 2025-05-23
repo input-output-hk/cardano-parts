@@ -300,7 +300,7 @@ in
                         db-synthesizer
                         db-truncater
                         mithril-client-cli
-                        # snapshot-converter
+                        snapshot-converter
 
                         # The packages derivations of the `-ng` pkgs provide
                         # the wrapped binary to avoid cli name collision.
@@ -329,6 +329,7 @@ in
                       with localFlake.packages.${system}; [
                         age
                         awscli2
+                        ssm-session-manager-plugin
                         cc-sign
                         localFlake.inputs.colmena.packages.${system}.colmena
                         graphviz

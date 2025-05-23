@@ -261,6 +261,8 @@ apply-bootstrap *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
 
+  [ -f .ssh_key ] || just save-bootstrap-ssh-key
+
   sed '2i \ \ IdentityFile .ssh_key' .ssh_config > .ssh_config_bootstrap
   SSH_CONFIG_FILE=".ssh_config_bootstrap" just apply {{ARGS}}
   rm .ssh_config_bootstrap

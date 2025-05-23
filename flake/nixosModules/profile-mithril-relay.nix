@@ -26,6 +26,8 @@ flake: {
 
     cfg = config.services.mithril-relay;
   in {
+    key = ./profile-mithril-relay.nix;
+
     options.services.mithril-relay = {
       interface = mkOption {
         type = str;

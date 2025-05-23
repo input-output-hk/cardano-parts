@@ -23,7 +23,12 @@ While working on the next step, you can already start the devshell using:
 
     nix develop
 
-This will be done automatically if you are using [direnv](https://direnv.net/) and issue `direnv allow`.
+This will be done automatically if you are using [direnv](https://direnv.net/)
+and issue `direnv allow`.
+
+Note that the nix version must be at least `2.17` and `fetch-closure`,
+`flakes` and `nix-command` must be included in your nix config for
+`experimental-features`.
 
 ## AWS
 

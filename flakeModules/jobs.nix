@@ -986,7 +986,7 @@ in {
             NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
             # Generate stake delegation certificate
-            if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" == "legacy" ]; then
+            if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" = "legacy" ]; then
               unset ERA_MOD
             else
               ERA_MOD="stake-"
@@ -1069,6 +1069,7 @@ in {
             #   [$FEE]
             #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
+            #   [$POOL_MARGIN]
             #   [$POOL_METADATA_BASE_URL]
             #   [$POOL_METADATA_URL]
             #   $POOL_NAMES
@@ -1096,6 +1097,11 @@ in {
             if [ -z "''${FEE:-}" ]; then
               echo "Fee for stake pool registration tx is defaulting to 300000 lovelace"
               FEE="300000"
+            fi
+
+            if [ -z "''${POOL_MARGIN:-}" ]; then
+              echo "Pool margin is defaulting to 1"
+              POOL_MARGIN="1"
             fi
 
             if [ -z "''${POOL_NAMES:-}" ]; then
@@ -1165,7 +1171,7 @@ in {
               fi
 
               # Generate stake delegation certificate
-              if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" == "legacy" ]; then
+              if [ -z "''${ERA_CMD:-}" ] || [ "''${ERA_CMD:-}" = "legacy" ]; then
                 unset ERA_MOD
               else
                 ERA_MOD="stake-"
@@ -1181,7 +1187,7 @@ in {
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                   --pool-cost 500000000 \
-                  --pool-margin 1 \
+                  --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
                   --single-host-pool-relay "$POOL_RELAY" \
@@ -1200,7 +1206,7 @@ in {
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                   --pool-cost 500000000 \
-                  --pool-margin 1 \
+                  --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
                   --single-host-pool-relay "$POOL_RELAY" \
@@ -1816,22 +1822,22 @@ in {
             SIGN_TX_ARGS=()
             VOTE_ARGS=()
 
-            if [ "$ROLE" == "spo" ]; then
+            if [ "$ROLE" = "spo" ]; then
               VOTE_ARGS+=("--cold-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
-            elif [ "$ROLE" == "drep" ]; then
+            elif [ "$ROLE" = "drep" ]; then
               VOTE_ARGS+=("--drep-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
-            elif [ "$ROLE" == "cc" ]; then
+            elif [ "$ROLE" = "cc" ]; then
               VOTE_ARGS+=("--cc-hot-verification-key-file" "$(decrypt_check "$VOTE_KEY".vkey)")
             else
               echo "ROLE must be one of: spo, drep or cc"
               exit 1
             fi
 
-            if [ "$DECISION" == "yes" ]; then
+            if [ "$DECISION" = "yes" ]; then
               VOTE_ARGS+=("--yes")
-            elif [ "$DECISION" == "no" ]; then
+            elif [ "$DECISION" = "no" ]; then
               VOTE_ARGS+=("--no")
-            elif [ "$DECISION" == "abstain" ]; then
+            elif [ "$DECISION" = "abstain" ]; then
               VOTE_ARGS+=("--abstain")
             else
               echo "DECISION must be one of: yes, no or abstain"

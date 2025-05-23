@@ -417,6 +417,8 @@
 
       cfg = config.services.cardano-postgres;
     in {
+      key = ./profile-cardano-postgres.nix;
+
       options = {
         services.cardano-postgres = {
           dataDir = mkOption {

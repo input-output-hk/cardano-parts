@@ -7,6 +7,7 @@
 #   config.services.cardano-node.totalMaxHeapSizeMiB
 #   config.services.mithril-client.enable
 #   config.services.mithril-client.aggregatorEndpointUrl
+#   config.services.mithril-client.allowedAncillary
 #   config.services.mithril-client.allowedNetworks
 #   config.services.mithril-client.genesisVerificationKey
 #   config.services.mithril-client.snapshotDigest
@@ -44,7 +45,7 @@
     inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
-    inherit (opsLib) mithrilAllowedNetworks mithrilVerifyingPools;
+    inherit (opsLib) mithrilAllowedAncillaryNetworks mithrilAllowedNetworks mithrilVerifyingPools;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
     inherit (fromJSON (readFile ShelleyGenesisFile)) slotsPerKESPeriod;
 
@@ -89,6 +90,7 @@
 
     iRange = range 0 (cfg.instances - 1);
     isMithrilEnv = cfgMithril.enable && elem environmentName cfgMithril.allowedNetworks;
+    isMithrilAncillary = cfgMithril.enable && elem environmentName cfgMithril.allowedAncillary;
 
     cfg = nixos.config.services.cardano-node;
     cfgMithril = nixos.config.services.mithril-client;
@@ -141,12 +143,26 @@
             description = "The mithril aggregator endpoint url.";
           };
 
+          allowedAncillary = mkOption {
+            type = listOf str;
+            default = mithrilAllowedAncillaryNetworks;
+            description = ''
+              A list of cardano networks permitted to use mithril ancillary state.
+            '';
+          };
+
           allowedNetworks = mkOption {
             type = listOf str;
             default = mithrilAllowedNetworks;
             description = ''
               A list of cardano networks permitted to use mithril snapshots.
             '';
+          };
+
+          ancillaryVerificationKey = mkOption {
+            type = str;
+            default = cfg.environments.${environmentName}.mithrilAncillaryVerificationKey or "";
+            description = "The mithril ancillary verification key.";
           };
 
           genesisVerificationKey = mkOption {
@@ -196,7 +212,7 @@
           self'.packages.db-analyser-ng
           self'.packages.db-synthesizer-ng
           self'.packages.db-truncater-ng
-          # self'.packages.snapshot-converter
+          self'.packages.snapshot-converter
           self'.packages.snapshot-converter-ng
         ]
         ++ optional isMithrilEnv mithril-client-cli;
@@ -486,7 +502,7 @@
 
                         # Prevent comparing two static strings in bash from causing a shellcheck failure
                         # shellcheck disable=SC2050
-                        if [ "${boolToString cfgMithril.verifySnapshotSignature}" == "true" ]; then
+                        if [ "${boolToString cfgMithril.verifySnapshotSignature}" = "true" ]; then
                           if [ "$DIGEST" = "latest" ]; then
                             # If digest is "latest" search through all available recent snaps for signing verification.
                             SNAPSHOTS_JSON=$(mithril-client cardano-db snapshot list --json)
@@ -533,7 +549,16 @@
                           fi
                         fi
 
-                        echo "Bootstrapping cardano-node-${toString i} state from mithril"
+                        echo "Bootstrapping cardano-node-${toString i} state from mithril..."
+
+                        # shellcheck disable=SC2050
+                        if [ "${boolToString isMithrilAncillary}" = "true" ]; then
+                          ANCILLARY_ARGS=("--include-ancillary" "--ancillary-verification-key" "${cfgMithril.ancillaryVerificationKey}")
+                          echo "Bootstrapping using ancillary state..."
+                        else
+                          echo "Bootstrapping without ancillary state..."
+                        fi
+
                         mithril-client --version
                         mithril-client \
                           -vvv \
@@ -541,13 +566,16 @@
                           download \
                           "$DIGEST" \
                           --download-dir "$TMPSTATE" \
-                          --genesis-verification-key "${cfgMithril.genesisVerificationKey}"
+                          --genesis-verification-key "${cfgMithril.genesisVerificationKey}" \
+                          ''${ANCILLARY_ARGS:+''${ANCILLARY_ARGS[@]}}
                         mv "$TMPSTATE/db" "$DB_DIR"
                         rm -rf "$TMPSTATE"
                         echo "Mithril bootstrap complete for $DB_DIR"
                       fi
                     '';
                   in ''
+                    [ -n "''${DEBUG:-}" ] && set -x
+
                     INSTANCE="${toString i}"
                     DB_DIR="${
                       if i == 0
@@ -558,7 +586,7 @@
 
                     # Legacy: if a db-restore.tar.gz file exists, use it to
                     # replace state of the first node instance.
-                    if [ -f db-restore.tar.gz ] && [ "$INSTANCE" == "0" ]; then
+                    if [ -f db-restore.tar.gz ] && [ "$INSTANCE" = "0" ]; then
                       echo "Restoring database from db-restore.tar.gz to $DB_DIR"
                       rm -rf "$DB_DIR"
                       tar xzf db-restore.tar.gz
