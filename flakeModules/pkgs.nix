@@ -440,7 +440,7 @@ in
             (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-2-e06029b)
             # (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-87f6f67)
             (mkPkg "blockperf" localFlake.inputs.blockperf.packages.x86_64-linux.blockperf)
-            (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-0-3749045")
+            #(mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-0-3749045")
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-10-4-1-420c94f // {version = "10.8.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-10-4-1-420c94f // {version = "10.8.0.0";}))
             (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-5-cb61094")
@@ -465,11 +465,11 @@ in
             (mkPkg "cardano-testnet-ng" caPkgs."cardano-testnet-input-output-hk-cardano-node-10-4-1-420c94f")
             (mkPkg "cardano-tracer" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-4-1-420c94f")
             (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-input-output-hk-cardano-node-10-4-1-420c94f")
-            (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2025-03-31-1649791
+            /* (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2025-03-31-1649791
               // {
                 pname = "cardano-wallet";
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
-              }))
+              })) */
             (mkPkg "cc-sign" caPkgs.cc-sign-IntersectMBO-credential-manager-0-1-3-0-2d82213)
             (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-10-4-1-420c94f")
             (mkPkg "db-analyser-ng" caPkgs."db-analyser-input-output-hk-cardano-node-10-4-1-420c94f")
@@ -553,7 +553,7 @@ in
             db-analyser-ng = mkWrapper "db-analyser-ng" cfgPkgs.db-analyser-ng;
             db-synthesizer-ng = mkWrapper "db-synthesizer-ng" cfgPkgs.db-synthesizer-ng;
             db-truncater-ng = mkWrapper "db-truncater-ng" cfgPkgs.db-truncater-ng;
-            mithril-client-cli-ng = mkWrapper "mithril-client-ng" cfgPkgs.mithril-client-cli-ng;
+            #mithril-client-cli-ng = mkWrapper "mithril-client-ng" cfgPkgs.mithril-client-cli-ng;
             mithril-signer-ng = mkWrapper "mithril-signer-ng" cfgPkgs.mithril-signer-ng;
             snapshot-converter-ng = mkWrapper "snapshot-converter-ng" cfgPkgs.snapshot-converter-ng;
           };

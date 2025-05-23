@@ -291,11 +291,11 @@ in
                         haskellPackages.cbor-tool
                         bech32
                         blockfrost-platform
-                        cardano-address
+                        #cardano-address
                         cardano-cli
                         cardano-node
                         cardano-testnet
-                        cardano-wallet
+                        #cardano-wallet
                         db-analyser
                         db-synthesizer
                         db-truncater
@@ -310,12 +310,11 @@ in
                         self'.packages.db-analyser-ng
                         self'.packages.db-synthesizer-ng
                         self'.packages.db-truncater-ng
-                        self'.packages.mithril-client-cli-ng
-                        self'.packages.snapshot-converter-ng
+                        #self'.packages.mithril-client-cli-ng
 
                         gdb
-                        process-compose
-                        token-metadata-creator
+                        #process-compose
+                        #token-metadata-creator
                       ]);
                 };
               }

@@ -25,7 +25,9 @@
     services-flake.url = "github:juspay/services-flake";
 
     # Cardano related inputs
-    capkgs.url = "github:input-output-hk/capkgs";
+    # this fork has macOS packages
+    capkgs.url = "github:tgunnoe/capkgs";
+
     empty-flake.url = "github:input-output-hk/empty-flake";
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
@@ -141,7 +143,7 @@
           inputs.process-compose-flake.flakeModule
         ];
 
-      systems = ["x86_64-linux"];
+      systems = ["x86_64-linux" "aarch64-darwin"];
 
       flake = {
         flakeModules = {
