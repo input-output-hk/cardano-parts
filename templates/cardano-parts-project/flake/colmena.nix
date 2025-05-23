@@ -84,8 +84,8 @@ in
 
       # Mithril signing config
       # mithrilRelay = {imports = [inputs.cardano-parts.nixosModules.profile-mithril-relay];};
-      # declMRel = node: {services.mithril-signer.relayEndpoint = nixosConfigurations.${node}.config.ips.privateIpv4;};
-      # declMSigner = node: {services.mithril-relay.signerIp = nixosConfigurations.${node}.config.ips.privateIpv4;};
+      # declMRel = node: {services.mithril-signer.relayEndpoint = nixosConfigurations.${node}.config.ips.privateIpv4 or "ip-module not available";};
+      # declMSigner = node: {services.mithril-relay.signerIp = nixosConfigurations.${node}.config.ips.privateIpv4 or "ip-module not available;};
 
       # Optimize tcp sysctl and route params for long distance transmission.
       # Apply to one relay per pool group.

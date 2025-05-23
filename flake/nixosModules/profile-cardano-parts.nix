@@ -4,6 +4,8 @@
 #
 # Attributes available on nixos module import:
 #   config.cardano-parts.cluster.group.<...>                             # Inherited from flakeModule cluster.group assignment
+#   config.cardano-parts.perNode.generic.abortOnMissingIpModule
+#   config.cardano-parts.perNode.generic.warnOnMissingIpModule
 #   config.cardano-parts.perNode.lib.cardanoLib
 #   config.cardano-parts.perNode.lib.opsLib
 #   config.cardano-parts.perNode.lib.topologyLib
@@ -109,6 +111,12 @@ flake @ {moduleWithSystem, ...}: {
 
     perNodeSubmodule = submodule {
       options = {
+        generic = mkOption {
+          type = genericSubmodule;
+          description = mdDoc "Cardano-parts nixos perNode generic submodule";
+          default = {};
+        };
+
         lib = mkOption {
           type = libSubmodule;
           description = mdDoc "Cardano-parts nixos perNode lib submodule";
@@ -131,6 +139,26 @@ flake @ {moduleWithSystem, ...}: {
           type = rolesSubmodule;
           description = mdDoc "Cardano-parts nixos perNode roles submodule";
           default = {};
+        };
+      };
+    };
+
+    genericSubmodule = submodule {
+      options = {
+        abortOnMissingIpModule = mkOption {
+          type = bool;
+          description = mdDoc ''
+            The option to abort on missing downstream provided "ip-module" nixosModule.
+          '';
+          default = cfg.group.generic.abortOnMissingIpModule;
+        };
+
+        warnOnMissingIpModule = mkOption {
+          type = bool;
+          description = mdDoc ''
+            The option to warn on missing downstream provided "ip-module" nixosModule.
+          '';
+          default = cfg.group.generic.warnOnMissingIpModule;
         };
       };
     };

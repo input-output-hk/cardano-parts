@@ -18,6 +18,8 @@
 #   flake.cardano-parts.cluster.infra.generic.warnOnMissingIpModule
 #   flake.cardano-parts.cluster.infra.grafana.stackName
 #   flake.cardano-parts.cluster.groups.<default|name>.bookRelayMultivalueDns
+#   flake.cardano-parts.cluster.groups.<default|name>.generic.abortOnMissingIpModule
+#   flake.cardano-parts.cluster.groups.<default|name>.generic.warnOnMissingIpModule
 #   flake.cardano-parts.cluster.groups.<default|name>.groupBlockProducerSubstring
 #   flake.cardano-parts.cluster.groups.<default|name>.groupFlake
 #   flake.cardano-parts.cluster.groups.<default|name>.groupName
@@ -270,10 +272,29 @@ flake @ {
 
   groupSubmodule = submodule ({name, ...}: {
     options = {
-      meta = mkOption {
-        type = metaSubmodule;
-        description = mdDoc "Cardano-parts cluster group meta submodule.";
+      bookRelayMultivalueDns = mkOption {
+        type = nullOr str;
+        description = mdDoc ''
+          Cardano-parts cluster group(s) multivalue DNS.
+          Machines belonging to this group and in the relay role have their IP A address added to this multivalue DNS record.
+          This is intended to aggregate all group relays for a given environment to a single DNS for use as an upstream publicRoots.
+        '';
+        default = null;
+      };
+
+      generic = mkOption {
+        type = groupGenericSubmodule;
+        description = mdDoc "Cardano-parts cluster group generic submodule.";
         default = {};
+      };
+
+      groupBlockProducerSubstring = mkOption {
+        type = str;
+        description = mdDoc ''
+          Cardano-parts cluster group block producer substring.
+          Machines belonging to this group and in the block producer role will have Colmena names containing this substring.
+        '';
+        default = "bp-";
       };
 
       groupFlake = mkOption {
@@ -314,16 +335,6 @@ flake @ {
         default = "";
       };
 
-      bookRelayMultivalueDns = mkOption {
-        type = nullOr str;
-        description = mdDoc ''
-          Cardano-parts cluster group(s) multivalue DNS.
-          Machines belonging to this group and in the relay role have their IP A address added to this multivalue DNS record.
-          This is intended to aggregate all group relays for a given environment to a single DNS for use as an upstream publicRoots.
-        '';
-        default = null;
-      };
-
       groupRelayMultivalueDns = mkOption {
         type = nullOr str;
         description = mdDoc ''
@@ -345,30 +356,47 @@ flake @ {
         default = "rel-";
       };
 
-      groupBlockProducerSubstring = mkOption {
-        type = str;
-        description = mdDoc ''
-          Cardano-parts cluster group block producer substring.
-          Machines belonging to this group and in the block producer role will have Colmena names containing this substring.
-        '';
-        default = "bp-";
+      meta = mkOption {
+        type = groupMetaSubmodule;
+        description = mdDoc "Cardano-parts cluster group meta submodule.";
+        default = {};
       };
 
       pkgs = mkOption {
-        type = pkgsSubmodule;
+        type = groupPkgsSubmodule;
         description = mdDoc "Cardano-parts cluster group pkgs submodule.";
         default = {};
       };
 
       lib = mkOption {
-        type = libSubmodule;
+        type = groupLibSubmodule;
         description = mdDoc "Cardano-parts cluster group lib submodule.";
         default = {};
       };
     };
   });
 
-  libSubmodule = submodule {
+  groupGenericSubmodule = submodule {
+    options = {
+      abortOnMissingIpModule = mkOption {
+        type = bool;
+        description = mdDoc ''
+          Cardano-parts cluster group option to abort on missing downstream provided "ip-module" nixosModule.
+        '';
+        default = cfg.cluster.infra.generic.abortOnMissingIpModule;
+      };
+
+      warnOnMissingIpModule = mkOption {
+        type = bool;
+        description = mdDoc ''
+          Cardano-parts cluster group option to warn on missing downstream provided "ip-module" nixosModule.
+        '';
+        default = cfg.cluster.infra.generic.warnOnMissingIpModule;
+      };
+    };
+  };
+
+  groupLibSubmodule = submodule {
     options = {
       cardanoLib = mkOption {
         type = functionTo (attrsOf anything);
@@ -394,7 +422,7 @@ flake @ {
     };
   };
 
-  metaSubmodule = submodule {
+  groupMetaSubmodule = submodule {
     options = {
       addressType = mkOption {
         type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"];
@@ -519,7 +547,7 @@ flake @ {
     };
   };
 
-  pkgsSubmodule = submodule {
+  groupPkgsSubmodule = submodule {
     options = {
       blockfrost-platform = mkOption {
         type = functionTo package;

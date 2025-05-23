@@ -443,8 +443,6 @@ in
             (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-0-3749045")
             (mkPkg "cardano-cli" (caPkgs.cardano-cli-input-output-hk-cardano-node-10-4-1-420c94f // {version = "10.8.0.0";}))
             (mkPkg "cardano-cli-ng" (caPkgs.cardano-cli-input-output-hk-cardano-node-10-4-1-420c94f // {version = "10.8.0.0";}))
-            # (mkPkg "cardano-db-sync" (recursiveUpdate caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-5-cb61094" {meta.mainProgram = "cardano-db-sync";}))
-            # (mkPkg "cardano-db-sync-ng" (recursiveUpdate caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-5-cb61094" {meta.mainProgram = "cardano-db-sync";}))
             (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-5-cb61094")
             (mkPkg "cardano-db-sync-ng" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-input-output-hk-cardano-db-sync-13-6-0-5-cb61094")
             (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-input-output-hk-cardano-db-sync-13-6-0-5-cb61094")

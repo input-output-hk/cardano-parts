@@ -7,7 +7,7 @@ flake: {
     inherit (lib) optional;
     inherit (flake.config.flake) nixosModules;
 
-    cfgGeneric = flake.config.flake.cardano-parts.cluster.infra.generic;
+    cfgGeneric = config.cardano-parts.perNode.generic;
 
     msg = ''
 
