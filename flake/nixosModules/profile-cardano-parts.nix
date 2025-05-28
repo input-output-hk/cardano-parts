@@ -352,7 +352,41 @@ flake @ {moduleWithSystem, ...}: {
     config = {
       # The hosts file is case-insensitive, so switch from camelCase attr name to kebab-case
       networking.hosts = mkIf (gfModules ? ips) (let
-        allIps = head gfModules.ips.imports;
+        # Prior to "github:hercules-ci/flake-parts/dc3b467eac0fe1436e897d01c35dabe63b4749ea"
+        # made on Sept 12th, 2024, the expression:
+        #
+        #   head gfModules.ips.imports
+        #
+        # yielded an attrSet with attrName as machine name and
+        # attrValue as attrSet of ip type to ip value.  We'll refer to this
+        # attrSet as ipInfo for simplicity below.
+        #
+        # After this commit, the same expression instead returns:
+        #
+        #  {
+        #    imports = [
+        #      {
+        #        _file = "$NIX_STORE_PATH, via option flake.nixosModules.ips";
+        #        imports = [
+        #          ipInfo
+        #        ];
+        #      }
+        #    ]
+        #  }
+        #
+        # The same info can be extracted with:
+        #
+        #   head (head (head gfModules.ips.imports).imports).imports
+        #
+        # but this is getting rather ugly, so let's use a recursive function
+        # instead.
+        allIps = let
+          flattenImports = m:
+            if m ? imports && isList m.imports
+            then flattenImports (head m.imports)
+            else m;
+        in
+          flattenImports gfModules.ips;
 
         hostsList =
           # See hostsList type and description above
