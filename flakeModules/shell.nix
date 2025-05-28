@@ -390,43 +390,42 @@ in
           );
 
         mkMenu = id: {
-          "menu-${id}" =
-            (pkgs.writeShellApplication
-              {
-                name = "menu-${id}";
-                runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell];
+          "menu-${id}" = (pkgs.writeShellApplication
+            {
+              name = "menu-${id}";
+              runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell];
 
-                text = let
-                  minWidth =
-                    last (
-                      sort lessThan (
-                        map (pkg: stringLength (pkgStr pkg)) (allPkgs id)
-                      )
+              text = let
+                minWidth =
+                  last (
+                    sort lessThan (
+                      map (pkg: stringLength (pkgStr pkg)) (allPkgs id)
                     )
-                    + 4;
-                in ''
-                  nu -c '"Cardano-parts menu: ${id}" | ansi gradient --fgstart "0xffffff" --fgend "0xffffff" --bgstart "0x0000ff" --bgend "0xff0000"'
-                  echo
-                  echo "The following packages are available in the ${id} devShell:"
-                  echo
-                  echo "${concatStringsSep "\n" (map (pkg:
-                    if hasAttr "description" pkg.meta
-                    then pkgStr pkg + fixedWidthString (minWidth - stringLength (pkgStr pkg)) " " "" + pkg.meta.description
-                    else pkgStr pkg)
-                  (allPkgs id))}"
-                  echo
-                  echo
-                  echo "Other cardano-parts devShells available are:"
-                  echo "${concatMapStringsSep "\n" (id: "  ${id} (info: menu-${id})") definedIds}"
-                  echo
-                '';
-              })
+                  )
+                  + 4;
+              in ''
+                nu -c '"Cardano-parts menu: ${id}" | ansi gradient --fgstart "0xffffff" --fgend "0xffffff" --bgstart "0x0000ff" --bgend "0xff0000"'
+                echo
+                echo "The following packages are available in the ${id} devShell:"
+                echo
+                echo "${concatStringsSep "\n" (map (pkg:
+                  if hasAttr "description" pkg.meta
+                  then pkgStr pkg + fixedWidthString (minWidth - stringLength (pkgStr pkg)) " " "" + pkg.meta.description
+                  else pkgStr pkg)
+                (allPkgs id))}"
+                echo
+                echo
+                echo "Other cardano-parts devShells available are:"
+                echo "${concatMapStringsSep "\n" (id: "  ${id} (info: menu-${id})") definedIds}"
+                echo
+              '';
+            })
             .overrideAttrs (
-              _: {
-                meta.description = "Cardano parts menu for devShell ${id}";
-                meta.mainProgram = "menu-${id}";
-              }
-            );
+            _: {
+              meta.description = "Cardano parts menu for devShell ${id}";
+              meta.mainProgram = "menu-${id}";
+            }
+          );
         };
 
         pkgName = pkg: pkg.meta.mainProgram or (getName pkg);
