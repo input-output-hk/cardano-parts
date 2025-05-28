@@ -250,11 +250,11 @@ default:
 
 # Deploy select machines
 apply *ARGS:
-  colmena apply --verbose --experimental-flake-eval --on {{ARGS}}
+  colmena apply --verbose --on {{ARGS}}
 
 # Deploy all machines
 apply-all *ARGS:
-  colmena apply --verbose --experimental-flake-eval {{ARGS}}
+  colmena apply --verbose {{ARGS}}
 
 # Deploy select machines with the bootstrap key
 apply-bootstrap *ARGS:
@@ -868,7 +868,7 @@ ssh-for-all *ARGS:
 
 # Ssh for select
 ssh-for-each HOSTNAMES *ARGS:
-  colmena exec --verbose --experimental-flake-eval --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
+  colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
 
 # List machine ips based on regex pattern
 ssh-list-ips PATTERN:
