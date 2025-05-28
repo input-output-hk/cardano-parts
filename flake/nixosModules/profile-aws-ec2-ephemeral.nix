@@ -86,18 +86,28 @@ flake: {
 
       fsOpts = mkOption {
         type = listOf str;
-        default = [
-          # An example file system performance tuning option for XFS
-          "logbsize=256k"
-        ];
+        default =
+          if cfg.fsType == "ext2"
+          then [
+            # An example file system performance tuning option for ext2
+            "noacl"
+            "noatime"
+            "nodiratime"
+          ]
+          else if cfg.fsType == "xfs"
+          then [
+            # An example file system performance tuning option for XFS
+            "logbsize=256k"
+          ]
+          else [];
         description = ''
           File system tuning options used during mounting.
         '';
       };
 
       fsType = mkOption {
-        type = enum ["xfs"];
-        default = "xfs";
+        type = enum ["ext2" "xfs"];
+        default = "ext2";
         description = ''
           The file system to use for ephemeral storage.
 
@@ -107,7 +117,7 @@ flake: {
           ephemeral block device(s) at which point auto-format and relabelling
           will occur.
 
-          NOTE: Changing to a file system other than xfs will require
+          NOTE: Changing to a file system other than ext2 or xfs will require
           extending the nixos module code to support the new filesystem(s).
         '';
       };
@@ -239,7 +249,7 @@ flake: {
             ExecStart = getExe (pkgs.writeShellApplication {
               name = cfg.serviceName;
 
-              runtimeInputs = with pkgs; [fd jq kmod mdadm util-linux xfsprogs];
+              runtimeInputs = with pkgs; [e2fsprogs fd jq kmod mdadm util-linux xfsprogs];
               text = ''
                 set -euo pipefail
 
@@ -291,7 +301,7 @@ flake: {
                 if [ "$NUM_BD" -eq "1" ]; then
                   if [ "$EMPTY" = "true" ]; then
                     set -x
-                    mkfs -t xfs -L "$LABEL" "''${INSTANCE_BD[@]}"
+                    mkfs -t ${cfg.fsType} -L "$LABEL" "''${INSTANCE_BD[@]}"
                   fi
                   ln -svf "''${INSTANCE_BD[@]}" "$SYM_TGT"
                   set +x
@@ -301,7 +311,7 @@ flake: {
                     set -x
                     mdadm --create "$RAID_DEV" --raid-devices="$NUM_BD" --level=0 "''${INSTANCE_BD[@]}"
                     mdadm --detail --scan | tee "$RAID_CFG"
-                    mkfs -t xfs -L "$LABEL" "$RAID_DEV"
+                    mkfs -t ${cfg.fsType} -L "$LABEL" "$RAID_DEV"
                     ln -svf "$RAID_DEV" "$SYM_TGT"
                     set +x
                   else
