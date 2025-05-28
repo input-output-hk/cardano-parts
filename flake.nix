@@ -9,8 +9,8 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     inputs-check.url = "github:input-output-hk/inputs-check";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
-    nix.url = "github:nixos/nix/2.25-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    nix.url = "github:nixos/nix/2.29-maintenance";
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
