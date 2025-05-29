@@ -4,7 +4,11 @@
   inputs = {
     auth-keys-hub = {
       url = "github:input-output-hk/auth-keys-hub";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        treefmt-nix.follows = "treefmt-nix";
+      };
     };
 
     colmena = {
@@ -31,8 +35,18 @@
       flake = false;
     };
 
-    sops-nix.url = "github:Mic92/sops-nix";
-    terranix.url = "github:terranix/terranix";
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    terranix = {
+      url = "github:terranix/terranix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
 
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
@@ -45,13 +59,18 @@
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
-    empty-flake.url = "github:input-output-hk/empty-flake";
-    haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Blockperf fork until PRs merged upstream
-    blockperf.url = "github:johnalotoski/blockperf/preview-network";
+    blockperf = {
+      url = "github:johnalotoski/blockperf/preview-network";
+      inputs = {
+        # Requires nixpkgs specific pinning for locked python versioning
+        # nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
     # blockperf.url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/preview-network";
 
     # For tmp local testing pins
@@ -116,9 +135,6 @@
       url = "github:cardano-foundation/cardano-wallet/v2025-03-31";
       flake = false;
     };
-
-    # Reduce stackage.nix source download deps
-    haskell-nix.inputs.stackage.follows = "empty-flake";
   };
 
   outputs = inputs: let
