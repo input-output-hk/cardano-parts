@@ -2,23 +2,42 @@
   description = "Cardano Parts: nix flake parts for cardano clusters";
 
   inputs = {
-    auth-keys-hub.url = "github:input-output-hk/auth-keys-hub";
-    auth-keys-hub.inputs.nixpkgs.follows = "nixpkgs";
-    colmena.inputs.nixpkgs.follows = "nixpkgs";
-    colmena.url = "github:zhaofengli/colmena";
+    auth-keys-hub = {
+      url = "github:input-output-hk/auth-keys-hub";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    colmena = {
+      url = "github:zhaofengli/colmena";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     flake-parts.url = "github:hercules-ci/flake-parts";
-    inputs-check.url = "github:input-output-hk/inputs-check";
+
+    inputs-check = {
+      url = "github:input-output-hk/inputs-check";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
+
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     nix.url = "github:nixos/nix/2.29-maintenance";
+
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
     };
+
     sops-nix.url = "github:Mic92/sops-nix";
     terranix.url = "github:terranix/terranix";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
@@ -31,9 +50,11 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
-    # For tmp local testing pins
+    # Blockperf fork until PRs merged upstream
     blockperf.url = "github:johnalotoski/blockperf/preview-network";
     # blockperf.url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/preview-network";
+
+    # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
 
