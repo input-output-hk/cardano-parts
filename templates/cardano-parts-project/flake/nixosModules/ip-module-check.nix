@@ -24,7 +24,10 @@ flake: {
         + ''
 
           If you know what you are doing and have a special edge case, this warning may be disabled by setting:
-            flake.cardano-parts.cluster.infra.generic.warnOnMissingIpModule = false'');
+            flake.cardano-parts.cluster.infra.generic.warnOnMissingIpModule = false
+
+          Or by setting a per node nixosModules config option:
+            config.cardano-parts.perNode.generic.warnOnMissingIpModule = false'');
 
     assertions = [
       {
@@ -34,7 +37,10 @@ flake: {
           + ''
 
             If you know what you are doing and have a special edge case, this abort may be disabled by setting:
-              flake.cardano-parts.cluster.infra.generic.abortOnMissingIpModule = false'';
+              flake.cardano-parts.cluster.infra.generic.abortOnMissingIpModule = false
+
+            Or by setting a per node nixosModules config option:
+              config.cardano-parts.perNode.generic.abortOnMissingIpModule = false'';
       }
     ];
   };
