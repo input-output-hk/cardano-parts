@@ -60,7 +60,7 @@ flake: {
     ...
   }: let
     inherit (builtins) head;
-    inherit (lib) any getExe hasInfix hasPrefix mkForce mkIf mkOption splitString;
+    inherit (lib) any getExe hasInfix hasPrefix mkForce mkIf mkOption removePrefix splitString;
     inherit (lib.types) bool enum listOf str;
     inherit (config.aws.instance) instance_type;
 
@@ -76,6 +76,15 @@ flake: {
     key = ./profile-aws-ec2-ephemeral.nix;
 
     options.services.aws.ec2.ephemeral = {
+      enableMountOnCreation = mkOption {
+        type = bool;
+        default = true;
+        description = ''
+          Whether to ensure the ephemeral volume is mounted automatically after
+          it becomes available.
+        '';
+      };
+
       enablePostMountService = mkOption {
         type = bool;
         default = true;
@@ -341,6 +350,35 @@ flake: {
                 set -euo pipefail
 
                 ${cfg.postMountScript}
+              '';
+            });
+          };
+        };
+
+        "${cfg.serviceName}-mount-on-creation" = mkIf cfg.enableMountOnCreation {
+          wantedBy = ["multi-user.target"];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = getExe (pkgs.writeShellApplication {
+              name = "${cfg.serviceName}-mount-on-creation";
+              text = ''
+                set -euo pipefail
+
+                while true; do
+                  echo "Sleeping 10 seconds until mount on created attempt..."
+                  sleep 10
+                  # shellcheck disable=SC2010
+                  if ls -1 / | grep -q ${removePrefix "/" cfg.mountPoint}; then
+                    echo "Found: ${cfg.mountPoint}"
+
+                    # Trigger the systemd auto-mount service
+                    ls ${cfg.mountPoint}
+
+                    touch ${cfg.mountPoint}/.mounted
+
+                    break
+                  fi
+                done
               '';
             });
           };
