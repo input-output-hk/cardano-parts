@@ -144,7 +144,12 @@
           # disabled as a precaution.
           optimise.automatic = false;
 
-          gc.automatic = true;
+          gc = {
+            automatic = true;
+
+            # Minimize security vulnerability positive scan results by flushing old closures
+            options = "--delete-older-than 30d";
+          };
 
           settings = {
             auto-optimise-store = true;

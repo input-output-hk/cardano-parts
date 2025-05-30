@@ -29,7 +29,7 @@ flake @ {moduleWithSystem, ...}: {
   }:
     with builtins;
     with lib; let
-      inherit (lib.types) attrsOf bool enum listOf str;
+      inherit (lib.types) attrsOf bool enum listOf str lines;
       inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
@@ -432,7 +432,7 @@ flake @ {moduleWithSystem, ...}: {
           };
 
           extraAlloyConfig = mkOption {
-            type = str;
+            type = lines;
             default = "";
             description = ''
               Extra configuration appended to the /etc/alloy/config.alloy file prior to formatting.

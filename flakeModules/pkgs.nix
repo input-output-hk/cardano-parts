@@ -46,6 +46,7 @@
 #   perSystem.cardano-parts.pkgs.cardano-tracer
 #   perSystem.cardano-parts.pkgs.cardano-wallet
 #   perSystem.cardano-parts.pkgs.cc-sign
+#   perSystem.cardano-parts.pkgs.colemena
 #   perSystem.cardano-parts.pkgs.db-analyser
 #   perSystem.cardano-parts.pkgs.db-synthesizer
 #   perSystem.cardano-parts.pkgs.db-truncater
@@ -471,6 +472,7 @@ in
                 meta.description = "HTTP server and command-line for managing UTxOs and HD wallets in Cardano.";
               }))
             (mkPkg "cc-sign" caPkgs.cc-sign-IntersectMBO-credential-manager-0-1-3-0-2d82213)
+            (mkPkg "colmena" localFlake.inputs.colmena.packages.${system}.colmena)
             (mkPkg "db-analyser" caPkgs."db-analyser-input-output-hk-cardano-node-10-4-1-420c94f")
             (mkPkg "db-analyser-ng" caPkgs."db-analyser-input-output-hk-cardano-node-10-4-1-420c94f")
             (mkPkg "db-synthesizer" caPkgs."db-synthesizer-input-output-hk-cardano-node-10-4-1-420c94f")
@@ -523,6 +525,7 @@ in
               cardano-testnet
               cardano-tracer
               cardano-wallet
+              colmena
               db-analyser
               db-synthesizer
               db-truncater

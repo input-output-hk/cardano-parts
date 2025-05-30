@@ -613,6 +613,12 @@ flake: {
             listenAddress = "127.0.0.1";
             port = cfg.varnishExporterPort;
             group = "varnish";
+
+            # Required until https://github.com/nixos/nixpkgs/issues/400003 is fixed.
+            instance =
+              if versionOlder config.services.varnish.package.version "7"
+              then "/var/run/varnish/${config.networking.hostName}"
+              else "/var/run/varnishd";
           };
         };
       };
