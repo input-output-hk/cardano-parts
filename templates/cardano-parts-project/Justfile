@@ -1324,7 +1324,7 @@ tofu *ARGS:
 
   tofu init -reconfigure
   tofu workspace select -or-create "$WORKSPACE"
-  tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
+  tofu "${ARGS[@]:0:1}" ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")} "${ARGS[@]:1}"
 
 # Truncate a select chain after slot
 truncate-chain ENV SLOT:
