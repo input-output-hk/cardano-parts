@@ -566,12 +566,14 @@ in {
           runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
+            #   [$CC_DIR]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
             #   [$GENESIS_DIR]
             #   [$INITIAL_FUNDS]
             #   [$MAX_SUPPLY]
+            #   [$NUM_CC_KEYS]
             #   [$NUM_GENESIS_KEYS]
             #   [$SECURITY_PARAM]
             #   [$SLOT_LENGTH]
@@ -588,9 +590,11 @@ in {
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+            export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -626,6 +630,7 @@ in {
               --pools 1 \
               --stake-delegators 1 \
               --utxo-keys 1 \
+              --committee-keys "$NUM_CC_KEYS" \
               --total-supply "$MAX_SUPPLY" \
               --delegated-supply "$DELEGATED_SUPPLY" \
               --testnet-magic "$TESTNET_MAGIC" \
@@ -697,6 +702,13 @@ in {
               '. += $jsonUpdates | .protocolParams.protocolVersion = {"major": 9, "minor": 0}' \
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
+
+            # Constitutional committee threshold will be set to 0 by default
+            jq --sort-keys \
+              --argjson jsonUpdates '{"numerator": 2, "denominator": 3}' \
+              '.committee.threshold = $jsonUpdates' \
+              < "$GENESIS_DIR/conway-genesis.json" \
+              | sponge "$GENESIS_DIR/conway-genesis.json"
 
             # Obtain a base node config and topology
             cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
@@ -773,6 +785,16 @@ in {
               done
             popd &> /dev/null
 
+            pushd "$GENESIS_DIR/cc-keys" &> /dev/null
+              for ((i=0; i < "$NUM_CC_KEYS"; i++)); do
+                mv "cc$((i + 1))/cc.cold.skey" "cc-$((i + 1))-cold.skey"
+                mv "cc$((i + 1))/cc.cold.vkey" "cc-$((i + 1))-cold.vkey"
+                mv "cc$((i + 1))/cc.hot.skey" "cc-$((i + 1))-hot.skey"
+                mv "cc$((i + 1))/cc.hot.vkey" "cc-$((i + 1))-hot.vkey"
+                rmdir "cc$((i + 1))/"
+              done
+            popd &> /dev/null
+
             # Transform the rich key into a create-cardano compatible layout
             mv "$GENESIS_DIR/utxo-keys/utxo1/utxo.skey" "$GENESIS_DIR/utxo-keys/rich-utxo.skey"
             mv "$GENESIS_DIR/utxo-keys/utxo1/utxo.vkey" "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
@@ -801,6 +823,7 @@ in {
               mv bootstrap-pool envs/"$ENV"/
               mv delegate-keys envs/"$ENV"/
               mv genesis-keys envs/"$ENV"/
+              mv cc-keys envs/"$ENV"/
               mv utxo-keys envs/"$ENV"/
               mv node-config.json ./*-genesis.json topology.json rundir/
             popd &> /dev/null
