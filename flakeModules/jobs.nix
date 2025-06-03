@@ -363,12 +363,14 @@ in {
           runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
+            #   [$CC_DIR]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
             #   [$GENESIS_DIR]
             #   [$INITIAL_FUNDS]
             #   [$MAX_SUPPLY]
+            #   [$NUM_CC_KEYS]
             #   [$NUM_GENESIS_KEYS]
             #   [$SECURITY_PARAM]
             #   [$SLOT_LENGTH]
@@ -385,9 +387,11 @@ in {
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+            export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -413,6 +417,7 @@ in {
             "''${CARDANO_CLI[@]}" genesis create-testnet-data \
               --genesis-keys "$NUM_GENESIS_KEYS" \
               --utxo-keys 1 \
+              --committee-keys "$NUM_CC_KEYS" \
               --total-supply "$MAX_SUPPLY" \
               --delegated-supply 0 \
               --testnet-magic "$TESTNET_MAGIC" \
@@ -421,27 +426,6 @@ in {
               --spec-conway "$TEMPLATE_DIR/conway.json" \
               --start-time "$START_TIME" \
               --out-dir "$GENESIS_DIR"
-
-            # Remove when node release is > 10.1.4
-            if [ "''${UNSTABLE:-}" != "true" ]; then
-              # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide a byron genesis
-              # whereas -ng now does
-              "''${CARDANO_CLI_NO_ERA[@]}" byron genesis genesis \
-                --protocol-magic "$TESTNET_MAGIC" \
-                --start-time "$(date +%s -d "$START_TIME")" \
-                --k "$SECURITY_PARAM" \
-                --n-poor-addresses 0 \
-                --n-delegate-addresses "$NUM_GENESIS_KEYS" \
-                --total-balance "$MAX_SUPPLY" \
-                --delegate-share 0 \
-                --avvm-entry-count 0 \
-                --avvm-entry-balance 0 \
-                --protocol-parameters-file "$TEMPLATE_DIR/byron.json" \
-                --genesis-output-dir "$GENESIS_DIR/byron-config"
-
-              # Move the byron genesis into the same dir as shelley, alonzo, conway genesis files
-              mv "$GENESIS_DIR/byron-config/genesis.json" "$GENESIS_DIR/byron-genesis.json"
-            fi
 
             # If initial funds is explicitly declared for the rich key, set it here
             if [ -n "''${INITIAL_FUNDS:-}" ]; then
@@ -460,6 +444,13 @@ in {
               '. += $jsonUpdates' \
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
+
+            # Constitutional committee threshold will be set to 0 by default
+            jq --sort-keys \
+              --argjson jsonUpdates '{"numerator": 2, "denominator": 3}' \
+              '.committee.threshold = $jsonUpdates' \
+              < "$GENESIS_DIR/conway-genesis.json" \
+              | sponge "$GENESIS_DIR/conway-genesis.json"
 
             # Obtain a base node config and topology
             cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
@@ -500,18 +491,9 @@ in {
                 mv "genesis$((i + 1))/key.skey" "shelley.$(printf "%03d" "$i").skey"
                 mv "genesis$((i + 1))/key.vkey" "shelley.$(printf "%03d" "$i").vkey"
                 rmdir "genesis$((i + 1))/"
-
-
-                # Remove when node release is > 10.1.4
-                if [ "''${UNSTABLE:-}" != "true" ]; then
-                  mv ../byron-config/genesis-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
-                fi
               done
 
-              # Remove if scope when node release is > 10.1.4
-              if [ "''${UNSTABLE:-}" = "true" ]; then
-                mv ../byron-gen-command/genesis-keys.000.key byron.000.key
-              fi
+              mv ../byron-gen-command/genesis-keys.000.key byron.000.key
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
@@ -526,21 +508,21 @@ in {
                 mv "delegate$((i + 1))/vrf.skey" "shelley.$(printf "%03d" "$i").vrf.skey"
                 mv "delegate$((i + 1))/vrf.vkey" "shelley.$(printf "%03d" "$i").vrf.vkey"
                 rmdir "delegate$((i + 1))/"
-
-                # Remove when node release is > 10.1.4
-                if [ "''${UNSTABLE:-}" != "true" ]; then
-                  mv ../byron-config/delegate-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
-                  mv ../byron-config/delegation-cert."$(printf "%03d" "$i")".json "byron.$(printf "%03d" "$i").cert.json"
-                fi
               done
-              # Remove if scope and first case when node release is > 10.1.4
-              if [ "''${UNSTABLE:-}" != "true" ]; then
-                rmdir ../byron-config/
-              else
+
                 mv ../byron-gen-command/delegate-keys.000.key byron.000.key
                 mv ../byron-gen-command/delegation-cert.000.json byron.000.cert.json
                 rmdir ../byron-gen-command/
-              fi
+            popd &> /dev/null
+
+            pushd "$GENESIS_DIR/cc-keys" &> /dev/null
+              for ((i=0; i < "$NUM_CC_KEYS"; i++)); do
+                mv "cc$((i + 1))/cc.cold.skey" "cc-$((i + 1))-cold.skey"
+                mv "cc$((i + 1))/cc.cold.vkey" "cc-$((i + 1))-cold.vkey"
+                mv "cc$((i + 1))/cc.hot.skey" "cc-$((i + 1))-hot.skey"
+                mv "cc$((i + 1))/cc.hot.vkey" "cc-$((i + 1))-hot.vkey"
+                rmdir "cc$((i + 1))/"
+              done
             popd &> /dev/null
 
             # Transform the rich key into a create-cardano compatible layout
@@ -570,6 +552,7 @@ in {
               mkdir -p envs/"$ENV" rundir
               mv delegate-keys envs/"$ENV"/
               mv genesis-keys envs/"$ENV"/
+              mv cc-keys envs/"$ENV"/
               mv utxo-keys envs/"$ENV"/
               mv node-config.json ./*-genesis.json topology.json rundir/
             popd &> /dev/null
