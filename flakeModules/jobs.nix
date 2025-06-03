@@ -223,6 +223,8 @@ in {
           runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
+            #   [$CC_DIR]
+            #   [$CC_EPOCH]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
@@ -242,9 +244,12 @@ in {
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+            export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
+            export CC_EPOCH=''${CC_EPOCH:-1000000}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -303,8 +308,38 @@ in {
               > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
               chmod 0600 "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
 
+            JSON_UPDATES=$( (for i in $(seq 1 "$NUM_CC_KEYS"); do
+              echo "{\"keyHash-$(cardano-cli latest governance committee key-hash --verification-key-file "$CC_DIR/cc-$i-cold.vkey")\": $CC_EPOCH}"
+            done) | jq -s add)
+
+            jq --sort-keys \
+              --argjson jsonUpdates "$JSON_UPDATES" \
+              '.committee.members = $jsonUpdates' \
+              < "$GENESIS_DIR/conway-genesis.json" \
+              | sponge "$GENESIS_DIR/conway-genesis.json"
+
             # Remove once the cardano-node new tracing is default in nixosModules.
             jq '. += {UseTraceDispatcher: false}' \
+              < "$GENESIS_DIR/node-config.json" \
+              | sponge "$GENESIS_DIR/node-config.json"
+
+            # Calculate genesis hashes and inject them into the node config file
+            HASH_BYRON=$("''${CARDANO_CLI_NO_ERA[@]}" byron genesis print-genesis-hash --genesis-json "$GENESIS_DIR/byron-genesis.json")
+            HASH_SHELLEY=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/shelley-genesis.json")
+            HASH_ALONZO=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/alonzo-genesis.json")
+            HASH_CONWAY=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/conway-genesis.json")
+            jq --sort-keys \
+              --arg hashByron "$HASH_BYRON" \
+              --arg hashShelley "$HASH_SHELLEY" \
+              --arg hashAlonzo "$HASH_ALONZO" \
+              --arg hashConway "$HASH_CONWAY" \
+              '. += {
+                ByronGenesisHash: $hashByron,
+                ShelleyGenesisHash: $hashShelley,
+                AlonzoGenesisHash: $hashAlonzo,
+                ConwayGenesisHash: $hashConway,
+                UseTraceDispatcher: false
+              }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
 
