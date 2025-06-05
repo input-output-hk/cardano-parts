@@ -45,7 +45,13 @@
         # Fetch the latest version
         providerFor = owner: repo: let
           json = readJSON (inputs.opentofu-registry + "/providers/${substring 0 1 owner}/${owner}/${repo}.json");
-          latest = head json.versions;
+
+          # Recent commits in opentofu-registry often append a version suffix of `-{alpha,beta}[0-9]+$`.
+          # Tofu won't initialize these alpha and beta packages by default, so filter them out.
+          stable = filter (e: match "^[0-9]+\.[0-9]+\.[0-9]+$" e.version != null) json.versions;
+
+          latest = head stable;
+
           matching = filter (e: e.os == "linux" && e.arch == "amd64") latest.targets;
           target = head matching;
         in

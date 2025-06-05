@@ -1,6 +1,7 @@
-import? 'scripts/recipes-aws.just'
-import? 'scripts/recipes-custom.just'
-import? 'scripts/recipes-governance.just'
+import? 'scripts/recipes/aws.just'
+import? 'scripts/recipes/demo.just'
+import? 'scripts/recipes/custom.just'
+import? 'scripts/recipes/governance.just'
 
 set shell := ["bash", "-uc"]
 set positional-arguments
@@ -250,11 +251,11 @@ default:
 
 # Deploy select machines
 apply *ARGS:
-  colmena apply --verbose --experimental-flake-eval --on {{ARGS}}
+  colmena apply --verbose --on {{ARGS}}
 
 # Deploy all machines
 apply-all *ARGS:
-  colmena apply --verbose --experimental-flake-eval {{ARGS}}
+  colmena apply --verbose {{ARGS}}
 
 # Deploy select machines with the bootstrap key
 apply-bootstrap *ARGS:
@@ -868,7 +869,7 @@ ssh-for-all *ARGS:
 
 # Ssh for select
 ssh-for-each HOSTNAMES *ARGS:
-  colmena exec --verbose --experimental-flake-eval --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
+  colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
 
 # List machine ips based on regex pattern
 ssh-list-ips PATTERN:
@@ -893,262 +894,6 @@ ssh-list-names PATTERN:
     | where Host =~ "{{PATTERN}}"
     | get Host
     | str join " "
-
-# Start a fork to conway demo
-start-demo:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  just stop-node demo
-
-  {{stateDir}}
-
-  echo "Cleaning state-demo..."
-  if [ -d state-demo ]; then
-    chmod -R +w state-demo
-    rm -rf state-demo
-  fi
-
-  echo "Generating state-demo config..."
-
-  export ENV=custom
-  export GENESIS_DIR=state-demo
-  export KEY_DIR=state-demo/envs/custom
-  export DATA_DIR=state-demo/rundir
-
-  export CARDANO_NODE_SOCKET_PATH="$STATEDIR/node-demo.socket"
-  export TESTNET_MAGIC=42
-
-  export NUM_GENESIS_KEYS=3
-  export POOL_NAMES="sp-1 sp-2 sp-3"
-  export STAKE_POOL_DIR=state-demo/groups/stake-pools
-
-  export BULK_CREDS=state-demo/bulk.creds.all.json
-  export PAYMENT_KEY=state-demo/envs/custom/utxo-keys/rich-utxo
-
-  export UNSTABLE=true
-  export UNSTABLE_LIB=true
-  export USE_ENCRYPTION=true
-  export USE_DECRYPTION=true
-  export USE_NODE_CONFIG_BP=false
-  export DEBUG=true
-
-  export SECURITY_PARAM=8
-  export SLOT_LENGTH=100
-  export START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds")
-
-  if [ "${USE_CREATE_TESTNET_DATA:-false}" = true ]; then
-    ERA_CMD="conway" \
-      nix run .#job-gen-custom-node-config-data
-  else
-    ERA_CMD="alonzo" \
-      nix run .#job-gen-custom-node-config
-  fi
-
-  ERA_CMD="alonzo" \
-    nix run .#job-create-stake-pool-keys
-
-  if [ "$USE_DECRYPTION" = true ]; then
-    BFT_CREDS=$(just sops-decrypt-binary "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
-    POOL_CREDS=$(just sops-decrypt-binary "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
-  else
-    BFT_CREDS=$(cat "$KEY_DIR"/delegate-keys/bulk.creds.bft.json)
-    POOL_CREDS=$(cat "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
-  fi
-  (
-    jq -r '.[]' <<< "$BFT_CREDS"
-    jq -r '.[]' <<< "$POOL_CREDS"
-  ) | jq -s > "$BULK_CREDS"
-
-  echo "Start cardano-node in the background. Run \"just stop-node demo\" to stop"
-  NODE_CONFIG="$DATA_DIR/node-config.json" \
-    NODE_TOPOLOGY="$DATA_DIR/topology.json" \
-    SOCKET_PATH="$STATEDIR/node-demo.socket" \
-    nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-demo.log" & echo $! > "$STATEDIR/node-demo.pid" &
-  just set-default-cardano-env demo "" "$PPID"
-  echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
-  sleep 30
-  echo
-
-  if [ "${USE_CREATE_TESTNET_DATA:-false}" = false ]; then
-    echo "Moving genesis utxo in epoch 0..."
-    BYRON_SIGNING_KEY="$KEY_DIR"/utxo-keys/shelley.000.skey \
-      ERA_CMD="alonzo" \
-      nix run .#job-move-genesis-utxo
-    echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
-    sleep 10
-    echo
-  fi
-
-  echo "Registering stake pools in epoch 0..."
-  POOL_RELAY=demo.local \
-    POOL_RELAY_PORT=3001 \
-    ERA_CMD="alonzo" \
-    nix run .#job-register-stake-pools
-  echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
-  sleep 10
-  echo
-
-  WAIT_FOR_TIP() {
-    TYPE="$1"
-    TARGET="$2"
-    EPOCH="$1"
-
-    while true; do
-        [ "$(jq -re ".$TYPE" <<< "$(just query-tip demo)")" = "$TARGET" ] && break;
-      sleep 2
-    done
-  }
-
-  echo "Delegating rewards stake key in epoch 0..."
-  ERA_CMD="alonzo" \
-    nix run .#job-delegate-rewards-stake-key
-  echo "Sleeping until epoch 1"
-  WAIT_FOR_TIP "epoch" "1"
-  echo
-
-  echo "Forking to babbage in epoch 1..."
-  just query-tip demo
-  MAJOR_VERSION=7 \
-    ERA_CMD="alonzo" \
-    nix run .#job-update-proposal-hard-fork
-  echo "Sleeping until babbage"
-  WAIT_FOR_TIP "era" "Babbage"
-  echo
-
-  echo "Forking to babbage (intra-era) in epoch 2..."
-  just query-tip demo
-  MAJOR_VERSION=8 \
-    ERA_CMD="babbage" \
-    nix run .#job-update-proposal-hard-fork
-  echo "Sleeping until epoch 3"
-  WAIT_FOR_TIP "epoch" "3"
-  echo
-
-  echo "Forking to conway in epoch 3..."
-  just query-tip demo
-  MAJOR_VERSION=9 \
-    ERA_CMD="babbage" \
-    nix run .#job-update-proposal-hard-fork
-  echo "Sleeping until epoch conway"
-  WAIT_FOR_TIP "era" "Conway"
-  echo
-
-  just query-tip demo
-  echo
-  echo "Finished sequence..."
-  echo
-
-# Start a fork to conway demo using create-testnet-data-ng job
-start-demo-ng:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  just stop-node demo
-
-  {{stateDir}}
-
-  echo "Cleaning state-demo-ng..."
-  if [ -d state-demo-ng ]; then
-    chmod -R +w state-demo-ng
-    rm -rf state-demo-ng
-  fi
-
-  echo "Generating state-demo-ng config..."
-
-  export ENV=custom
-  export GENESIS_DIR=state-demo-ng
-  export KEY_DIR=state-demo-ng/envs/custom
-  export DATA_DIR=state-demo-ng/rundir
-
-  export CARDANO_NODE_SOCKET_PATH="$STATEDIR/node-demo.socket"
-  export TESTNET_MAGIC=42
-
-  export NUM_GENESIS_KEYS=3
-  export POOL_NAMES="sp-1 sp-2 sp-3"
-  export STAKE_POOL_DIR=state-demo-ng/groups/stake-pools
-
-  export BULK_CREDS=state-demo-ng/bulk.creds.all.json
-  export PAYMENT_KEY=state-demo-ng/envs/custom/utxo-keys/rich-utxo
-
-  export UNSTABLE=true
-  export UNSTABLE_LIB=true
-  export USE_ENCRYPTION=true
-  export USE_DECRYPTION=true
-  export USE_NODE_CONFIG_BP=false
-  export USE_CREATE_TESTNET_DATA=true
-  export DEBUG=true
-
-  export SECURITY_PARAM=8
-  export SLOT_LENGTH=100
-  export START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now + 30 seconds")
-
-  export ERA_CMD=conway
-
-  nix run .#job-gen-custom-node-config-data-ng
-
-  nix run .#job-create-stake-pool-keys
-
-  if [ "$USE_DECRYPTION" = true ]; then
-    BOOTSTRAP_CREDS=$(just sops-decrypt-binary "$KEY_DIR"/bootstrap-pool/bulk.creds.bootstrap.json)
-    POOL_CREDS=$(just sops-decrypt-binary "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
-  else
-    BOOTSTRAP_CREDS=$(cat "$KEY_DIR"/bootstrap-pool/bulk.creds.bootstrap.json)
-    POOL_CREDS=$(cat "$STAKE_POOL_DIR"/no-deploy/bulk.creds.pools.json)
-  fi
-  (
-    jq -r '.[]' <<< "$BOOTSTRAP_CREDS"
-    jq -r '.[]' <<< "$POOL_CREDS"
-  ) | jq -s > "$BULK_CREDS"
-
-  echo "Start cardano-node in the background. Run \"just stop-node demo\" to stop"
-  NODE_CONFIG="$DATA_DIR/node-config.json" \
-    NODE_TOPOLOGY="$DATA_DIR/topology.json" \
-    SOCKET_PATH="$STATEDIR/node-demo.socket" \
-    nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-demo.log" & echo $! > "$STATEDIR/node-demo.pid" &
-  just set-default-cardano-env demo "" "$PPID"
-  echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
-  sleep 30
-  echo
-
-  echo "Registering stake pools..."
-  POOL_RELAY=demo-ng.local \
-    POOL_RELAY_PORT=3001 \
-    nix run .#job-register-stake-pools
-  echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 7)))"
-  sleep 10
-  echo
-
-  echo "Delegating rewards stake key..."
-  nix run .#job-delegate-rewards-stake-key
-  echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 7)))"
-  sleep 10
-  echo
-
-  echo "Retiring the bootstrap pool..."
-  BOOTSTRAP_POOL_DIR="$KEY_DIR/bootstrap-pool" \
-    RICH_KEY="$KEY_DIR/utxo-keys/rich-utxo" \
-    nix run .#job-retire-bootstrap-pool
-  sleep 10
-  echo
-
-  WAIT_FOR_TIP() {
-    TYPE="$1"
-    TARGET="$2"
-    EPOCH="$1"
-
-    while true; do
-        [ "$(jq -re ".$TYPE" <<< "$(just query-tip demo)")" = "$TARGET" ] && break;
-      sleep 2
-    done
-  }
-
-  echo "Sleeping until epoch 1 when the bootstrap pool retires"
-  WAIT_FOR_TIP "epoch" "1"
-  echo
-
-  just query-tip demo
-  echo
-  echo "Finished sequence..."
-  echo
 
 # Start a local node for a specific env
 start-node ENV:
@@ -1324,7 +1069,7 @@ tofu *ARGS:
 
   tofu init -reconfigure
   tofu workspace select -or-create "$WORKSPACE"
-  tofu ${ARGS[@]} ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")}
+  tofu "${ARGS[@]:0:1}" ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")} "${ARGS[@]:1}"
 
 # Truncate a select chain after slot
 truncate-chain ENV SLOT:

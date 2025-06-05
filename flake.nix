@@ -2,23 +2,56 @@
   description = "Cardano Parts: nix flake parts for cardano clusters";
 
   inputs = {
-    auth-keys-hub.url = "github:input-output-hk/auth-keys-hub";
-    auth-keys-hub.inputs.nixpkgs.follows = "nixpkgs";
-    colmena.inputs.nixpkgs.follows = "nixpkgs";
-    colmena.url = "github:zhaofengli/colmena";
+    auth-keys-hub = {
+      url = "github:input-output-hk/auth-keys-hub";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        treefmt-nix.follows = "treefmt-nix";
+      };
+    };
+
+    colmena = {
+      url = "github:zhaofengli/colmena";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     flake-parts.url = "github:hercules-ci/flake-parts";
-    inputs-check.url = "github:input-output-hk/inputs-check";
+
+    inputs-check = {
+      url = "github:input-output-hk/inputs-check";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
+
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
-    nix.url = "github:nixos/nix/2.25-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    nix.url = "github:nixos/nix/2.29-maintenance";
+
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
     };
-    sops-nix.url = "github:Mic92/sops-nix";
-    terranix.url = "github:terranix/terranix";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    terranix = {
+      url = "github:terranix/terranix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
+
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
@@ -26,14 +59,21 @@
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
-    empty-flake.url = "github:input-output-hk/empty-flake";
-    haskell-nix.url = "github:input-output-hk/haskell.nix";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
-    # For tmp local testing pins
-    blockperf.url = "github:johnalotoski/blockperf/preview-network";
+    # Blockperf fork until PRs merged upstream
+    blockperf = {
+      url = "github:johnalotoski/blockperf/preview-network";
+      inputs = {
+        # Requires nixpkgs specific pinning for locked python versioning
+        # nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
     # blockperf.url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/preview-network";
+
+    # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
 
@@ -41,12 +81,12 @@
     # versioning of the release and pre-release (-ng) dbsync
     # definitions found in flakeModule/pkgs.nix.
     cardano-db-sync-schema = {
-      url = "github:IntersectMBO/cardano-db-sync/13.6.0.4";
+      url = "github:IntersectMBO/cardano-db-sync/13.6.0.5";
       flake = false;
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.6.0.4";
+      url = "github:IntersectMBO/cardano-db-sync/13.6.0.5";
       flake = false;
     };
 
@@ -95,9 +135,6 @@
       url = "github:cardano-foundation/cardano-wallet/v2025-03-31";
       flake = false;
     };
-
-    # Reduce stackage.nix source download deps
-    haskell-nix.inputs.stackage.follows = "empty-flake";
   };
 
   outputs = inputs: let

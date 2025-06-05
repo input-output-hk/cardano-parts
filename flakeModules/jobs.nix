@@ -223,6 +223,8 @@ in {
           runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
+            #   [$CC_DIR]
+            #   [$CC_EPOCH]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
@@ -242,9 +244,12 @@ in {
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+            export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
+            export CC_EPOCH=''${CC_EPOCH:-1000000}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -303,8 +308,38 @@ in {
               > "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
               chmod 0600 "$GENESIS_DIR/utxo-keys/rich-utxo.addr"
 
+            JSON_UPDATES=$( (for i in $(seq 1 "$NUM_CC_KEYS"); do
+              echo "{\"keyHash-$(cardano-cli latest governance committee key-hash --verification-key-file "$CC_DIR/cc-$i-cold.vkey")\": $CC_EPOCH}"
+            done) | jq -s add)
+
+            jq --sort-keys \
+              --argjson jsonUpdates "$JSON_UPDATES" \
+              '.committee.members = $jsonUpdates' \
+              < "$GENESIS_DIR/conway-genesis.json" \
+              | sponge "$GENESIS_DIR/conway-genesis.json"
+
             # Remove once the cardano-node new tracing is default in nixosModules.
             jq '. += {UseTraceDispatcher: false}' \
+              < "$GENESIS_DIR/node-config.json" \
+              | sponge "$GENESIS_DIR/node-config.json"
+
+            # Calculate genesis hashes and inject them into the node config file
+            HASH_BYRON=$("''${CARDANO_CLI_NO_ERA[@]}" byron genesis print-genesis-hash --genesis-json "$GENESIS_DIR/byron-genesis.json")
+            HASH_SHELLEY=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/shelley-genesis.json")
+            HASH_ALONZO=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/alonzo-genesis.json")
+            HASH_CONWAY=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/conway-genesis.json")
+            jq --sort-keys \
+              --arg hashByron "$HASH_BYRON" \
+              --arg hashShelley "$HASH_SHELLEY" \
+              --arg hashAlonzo "$HASH_ALONZO" \
+              --arg hashConway "$HASH_CONWAY" \
+              '. += {
+                ByronGenesisHash: $hashByron,
+                ShelleyGenesisHash: $hashShelley,
+                AlonzoGenesisHash: $hashAlonzo,
+                ConwayGenesisHash: $hashConway,
+                UseTraceDispatcher: false
+              }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
 
@@ -328,12 +363,14 @@ in {
           runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
+            #   [$CC_DIR]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
             #   [$GENESIS_DIR]
             #   [$INITIAL_FUNDS]
             #   [$MAX_SUPPLY]
+            #   [$NUM_CC_KEYS]
             #   [$NUM_GENESIS_KEYS]
             #   [$SECURITY_PARAM]
             #   [$SLOT_LENGTH]
@@ -350,9 +387,11 @@ in {
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+            export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -378,6 +417,7 @@ in {
             "''${CARDANO_CLI[@]}" genesis create-testnet-data \
               --genesis-keys "$NUM_GENESIS_KEYS" \
               --utxo-keys 1 \
+              --committee-keys "$NUM_CC_KEYS" \
               --total-supply "$MAX_SUPPLY" \
               --delegated-supply 0 \
               --testnet-magic "$TESTNET_MAGIC" \
@@ -386,27 +426,6 @@ in {
               --spec-conway "$TEMPLATE_DIR/conway.json" \
               --start-time "$START_TIME" \
               --out-dir "$GENESIS_DIR"
-
-            # Remove when node release is > 10.1.4
-            if [ "''${UNSTABLE:-}" != "true" ]; then
-              # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide a byron genesis
-              # whereas -ng now does
-              "''${CARDANO_CLI_NO_ERA[@]}" byron genesis genesis \
-                --protocol-magic "$TESTNET_MAGIC" \
-                --start-time "$(date +%s -d "$START_TIME")" \
-                --k "$SECURITY_PARAM" \
-                --n-poor-addresses 0 \
-                --n-delegate-addresses "$NUM_GENESIS_KEYS" \
-                --total-balance "$MAX_SUPPLY" \
-                --delegate-share 0 \
-                --avvm-entry-count 0 \
-                --avvm-entry-balance 0 \
-                --protocol-parameters-file "$TEMPLATE_DIR/byron.json" \
-                --genesis-output-dir "$GENESIS_DIR/byron-config"
-
-              # Move the byron genesis into the same dir as shelley, alonzo, conway genesis files
-              mv "$GENESIS_DIR/byron-config/genesis.json" "$GENESIS_DIR/byron-genesis.json"
-            fi
 
             # If initial funds is explicitly declared for the rich key, set it here
             if [ -n "''${INITIAL_FUNDS:-}" ]; then
@@ -425,6 +444,13 @@ in {
               '. += $jsonUpdates' \
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
+
+            # Constitutional committee threshold will be set to 0 by default
+            jq --sort-keys \
+              --argjson jsonUpdates '{"numerator": 2, "denominator": 3}' \
+              '.committee.threshold = $jsonUpdates' \
+              < "$GENESIS_DIR/conway-genesis.json" \
+              | sponge "$GENESIS_DIR/conway-genesis.json"
 
             # Obtain a base node config and topology
             cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
@@ -465,18 +491,9 @@ in {
                 mv "genesis$((i + 1))/key.skey" "shelley.$(printf "%03d" "$i").skey"
                 mv "genesis$((i + 1))/key.vkey" "shelley.$(printf "%03d" "$i").vkey"
                 rmdir "genesis$((i + 1))/"
-
-
-                # Remove when node release is > 10.1.4
-                if [ "''${UNSTABLE:-}" != "true" ]; then
-                  mv ../byron-config/genesis-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
-                fi
               done
 
-              # Remove if scope when node release is > 10.1.4
-              if [ "''${UNSTABLE:-}" = "true" ]; then
-                mv ../byron-gen-command/genesis-keys.000.key byron.000.key
-              fi
+              mv ../byron-gen-command/genesis-keys.000.key byron.000.key
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
@@ -491,21 +508,21 @@ in {
                 mv "delegate$((i + 1))/vrf.skey" "shelley.$(printf "%03d" "$i").vrf.skey"
                 mv "delegate$((i + 1))/vrf.vkey" "shelley.$(printf "%03d" "$i").vrf.vkey"
                 rmdir "delegate$((i + 1))/"
-
-                # Remove when node release is > 10.1.4
-                if [ "''${UNSTABLE:-}" != "true" ]; then
-                  mv ../byron-config/delegate-keys."$(printf "%03d" "$i")".key "byron.$(printf "%03d" "$i").key"
-                  mv ../byron-config/delegation-cert."$(printf "%03d" "$i")".json "byron.$(printf "%03d" "$i").cert.json"
-                fi
               done
-              # Remove if scope and first case when node release is > 10.1.4
-              if [ "''${UNSTABLE:-}" != "true" ]; then
-                rmdir ../byron-config/
-              else
+
                 mv ../byron-gen-command/delegate-keys.000.key byron.000.key
                 mv ../byron-gen-command/delegation-cert.000.json byron.000.cert.json
                 rmdir ../byron-gen-command/
-              fi
+            popd &> /dev/null
+
+            pushd "$GENESIS_DIR/cc-keys" &> /dev/null
+              for ((i=0; i < "$NUM_CC_KEYS"; i++)); do
+                mv "cc$((i + 1))/cc.cold.skey" "cc-$((i + 1))-cold.skey"
+                mv "cc$((i + 1))/cc.cold.vkey" "cc-$((i + 1))-cold.vkey"
+                mv "cc$((i + 1))/cc.hot.skey" "cc-$((i + 1))-hot.skey"
+                mv "cc$((i + 1))/cc.hot.vkey" "cc-$((i + 1))-hot.vkey"
+                rmdir "cc$((i + 1))/"
+              done
             popd &> /dev/null
 
             # Transform the rich key into a create-cardano compatible layout
@@ -535,6 +552,7 @@ in {
               mkdir -p envs/"$ENV" rundir
               mv delegate-keys envs/"$ENV"/
               mv genesis-keys envs/"$ENV"/
+              mv cc-keys envs/"$ENV"/
               mv utxo-keys envs/"$ENV"/
               mv node-config.json ./*-genesis.json topology.json rundir/
             popd &> /dev/null
@@ -548,12 +566,14 @@ in {
           runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
+            #   [$CC_DIR]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
             #   [$GENESIS_DIR]
             #   [$INITIAL_FUNDS]
             #   [$MAX_SUPPLY]
+            #   [$NUM_CC_KEYS]
             #   [$NUM_GENESIS_KEYS]
             #   [$SECURITY_PARAM]
             #   [$SLOT_LENGTH]
@@ -570,9 +590,11 @@ in {
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
+            export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -608,6 +630,7 @@ in {
               --pools 1 \
               --stake-delegators 1 \
               --utxo-keys 1 \
+              --committee-keys "$NUM_CC_KEYS" \
               --total-supply "$MAX_SUPPLY" \
               --delegated-supply "$DELEGATED_SUPPLY" \
               --testnet-magic "$TESTNET_MAGIC" \
@@ -679,6 +702,13 @@ in {
               '. += $jsonUpdates | .protocolParams.protocolVersion = {"major": 9, "minor": 0}' \
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
+
+            # Constitutional committee threshold will be set to 0 by default
+            jq --sort-keys \
+              --argjson jsonUpdates '{"numerator": 2, "denominator": 3}' \
+              '.committee.threshold = $jsonUpdates' \
+              < "$GENESIS_DIR/conway-genesis.json" \
+              | sponge "$GENESIS_DIR/conway-genesis.json"
 
             # Obtain a base node config and topology
             cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
@@ -755,6 +785,16 @@ in {
               done
             popd &> /dev/null
 
+            pushd "$GENESIS_DIR/cc-keys" &> /dev/null
+              for ((i=0; i < "$NUM_CC_KEYS"; i++)); do
+                mv "cc$((i + 1))/cc.cold.skey" "cc-$((i + 1))-cold.skey"
+                mv "cc$((i + 1))/cc.cold.vkey" "cc-$((i + 1))-cold.vkey"
+                mv "cc$((i + 1))/cc.hot.skey" "cc-$((i + 1))-hot.skey"
+                mv "cc$((i + 1))/cc.hot.vkey" "cc-$((i + 1))-hot.vkey"
+                rmdir "cc$((i + 1))/"
+              done
+            popd &> /dev/null
+
             # Transform the rich key into a create-cardano compatible layout
             mv "$GENESIS_DIR/utxo-keys/utxo1/utxo.skey" "$GENESIS_DIR/utxo-keys/rich-utxo.skey"
             mv "$GENESIS_DIR/utxo-keys/utxo1/utxo.vkey" "$GENESIS_DIR/utxo-keys/rich-utxo.vkey"
@@ -783,6 +823,7 @@ in {
               mv bootstrap-pool envs/"$ENV"/
               mv delegate-keys envs/"$ENV"/
               mv genesis-keys envs/"$ENV"/
+              mv cc-keys envs/"$ENV"/
               mv utxo-keys envs/"$ENV"/
               mv node-config.json ./*-genesis.json topology.json rundir/
             popd &> /dev/null
@@ -1713,7 +1754,7 @@ in {
           runtimeInputs = stdPkgs;
           text = ''
             # Inputs:
-            #   $ACTION
+            #   [$ACTION]
             #   [$DEBUG]
             #   [$ERA_CMD]
             #   [$GOV_ACTION_DEPOSIT]
@@ -1737,21 +1778,24 @@ in {
             SIGN_TX_ARGS=()
 
             ACTION=''${ACTION:-"create-constitution"}
-            GOV_ACTION_DEPOSIT=''${GOV_ACTION_DEPOSIT:-"0"}
+            GOV_ACTION_DEPOSIT=''${GOV_ACTION_DEPOSIT:-"50000000000"}
             PROPOSAL_ARGS=("$@")
-            PROPOSAL_HASH=''${PROPOSAL_HASH:-"0000000000000000000000000000000000000000000000000000000000000000"}
-            PROPOSAL_URL=''${PROPOSAL_URL:-"https://proposals.sancho.network/1"}
+
+            # From:
+            # cardano-cli hash anchor-data --file-text <(curl -sL https://tinyurl.com/3wrwb2as)
+            PROPOSAL_HASH=''${PROPOSAL_HASH:-"52e69500a92d80f2126c836a4903dc582006709f004cf7a28ed648f732dff8d2"}
+            PROPOSAL_URL=''${PROPOSAL_URL:-"https://tinyurl.com/3wrwb2as"}
 
             WITNESSES=2
             DEPOSIT_STAKE_KEY_ARGS=("--deposit-return-stake-verification-key-file" "$(decrypt_check "$STAKE_KEY".vkey)")
 
             CHANGE_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
-            "''${CARDANO_CLI[@]}" governance action "$ACTION" \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance action "$ACTION" \
               --testnet \
               "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
@@ -1760,10 +1804,9 @@ in {
               "''${PROPOSAL_ARGS[@]}" \
               --out-file "$ACTION".action
 
-
             # Generate transaction
             TXIN=$(
-              "''${CARDANO_CLI[@]}" query utxo \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
@@ -1774,7 +1817,7 @@ in {
             BUILD_TX_ARGS+=("--proposal-file" "$ACTION".action)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$STAKE_KEY".skey)")
 
-            "''${CARDANO_CLI[@]}" transaction build \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -1782,14 +1825,14 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-"$ACTION".txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
               --tx-body-file tx-"$ACTION".txbody \
               --out-file tx-"$ACTION".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               "''${SIGN_TX_ARGS[@]}"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-"$ACTION".txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-"$ACTION".txsigned
             fi
           '';
         };
@@ -1847,16 +1890,16 @@ in {
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
             # TODO: make work with other actions than constitution
-            "''${CARDANO_CLI[@]}" governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
 
             # Generate transaction
             TXIN=$(
-              "''${CARDANO_CLI[@]}" query utxo \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
@@ -1867,7 +1910,7 @@ in {
             BUILD_TX_ARGS+=("--vote-file" "$ROLE".vote)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$VOTE_KEY".skey)")
 
-            "''${CARDANO_CLI[@]}" transaction build \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -1875,14 +1918,14 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-vote-"$ROLE".txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
               --tx-body-file tx-vote-"$ROLE".txbody \
               --out-file tx-vote-"$ROLE".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               "''${SIGN_TX_ARGS[@]}"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-vote-"$ROLE".txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-vote-"$ROLE".txsigned
             fi
           '';
         };
@@ -1915,58 +1958,58 @@ in {
             DREP_DEPOSIT=''${DREP_DEPOSIT:-"0"}
             mkdir -p "$DREP_DIR"
 
-            "''${CARDANO_CLI[@]}" address key-gen \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-gen \
               --verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/pay-"$INDEX".skey
 
-            "''${CARDANO_CLI[@]}" stake-address key-gen \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address key-gen \
               --verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/stake-"$INDEX".skey
 
-            "''${CARDANO_CLI[@]}" governance drep key-gen \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance drep key-gen \
               --verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --signing-key-file "$DREP_DIR"/drep-"$INDEX".skey
 
             DREP_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --payment-verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
                 --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
                 | tee "$DREP_DIR"/drep-"$INDEX".addr
             )
 
-            "''${CARDANO_CLI[@]}" stake-address registration-certificate \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address registration-certificate \
               --key-reg-deposit-amt "$STAKE_DEPOSIT" \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --out-file drep-"$INDEX"-stake.cert
 
-            "''${CARDANO_CLI[@]}" governance drep registration-certificate \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance drep registration-certificate \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --key-reg-deposit-amt "$DREP_DEPOSIT" \
               --out-file drep-"$INDEX"-drep.cert
 
-            "''${CARDANO_CLI[@]}" stake-address vote-delegation-certificate \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address vote-delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file drep-"$INDEX"-delegation.cert
 
             WITNESSES=3
             CHANGE_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
             # Generate transaction
             TXIN=$(
-              "''${CARDANO_CLI[@]}" query utxo \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" transaction build \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
               --tx-in "$TXIN" \
               --tx-out "$DREP_ADDRESS"+"$VOTING_POWER" \
               --change-address "$CHANGE_ADDRESS" \
@@ -1977,7 +2020,7 @@ in {
               --certificate drep-"$INDEX"-delegation.cert \
               --out-file tx-drep-"$INDEX".txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
               --tx-body-file tx-drep-"$INDEX".txbody \
               --out-file tx-drep-"$INDEX".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
@@ -1987,7 +2030,7 @@ in {
             fd --type file . "$DREP_DIR"/ --exec bash -c 'encrypt_check {}'
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-"$INDEX".txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-"$INDEX".txsigned
             fi
           '';
         };
@@ -2014,28 +2057,28 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            "''${CARDANO_CLI[@]}" governance committee create-hot-key-authorization-certificate \
-              --cold-verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
-              --hot-key-file "$CC_DIR"/hot-"$INDEX".vkey \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance committee create-hot-key-authorization-certificate \
+              --cold-verification-key-file "$CC_DIR"/cc-"$INDEX"-cold.vkey \
+              --hot-verification-key-file "$CC_DIR"/cc-"$INDEX"-hot.vkey \
               --out-file cc-"$INDEX"-reg.cert
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
             # Generate transaction
             TXIN=$(
-              "''${CARDANO_CLI[@]}" query utxo \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" transaction build \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -2043,16 +2086,16 @@ in {
               --certificate cc-"$INDEX"-reg.cert \
               --out-file tx-cc-"$INDEX".txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
               --tx-body-file tx-cc-"$INDEX".txbody \
               --out-file tx-cc-"$INDEX".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
-              --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
+              --signing-key-file "$CC_DIR"/cc-"$INDEX"-cold.skey
 
             fd --type file . "$CC_DIR"/ --exec bash -c 'encrypt_check {}'
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-cc-"$INDEX".txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-cc-"$INDEX".txsigned
             fi
           '';
         };
@@ -2077,13 +2120,13 @@ in {
 
             mkdir -p "$CC_DIR"
 
-            "''${CARDANO_CLI[@]}" governance committee key-gen-cold \
-              --verification-key-file "$CC_DIR"/cold-"$INDEX".vkey \
-              --signing-key-file "$CC_DIR"/cold-"$INDEX".skey
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance committee key-gen-cold \
+              --verification-key-file "$CC_DIR"/cc-"$INDEX"-cold.vkey \
+              --signing-key-file "$CC_DIR"/cc-"$INDEX"-cold.skey
 
-            "''${CARDANO_CLI[@]}" governance committee key-gen-hot \
-              --verification-key-file "$CC_DIR"/hot-"$INDEX".vkey \
-              --signing-key-file "$CC_DIR"/hot-"$INDEX".skey
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance committee key-gen-hot \
+              --verification-key-file "$CC_DIR"/cc-"$INDEX"-hot.vkey \
+              --signing-key-file "$CC_DIR"/cc-"$INDEX"-hot.skey
           '';
         };
 
@@ -2108,28 +2151,28 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            "''${CARDANO_CLI[@]}" stake-address vote-delegation-certificate \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address vote-delegation-certificate \
               --stake-verification-key-file "$(decrypt_check "$STAKE_KEY".vkey)" \
               --drep-verification-key-file "$(decrypt_check "$DREP_KEY".vkey)" \
               --out-file drep-delegation.cert
 
             WITNESSES=2
             CHANGE_ADDRESS=$(
-              "''${CARDANO_CLI[@]}" address build \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
                 --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
             # Generate transaction
             TXIN=$(
-              "''${CARDANO_CLI[@]}" query utxo \
+              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
                 --out-file /dev/stdout \
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI[@]}" transaction build \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -2137,14 +2180,14 @@ in {
               --certificate drep-delegation.cert \
               --out-file tx-drep-delegation.txbody
 
-            "''${CARDANO_CLI[@]}" transaction sign \
+            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
               --tx-body-file tx-drep-delegation.txbody \
               --out-file tx-drep-delegation.txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
               --signing-key-file "$(decrypt_check "$STAKE_KEY".skey)"
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
-              "''${CARDANO_CLI[@]}" transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-delegation.txsigned
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file tx-drep-delegation.txsigned
             fi
           '';
         };
