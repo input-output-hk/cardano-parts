@@ -87,6 +87,7 @@
           procps
           ripgrep
           rsync
+          ssm-session-manager-plugin
           smem
           ssh-to-age
           sops
