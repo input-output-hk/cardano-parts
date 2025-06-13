@@ -30,11 +30,7 @@
 
         networking = {
           hostName = name;
-          firewall = {
-            enable = true;
-            allowedTCPPorts = [22];
-            allowedUDPPorts = [];
-          };
+          firewall.enable = true;
         };
 
         time.timeZone = "UTC";
