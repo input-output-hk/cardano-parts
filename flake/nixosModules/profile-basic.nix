@@ -30,11 +30,7 @@
 
         networking = {
           hostName = name;
-          firewall = {
-            enable = true;
-            allowedTCPPorts = [22];
-            allowedUDPPorts = [];
-          };
+          firewall.enable = true;
         };
 
         time.timeZone = "UTC";
@@ -53,48 +49,59 @@
           doc.enable = false;
         };
 
-        environment.systemPackages = with pkgs; [
-          awscli2
-          age
-          bat
-          bind
-          cloud-utils
-          di
-          dnsutils
-          fd
-          fx
-          file
-          git
-          glances
-          helix
-          htop
-          icdiff
-          ijq
-          iptables
-          self'.packages.isd
-          jiq
-          jq
-          lsof
-          nano
-          # For nix >= 2.24 build compatibility
-          inputs.nixpkgs-unstable.legacyPackages.${system}.neovim
-          ncdu
-          # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 24.11 causing missing features error
-          inputs.nixpkgs.legacyPackages.${system}.nushell
-          nvme-cli
-          parted
-          pciutils
-          procps
-          ripgrep
-          rsync
-          smem
-          ssh-to-age
-          sops
-          sysstat
-          tcpdump
-          tree
-          wget
-        ];
+        environment = {
+          shellInit = ''
+            # This can be used to simplify ssh sessions, rsync, ex:
+            #   ssh -o "$(ssm-proxy-cmd "$REGION")" "$INSTANCE_ID"
+            ssm-proxy-cmd() {
+              echo "ProxyCommand=sh -c 'aws --region $1 ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p'"
+            }
+          '';
+
+          systemPackages = with pkgs; [
+            awscli2
+            age
+            bat
+            bind
+            cloud-utils
+            di
+            dnsutils
+            fd
+            fx
+            file
+            git
+            glances
+            helix
+            htop
+            icdiff
+            ijq
+            iptables
+            self'.packages.isd
+            jiq
+            jq
+            lsof
+            nano
+            # For nix >= 2.24 build compatibility
+            inputs.nixpkgs-unstable.legacyPackages.${system}.neovim
+            ncdu
+            # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 24.11 causing missing features error
+            inputs.nixpkgs.legacyPackages.${system}.nushell
+            nvme-cli
+            parted
+            pciutils
+            procps
+            ripgrep
+            rsync
+            ssm-session-manager-plugin
+            smem
+            ssh-to-age
+            sops
+            sysstat
+            tcpdump
+            tree
+            wget
+          ];
+        };
 
         programs = {
           tmux = {

@@ -259,7 +259,6 @@ in
                     moreutils
                     # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a missing features failure
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell
-                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellPlugins.polars
                     patch
                     ripgrep
                     statix
@@ -428,7 +427,6 @@ in
                     selectScope id optionalString "enableHooks" "defaultHooks"
                     + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
                     + ''
-                      export NUSHELL_PLUGINS_POLARS="${getExe localFlake.inputs.nixpkgs.legacyPackages.${system}.nushellPlugins.polars}"
                       [ -z "$NOMENU" ] && menu
                     '';
                 }
