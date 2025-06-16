@@ -817,7 +817,13 @@ ssh-bootstrap HOSTNAME *ARGS:
 ssh-for-all *ARGS:
   #!/usr/bin/env nu
   let nodes = (nix eval --json '.#nixosConfigurations' --apply builtins.attrNames | from json)
-  $nodes | par-each {|node| just ssh -q $node {{ARGS}}}
+  $nodes | par-each {|node|
+    let result = (do -i { ^just ssh -q $node {{ARGS}} } | complete)
+    {
+      index: $node,
+      result: $result
+    }
+  }
 
 # Ssh for select
 ssh-for-each HOSTNAMES *ARGS:
