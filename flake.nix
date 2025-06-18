@@ -106,8 +106,7 @@
     };
 
     cardano-node-service-ng = {
-      # Until node >= 10.5.0 is tagged, this commit allows the service to work on nixpkgs >= 25.05
-      url = "github:IntersectMBO/cardano-node/0983ac29304aadac74a5604eeefa76cfbcc91611";
+      url = "github:IntersectMBO/cardano-node/10.5.0";
       flake = false;
     };
 

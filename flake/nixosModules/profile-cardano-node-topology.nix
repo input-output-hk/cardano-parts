@@ -97,6 +97,7 @@
           # These are also set from the role-block-producer nixos module
           extraNodeConfig = {
             PeerSharing = false;
+            TargetNumberOfKnownPeers = 100;
             TargetNumberOfRootPeers = 100;
           };
           publicProducers = mkForce (extraNodeListPublicProducers ++ extraPublicProducers);
