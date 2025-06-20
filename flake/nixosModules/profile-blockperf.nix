@@ -30,8 +30,8 @@ flake: {
     name,
     ...
   }: let
-    inherit (builtins) concatStringsSep;
-    inherit (lib) escapeShellArgs hasSuffix getExe mkIf mkOption optional;
+    inherit (builtins) concatStringsSep head;
+    inherit (lib) escapeShellArgs hasSuffix getExe mkIf mkOption optional optionalString splitString;
     inherit (lib.types) bool int listOf nullOr package port str;
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
@@ -80,6 +80,18 @@ flake: {
         type = nullOr str;
         default = null;
         description = "The filename of the local encrypted client key.";
+      };
+
+      debugBlockperf = mkOption {
+        type = bool;
+        default = false;
+        description = "Whether or not to enable blockperf debug logging.";
+      };
+
+      debugScript = mkOption {
+        type = bool;
+        default = false;
+        description = "Whether or not to enable systemd script debugging.";
       };
 
       maskedDnsList = mkOption {
@@ -139,7 +151,10 @@ flake: {
 
       logFile = mkOption {
         type = str;
-        default = "${cfgNode.stateDir 0}/blockperf/node.json";
+        default =
+          if cfgNode.useLegacyTracing
+          then "${cfgNode.stateDir 0}/blockperf/node.json"
+          else "${cfgNode.stateDir 0}/blockperf/${name}/node.json";
         description = "The full path and file name of the node log file which blockperf consumes.";
       };
 
@@ -198,44 +213,87 @@ flake: {
     };
 
     # Blockperf does not yet work with the new tracing system
-    config = mkIf config.services.cardano-node.useLegacyTracing {
+    config = {
       environment.systemPackages = [cfg.package];
 
-      services.cardano-node = {
-        extraNodeInstanceConfig = _: {
-          TraceChainSyncClient = true;
-          TraceBlockFetchClient = true;
+      services = {
+        cardano-node = {
+          extraNodeInstanceConfig = _:
+            if cfgNode.useLegacyTracing
+            then {
+              TraceChainSyncClient = true;
+              TraceBlockFetchClient = true;
 
-          # We need to redeclare the standard setup in the list along
-          # with the new blockperf config because:
-          #   * cfgNode.extraNodeConfig won't merge or replace lists
-          #   * cfgNode.extraNodeInstanceConfig replaces lists
-          defaultScribes = [
-            # Standard scribe
-            ["JournalSK" "cardano"]
+              # We need to redeclare the standard setup in the list along
+              # with the new blockperf config because:
+              #   * cfgNode.extraNodeConfig won't merge or replace lists
+              #   * cfgNode.extraNodeInstanceConfig replaces lists
+              defaultScribes = [
+                # Standard scribe
+                ["JournalSK" "cardano"]
 
-            # Blockperf required
-            ["FileSK" cfg.logFile]
-          ];
+                # Blockperf required
+                ["FileSK" cfg.logFile]
+              ];
 
-          setupScribes = [
-            # Standard scribe
-            {
-              scFormat = "ScText";
-              scKind = "JournalSK";
-              scName = "cardano";
+              setupScribes = [
+                # Standard scribe
+                {
+                  scFormat = "ScText";
+                  scKind = "JournalSK";
+                  scName = "cardano";
+                }
+
+                # Blockperf required
+                {
+                  scFormat = "ScJson";
+                  scKind = "FileSK";
+                  scName = cfg.logFile;
+                  scRotation = {
+                    rpLogLimitBytes = cfg.logLimitBytes;
+                    rpKeepFilesNum = cfg.logKeepFilesNum;
+                    rpMaxAgeHours = cfg.logMaxAgeHours;
+                  };
+                }
+              ];
             }
-
-            # Blockperf required
-            {
-              scFormat = "ScJson";
-              scKind = "FileSK";
-              scName = cfg.logFile;
-              scRotation = {
-                rpLogLimitBytes = cfg.logLimitBytes;
-                rpKeepFilesNum = cfg.logKeepFilesNum;
-                rpMaxAgeHours = cfg.logMaxAgeHours;
+            else {
+              TraceOptions = {
+                "BlockFetch.Client.SendFetchRequest" = {
+                  details = "DNormal";
+                  maxFrequency = 0.0;
+                  severity = "Info";
+                };
+                "BlockFetch.Client.CompletedBlockFetch" = {
+                  details = "DNormal";
+                  maxFrequency = 0.0;
+                  severity = "Info";
+                };
+                "ChainDb.AddBlockEvent.AddedToCurrentChain" = {
+                  details = "DNormal";
+                  maxFrequency = 0.0;
+                  severity = "Info";
+                };
+                "ChainDb.AddBlockEvent.SwitchedToAFork" = {
+                  details = "DNormal";
+                  maxFrequency = 0.0;
+                  severity = "Info";
+                };
+                "ChainSync.Client.DownloadedHeader" = {
+                  details = "DNormal";
+                  maxFrequency = 0.0;
+                  severity = "Info";
+                };
               };
+            };
+        };
+
+        cardano-tracer = {
+          logging = [
+            {
+              logFormat = "ForMachine";
+              logMode = "FileMode";
+              logRoot = head (splitString "/${name}" cfg.logFile);
             }
           ];
         };
@@ -256,6 +314,15 @@ flake: {
         startLimitIntervalSec = 900;
 
         environment = {
+          # Whether to enable systemd script debugging
+          DEBUG = mkIf cfg.debugScript "True";
+
+          # Whether to publish to CF upstream
+          BLOCKPERF_LEGACY_TRACING =
+            if cfgNode.useLegacyTracing
+            then "True"
+            else "False";
+
           # Whether to publish to CF upstream
           BLOCKPERF_PUBLISH =
             if cfg.publish
@@ -348,6 +415,11 @@ flake: {
               BLOCKPERF_MASKED_ADDRESSES="$MASKED"
               export BLOCKPERF_MASKED_ADDRESSES
 
+              echo "Blockperf legacy tracing is: ${
+                if cfgNode.useLegacyTracing
+                then "Enabled"
+                else "Disabled"
+              }"
               echo "Blockperf publishing is: ${
                 if cfg.publish
                 then "Enabled"
@@ -361,7 +433,7 @@ flake: {
               echo -e "Blockperf machine masked addresses string (resolved):\n  $BLOCKPERF_MASKED_ADDRESSES"
               echo "Blockperf metrics port: $BLOCKPERF_METRICS_PORT"
               echo "Starting blockperf..."
-              blockperf run
+              blockperf run ${optionalString cfg.debugBlockperf "--debug"}
             '';
           });
 
