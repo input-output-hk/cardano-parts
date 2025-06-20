@@ -31,7 +31,7 @@ flake: {
     ...
   }: let
     inherit (builtins) concatStringsSep head;
-    inherit (lib) escapeShellArgs hasSuffix getExe mkIf mkOption optional optionalString splitString;
+    inherit (lib) escapeShellArgs hasSuffix getExe mkIf mkOption optional optionalAttrs optionalString splitString;
     inherit (lib.types) bool int listOf nullOr package port str;
     inherit (groupCfg) groupName groupFlake;
     inherit (opsLib) mkSopsSecret;
@@ -216,88 +216,93 @@ flake: {
     config = {
       environment.systemPackages = [cfg.package];
 
-      services = {
-        cardano-node = {
-          extraNodeInstanceConfig = _:
-            if cfgNode.useLegacyTracing
-            then {
-              TraceChainSyncClient = true;
-              TraceBlockFetchClient = true;
+      # The mkMerge avoids infinite recursion and/or no cardano-tracer service
+      # errors for legacy tracing machines.
+      services = lib.mkMerge [
+        {
+          cardano-node = {
+            extraNodeInstanceConfig = _:
+              if cfgNode.useLegacyTracing
+              then {
+                TraceChainSyncClient = true;
+                TraceBlockFetchClient = true;
 
-              # We need to redeclare the standard setup in the list along
-              # with the new blockperf config because:
-              #   * cfgNode.extraNodeConfig won't merge or replace lists
-              #   * cfgNode.extraNodeInstanceConfig replaces lists
-              defaultScribes = [
-                # Standard scribe
-                ["JournalSK" "cardano"]
+                # We need to redeclare the standard setup in the list along
+                # with the new blockperf config because:
+                #   * cfgNode.extraNodeConfig won't merge or replace lists
+                #   * cfgNode.extraNodeInstanceConfig replaces lists
+                defaultScribes = [
+                  # Standard scribe
+                  ["JournalSK" "cardano"]
 
-                # Blockperf required
-                ["FileSK" cfg.logFile]
-              ];
+                  # Blockperf required
+                  ["FileSK" cfg.logFile]
+                ];
 
-              setupScribes = [
-                # Standard scribe
-                {
-                  scFormat = "ScText";
-                  scKind = "JournalSK";
-                  scName = "cardano";
-                }
+                setupScribes = [
+                  # Standard scribe
+                  {
+                    scFormat = "ScText";
+                    scKind = "JournalSK";
+                    scName = "cardano";
+                  }
 
-                # Blockperf required
-                {
-                  scFormat = "ScJson";
-                  scKind = "FileSK";
-                  scName = cfg.logFile;
-                  scRotation = {
-                    rpLogLimitBytes = cfg.logLimitBytes;
-                    rpKeepFilesNum = cfg.logKeepFilesNum;
-                    rpMaxAgeHours = cfg.logMaxAgeHours;
+                  # Blockperf required
+                  {
+                    scFormat = "ScJson";
+                    scKind = "FileSK";
+                    scName = cfg.logFile;
+                    scRotation = {
+                      rpLogLimitBytes = cfg.logLimitBytes;
+                      rpKeepFilesNum = cfg.logKeepFilesNum;
+                      rpMaxAgeHours = cfg.logMaxAgeHours;
+                    };
+                  }
+                ];
+              }
+              else {
+                TraceOptions = {
+                  "BlockFetch.Client.CompletedBlockFetch" = {
+                    details = "DNormal";
+                    maxFrequency = 0.0;
+                    severity = "Info";
                   };
-                }
-              ];
-            }
-            else {
-              TraceOptions = {
-                "BlockFetch.Client.SendFetchRequest" = {
-                  details = "DNormal";
-                  maxFrequency = 0.0;
-                  severity = "Info";
-                };
-                "BlockFetch.Client.CompletedBlockFetch" = {
-                  details = "DNormal";
-                  maxFrequency = 0.0;
-                  severity = "Info";
-                };
-                "ChainDb.AddBlockEvent.AddedToCurrentChain" = {
-                  details = "DNormal";
-                  maxFrequency = 0.0;
-                  severity = "Info";
-                };
-                "ChainDb.AddBlockEvent.SwitchedToAFork" = {
-                  details = "DNormal";
-                  maxFrequency = 0.0;
-                  severity = "Info";
-                };
-                "ChainSync.Client.DownloadedHeader" = {
-                  details = "DNormal";
-                  maxFrequency = 0.0;
-                  severity = "Info";
+                  "BlockFetch.Client.SendFetchRequest" = {
+                    details = "DNormal";
+                    maxFrequency = 0.0;
+                    severity = "Info";
+                  };
+                  "ChainDb.AddBlockEvent.AddedToCurrentChain" = {
+                    details = "DNormal";
+                    maxFrequency = 0.0;
+                    severity = "Info";
+                  };
+                  "ChainDb.AddBlockEvent.SwitchedToAFork" = {
+                    details = "DNormal";
+                    maxFrequency = 0.0;
+                    severity = "Info";
+                  };
+                  "ChainSync.Client.DownloadedHeader" = {
+                    details = "DNormal";
+                    maxFrequency = 0.0;
+                    severity = "Info";
+                  };
                 };
               };
-            };
-        };
-
-        cardano-tracer = {
-          logging = [
-            {
-              logFormat = "ForMachine";
-              logMode = "FileMode";
-              logRoot = head (splitString "/${name}" cfg.logFile);
-            }
-          ];
-        };
-      };
+          };
+        }
+        (optionalAttrs (config.services ? cardano-tracer) {
+          cardano-tracer = mkIf (!cfgNode.useLegacyTracing) {
+            logging = [
+              {
+                logFormat = "ForMachine";
+                logMode = "FileMode";
+                logRoot = head (splitString "/${name}" cfg.logFile);
+              }
+            ];
+          };
+        })
+      ];
 
       # The blockperf systemd service name cannot contain the string "blockperf"
       # or the bin utility will think it is already running
