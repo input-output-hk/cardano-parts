@@ -69,6 +69,7 @@
           (providerFor "fgouteroux" "mimir")
           (providerFor "grafana" "grafana")
           (providerFor "opentofu" "aws")
+          (providerFor "opentofu" "awscc")
           (providerFor "opentofu" "local")
           (providerFor "opentofu" "external")
           (providerFor "opentofu" "null")
