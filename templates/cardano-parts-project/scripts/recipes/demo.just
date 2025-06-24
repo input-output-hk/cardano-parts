@@ -195,7 +195,7 @@ start-demo:
   )
   DECISION=yes \
     ROLE=cc \
-    VOTE_KEY="$CC_DIR/cc-1-hot \
+    VOTE_KEY="$CC_DIR/cc-1-hot" \
     nix run .#job-submit-vote
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   sleep "$FIXED_DELAY_SECS"
