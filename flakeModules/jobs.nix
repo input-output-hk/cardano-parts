@@ -94,6 +94,15 @@ in {
         # Some code paths may not use the era bundled cli
         # shellcheck disable=SC2034
         CARDANO_CLI=("''${CARDANO_CLI_NO_ERA[@]}" "''${ERA_CMD:+$ERA_CMD}")
+
+        # Use a cardano-cli breaking change marker to handle version specific breaking changes
+        if [ "$(printf "%s\n10.11.0.0" "$("''${CARDANO_CLI_NO_ERA[@]}" --version)" | sort -V | head -n 1)" = "10.11.0.0" ]; then
+          # shellcheck disable=SC2034
+          CARDANO_CLI_BREAKING="true"
+        else
+          # shellcheck disable=SC2034
+          CARDANO_CLI_BREAKING="false"
+        fi
       '';
 
       updateProposalTemplate = ''
@@ -166,11 +175,19 @@ in {
         function create_proposal {
           TARGET_EPOCH="$1"
 
-          "''${CARDANO_CLI_NO_ERA[@]}" legacy governance create-update-proposal \
-            --epoch "$TARGET_EPOCH" \
-            "''${PROPOSAL_ARGS[@]}" \
-            "''${PROPOSAL_KEY_ARGS[@]}" \
-            --out-file update.proposal
+          if [ "$CARDANO_CLI_BREAKING" = "true" ]; then
+            "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" governance action create-protocol-parameters-update \
+              --epoch "$TARGET_EPOCH" \
+              "''${PROPOSAL_ARGS[@]}" \
+              "''${PROPOSAL_KEY_ARGS[@]}" \
+              --out-file update.proposal
+          else
+            "''${CARDANO_CLI_NO_ERA[@]}" legacy governance create-update-proposal \
+              --epoch "$TARGET_EPOCH" \
+              "''${PROPOSAL_ARGS[@]}" \
+              "''${PROPOSAL_KEY_ARGS[@]}" \
+              --out-file update.proposal
+          fi
 
           "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
             --tx-in "$TXIN" \
@@ -2058,8 +2075,8 @@ in {
             ${selectCardanoCli}
 
             "''${CARDANO_CLI_NO_ERA[@]}" latest governance committee create-hot-key-authorization-certificate \
-              --cold-verification-key-file "$CC_DIR"/cc-"$INDEX"-cold.vkey \
-              --hot-verification-key-file "$CC_DIR"/cc-"$INDEX"-hot.vkey \
+              --cold-verification-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-cold.vkey)" \
+              --hot-verification-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-hot.vkey)" \
               --out-file cc-"$INDEX"-reg.cert
 
             WITNESSES=2
@@ -2090,7 +2107,7 @@ in {
               --tx-body-file tx-cc-"$INDEX".txbody \
               --out-file tx-cc-"$INDEX".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
-              --signing-key-file "$CC_DIR"/cc-"$INDEX"-cold.skey
+              --signing-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-cold.skey)"
 
             fd --type file . "$CC_DIR"/ --exec bash -c 'encrypt_check {}'
 
@@ -2121,12 +2138,12 @@ in {
             mkdir -p "$CC_DIR"
 
             "''${CARDANO_CLI_NO_ERA[@]}" latest governance committee key-gen-cold \
-              --verification-key-file "$CC_DIR"/cc-"$INDEX"-cold.vkey \
-              --signing-key-file "$CC_DIR"/cc-"$INDEX"-cold.skey
+              --verification-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-cold.vkey)" \
+              --signing-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-cold.skey)"
 
             "''${CARDANO_CLI_NO_ERA[@]}" latest governance committee key-gen-hot \
-              --verification-key-file "$CC_DIR"/cc-"$INDEX"-hot.vkey \
-              --signing-key-file "$CC_DIR"/cc-"$INDEX"-hot.skey
+              --verification-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-hot.vkey)" \
+              --signing-key-file "$(decrypt-check "$CC_DIR"/cc-"$INDEX"-hot.skey)"
           '';
         };
 

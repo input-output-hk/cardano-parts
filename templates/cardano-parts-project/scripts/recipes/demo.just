@@ -158,7 +158,7 @@ start-demo:
   echo "Submitting a Plomin prep cost model action..."
   PROPOSAL_ARGS=("--cost-model-file" "scripts/cost-models/mainnet-plutusv3-pv10-prep.json")
   ACTION="create-protocol-parameters-update" \
-    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/sp-1-owner-stake" \
+    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f1 -d' ' <<< "$POOL_NAMES")-owner-stake" \
     nix run .#job-submit-gov-action -- "${PROPOSAL_ARGS[@]}"
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   echo "Sleeping until cost model can be voted on, epoch 5"
@@ -168,7 +168,7 @@ start-demo:
   echo "Submitting a Plomin hard fork action..."
   PROPOSAL_ARGS=("--protocol-major-version" "10" "--protocol-minor-version" "0")
   ACTION="create-hardfork" \
-    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/sp-1-owner-stake" \
+    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f1 -d' ' <<< "$POOL_NAMES")-owner-stake" \
     nix run .#job-submit-gov-action -- "${PROPOSAL_ARGS[@]}"
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   sleep "$FIXED_DELAY_SECS"
@@ -195,7 +195,7 @@ start-demo:
   )
   DECISION=yes \
     ROLE=cc \
-    VOTE_KEY="$CC_DIR/cc-1-hot \
+    VOTE_KEY="$CC_DIR/cc-1-hot" \
     nix run .#job-submit-vote
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   sleep "$FIXED_DELAY_SECS"
@@ -206,7 +206,7 @@ start-demo:
     echo "Submitting the pool $i vote for the Plomin hard fork..."
     DECISION=yes \
       ROLE=spo \
-      VOTE_KEY="$STAKE_POOL_DIR/no-deploy/sp-${i}-cold" \
+      VOTE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f${i} -d' ' <<< "$POOL_NAMES")-cold" \
       nix run .#job-submit-vote
     echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
     sleep "$FIXED_DELAY_SECS"
@@ -263,6 +263,7 @@ start-demo-ng:
   export USE_DECRYPTION="${USE_DECRYPTION:-true}"
   export USE_NODE_CONFIG_BP="${USE_NODE_CONFIG_BP:-false}"
   export DEBUG="${DEBUG:-true}"
+  export RETIRE_BOOTSTRAP_POOL="${RETIRE_BOOTSTRAP_POOL:-true}"
   export SECURITY_PARAM="${SECURITY_PARAM:-8}"
   export SLOT_LENGTH="${SLOT_LENGTH:-100}"
   export FIXED_DELAY_SECS="${FIXED_DELAY_SECS:-10}"
@@ -309,13 +310,18 @@ start-demo-ng:
   sleep 10
   echo
 
-  echo "Retiring the bootstrap pool..."
-  BOOTSTRAP_POOL_DIR="$KEY_DIR/bootstrap-pool" \
-    RICH_KEY="$KEY_DIR/utxo-keys/rich-utxo" \
-    nix run .#job-retire-bootstrap-pool
-  echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
-  sleep 10
-  echo
+  if [ "$RETIRE_BOOTSTRAP_POOL" = "true" ]; then
+    echo "Retiring the bootstrap pool..."
+    BOOTSTRAP_POOL_DIR="$KEY_DIR/bootstrap-pool" \
+      RICH_KEY="$KEY_DIR/utxo-keys/rich-utxo" \
+      nix run .#job-retire-bootstrap-pool
+    echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
+    sleep 10
+    echo
+  else
+    echo "Skipping bootstrap pool retirement..."
+    echo
+  fi
 
   WAIT_FOR_TIP() {
     TYPE="$1"
@@ -340,7 +346,7 @@ start-demo-ng:
   echo "Submitting a Plomin prep cost model action..."
   PROPOSAL_ARGS=("--cost-model-file" "scripts/cost-models/mainnet-plutusv3-pv10-prep.json")
   ACTION="create-protocol-parameters-update" \
-    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/sp-1-owner-stake" \
+    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f1 -d' ' <<< "$POOL_NAMES")-owner-stake" \
     nix run .#job-submit-gov-action -- "${PROPOSAL_ARGS[@]}"
   echo "Sleeping until cost model can be voted on, epoch 1"
   WAIT_FOR_TIP "epoch" "1"
@@ -349,7 +355,7 @@ start-demo-ng:
   echo "Submitting a Plomin hard fork action..."
   PROPOSAL_ARGS=("--protocol-major-version" "10" "--protocol-minor-version" "0")
   ACTION="create-hardfork" \
-    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/sp-1-owner-stake" \
+    STAKE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f1 -d' ' <<< "$POOL_NAMES")-owner-stake" \
     nix run .#job-submit-gov-action -- "${PROPOSAL_ARGS[@]}"
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   sleep "$FIXED_DELAY_SECS"
@@ -387,17 +393,18 @@ start-demo-ng:
     echo "Submitting the pool $i vote for the Plomin hard fork..."
     DECISION=yes \
       ROLE=spo \
-      VOTE_KEY="$STAKE_POOL_DIR/no-deploy/sp-${i}-cold" \
+      VOTE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f${i} -d' ' <<< "$POOL_NAMES")-cold" \
       nix run .#job-submit-vote
     echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
     sleep "$FIXED_DELAY_SECS"
   done
-  echo "Sleeping until epoch 3 for the plomin HF votes to register..."
-  WAIT_FOR_TIP "epoch" "3"
+  CURRENT_EPOCH=$(jq -re ".epoch" <<< "$(just query-tip demo "$TESTNET_MAGIC")")
+  echo "Sleeping until epoch $((CURRENT_EPOCH + 1)) for the plomin HF votes to register..."
+  WAIT_FOR_TIP "epoch" "$((CURRENT_EPOCH + 1))"
   echo
 
-  echo "Sleeping until epoch 4 for the Plomin HF action to ratify..."
-  WAIT_FOR_TIP "epoch" "4"
+  echo "Sleeping until epoch $((CURRENT_EPOCH + 2)) for the Plomin HF action to ratify..."
+  WAIT_FOR_TIP "epoch" "$((CURRENT_EPOCH + 2))"
   echo
 
   just query-tip demo "$TESTNET_MAGIC"
