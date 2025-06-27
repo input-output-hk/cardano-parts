@@ -6,6 +6,8 @@
 #   config.services.blockperf.amazonCa
 #   config.services.blockperf.clientCert
 #   config.services.blockperf.clientKey
+#   config.services.blockperf.debugBlockperf
+#   config.services.blockperf.debugScript
 #   config.services.blockperf.logFile
 #   config.services.blockperf.logKeepFilesNum
 #   config.services.blockperf.logLimitBytes
@@ -212,7 +214,6 @@ flake: {
       };
     };
 
-    # Blockperf does not yet work with the new tracing system
     config = {
       environment.systemPackages = [cfg.package];
 

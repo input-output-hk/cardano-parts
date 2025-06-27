@@ -465,8 +465,10 @@ flake: {
                     # Metrics exporter: cardano-node
                     ++ optionals (cfgSvc ? cardano-node && cfgSvc.cardano-node.enable)
                     (map (i: let
+                      hasPrometheusSimple = any (hasPrefix "PrometheusSimple") cfgSvc.cardano-node.nodeConfig.TraceOptions."".backends;
+
                       metrics_path =
-                        if cfgSvc.cardano-node.useLegacyTracing || (!cfgSvc.cardano-node.useLegacyTracing && cfgSvc.cardano-node.ngTracer)
+                        if cfgSvc.cardano-node.useLegacyTracing || hasPrometheusSimple
                         then "/metrics"
                         else "/${(cfgSvc.cardano-node.extraNodeInstanceConfig i).TraceOptionNodeName}";
 
@@ -475,12 +477,7 @@ flake: {
                         then "cardano-node"
                         else "cardano-node-${toString i}";
 
-                      targets =
-                        if cfgSvc.cardano-node.useLegacyTracing
-                        then "${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"
-                        else if cfgSvc.cardano-node.ngTracer
-                        then "${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}"
-                        else "${hostAddr}:${toString cardanoNodePrometheusExporterPort}";
+                      targets = "${hostAddr}:${toString (cardanoNodePrometheusExporterPort + i)}";
                     in {
                       inherit metrics_path;
                       job_name = "integrations/${serviceName i}";
