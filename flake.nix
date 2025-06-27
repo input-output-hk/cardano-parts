@@ -67,13 +67,13 @@
     # Blockperf fork until PRs merged upstream
     blockperf = {
       url = "github:johnalotoski/blockperf/new-tracing";
+      # url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/new-tracing";
       inputs = {
         # Requires nixpkgs specific pinning for locked python versioning
         # nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
       };
     };
-    # blockperf.url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/preview-network";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
