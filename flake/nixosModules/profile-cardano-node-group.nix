@@ -109,16 +109,6 @@
     options = {
       services = {
         cardano-node = {
-          ngTracer = mkOption {
-            type = bool;
-            default = false;
-            description = ''
-              Temporary bool to indicate with to migrate to the next-gen
-              (-ng) tracing system using the new iohk-nix envs, new
-              cardano-node tracing service.
-            '';
-          };
-
           shareNodeSocket = mkOption {
             type = bool;
             default = false;
@@ -274,82 +264,13 @@
           cardanoNodePackages = mkDefault cardano-node-pkgs;
           nodeId = mkDefault nodeId;
 
-          # We're still on legacy tracing system for now, but flip this when we're ready.
-          # Also review iohk-nix and cardano-node nixos service related changes.
-          useLegacyTracing = mkDefault true;
+          # Time to move to the new tracing system as default!
+          useLegacyTracing = mkDefault false;
 
-          # Once the new tracing system is default, this can be simplified and iohk-nix updated and the `or` removed
           nodeConfig = mkForce (
             if cfgNode.useLegacyTracing
-            then cardanoLib.environments.${environmentName}.nodeConfigLegacy or cardanoLib.environments.${environmentName}.nodeConfig
+            then cardanoLib.environments.${environmentName}.nodeConfigLegacy
             else cardanoLib.environments.${environmentName}.nodeConfig
-            # else
-            #   # Reference: https://github.com/IntersectMBO/cardano-node/blob/master/nix/workbench/service/tracing.nix
-            #   removeAttrs cardanoLib.environments.${environmentName}.nodeConfig [
-            #     "TraceAcceptPolicy"
-            #     "TraceBlockchainTime"
-            #     "TraceBlockFetchClient"
-            #     "TraceBlockFetchDecisions"
-            #     "TraceBlockFetchProtocol"
-            #     "TraceBlockFetchProtocolSerialised"
-            #     "TraceBlockFetchServer"
-            #     "TraceChainDb"
-            #     "TraceChainSyncClient"
-            #     "TraceChainSyncBlockServer"
-            #     "TraceChainSyncHeaderServer"
-            #     "TraceChainSyncProtocol"
-            #     "TraceConnectionManager"
-            #     "TraceConnectionManagerCounters"
-            #     "TraceConnectionManagerTransitions"
-            #     "DebugPeerSelectionInitiator"
-            #     "DebugPeerSelectionInitiatorResponder"
-            #     "TraceDiffusionInitialization"
-            #     "TraceDNSResolver"
-            #     "TraceDNSSubscription"
-            #     "TraceErrorPolicy"
-            #     "TraceForge"
-            #     "TraceForgeStateInfo"
-            #     "TraceHandshake"
-            #     "TraceIpSubscription"
-            #     "TraceKeepAliveClient"
-            #     "TraceLedgerPeers"
-            #     "TraceLocalChainSyncProtocol"
-            #     "TraceLocalConnectionManager"
-            #     "TraceLocalErrorPolicy"
-            #     "TraceLocalHandshake"
-            #     "TraceLocalInboundGovernor"
-            #     "TraceLocalRootPeers"
-            #     "TraceLocalServer"
-            #     "TraceLocalStateQueryProtocol"
-            #     "TraceLocalTxMonitorProtocol"
-            #     "TraceLocalTxSubmissionProtocol"
-            #     "TraceLocalTxSubmissionServer"
-            #     "TraceMempool"
-            #     "TraceMux"
-            #     "TraceLocalMux"
-            #     "TracePeerSelection"
-            #     "TracePeerSelectionCounters"
-            #     "TracePeerSelectionActions"
-            #     "TracePublicRootPeers"
-            #     "TraceServer"
-            #     "TraceInboundGovernor"
-            #     "TraceInboundGovernorCounters"
-            #     "TraceInboundGovernorTransitions"
-            #     "TraceTxInbound"
-            #     "TraceTxOutbound"
-            #     "TraceTxSubmissionProtocol"
-            #     "TraceTxSubmission2Protocol"
-            #     "TracingVerbosity"
-            #     "defaultBackends"
-            #     "defaultScribes"
-            #     "hasEKG"
-            #     "hasPrometheus"
-            #     "minSeverity"
-            #     "options"
-            #     "rotation"
-            #     "setupBackends"
-            #     "setupScribes"
-            #   ]
           );
 
           # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
@@ -366,7 +287,7 @@
             else null
           );
 
-          tracerSocketPathConnect = mkIf cfgNode.ngTracer cfgTracer.acceptingSocket;
+          tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) cfgTracer.acceptingSocket;
 
           hostAddr = mkDefault hostAddr;
 
@@ -385,8 +306,6 @@
               MaxConcurrencyDeadline = 4;
             }
             // optionalAttrs cfgNode.useLegacyTracing {
-              # In versions of cardano-node > `10.1.2`, legacy tracing will no longer be default.
-              # Until we are ready to use new tracing as default, set UseTraceDispatcher false.
               UseTraceDispatcher = false;
 
               hasPrometheus = [cfgNode.hostAddr cardanoNodePrometheusExporterPort];
@@ -452,20 +371,15 @@
           systemdSocketActivation = false;
         };
 
-        # While in a transition from legacy new tracing to ng new tracing, any
-        # profile which imports `profile-cardano-node-group` will also have
-        # to import some version of the cardano-tracer service.
-        cardano-tracer =
-          if cfgNode.ngTracer
-          then {
-            enable = true;
-            environment = environmentName;
-            package = mkDefault cardano-tracer;
-            cardanoNodePackages = mkDefault cardano-node-pkgs;
-            resourceFreq = mkDefault (60 * 1000);
-          }
-          else {};
+        cardano-tracer = mkIf (!cfgNode.useLegacyTracing) {
+          enable = true;
+          environment = environmentName;
+          package = mkDefault cardano-tracer;
+          cardanoNodePackages = mkDefault cardano-node-pkgs;
+          resourceFreq = mkDefault (60 * 1000);
+        };
       };
+
       systemd.services = let
         serviceName = i:
           if cfgNode.instances == 1
