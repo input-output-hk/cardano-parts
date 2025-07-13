@@ -50,7 +50,12 @@ in {
           local FILE="$1"
 
           if [ "''${USE_DECRYPTION:-false}" = "true" ]; then
-            echo -n "<(sops --config $(sops_config "$FILE") --input-type binary --output-type binary --decrypt $FILE)"
+            if jq -e 'has("sops") and has("data") and (.data | startswith("ENC["))' &> /dev/null < "$FILE"; then
+              echo -n "<(sops --config $(sops_config "$FILE") --input-type binary --output-type binary --decrypt $FILE)"
+            else
+              echo "warning: file \"$FILE\" appears to not be encrypted, skipping decryption" >&2
+              echo -n "$FILE"
+            fi
           else
             echo -n "$FILE"
           fi
@@ -65,7 +70,7 @@ in {
                 echo "encrypting: file $FILE"
                 sops --config "$(sops_config "$FILE")" --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
               else
-                echo "warning: file \"$FILE\" appears to already be binary encrypted, skipping"
+                echo "warning: file \"$FILE\" appears to already be binary encrypted, skipping encryption"
               fi
             else
               echo "warning: file \"$FILE\" appears to to be a symlink, skipping"
