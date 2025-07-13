@@ -1964,6 +1964,7 @@ in {
             #   [$ERA_CMD]
             #   $INDEX
             #   $PAYMENT_KEY
+            #   [$POOL_DELEG_ID]
             #   [$SUBMIT_TX]
             #   $TESTNET_MAGIC
             #   $VOTING_POWER
@@ -1976,6 +1977,8 @@ in {
 
             ${secretsFns}
             ${selectCardanoCli}
+
+            BUILD_TX_ARGS=()
 
             DREP_DEPOSIT=''${DREP_DEPOSIT:-"0"}
             mkdir -p "$DREP_DIR"
@@ -2000,6 +2003,23 @@ in {
                 | tee "$DREP_DIR"/drep-"$INDEX".addr
             )
 
+            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address build \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/stake-"$INDEX".addr
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
+              --payment-verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/pay-"$INDEX".hash
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
+              --payment-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/stake-"$INDEX".hash
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
+              --payment-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/drep-"$INDEX".hash
+
             "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address registration-certificate \
               --key-reg-deposit-amt "$STAKE_DEPOSIT" \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
@@ -2013,7 +2033,16 @@ in {
             "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address vote-delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
-              --out-file drep-"$INDEX"-delegation.cert
+              --out-file drep-"$INDEX"-vote-delegation.cert
+
+            if [ -n "''${POOL_DELEG_ID:-}" ]; then
+              "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address stake-delegation-certificate \
+                --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+                --stake-pool-id "$POOL_DELEG_ID" \
+                --out-file drep-"$INDEX"-stake-delegation.cert
+
+              BUILD_TX_ARGS+=("--certificate" "drep-$INDEX-stake-delegation.cert")
+            fi
 
             WITNESSES=3
             CHANGE_ADDRESS=$(
@@ -2039,7 +2068,8 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --certificate drep-"$INDEX"-stake.cert \
               --certificate drep-"$INDEX"-drep.cert \
-              --certificate drep-"$INDEX"-delegation.cert \
+              --certificate drep-"$INDEX"-vote-delegation.cert \
+              "''${BUILD_TX_ARGS[@]}" \
               --out-file tx-drep-"$INDEX".txbody
 
             "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
