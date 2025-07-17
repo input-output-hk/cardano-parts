@@ -37,6 +37,7 @@
 #   perSystem.cardano-parts.pkgs.cardano-node
 #   perSystem.cardano-parts.pkgs.cardano-node-ng
 #   perSystem.cardano-parts.pkgs.cardano-ogmios
+#   perSystem.cardano-parts.pkgs.cardano-signer
 #   perSystem.cardano-parts.pkgs.cardano-smash
 #   perSystem.cardano-parts.pkgs.cardano-smash-ng
 #   perSystem.cardano-parts.pkgs.cardano-submit-api
@@ -440,7 +441,7 @@ in
           dbsync-pre-release = "input-output-hk-cardano-db-sync-13-6-0-5-cb61094";
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2524-0-pre-7bf7033";
-          mithril-pre-release = "input-output-hk-mithril-unstable-867fdbb";
+          mithril-pre-release = "input-output-hk-mithril-unstable-5a699e2";
           node-release = "input-output-hk-cardano-node-10-4-1-420c94f";
           node-pre-release = "input-output-hk-cardano-node-10-5-0-7e045ab";
         in
@@ -468,6 +469,7 @@ in
               (mkPkg "cardano-node" (caPkgs."cardano-node-${node-release}" // {version = "10.4.1";}))
               (mkPkg "cardano-node-ng" (caPkgs."cardano-node-${node-pre-release}" // {version = "10.5.0";}))
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-11-2-df5971a)
+              (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-27-0-b71c3f1)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")
               (mkPkg "cardano-smash-ng" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-pre-release}")
               (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-${node-release}")
@@ -530,6 +532,7 @@ in
               cardano-faucet
               cardano-node
               cardano-ogmios
+              cardano-signer
               cardano-smash
               cardano-submit-api
               cardano-testnet

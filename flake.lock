@@ -51,16 +51,16 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1746509278,
-        "narHash": "sha256-/pcYYOKgD2+1Zl0jV+3S4h3GSp/3TSfokrqu0rDAijo=",
-        "owner": "johnalotoski",
+        "lastModified": 1752150659,
+        "narHash": "sha256-S49YIfVSUwkbEHJNHs8ZGjop9/lTMfOqNfO+5yKxJwA=",
+        "owner": "cardano-foundation",
         "repo": "blockperf",
-        "rev": "cfc8155b9c14fedd569f879f2b3cf7ead91d47be",
+        "rev": "aae8cf46af695fdb0888fa28f9f860079e765f10",
         "type": "github"
       },
       "original": {
-        "owner": "johnalotoski",
-        "ref": "preview-network",
+        "owner": "cardano-foundation",
+        "ref": "develop",
         "repo": "blockperf",
         "type": "github"
       }
@@ -101,11 +101,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1750254939,
-        "narHash": "sha256-P0N8TOddVyzHkIpDPdGsXbhR6W1vAhpOUvZPvyrrcNY=",
+        "lastModified": 1752770082,
+        "narHash": "sha256-w1jz9DIOsGDONx/mcOozAyMYE7vs6HiaaT2Ii0Tz32o=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "ba03172728d491a2a1619755c885a3bcdbdfb43c",
+        "rev": "a959c48c71e44a0a53f0ddecf12893f4e4d35edc",
         "type": "github"
       },
       "original": {

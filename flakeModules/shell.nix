@@ -281,6 +281,7 @@ in
                         cardano-address
                         cardano-cli
                         cardano-node
+                        cardano-signer
                         cardano-testnet
                         cardano-wallet
                         db-analyser

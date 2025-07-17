@@ -64,7 +64,7 @@
 
     # Blockperf fork until PRs merged upstream
     blockperf = {
-      url = "github:johnalotoski/blockperf/preview-network";
+      url = "github:cardano-foundation/blockperf/develop";
       inputs = {
         # Requires nixpkgs specific pinning for locked python versioning
         # nixpkgs.follows = "nixpkgs";
