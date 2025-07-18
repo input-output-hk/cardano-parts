@@ -62,17 +62,6 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
-    # Blockperf fork until PRs merged upstream
-    blockperf = {
-      url = "github:cardano-foundation/blockperf/develop";
-      inputs = {
-        # Requires nixpkgs specific pinning for locked python versioning
-        # nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-      };
-    };
-    # blockperf.url = "path:/home/jlotoski/work/johnalotoski/blockperf-wt/preview-network";
-
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";

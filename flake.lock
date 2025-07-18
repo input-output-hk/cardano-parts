@@ -43,28 +43,6 @@
         "type": "github"
       }
     },
-    "blockperf": {
-      "inputs": {
-        "flake-parts": [
-          "flake-parts"
-        ],
-        "nixpkgs": "nixpkgs"
-      },
-      "locked": {
-        "lastModified": 1752150659,
-        "narHash": "sha256-S49YIfVSUwkbEHJNHs8ZGjop9/lTMfOqNfO+5yKxJwA=",
-        "owner": "cardano-foundation",
-        "repo": "blockperf",
-        "rev": "aae8cf46af695fdb0888fa28f9f860079e765f10",
-        "type": "github"
-      },
-      "original": {
-        "owner": "cardano-foundation",
-        "ref": "develop",
-        "repo": "blockperf",
-        "type": "github"
-      }
-    },
     "blst": {
       "flake": false,
       "locked": {
@@ -101,11 +79,11 @@
     },
     "capkgs": {
       "locked": {
-        "lastModified": 1752770082,
-        "narHash": "sha256-w1jz9DIOsGDONx/mcOozAyMYE7vs6HiaaT2Ii0Tz32o=",
+        "lastModified": 1753194948,
+        "narHash": "sha256-c2u8JzI+KPquczoAZ0mlOtRm6q+himwvQod2k1Vpl/k=",
         "owner": "input-output-hk",
         "repo": "capkgs",
-        "rev": "a959c48c71e44a0a53f0ddecf12893f4e4d35edc",
+        "rev": "af0077b030b1e5e927e7d7ff27a80dadb59f0fb1",
         "type": "github"
       },
       "original": {
@@ -451,7 +429,7 @@
     "iohk-nix": {
       "inputs": {
         "blst": "blst",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs",
         "secp256k1": "secp256k1",
         "sodium": "sodium"
       },
@@ -472,7 +450,7 @@
     "iohk-nix-ng": {
       "inputs": {
         "blst": "blst_2",
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_2",
         "secp256k1": "secp256k1_2",
         "sodium": "sodium_2"
       },
@@ -495,7 +473,7 @@
         "flake-compat": "flake-compat_2",
         "flake-parts": "flake-parts_2",
         "git-hooks-nix": "git-hooks-nix",
-        "nixpkgs": "nixpkgs_4",
+        "nixpkgs": "nixpkgs_3",
         "nixpkgs-23-11": "nixpkgs-23-11",
         "nixpkgs-regression": "nixpkgs-regression"
       },
@@ -537,16 +515,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1705458851,
-        "narHash": "sha256-uQvEhiv33Zj/Pv364dTvnpPwFSptRZgVedDzoM+HqVg=",
-        "owner": "NixOS",
+        "lastModified": 1684171562,
+        "narHash": "sha256-BMUWjVWAUdyMWKk0ATMC9H0Bv4qAV/TXwwPUvTiC5IQ=",
+        "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "8bf65f17d8070a0a490daf5f1c784b87ee73982c",
+        "rev": "55af203d468a6f5032a519cba4f41acf5a74b638",
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
-        "ref": "nixos-23.11",
+        "owner": "nixos",
+        "ref": "release-22.11",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -632,22 +610,6 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1684171562,
-        "narHash": "sha256-BMUWjVWAUdyMWKk0ATMC9H0Bv4qAV/TXwwPUvTiC5IQ=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "55af203d468a6f5032a519cba4f41acf5a74b638",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "release-22.11",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_4": {
-      "locked": {
         "lastModified": 1747179050,
         "narHash": "sha256-qhFMmDkeJX9KJwr5H32f1r7Prs7XbQWtO0h3V0a0rFY=",
         "owner": "NixOS",
@@ -662,7 +624,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_5": {
+    "nixpkgs_4": {
       "locked": {
         "lastModified": 1748162331,
         "narHash": "sha256-rqc2RKYTxP3tbjA+PB3VMRQNnjesrT0pEofXQTrMsS8=",
@@ -713,7 +675,6 @@
       "inputs": {
         "auth-keys-hub": "auth-keys-hub",
         "blockfrost-platform-service": "blockfrost-platform-service",
-        "blockperf": "blockperf",
         "capkgs": "capkgs",
         "cardano-db-sync-schema": "cardano-db-sync-schema",
         "cardano-db-sync-schema-ng": "cardano-db-sync-schema-ng",
@@ -730,7 +691,7 @@
         "iohk-nix": "iohk-nix",
         "iohk-nix-ng": "iohk-nix-ng",
         "nix": "nix",
-        "nixpkgs": "nixpkgs_5",
+        "nixpkgs": "nixpkgs_4",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "opentofu-registry": "opentofu-registry",
         "process-compose-flake": "process-compose-flake",
