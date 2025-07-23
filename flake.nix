@@ -95,7 +95,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.5.0";
+      url = "github:IntersectMBO/cardano-node/release/10.5.1";
       flake = false;
     };
 
