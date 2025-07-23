@@ -50,7 +50,12 @@ in {
           local FILE="$1"
 
           if [ "''${USE_DECRYPTION:-false}" = "true" ]; then
-            echo -n "<(sops --config $(sops_config "$FILE") --input-type binary --output-type binary --decrypt $FILE)"
+            if jq -e 'has("sops") and has("data") and (.data | startswith("ENC["))' &> /dev/null < "$FILE"; then
+              echo -n "<(sops --config $(sops_config "$FILE") --input-type binary --output-type binary --decrypt $FILE)"
+            else
+              echo "warning: file \"$FILE\" appears to not be encrypted, skipping decryption" >&2
+              echo -n "$FILE"
+            fi
           else
             echo -n "$FILE"
           fi
@@ -65,7 +70,7 @@ in {
                 echo "encrypting: file $FILE"
                 sops --config "$(sops_config "$FILE")" --input-type binary --output-type binary --encrypt "$FILE" | sponge "$FILE"
               else
-                echo "warning: file \"$FILE\" appears to already be binary encrypted, skipping"
+                echo "warning: file \"$FILE\" appears to already be binary encrypted, skipping encryption"
               fi
             else
               echo "warning: file \"$FILE\" appears to to be a symlink, skipping"
@@ -1061,7 +1066,6 @@ in {
                 "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                   --address "$CHANGE_ADDRESS" \
                   --testnet-magic "$TESTNET_MAGIC" \
-                  --out-file /dev/stdout \
                 | jq -r --arg fee "$FEE" 'to_entries
                   |
                     [
@@ -1291,7 +1295,6 @@ in {
                 "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                   --address "$CHANGE_ADDRESS" \
                   --testnet-magic "$TESTNET_MAGIC" \
-                  --out-file /dev/stdout \
                 | jq -r --arg fee "$FEE" 'to_entries
                   |
                     [
@@ -1417,7 +1420,6 @@ in {
                 "''${CARDANO_CLI[@]}" query utxo \
                   --address "$(eval cat "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.addr")")" \
                   --testnet-magic "$TESTNET_MAGIC" \
-                  --out-file /dev/stdout \
                 | jq -r 'to_entries[]
                   | [{"txin": .key, "address": .value.address, "amount": .value.value.lovelace}][0]'
               )
@@ -1561,7 +1563,6 @@ in {
                 "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                   --whole-utxo \
                   --testnet-magic "$TESTNET_MAGIC" \
-                  --out-file /dev/stdout \
                 | jq '
                   to_entries[]
                   | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
@@ -1773,17 +1774,20 @@ in {
             # Inputs:
             #   [$ACTION]
             #   [$DEBUG]
+            #   [$COLLATERAL]
             #   [$ERA_CMD]
             #   [$GOV_ACTION_DEPOSIT]
             #   $PAYMENT_KEY
             #   $PROPOSAL_ARGS
             #   [$PROPOSAL_HASH]
             #   [$PROPOSAL_URL]
+            #   [$SCRIPT_FILE_URL]
             #   $STAKE_KEY
             #   [$SUBMIT_TX]
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_DECRYPTION]
+            #   [$USE_GUARDRAILS]
             #   [$USE_SHELL_BINS]
 
             [ -n "''${DEBUG:-}" ] && set -x
@@ -1796,6 +1800,7 @@ in {
 
             ACTION=''${ACTION:-"create-constitution"}
             GOV_ACTION_DEPOSIT=''${GOV_ACTION_DEPOSIT:-"50000000000"}
+            COLLATERAL=''${COLLATERAL:-"10000000"}
             PROPOSAL_ARGS=("$@")
 
             # From:
@@ -1822,13 +1827,47 @@ in {
               --out-file "$ACTION".action
 
             # Generate transaction
-            TXIN=$(
+            UTXO=$(
               "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
-                --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
-              | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
+                --testnet-magic "$TESTNET_MAGIC"
             )
+
+            TXIN=$(jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key' <<< "$UTXO")
+
+            if [ -n "''${USE_GUARDRAILS:-}" ]; then
+              if [ -z "''${SCRIPT_FILE_URL:-}" ]; then
+                case "$TESTNET_MAGIC" in
+                  764824073)
+                    SCRIPT_FILE_URL="https://book.play.dev.cardano.org/environments/mainnet/guardrails-script.plutus"
+                    ;;
+                  1)
+                    SCRIPT_FILE_URL="https://book.play.dev.cardano.org/environments/preprod/guardrails-script.plutus"
+                    ;;
+                  2)
+                    SCRIPT_FILE_URL="https://book.play.dev.cardano.org/environments/preview/guardrails-script.plutus"
+                    ;;
+                  *)
+                    echo "Testnet magic of $TESTNET_MAGIC not recognized.  Please set the SCRIPT_FILE_URL var."
+                    exit 1
+                esac
+              fi
+
+              TXIN_COLLATERAL=$(
+                jq -r --arg txin "$TXIN" --arg collateral "$COLLATERAL" \
+                  'to_entries
+                    | map(select(.value.value.lovelace > ($collateral | tonumber)))
+                    | map(select(.key != $txin))
+                    | sort_by(.value.value.lovelace)[0].key
+                  ' <<< "$UTXO"
+              )
+
+              BUILD_TX_ARGS+=(
+                "--tx-in-collateral" "$TXIN_COLLATERAL"
+                "--proposal-script-file" "<(curl -sL \"$SCRIPT_FILE_URL\")"
+                "--proposal-redeemer-value" "{}"
+              )
+            fi
 
             # Generate arrays needed for build/sign commands
             BUILD_TX_ARGS+=("--proposal-file" "$ACTION".action)
@@ -1919,7 +1958,6 @@ in {
               "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
@@ -1959,6 +1997,7 @@ in {
             #   [$ERA_CMD]
             #   $INDEX
             #   $PAYMENT_KEY
+            #   [$POOL_DELEG_ID]
             #   [$SUBMIT_TX]
             #   $TESTNET_MAGIC
             #   $VOTING_POWER
@@ -1971,6 +2010,8 @@ in {
 
             ${secretsFns}
             ${selectCardanoCli}
+
+            BUILD_TX_ARGS=()
 
             DREP_DEPOSIT=''${DREP_DEPOSIT:-"0"}
             mkdir -p "$DREP_DIR"
@@ -1995,6 +2036,23 @@ in {
                 | tee "$DREP_DIR"/drep-"$INDEX".addr
             )
 
+            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address build \
+              --testnet-magic "$TESTNET_MAGIC" \
+              --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/stake-"$INDEX".addr
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
+              --payment-verification-key-file "$DREP_DIR"/pay-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/pay-"$INDEX".hash
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
+              --payment-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/stake-"$INDEX".hash
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
+              --payment-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/drep-"$INDEX".hash
+
             "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address registration-certificate \
               --key-reg-deposit-amt "$STAKE_DEPOSIT" \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
@@ -2008,7 +2066,16 @@ in {
             "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address vote-delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
-              --out-file drep-"$INDEX"-delegation.cert
+              --out-file drep-"$INDEX"-vote-delegation.cert
+
+            if [ -n "''${POOL_DELEG_ID:-}" ]; then
+              "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address stake-delegation-certificate \
+                --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
+                --stake-pool-id "$POOL_DELEG_ID" \
+                --out-file drep-"$INDEX"-stake-delegation.cert
+
+              BUILD_TX_ARGS+=("--certificate" "drep-$INDEX-stake-delegation.cert")
+            fi
 
             WITNESSES=3
             CHANGE_ADDRESS=$(
@@ -2022,7 +2089,6 @@ in {
               "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
@@ -2034,7 +2100,8 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --certificate drep-"$INDEX"-stake.cert \
               --certificate drep-"$INDEX"-drep.cert \
-              --certificate drep-"$INDEX"-delegation.cert \
+              --certificate drep-"$INDEX"-vote-delegation.cert \
+              "''${BUILD_TX_ARGS[@]}" \
               --out-file tx-drep-"$INDEX".txbody
 
             "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
@@ -2091,7 +2158,6 @@ in {
               "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
@@ -2185,7 +2251,6 @@ in {
               "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                 --address "$CHANGE_ADDRESS" \
                 --testnet-magic "$TESTNET_MAGIC" \
-                --out-file /dev/stdout \
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 

@@ -41,6 +41,10 @@ in {
           cp -r "${envCfgs}/config/$ENV" "$DATA_DIR/config/"
         done
 
+        # Until https://github.com/IntersectMBO/cardano-node/pull/6282 is merged and released,
+        # remove PrometheusSimple from configs so multiple instances can be started without fatal error.
+        find "$DATA_DIR/config" -type f -exec sed -i '/PrometheusSimple/d' {} +
+
         # Prepare mithril client env configs
         ${
           concatStringsSep "\n"

@@ -69,6 +69,22 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     exit 1
   fi
 
+  L_JUSTIFY() {
+    DESC="$1"
+    VALUE="$2"
+    COL="$3"
+
+    printf "  %s%*s%s\n" "$DESC" $((COL - ${#DESC})) "" "$VALUE"
+  }
+
+  R_JUSTIFY() {
+    DESC="$1"
+    VALUE="$2"
+    COL="$3"
+
+    printf "  %s%*s%s\n" "$DESC" $((COL - ${#DESC} - ${#VALUE})) "" "$VALUE"
+  }
+
   # Arg setup
   ACTION_UTXO="{{ACTION_ID}}"
   ACTION_IDX="{{ACTION_IDX}}"
@@ -77,8 +93,8 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
   # Basic query info
   echo "Current voting status for:"
-  echo "  ACTION_ID: $ACTION_ID"
-  echo "  ACTION_BECH: $ACTION_BECH"
+  L_JUSTIFY "ACTION_ID:" "$ACTION_ID" 35
+  L_JUSTIFY "ACTION_BECH:" "$ACTION_BECH" 35
   echo
 
   CURRENT_EPOCH=$(jq -re .epoch <<< "$TIP")
@@ -90,25 +106,48 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     exit 1
   fi
 
-  # DREP_PWR_DIST is similar to DREP_DIST but only includes active dreps and
-  # those without `drep-alwaysAbstain` and `drep-noConfidence`.
   EPOCH=$(jq -re .epoch <<< "$TIP")
+
+  # The drep-stake-distribution query includes expired dreps and system
+  # alwaysAbstain and alwaysNoConfidence dreps which are funded directly from
+  # stake delegation.
   DREP_DIST=$(eval "$CARDANO_CLI" latest query drep-stake-distribution --all-dreps 2> /dev/null)
+
+  # DREP_PWR_DIST is similar to DREP_DIST but excludes expired dreps and system dreps (alwaysAbstain and alwaysNoConfidence).
   DREP_PWR_DIST=$(eval "$CARDANO_CLI" latest query drep-state --all-dreps --include-stake \
     | jq -re "[ .[] | select( .[1].expiry >= $EPOCH ) | [\"drep-\(.[0] | keys[0])-\(.[0] | to_entries[].value)\", (.[1].stake // 0)]]" 2> /dev/null)
+
+  # Get a distribution of all expired dreps
+  DREP_EXP_PWR_DIST=$(eval "$CARDANO_CLI" latest query drep-state --all-dreps --include-stake \
+    | jq -re "[ .[] | select( .[1].expiry < $EPOCH ) | [\"drep-\(.[0] | keys[0])-\(.[0] | to_entries[].value)\", (.[1].stake // 0)]]" 2> /dev/null)
+
+  # Calculate active and inactive drep power based on valid or expired dreps
   DREP_PWR_ACTIVE=$(jq -re "[.[][1]] | add // 0" <<< "$DREP_PWR_DIST" 2> /dev/null)
-  DREP_STAKE_TOTAL=$(jq -re '[del(.[] | select(.[0] == "drep-alwaysAbstain" or .[0] == "drep-alwaysNoConfidence")) | .[][1]] | add' <<< "$DREP_DIST" 2> /dev/null)
+  DREP_PWR_INACTIVE=$(jq -re "[.[][1]] | add // 0" <<< "$DREP_EXP_PWR_DIST" 2> /dev/null)
+
+  # All drep stake, including stake held by expired dreps, and stake auto delegated to always abstain or always no-confidence
+  DREP_STAKE_TOTAL=$(jq -re '[.[][1]] | add' <<< "$DREP_DIST" 2> /dev/null)
+
+  # This is always 1 length for drep-alwaysNoConfidence;
   DREP_NOCONF_COUNT=$(jq -re '[.[] | select(.[0] == "drep-alwaysNoConfidence") | .[1]] | length' <<< "$DREP_DIST" 2> /dev/null)
   DREP_NOCONF_TOTAL=$(jq -re '(.[] | select(.[0] == "drep-alwaysNoConfidence") | .[1]) // 0' <<< "$DREP_DIST" 2> /dev/null)
-  echo "Some potentially useful metrics:"
-  echo "  CURRENT_EPOCH: $CURRENT_EPOCH"
-  echo "  DREP_POWER_ACTIVE: $DREP_PWR_ACTIVE"
-  echo "  DREP_STAKE_TOTAL: $DREP_STAKE_TOTAL"
-  echo "  DREP_NOCONF_TOTAL: $DREP_NOCONF_TOTAL"
+
+  DREP_ALWAYS_ABSTAIN_TOTAL=$(jq -re '(.[] | select(.[0] == "drep-alwaysAbstain") | .[1]) // 0' <<< "$DREP_DIST" 2> /dev/null)
+  echo "Some useful metrics:"
+  R_JUSTIFY "CURRENT_EPOCH:" "$CURRENT_EPOCH" 50
+  R_JUSTIFY "DREP_POWER_ACTIVE:" "$DREP_PWR_ACTIVE" 50
+  R_JUSTIFY "DREP_POWER_INACTIVE:" "$DREP_PWR_INACTIVE" 50
+  R_JUSTIFY "DREP_STAKE_TOTAL:" "$DREP_STAKE_TOTAL" 50
+  R_JUSTIFY "DREP_NOCONF_TOTAL:" "$DREP_NOCONF_TOTAL" 50
+  R_JUSTIFY "DREP_ALWAYS_ABSTAIN:" "$DREP_ALWAYS_ABSTAIN_TOTAL" 50
 
   POOL_DIST=$(eval "$CARDANO_CLI" latest query spo-stake-distribution --all-spos 2> /dev/null)
   POOL_STAKE_TOTAL=$(jq -re '[.[][1]] | add // 0' <<< "$POOL_DIST" 2> /dev/null)
-  echo "  POOL_STAKE_TOTAL: $POOL_STAKE_TOTAL"
+  POOL_ABSTAIN_TOTAL=$(jq -re '[(.[] | select(.[2] == "drep-alwaysAbstain")) | .[1]] | add' <<< "$POOL_DIST")
+  POOL_NOCONF_TOTAL=$(jq -re '[(.[] | select(.[2] == "drep-alwaysNoConfidence")) | .[1]] | add' <<< "$POOL_DIST")
+  R_JUSTIFY "POOL_STAKE_TOTAL:" "$POOL_STAKE_TOTAL" 50
+  R_JUSTIFY "POOL_ABSTAIN_TOTAL:" "$POOL_ABSTAIN_TOTAL" 50
+  R_JUSTIFY "POOL_NOCONF_TOTAL:" "$POOL_NOCONF_TOTAL" 50
 
   COMMITTEE_DIST=$(eval "$CARDANO_CLI" latest query committee-state \
     | jq -re '
@@ -127,7 +166,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   COMMITTEE_TOTAL=$(jq -re "length // 0" <<< "$COMMITTEE_DIST" 2> /dev/null)
   COMMITTEE_THRESHOLD=$(jq -re '"\(.committee.threshold)" // 0' <<< "$GOV_STATE" 2> /dev/null)
   COMMITTEE_THRESHOLD_TYPE=$(jq -re "type" <<< "$COMMITTEE_THRESHOLD" 2> /dev/null)
-  echo "  COMMITTEE_TOTAL: $COMMITTEE_TOTAL"
+  R_JUSTIFY "COMMITTEE_TOTAL:" "$COMMITTEE_TOTAL" 50
 
   case "$COMMITTEE_THRESHOLD_TYPE" in
     "object")
@@ -147,7 +186,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
   PPARAMS=$(eval "$CARDANO_CLI" latest query protocol-parameters)
   PROT_MAJOR_VER=$(jq -re ".protocolVersion.major // -1" <<< "$PPARAMS" 2> /dev/null)
-  echo "  PROT_MAJOR_VER: $PROT_MAJOR_VER"
+  R_JUSTIFY "PROT_MAJOR_VER:" "$PROT_MAJOR_VER" 50
 
   {
     read -r ACTION_TAG
@@ -188,14 +227,14 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     (.committeeVotes | with_entries(select(.value | contains("No"))) | length),
     (.committeeVotes | with_entries(select(.value | contains("Abstain"))) | length)' <<< "$ACTION")"
 
-    echo "  ACTION_TAG: $ACTION_TAG"
-    echo "  ACTION_ANCHOR_URL: $ACTION_ANCHOR_URL"
-    echo "  ACTION_ANCHOR_HASH: $ACTION_ANCHOR_HASH"
-    echo "  ACTION_PROPOSED_IN_EPOCH: $ACTION_PROPOSED_IN_EPOCH"
-    echo "  ACTION_EXPIRES_AFTER_EPOCH: $ACTION_EXPIRES_AFTER_EPOCH"
-    echo "  ACTION_DEPOSIT_RETURN_KEY_TYPE: $ACTION_DEPOSIT_RETURN_KEY_TYPE"
-    echo "  ACTION_DEPOSIT_RETURN_HASH: $ACTION_DEPOSIT_RETURN_HASH"
-    echo "  ACTION_DEPOSIT_RETURN_NETWORK: $ACTION_DEPOSIT_RETURN_NETWORK"
+    L_JUSTIFY "ACTION_TAG:" "$ACTION_TAG" 35
+    L_JUSTIFY "ACTION_ANCHOR_URL:" "$ACTION_ANCHOR_URL" 35
+    L_JUSTIFY "ACTION_ANCHOR_HASH:" "$ACTION_ANCHOR_HASH" 35
+    L_JUSTIFY "ACTION_PROPOSED_IN_EPOCH:" "$ACTION_PROPOSED_IN_EPOCH" 35
+    L_JUSTIFY "ACTION_EXPIRES_AFTER_EPOCH:" "$ACTION_EXPIRES_AFTER_EPOCH" 35
+    L_JUSTIFY "ACTION_DEPOSIT_RETURN_KEY_TYPE:" "$ACTION_DEPOSIT_RETURN_KEY_TYPE" 35
+    L_JUSTIFY "ACTION_DEPOSIT_RETURN_HASH:" "$ACTION_DEPOSIT_RETURN_HASH" 35
+    L_JUSTIFY "ACTION_DEPOSIT_RETURN_NETWORK:" "$ACTION_DEPOSIT_RETURN_NETWORK" 35
 
     # Generate lists with the DRep hashes that are voted yes, no or abstain.
     # Add a 'drep-' in front of each entry to mach up the syntax in the `drep-stake-distribution` json.
@@ -222,6 +261,11 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     # Calculate the acceptance percentage for the drep group
     if [ "$ACTION_TAG" != "NoConfidence" ]; then
       # Do a normal percentage calculation if not a `NoConfidence` action
+      # DREP_PWR_ACTIVE is drep stake for dreps who have not expired and it does not include alwaysNoConfidence or alwaysAbstain delegation
+      # DREP_NOCONF_TOTAL is only from direct stake key delegation and should be counted in the denominator
+      # DREP_STAKE_ABSTAIN is summed stake from explicit drep abstain votes
+      # which need to be removed from threshold denominator; the system
+      # alwaysAbstrain drep has already been excluded by using DREP_PWR_ACTIVE.
       DREP_PCT=$(bc <<< "scale=2; 100.00 * $DREP_STAKE_YES / ($DREP_PWR_ACTIVE + $DREP_NOCONF_TOTAL - $DREP_STAKE_ABSTAIN)" 2> /dev/null)
     else
       # Or, if a `NoConfidence` action, the always no confidence counts as yes
@@ -564,7 +608,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
             read -r DENOMINATOR
           } <<< "$(jq -re '.numerator // "-", .denominator // "-"' <<< "$COMMITTEE_THRESHOLD")"
           COMMITTEE_THRESHOLD=$(bc <<< "scale=0; ($NUMERATOR * 100 / $DENOMINATOR) / 1")
-          echo -e "Approval of a governance measure requires $NUMERATOR out of $DENOMINATOR ($COMMITEE_THRESHOLD%) of the votes of committee members.$OFF\n"
+          echo -e "Approval of a governance measure requires $NUMERATOR out of $DENOMINATOR ($COMMITTEE_THRESHOLD%) of the votes of committee members.$OFF\n"
           ;;
 
         "number")
