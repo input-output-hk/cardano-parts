@@ -59,10 +59,10 @@
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/new-tracing";
-    # iohk-nix.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/new-tracing";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/new-tracing";
-    # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/new-tracing";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    # iohk-nix.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
@@ -96,12 +96,14 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
@@ -121,24 +123,26 @@
     };
 
     cardano-submit-api-service = {
-      url = "github:IntersectMBO/cardano-node/10.4.1";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.5.0";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
-      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/new-tracing-service";
-      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/new-tracing-service";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
