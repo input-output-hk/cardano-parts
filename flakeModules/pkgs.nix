@@ -23,6 +23,8 @@
 #   flake.cardano-parts.pkgs.special.cardano-ogmios-service
 #   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   flake.cardano-parts.pkgs.special.cardano-smash-service-ng
+#   flake.cardano-parts.pkgs.special.cardano-submit-api-service
+#   flake.cardano-parts.pkgs.special.cardano-submit-api-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service-ng
 #   perSystem.cardano-parts.pkgs.bech32
