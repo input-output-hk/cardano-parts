@@ -8,6 +8,7 @@
 #   config.services.blockperf.clientKey
 #   config.services.blockperf.debugBlockperf
 #   config.services.blockperf.debugScript
+#   config.services.blockperf.enable
 #   config.services.blockperf.logFile
 #   config.services.blockperf.logKeepFilesNum
 #   config.services.blockperf.logLimitBytes
@@ -61,6 +62,16 @@ flake: {
     key = ./profile-blockperf.nix;
 
     options.services.blockperf = {
+      enable = mkOption {
+        type = bool;
+        default = true;
+        description = ''
+          Whether to enable the blockperf service.  Being a profile, this is
+          true by default.  Including this option allows selective disabling
+          without removing the import for a common module import.
+        '';
+      };
+
       amazonCa = mkOption {
         type = nullOr str;
         default = null;
@@ -214,7 +225,7 @@ flake: {
       };
     };
 
-    config = {
+    config = mkIf cfg.enable {
       environment.systemPackages = [cfg.package];
 
       # The mkMerge avoids infinite recursion and/or no cardano-tracer service
