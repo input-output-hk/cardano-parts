@@ -17,7 +17,10 @@
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
 #   * This module assists with group deployments
-#   * The upstream cardano-node and optionally cardano-tracer nixos service module should still be imported separately
+#   * The upstream cardano-node and cardano-tracer nixos service modules should still be imported separately
+#     * Even if cardano-tracer is not used, the module still should be imported
+#       to avoid infinite recursion as it is an integral part of the new tracing
+#       system
 {
   self,
   moduleWithSystem,
@@ -287,7 +290,7 @@
             else null
           );
 
-          tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) cfgTracer.acceptingSocket;
+          tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) (mkDefault cfgTracer.acceptingSocket);
 
           hostAddr = mkDefault hostAddr;
 
@@ -371,8 +374,8 @@
           systemdSocketActivation = false;
         };
 
-        cardano-tracer = mkIf (!cfgNode.useLegacyTracing) {
-          enable = true;
+        cardano-tracer = mkIf (nixos.config.services ? cardano-tracer && !cfgNode.useLegacyTracing) {
+          enable = mkDefault true;
           environment = environmentName;
           package = mkDefault cardano-tracer;
           cardanoNodePackages = mkDefault cardano-node-pkgs;
