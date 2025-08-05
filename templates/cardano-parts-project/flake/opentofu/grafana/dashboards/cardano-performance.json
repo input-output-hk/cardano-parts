@@ -25,9 +25,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 14,
+  "id": 20,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -45,6 +44,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -77,8 +77,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -105,11 +104,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -156,6 +156,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -187,8 +188,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -234,11 +234,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -286,6 +287,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -317,8 +319,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -337,7 +338,6 @@
         "y": 8
       },
       "id": 18,
-      "interval": "",
       "options": {
         "legend": {
           "calcs": [],
@@ -346,11 +346,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -386,6 +387,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -417,8 +419,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -437,7 +438,6 @@
         "y": 8
       },
       "id": 22,
-      "interval": "",
       "options": {
         "legend": {
           "calcs": [],
@@ -446,11 +446,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -485,6 +486,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -516,8 +518,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -591,11 +592,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -675,6 +677,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "points",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -707,8 +710,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -736,11 +738,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -778,6 +781,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "bars",
             "fillOpacity": 100,
             "gradientMode": "none",
@@ -811,8 +815,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -840,11 +843,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -852,7 +856,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "max(rate(cardano_node_metrics_Stat_cputicks_int{environment=\"$environment\",instance=~\".*-bp-.*\"}[1m:1m]))",
+          "expr": "max(rate(cardano_node_metrics_Stat_cputicks_int{environment=\"$environment\",instance=~\".*-bp-.*\"}[2m:1m]))",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -880,6 +884,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -910,8 +915,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -939,11 +943,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -992,6 +997,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -1023,8 +1029,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1051,11 +1056,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -1063,7 +1069,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(delta(cardano_node_metrics_utxoSize_int{environment=\"$environment\"}[1m]))",
+          "expr": "avg(delta(cardano_node_metrics_utxoSize_int{environment=\"$environment\"}[2m:1m]))",
           "interval": "",
           "legendFormat": "",
           "range": true,
@@ -1102,6 +1108,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "points",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -1132,8 +1139,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1161,11 +1167,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -1195,19 +1202,18 @@
         }
       ],
       "title": "Slot & block increments",
-      "transformations": [],
       "transparent": true,
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "",
-  "schemaVersion": 38,
+  "schemaVersion": 41,
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
           "text": "mainnet",
           "value": "mainnet"
         },
@@ -1215,10 +1221,8 @@
           "type": "prometheus"
         },
         "definition": "label_values(cardano_node_metrics_blockNum_int,environment)",
-        "hide": 0,
         "includeAll": false,
         "label": "environment",
-        "multi": false,
         "name": "environment",
         "options": [],
         "query": {
@@ -1228,8 +1232,6 @@
         },
         "refresh": 2,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       }
     ]
@@ -1238,34 +1240,9 @@
     "from": "now-30d",
     "to": "now"
   },
-  "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ],
-    "time_options": [
-      "5m",
-      "15m",
-      "1h",
-      "6h",
-      "12h",
-      "24h",
-      "2d",
-      "7d",
-      "30d"
-    ]
-  },
+  "timepicker": {},
   "timezone": "",
   "title": "Cardano Node: Performance",
   "uid": "Ee0EeiEefF",
-  "version": 2,
-  "weekStart": ""
+  "version": 6
 }
