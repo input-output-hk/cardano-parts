@@ -65,15 +65,36 @@ in
       # Cardano-node modules for group deployment
       node = {
         imports = [
-          # Base cardano-node service
+          # Base cardano-node service and cardano-tracer service
+          # Cardano-tracer service must be imported along with cardano-node service due to new tracing system integration.
           config.flake.cardano-parts.cluster.groups.default.meta.cardano-node-service
+          config.flake.cardano-parts.cluster.groups.default.meta.cardano-tracer-service
 
           # Config for cardano-node group deployments
           inputs.cardano-parts.nixosModules.profile-cardano-node-group
           inputs.cardano-parts.nixosModules.profile-cardano-custom-metrics
 
-          # Until 10.5 is released -- see description below
-          absPeerSnap
+          # To continue using legacy tracing, this option will be available for a few
+          # more cardano-node and cardano-parts releases.
+          # {services.cardano-node.useLegacyTracing = true;}
+
+          # By default, the new tracing system will forward metrics and logs to
+          # cardano-tracer. To use only the native logging and PrometheusSimple
+          # metrics from cardano-node, cardano-tracer can be disabled with the
+          # following options.
+          #
+          # Note that in the new tracing system, blockperf service will *not*
+          # work without cardano-tracer, as node cannot export logs in a
+          # blockperf consumable manner, so blockperf service should also be
+          # disabled if imported.
+          # {
+          #   services = {
+          #     # If blockperf is also enabled, disable it:
+          #     # blockperf.enable = false;
+          #     cardano-node.tracerSocketPathConnect = null;
+          #     cardano-tracer.enable = false;
+          #   };
+          # }
         ];
       };
 
@@ -179,7 +200,9 @@ in
 
       dbsync = {
         imports = [
+          # Cardano-tracer service must be imported along with cardano-node service due to new tracing system integration.
           config.flake.cardano-parts.cluster.groups.default.meta.cardano-node-service
+          config.flake.cardano-parts.cluster.groups.default.meta.cardano-tracer-service
           config.flake.cardano-parts.cluster.groups.default.meta.cardano-db-sync-service
           inputs.cardano-parts.nixosModules.profile-cardano-db-sync
           inputs.cardano-parts.nixosModules.profile-cardano-node-group
@@ -187,9 +210,6 @@ in
           inputs.cardano-parts.nixosModules.profile-cardano-postgres
           {services.cardano-node.shareNodeSocket = true;}
           {services.cardano-postgres.enablePsqlrc = true;}
-
-          # Until 10.5 is released -- see description below
-          absPeerSnap
         ];
       };
 
@@ -203,17 +223,6 @@ in
           {services.cardano-faucet.acmeEmail = "devops@iohk.io";}
         ];
       };
-
-      # Until 10.5.x is released, 10.4.1 will fail to start without this because
-      # node doesn't yet properly look up the relative path from topology to
-      # peer snapshot file.
-      #
-      # Setting this option null fixes the problem, but will leave a
-      # dangling peer snapshot file until 10.6.
-      #
-      # So until then, we'll switch from relative path that causes node failure
-      # to absolute path which does not.
-      absPeerSnap = {services.cardano-node.peerSnapshotFile = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";};
     in {
       meta = {
         nixpkgs = import inputs.nixpkgs {
