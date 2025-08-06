@@ -60,7 +60,9 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
+    # iohk-nix.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
@@ -88,13 +90,20 @@
       flake = false;
     };
 
+    cardano-db-sync-service-ng = {
+      url = "github:IntersectMBO/cardano-db-sync";
+      flake = false;
+    };
+
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/release/10.5.1";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/release/10.5.1";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
@@ -113,8 +122,27 @@
       flake = false;
     };
 
+    cardano-submit-api-service = {
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      flake = false;
+    };
+
+    cardano-submit-api-service-ng = {
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      flake = false;
+    };
+
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/jl/tracer-service";
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      flake = false;
+    };
+
+    cardano-tracer-service-ng = {
+      # Until 10.6.0 tag is available
+      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 

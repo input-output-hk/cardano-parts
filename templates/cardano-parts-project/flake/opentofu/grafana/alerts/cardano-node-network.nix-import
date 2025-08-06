@@ -21,21 +21,20 @@ in {
       for = "1m";
       labels.severity = "page";
       annotations = {
-        summary = "Blocks adoption delay have been above 4.5s for more than 5% of blocks.";
-        description = "Node average of blocks adoption delay have been above 4.5s for more than 5% of blocks for more than 6 hours.";
+        summary = "Blocks adoption delay has been above 4.5s for more than 5% of blocks.";
+        description = "Node average of blocks adoption delay has been above 4.5s for more than 5% of blocks for more than 6 hours.";
       };
     }
-    # TODO: This metric does not exist in the new tracing system yet
-    # {
-    #   alert = "blocks_adoption_delay_too_high_new_tracing";
-    #   expr = "avg(quantile_over_time(0.95, cardano_node_metrics_blockadoption_forgeDelay_real[6h])) >= 4.5";
-    #   for = "1m";
-    #   labels.severity = "page";
-    #   annotations = {
-    #     summary = "Blocks adoption delay have been above 4.5s for more than 5% of blocks.";
-    #     description = "Node average of blocks adoption delay have been above 4.5s for more than 5% of blocks for more than 6 hours.";
-    #   };
-    # }
+    {
+      alert = "blocks_adoption_delay_too_high_new_tracing";
+      expr = "avg(quantile_over_time(0.95, cardano_node_metrics_blockfetchclient_blockdelay_real[6h])) >= 4.5";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Blocks adoption delay has been above 4.5s for more than 5% of blocks.";
+        description = "Node average of blocks adoption delay has been above 4.5s for more than 5% of blocks for more than 6 hours.";
+      };
+    }
     # TODO: Static max block size until node publishes max block size metric
     {
       alert = "blocks_utilization_too_high";
@@ -48,17 +47,16 @@ in {
       };
     }
     # TODO: Static max block size until node publishes max block size metric
-    # TODO: This metric does not exist in the new tracing system yet
-    # {
-    #   alert = "blocks_utilization_too_high_new_tracing";
-    #   expr = "100 * avg(avg_over_time(Blockfetch_Client_Blocksize[6h]) / 90112) > ${highBlockUtilization}";
-    #   for = "5m";
-    #   labels.severity = "page";
-    #   annotations = {
-    #     summary = "Block utilization is above ${highBlockUtilization}%.";
-    #     description = "Block utilization has averaged above ${highBlockUtilization}% for more than 6h.";
-    #   };
-    # }
+    {
+      alert = "blocks_utilization_too_high_new_tracing";
+      expr = "100 * avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int[6h]) / 90112) > ${highBlockUtilization}";
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Block utilization is above ${highBlockUtilization}%.";
+        description = "Block utilization has averaged above ${highBlockUtilization}% for more than 6h.";
+      };
+    }
     {
       alert = "cardano_blockfetchclient_blockdelay_high";
       expr = ''cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.90'';
@@ -69,17 +67,16 @@ in {
         description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 90% of blocks over a 6 hour window arriving in 5 seconds.";
       };
     }
-    # TODO: This metric does not exist in the new tracing system yet
-    # {
-    #   alert = "cardano_blockfetchclient_blockdelay_high_new_tracing";
-    #   expr = ''Blockfetch_Client_Blockdelay_cdfFive < 0.90'';
-    #   for = "10m";
-    #   labels.severity = "page";
-    #   annotations = {
-    #     summary = "{{$labels.instance}}: cardano-node has less than 90% of blocks arriving in 5 seconds.";
-    #     description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 90% of blocks over a 6 hour window arriving in 5 seconds.";
-    #   };
-    # }
+    {
+      alert = "cardano_blockfetchclient_blockdelay_high_new_tracing";
+      expr = ''cardano_node_metrics_blockfetchclient_blockdelay_cdfFive_real < 0.90'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 90% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 90% of blocks over a 6 hour window arriving in 5 seconds.";
+      };
+    }
     {
       alert = "cardano_blockfetchclient_blockdelay_critical";
       expr = "cardano_node_metrics_blockfetchclient_blockdelay_cdfFive < 0.50";
@@ -90,20 +87,29 @@ in {
         description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
       };
     }
-    # TODO: This metric does not exist in the new tracing system yet
-    # {
-    #   alert = "cardano_blockfetchclient_blockdelay_critical_new_tracing";
-    #   expr = ''Blockfetch_Client_Blockdelay_cdfFive < 0.50'';
-    #   for = "10m";
-    #   labels.severity = "page";
-    #   annotations = {
-    #     summary = "{{$labels.instance}}: cardano-node has less than 50% of blocks arriving in 5 seconds.";
-    #     description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
-    #   };
-    # }
+    {
+      alert = "cardano_blockfetchclient_blockdelay_critical_new_tracing";
+      expr = ''cardano_node_metrics_blockfetchclient_blockdelay_cdfFive_real < 0.50'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has less than 50% of blocks arriving in 5 seconds.";
+        description = "{{$labels.instance}}: cardano-node has block fetch delays with less than 50% of blocks over a 6 hour window arriving in 5 seconds.  This is abnormal even for mempool trace enabled nodes.";
+      };
+    }
     {
       alert = "cardano_connection_count_high";
       expr = ''cardano_node_metrics_connectionManager_incomingConns > 450'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node has a high number of connections.";
+        description = "{{$labels.instance}}: cardano-node has an incoming connection count > 450 which is close to the hard limit of 512.  Consider scaling or taking other action.";
+      };
+    }
+    {
+      alert = "cardano_connection_count_high_new_tracing";
+      expr = ''cardano_node_metrics_connectionManager_inboundConns_int > 450'';
       for = "10m";
       labels.severity = "page";
       annotations = {

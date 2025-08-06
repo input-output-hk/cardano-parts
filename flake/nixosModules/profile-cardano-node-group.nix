@@ -17,7 +17,10 @@
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
 #   * This module assists with group deployments
-#   * The upstream cardano-node nixos service module should still be imported separately
+#   * The upstream cardano-node and cardano-tracer nixos service modules should still be imported separately
+#     * Even if cardano-tracer is not used, the module still should be imported
+#       to avoid infinite recursion as it is an integral part of the new tracing
+#       system
 {
   self,
   moduleWithSystem,
@@ -35,14 +38,14 @@
     ...
   }: let
     inherit (builtins) elem fromJSON readFile;
-    inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkIf mkOption optional optionalAttrs optionalString range recursiveUpdate types;
+    inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkForce mkIf mkOption optional optionalAttrs optionalString range recursiveUpdate types;
     inherit (types) bool float ints listOf oneOf str;
     inherit (nodeResources) cpuCount memMiB;
 
     inherit (nixos.config.cardano-parts.cluster.group.meta) environmentName;
     inherit (nixos.config.cardano-parts.perNode.lib) cardanoLib;
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr hostAddrIpv6 nodeId;
-    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs mithril-client-cli;
+    inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs cardano-tracer mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
     inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
     inherit (opsLib) mithrilAllowedAncillaryNetworks mithrilAllowedNetworks mithrilVerifyingPools;
@@ -66,7 +69,7 @@
     # software.  Generally, hyperthreads are counted if present, although this
     # depends on the provider that is reporting data to cpuCount.  It is, for
     # example, true for aws instances.
-    cores = numCeil (numFloor (cpuCount / cfg.instances) 2) 8;
+    cores = numCeil (numFloor (cpuCount / cfgNode.instances) 2) 8;
 
     # We don't use the mkTopology function directly from cardanoLib because that function
     # determines p2p usage based on network EnableP2P definition, whereas we wish to
@@ -79,21 +82,20 @@
       };
 
       p2pTopology = mkEdgeTopologyP2P {
-        inherit (env) edgeNodes;
-
-        useLedgerAfterSlot = env.usePeersFromLedgerAfterSlot;
+        inherit (env) edgeNodes useLedgerAfterSlot;
       };
     in
-      if cfg.useNewTopology
+      if cfgNode.useNewTopology
       then p2pTopology
       else legacyTopology;
 
-    iRange = range 0 (cfg.instances - 1);
+    iRange = range 0 (cfgNode.instances - 1);
     isMithrilEnv = cfgMithril.enable && elem environmentName cfgMithril.allowedNetworks;
     isMithrilAncillary = cfgMithril.enable && elem environmentName cfgMithril.allowedAncillary;
 
-    cfg = nixos.config.services.cardano-node;
+    cfgNode = nixos.config.services.cardano-node;
     cfgMithril = nixos.config.services.mithril-client;
+    cfgTracer = nixos.config.services.cardano-tracer;
   in {
     key = ./profile-cardano-node-group.nix;
 
@@ -121,7 +123,7 @@
 
           totalCpuCount = mkOption {
             type = ints.positive;
-            default = min cpuCount (2 * cfg.instances);
+            default = min cpuCount (2 * cfgNode.instances);
           };
 
           totalMaxHeapSizeMiB = mkOption {
@@ -133,13 +135,13 @@
         mithril-client = {
           enable = mkOption {
             type = bool;
-            default = cfg.environments.${environmentName} ? mithrilAggregatorEndpointUrl;
+            default = cfgNode.environments.${environmentName} ? mithrilAggregatorEndpointUrl;
             description = "Allow mithril-client to bootstrap cardano-node chain state.";
           };
 
           aggregatorEndpointUrl = mkOption {
             type = str;
-            default = cfg.environments.${environmentName}.mithrilAggregatorEndpointUrl or "";
+            default = cfgNode.environments.${environmentName}.mithrilAggregatorEndpointUrl or "";
             description = "The mithril aggregator endpoint url.";
           };
 
@@ -161,13 +163,13 @@
 
           ancillaryVerificationKey = mkOption {
             type = str;
-            default = cfg.environments.${environmentName}.mithrilAncillaryVerificationKey or "";
+            default = cfgNode.environments.${environmentName}.mithrilAncillaryVerificationKey or "";
             description = "The mithril ancillary verification key.";
           };
 
           genesisVerificationKey = mkOption {
             type = str;
-            default = cfg.environments.${environmentName}.mithrilGenesisVerificationKey or "";
+            default = cfgNode.environments.${environmentName}.mithrilGenesisVerificationKey or "";
             description = "The mithril genesis verification key.";
           };
 
@@ -215,7 +217,8 @@
           self'.packages.snapshot-converter
           self'.packages.snapshot-converter-ng
         ]
-        ++ optional isMithrilEnv mithril-client-cli;
+        ++ optional isMithrilEnv mithril-client-cli
+        ++ optional (!cfgNode.useLegacyTracing) cardano-tracer;
 
       environment = {
         shellAliases = {
@@ -239,7 +242,7 @@
             CARDANO_NODE_NETWORK_ID = toString protocolMagic;
             CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
             CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
-            CARDANO_NODE_SOCKET_PATH = cfg.socketPath 0;
+            CARDANO_NODE_SOCKET_PATH = cfgNode.socketPath 0;
             TESTNET_MAGIC = toString protocolMagic;
           }
           // optionalAttrs isMithrilEnv {
@@ -251,193 +254,143 @@
       # Leave firewall rules to role config
       # networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
 
-      services.cardano-node = {
-        enable = true;
-        environment = environmentName;
+      services = {
+        cardano-node = {
+          enable = true;
+          environment = environmentName;
 
-        # Setting environments to the perNode cardanoLib default ensures
-        # that nodeConfig is obtained from perNode cardanoLib iohk-nix pin.
-        environments = mkDefault cardanoLib.environments;
+          # Setting environments to the perNode cardanoLib default ensures
+          # that nodeConfig is obtained from perNode cardanoLib iohk-nix pin.
+          environments = mkDefault cardanoLib.environments;
 
-        package = mkDefault cardano-node;
-        cardanoNodePackages = mkDefault cardano-node-pkgs;
-        nodeId = mkDefault nodeId;
+          package = mkDefault cardano-node;
+          cardanoNodePackages = mkDefault cardano-node-pkgs;
+          nodeId = mkDefault nodeId;
 
-        # We're still on legacy tracing system for now, but flip this when we're ready.
-        # Also review iohk-nix and cardano-node nixos service related changes.
-        useLegacyTracing = mkDefault true;
+          # Time to move to the new tracing system as default!
+          useLegacyTracing = mkDefault false;
 
-        # Once the new tracing system is default, this can be simplified and iohk-nix updated.
-        nodeConfig = mkDefault (
-          if cfg.useLegacyTracing
-          then cardanoLib.environments.${environmentName}.nodeConfig
-          else
-            # Reference: https://github.com/IntersectMBO/cardano-node/blob/master/nix/workbench/service/tracing.nix
-            removeAttrs cardanoLib.environments.${environmentName}.nodeConfig [
-              "TraceAcceptPolicy"
-              "TraceBlockchainTime"
-              "TraceBlockFetchClient"
-              "TraceBlockFetchDecisions"
-              "TraceBlockFetchProtocol"
-              "TraceBlockFetchProtocolSerialised"
-              "TraceBlockFetchServer"
-              "TraceChainDb"
-              "TraceChainSyncClient"
-              "TraceChainSyncBlockServer"
-              "TraceChainSyncHeaderServer"
-              "TraceChainSyncProtocol"
-              "TraceConnectionManager"
-              "TraceConnectionManagerCounters"
-              "TraceConnectionManagerTransitions"
-              "DebugPeerSelectionInitiator"
-              "DebugPeerSelectionInitiatorResponder"
-              "TraceDiffusionInitialization"
-              "TraceDNSResolver"
-              "TraceDNSSubscription"
-              "TraceErrorPolicy"
-              "TraceForge"
-              "TraceForgeStateInfo"
-              "TraceHandshake"
-              "TraceIpSubscription"
-              "TraceKeepAliveClient"
-              "TraceLedgerPeers"
-              "TraceLocalChainSyncProtocol"
-              "TraceLocalConnectionManager"
-              "TraceLocalErrorPolicy"
-              "TraceLocalHandshake"
-              "TraceLocalInboundGovernor"
-              "TraceLocalRootPeers"
-              "TraceLocalServer"
-              "TraceLocalStateQueryProtocol"
-              "TraceLocalTxMonitorProtocol"
-              "TraceLocalTxSubmissionProtocol"
-              "TraceLocalTxSubmissionServer"
-              "TraceMempool"
-              "TraceMux"
-              "TraceLocalMux"
-              "TracePeerSelection"
-              "TracePeerSelectionCounters"
-              "TracePeerSelectionActions"
-              "TracePublicRootPeers"
-              "TraceServer"
-              "TraceInboundGovernor"
-              "TraceInboundGovernorCounters"
-              "TraceInboundGovernorTransitions"
-              "TraceTxInbound"
-              "TraceTxOutbound"
-              "TraceTxSubmissionProtocol"
-              "TraceTxSubmission2Protocol"
-              "TracingVerbosity"
-              "defaultBackends"
-              "defaultScribes"
-              "hasEKG"
-              "hasPrometheus"
-              "minSeverity"
-              "options"
-              "rotation"
-              "setupBackends"
-              "setupScribes"
-            ]
-        );
+          nodeConfig = mkForce (
+            if cfgNode.useLegacyTracing
+            then cardanoLib.environments.${environmentName}.nodeConfigLegacy
+            else cardanoLib.environments.${environmentName}.nodeConfig
+          );
 
-        # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
-        useNewTopology = mkDefault true;
-        useSystemdReload = mkDefault true;
-        topology = mkDefault (
-          if
-            (cfg.producers == [])
-            && cfg.publicProducers == []
-            && cfg.bootstrapPeers == null
-            && (flatten (map cfg.instanceProducers iRange)) == []
-            && (flatten (map cfg.instancePublicProducers iRange)) == []
-          then mkTopology cardanoLib.environments.${environmentName}
-          else null
-        );
+          # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
+          useNewTopology = mkDefault true;
+          useSystemdReload = mkDefault true;
+          topology = mkDefault (
+            if
+              (cfgNode.producers == [])
+              && cfgNode.publicProducers == []
+              && cfgNode.bootstrapPeers == null
+              && (flatten (map cfgNode.instanceProducers iRange)) == []
+              && (flatten (map cfgNode.instancePublicProducers iRange)) == []
+            then mkTopology cardanoLib.environments.${environmentName}
+            else null
+          );
 
-        hostAddr = mkDefault hostAddr;
+          tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) (mkDefault cfgTracer.acceptingSocket);
 
-        # Node will start on ipv4 only machines with a binding to ::/0, but it
-        # will also then consume resources unnecessarily by trying to bind to
-        # other ipv6 peers.
-        ipv6HostAddr = mkIf ((nixos.config.ips.publicIpv6 or "") != "") hostAddrIpv6;
+          hostAddr = mkDefault hostAddr;
 
-        port = mkDefault cardanoNodePort;
-        producers = mkDefault [];
-        publicProducers = mkDefault [];
+          # Node will start on ipv4 only machines with a binding to ::/0, but it
+          # will also then consume resources unnecessarily by trying to bind to
+          # other ipv6 peers.
+          ipv6HostAddr = mkIf ((nixos.config.ips.publicIpv6 or "") != "") hostAddrIpv6;
 
-        extraNodeConfig =
-          {
-            # The maximum number of used peers when fetching newly forged blocks
-            MaxConcurrencyDeadline = 4;
-          }
-          // optionalAttrs cfg.useLegacyTracing {
-            # In versions of cardano-node > `10.1.2`, legacy tracing will no longer be default.
-            # Until we are ready to use legacy tracing as default, set UseTraceDispatcher false.
-            UseTraceDispatcher = false;
+          port = mkDefault cardanoNodePort;
+          producers = mkDefault [];
+          publicProducers = mkDefault [];
 
-            hasPrometheus = [cfg.hostAddr cardanoNodePrometheusExporterPort];
+          extraNodeConfig =
+            {
+              # The maximum number of used peers when fetching newly forged blocks
+              MaxConcurrencyDeadline = 4;
+            }
+            // optionalAttrs cfgNode.useLegacyTracing {
+              UseTraceDispatcher = false;
 
-            # Use Journald output
-            setupScribes = [
-              {
-                scKind = "JournalSK";
-                scName = "cardano";
-                scFormat = "ScText";
-              }
-            ];
+              hasPrometheus = [cfgNode.hostAddr cardanoNodePrometheusExporterPort];
 
-            defaultScribes = [["JournalSK" "cardano"]];
+              # Use Journald output
+              setupScribes = [
+                {
+                  scKind = "JournalSK";
+                  scName = "cardano";
+                  scFormat = "ScText";
+                }
+              ];
+
+              defaultScribes = [["JournalSK" "cardano"]];
+            };
+
+          extraNodeInstanceConfig = i:
+            optionalAttrs (!cfgNode.useLegacyTracing) {
+              TraceOptionNodeName =
+                if (i == 0)
+                then name
+                else "${name}-${toString i}";
+            };
+
+          extraServiceConfig = _: {
+            # Allow up to 10 failures with 30 second restarts in a 15 minute window
+            # before entering failure state and alerting
+            startLimitBurst = 10;
+            startLimitIntervalSec = 900;
+
+            serviceConfig = {
+              # The ~2.3% difference between M and MiB units is already included in the scaling factor
+              MemoryMax = "${toString (1.15 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M";
+              LimitNOFILE = "65535";
+
+              # Ensure quick restarts on any condition
+              Restart = "always";
+              RestartSec = 30;
+
+              # Node uses SIGINT rather than the systemd default of SIGTERM for clean shutdown
+              KillSignal = "SIGINT";
+            };
           };
 
-        extraServiceConfig = _: {
-          # Allow up to 10 failures with 30 second restarts in a 15 minute window
-          # before entering failure state and alerting
-          startLimitBurst = 10;
-          startLimitIntervalSec = 900;
+          # These RTS changes from nixos upstream defaults of: `-N2 -A16 -qg -qb`
+          # improve chainsync speed when -N >= 4 and minimize blockperf measured
+          # late delta_headers >= 10 seconds.  The primary factors in the late
+          # delta_header reduction were observed to be:
+          #   * -N >= 4 with a sufficiently sized machine
+          #   * -M is sufficiently high. ex: ~13 -> 24 GiB on mainnet lowered late blocks significantly
+          #   * -I3 may offer minimal benefit with low signal to noise
+          #   * Dropping of -qg -qb results in improved parallel Gen1 gc performance compared to historical perf
+          #
+          # RTS ref: https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
+          rtsArgs = [
+            # See the defn of cores above -- this will be constrained between 2 and 8, inclusive
+            "-N${toString cores}"
+            "-A16m"
+            "-I3"
+            "-M${toString (1.024 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M"
+          ];
 
-          serviceConfig = {
-            # The ~2.3% difference between M and MiB units is already included in the scaling factor
-            MemoryMax = "${toString (1.15 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M";
-            LimitNOFILE = "65535";
-
-            # Ensure quick restarts on any condition
-            Restart = "always";
-            RestartSec = 30;
-
-            # Node uses SIGINT rather than the systemd default of SIGTERM for clean shutdown
-            KillSignal = "SIGINT";
-          };
+          systemdSocketActivation = false;
         };
 
-        # These RTS changes from nixos upstream defaults of: `-N2 -A16 -qg -qb`
-        # improve chainsync speed when -N >= 4 and minimize blockperf measured
-        # late delta_headers >= 10 seconds.  The primary factors in the late
-        # delta_header reduction were observed to be:
-        #   * -N >= 4 with a sufficiently sized machine
-        #   * -M is sufficiently high. ex: ~13 -> 24 GiB on mainnet lowered late blocks significantly
-        #   * -I3 may offer minimal benefit with low signal to noise
-        #   * Dropping of -qg -qb results in improved parallel Gen1 gc performance compared to historical perf
-        #
-        # RTS ref: https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
-        rtsArgs = [
-          # See the defn of cores above -- this will be constrained between 2 and 8, inclusive
-          "-N${toString cores}"
-          "-A16m"
-          "-I3"
-          "-M${toString (1.024 * cfg.totalMaxHeapSizeMiB / cfg.instances)}M"
-        ];
-
-        systemdSocketActivation = false;
+        cardano-tracer = mkIf (nixos.config.services ? cardano-tracer && !cfgNode.useLegacyTracing) {
+          enable = mkDefault true;
+          environment = environmentName;
+          package = mkDefault cardano-tracer;
+          cardanoNodePackages = mkDefault cardano-node-pkgs;
+          resourceFreq = mkDefault (60 * 1000);
+        };
       };
 
       systemd.services = let
         serviceName = i:
-          if cfg.instances == 1
+          if cfgNode.instances == 1
           then "cardano-node"
           else "cardano-node-${toString i}";
       in
         {
-          cardano-node-socket-share = mkIf cfg.shareNodeSocket {
+          cardano-node-socket-share = mkIf cfgNode.shareNodeSocket {
             after = ["cardano-node.service"];
             wants = ["cardano-node.service"];
             partOf = ["cardano-node.service"];
@@ -453,7 +406,7 @@
                 name = "cardano-node-socket-share";
                 runtimeInputs = with pkgs; [inotify-tools];
                 text = ''
-                  TARGET="${cfg.socketPath 0}"
+                  TARGET="${cfgNode.socketPath 0}"
                   NAME=$(basename "$TARGET")
                   DIR=$(dirname "$TARGET")
 
@@ -625,7 +578,7 @@
 
       assertions = [
         {
-          assertion = cpuCount >= 2 * cfg.instances;
+          assertion = cpuCount >= 2 * cfgNode.instances;
           message = ''The CPU count on the machine "${name}" will be less 2 per cardano-node instance; performance may be degraded.'';
         }
       ];

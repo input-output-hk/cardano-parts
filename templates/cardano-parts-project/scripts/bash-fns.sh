@@ -15,14 +15,14 @@ submit() (
   set -euo pipefail
   TX_SIGNED="$1"
 
-  TXID=$(cardano-cli latest transaction txid --tx-file "$TX_SIGNED")
+  TXID=$(cardano-cli latest transaction txid --tx-file "$TX_SIGNED" | jq -re .txhash)
 
   echo "Submitting $TX_SIGNED with txid $TXID..."
   cardano-cli latest transaction submit --tx-file "$TX_SIGNED"
 
   EXISTS="true"
   while [ "$EXISTS" = "true" ]; do
-    EXISTS=$(cardano-cli latest query tx-mempool tx-exists "$TXID" | jq -r .exists)
+    EXISTS=$(cardano-cli latest query tx-mempool tx-exists "$TXID" | jq -re .exists)
     if [ "$EXISTS" = "true" ]; then
       echo "The transaction still exists in the mempool, sleeping 5s: $TXID"
     else

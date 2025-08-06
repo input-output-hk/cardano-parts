@@ -12,6 +12,7 @@
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-pkgs-ng
 #   flake.cardano-parts.pkgs.special.cardano-db-sync-service
+#   flake.cardano-parts.pkgs.special.cardano-db-sync-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-faucet-service
 #   flake.cardano-parts.pkgs.special.cardano-metadata-pkgs
 #   flake.cardano-parts.pkgs.special.cardano-metadata-service
@@ -20,9 +21,12 @@
 #   flake.cardano-parts.pkgs.special.cardano-node-service
 #   flake.cardano-parts.pkgs.special.cardano-node-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-ogmios-service
+#   flake.cardano-parts.pkgs.special.cardano-smash-service
+#   flake.cardano-parts.pkgs.special.cardano-smash-service-ng
+#   flake.cardano-parts.pkgs.special.cardano-submit-api-service
+#   flake.cardano-parts.pkgs.special.cardano-submit-api-service-ng
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service
 #   flake.cardano-parts.pkgs.special.cardano-tracer-service-ng
-#   flake.cardano-parts.pkgs.special.cardano-smash-service
 #   perSystem.cardano-parts.pkgs.bech32
 #   perSystem.cardano-parts.pkgs.blockfrost-platform
 #   perSystem.cardano-parts.pkgs.blockperf
@@ -261,6 +265,7 @@
           cardano-cli = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli);
           cardano-node = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node);
           cardano-submit-api = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api);
+          cardano-tracer = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-tracer);
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
         };
       };
@@ -279,6 +284,7 @@
           cardano-cli = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli-ng);
           cardano-node = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node-ng);
           cardano-submit-api = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api-ng);
+          cardano-tracer = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-tracer-ng);
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
         };
       };
@@ -287,6 +293,12 @@
         type = str;
         description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
         default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/cardano-db-sync-service.nix";
+      };
+
+      cardano-db-sync-service-ng = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
+        default = "${localFlake.inputs.cardano-db-sync-service-ng}/nix/nixos/cardano-db-sync-service.nix";
       };
 
       # TODO: Module import fixup for local services
@@ -306,13 +318,13 @@
       cardano-node-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-node-service import path string.";
-        default = "${localFlake.inputs.cardano-node-service}/nix/nixos";
+        default = "${localFlake.inputs.cardano-node-service}/nix/nixos/cardano-node-service.nix";
       };
 
       cardano-node-service-ng = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-node-service-ng import path string.";
-        default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos";
+        default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos/cardano-node-service.nix";
       };
 
       cardano-ogmios-service = mkOption {
@@ -327,6 +339,18 @@
         default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/smash-service.nix";
       };
 
+      cardano-submit-api-service = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-submit-api-service import path string.";
+        default = "${localFlake.inputs.cardano-submit-api-service}/nix/nixos/cardano-submit-api-service.nix";
+      };
+
+      cardano-submit-api-service-ng = mkOption {
+        type = str;
+        description = mdDoc "The cardano-parts default cardano-submit-api-service-ng import path string.";
+        default = "${localFlake.inputs.cardano-submit-api-service-ng}/nix/nixos/cardano-submit-api-service.nix";
+      };
+
       cardano-tracer-service = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-tracer-service import path string.";
@@ -336,7 +360,7 @@
       cardano-tracer-service-ng = mkOption {
         type = str;
         description = mdDoc "The cardano-parts default cardano-tracer-service-ng import path string.";
-        default = "${localFlake.inputs.cardano-tracer-service}/nix/nixos/cardano-tracer-service.nix";
+        default = "${localFlake.inputs.cardano-tracer-service-ng}/nix/nixos/cardano-tracer-service.nix";
       };
     };
   };
