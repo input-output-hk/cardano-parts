@@ -36,12 +36,15 @@
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoNodePrometheusExporterPort
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardanoSmashDelistedPools
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-db-sync-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-db-sync-service-ng
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-faucet-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-metadata-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-node-service-ng
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-ogmios-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-smash-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-submit-api-service
+#   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-submit-api-service-ng
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-tracer-service
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.cardano-tracer-service-ng
 #   flake.cardano-parts.cluster.groups.<default|name>.meta.domain
@@ -469,6 +472,12 @@ flake @ {
         default = cfg.pkgs.special.cardano-db-sync-service;
       };
 
+      cardano-db-sync-service-ng = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-db-sync-service-ng import path string.";
+        default = cfg.pkgs.special.cardano-db-sync-service-ng;
+      };
+
       cardano-faucet-service = mkOption {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-faucet-service import path string.";
@@ -503,6 +512,18 @@ flake @ {
         type = str;
         description = mdDoc "Cardano-parts cluster group cardano-smash-service import path string.";
         default = cfg.pkgs.special.cardano-smash-service;
+      };
+
+      cardano-submit-api-service = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-submit-api-service import path string.";
+        default = cfg.pkgs.special.cardano-submit-api-service;
+      };
+
+      cardano-submit-api-service-ng = mkOption {
+        type = str;
+        description = mdDoc "Cardano-parts cluster group cardano-submit-api-service-ng import path string.";
+        default = cfg.pkgs.special.cardano-submit-api-service-ng;
       };
 
       cardano-tracer-service = mkOption {
