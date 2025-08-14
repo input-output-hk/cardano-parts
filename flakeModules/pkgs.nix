@@ -297,7 +297,7 @@
 
       cardano-db-sync-service-ng = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
+        description = mdDoc "The cardano-parts default cardano-db-sync-service-ng import path string.";
         default = "${localFlake.inputs.cardano-db-sync-service-ng}/nix/nixos/cardano-db-sync-service.nix";
       };
 
