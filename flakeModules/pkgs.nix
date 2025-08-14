@@ -465,7 +465,7 @@ in
           dbsync-pre-release = "input-output-hk-cardano-db-sync-13-6-0-5-cb61094";
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2524-0-pre-7bf7033";
-          mithril-pre-release = "input-output-hk-mithril-unstable-b76f911";
+          mithril-pre-release = "input-output-hk-mithril-unstable-de4de82";
           node-release = "input-output-hk-cardano-node-10-5-1-ca1ec27";
           node-pre-release = "input-output-hk-cardano-node-10-5-1-ca1ec27";
         in
@@ -476,7 +476,7 @@ in
               (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-2-e06029b)
               (mkPkg "blockperf" caPkgs.blockperf-cardano-foundation-blockperf-main-d757f38)
               (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-0-3749045")
-              (mkPkg "cardano-cli" (caPkgs."cardano-cli-${node-release}" // {version = "10.8.0.0";}))
+              (mkPkg "cardano-cli" (caPkgs."cardano-cli-${node-release}" // {version = "10.11.0.0";}))
               (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-${node-pre-release}" // {version = "10.11.0.0";}))
               (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-release}")
               (mkPkg "cardano-db-sync-ng" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-pre-release}")
@@ -492,7 +492,7 @@ in
               (mkPkg "cardano-node" (caPkgs."cardano-node-${node-release}" // {version = "10.5.1";}))
               (mkPkg "cardano-node-ng" (caPkgs."cardano-node-${node-pre-release}" // {version = "10.5.1";}))
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-11-2-df5971a)
-              (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-27-0-b71c3f1)
+              (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-29-0-2ef95e1)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")
               (mkPkg "cardano-smash-ng" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-pre-release}")
               (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-${node-release}")
