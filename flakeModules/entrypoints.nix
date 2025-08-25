@@ -43,7 +43,7 @@ in {
 
         # Until https://github.com/IntersectMBO/cardano-node/pull/6282 is merged and released,
         # remove PrometheusSimple from configs so multiple instances can be started without fatal error.
-        find "$DATA_DIR/config" -type f -exec sed -i '/PrometheusSimple/d' {} +
+        find "$DATA_DIR" -name 'config*.json' -type f -exec sed -i '/PrometheusSimple/d' {} +
 
         # Prepare mithril client env configs
         ${
@@ -88,6 +88,7 @@ in {
             [ -z "''${DATA_DIR:-}" ] && echo "DATA_DIR env var must be set -- aborting" && exit 1
 
             mkdir -p "$DATA_DIR/config/custom"
+            chmod -R +w "$DATA_DIR/config"
 
             # The menu of environments that we ship as built-in envs
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
@@ -98,7 +99,7 @@ in {
               ${copyEnvsTemplate cardanoLib}
             fi
 
-            chmod -R +w "$DATA_DIR/config" "$DATA_DIR/config/custom"
+            chmod -R +w "$DATA_DIR/config"
 
             if [ -n "''${ENVIRONMENT:-}" ]; then
               echo "Using the preset environment $ENVIRONMENT ..." >&2
