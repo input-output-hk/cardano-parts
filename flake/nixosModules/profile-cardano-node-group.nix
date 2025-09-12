@@ -85,7 +85,7 @@
         inherit (env) edgeNodes useLedgerAfterSlot;
       };
     in
-      if cfgNode.useNewTopology
+      if (cfgNode.useNewTopology or true)
       then p2pTopology
       else legacyTopology;
 
@@ -96,6 +96,8 @@
     cfgNode = nixos.config.services.cardano-node;
     cfgMithril = nixos.config.services.mithril-client;
     cfgTracer = nixos.config.services.cardano-tracer;
+
+    optNode = nixos.options.services.cardano-node;
   in {
     key = ./profile-cardano-node-group.nix;
 
@@ -277,8 +279,18 @@
           );
 
           # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
-          useNewTopology = mkDefault true;
+          # As of cardano-node version 10.6.0, useNewTopology is deprecated and will be removed upon Dijkstra hard fork.
+          # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the null case.
+          # Once ouroboros-network >= 0.22.2 is merged into node with 10.6.0, useNewTopology should be set to null.
+          useNewTopology =
+            if optNode.useNewTopology.type.description == "boolean"
+            then mkDefault true
+            # When ouroboros-network >= 0.22.2 is in use:
+            # else mkDefault null;
+            else mkDefault true;
+
           useSystemdReload = mkDefault true;
+
           topology = mkDefault (
             if
               (cfgNode.producers == [])
@@ -290,7 +302,12 @@
             else null
           );
 
-          tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) (mkDefault cfgTracer.acceptingSocket);
+          # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the acceptAt case.
+          tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) (
+            if cfgTracer ? acceptAt
+            then mkDefault cfgTracer.acceptAt
+            else mkDefault cfgTracer.acceptingSocket
+          );
 
           hostAddr = mkDefault hostAddr;
 

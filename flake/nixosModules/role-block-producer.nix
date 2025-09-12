@@ -59,9 +59,9 @@ flake: {
         inherit groupOutPath groupName name secretName keyName pathPrefix;
         fileOwner = "cardano-node";
         fileGroup = "cardano-node";
-        reloadUnits = optionals (nodeCfg.useSystemdReload && nodeCfg.useNewTopology) ["cardano-node.service"];
+        reloadUnits = optionals (nodeCfg.useSystemdReload && (nodeCfg.useNewTopology or true)) ["cardano-node.service"];
         restartUnits =
-          optionals (!nodeCfg.useSystemdReload || !nodeCfg.useNewTopology) ["cardano-node.service"]
+          optionals (!nodeCfg.useSystemdReload || !(nodeCfg.useNewTopology or true)) ["cardano-node.service"]
           ++ optionals mithrilCfg.enable ["mithril-signer.service"];
       };
 
