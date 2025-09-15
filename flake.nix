@@ -61,7 +61,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     # iohk-nix.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/10.6.0-pre-updates";
     # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
 
     # For tmp local testing pins
@@ -103,7 +103,8 @@
 
     cardano-node-service-ng = {
       # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/jl/10.6.0-pre-nix-cfg-updates";
+      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/10.6.0-pre-nix-cfg-updates";
       flake = false;
     };
 
@@ -142,7 +143,8 @@
 
     cardano-tracer-service-ng = {
       # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/jl/10.6.0-pre-nix-cfg-updates";
+      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/10.6.0-pre-nix-cfg-updates";
       flake = false;
     };
 
