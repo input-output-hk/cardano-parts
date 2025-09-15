@@ -241,6 +241,12 @@ in
                 description = mdDoc "Minimal devShell";
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
+                    # Bash interactive needs to be included, otherwise, the
+                    # default devShell uses a bash without progcomp compiled
+                    # and devShell bins will fail to auto-complete on file
+                    # completions.
+                    bashInteractive
+
                     alejandra
                     bc
                     curl
