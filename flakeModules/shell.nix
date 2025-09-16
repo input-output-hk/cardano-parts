@@ -11,10 +11,12 @@
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultHooks
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultLintPkg
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultVars
+#   perSystem.cardano-parts.shell.<global|<id>>.defaultZshCompFpathLoading
 #   perSystem.cardano-parts.shell.<global|<id>>.enableFormatter
 #   perSystem.cardano-parts.shell.<global|<id>>.enableHooks
 #   perSystem.cardano-parts.shell.<global|<id>>.enableLint
 #   perSystem.cardano-parts.shell.<global|<id>>.enableVars
+#   perSystem.cardano-parts.shell.<global|<id>>.enableZshCompFpathLoading
 #   perSystem.cardano-parts.shell.<global|<id>>.extraPkgs
 #   perSystem.cardano-parts.shell.<global|<id>>.pkgs
 #
@@ -152,6 +154,41 @@ in
               };
             };
 
+            defaultZshCompFpathLoading = mkOption {
+              description = mdDoc "The cardano-parts default zsh completion fpath loading hook.";
+              default = globalDefault isGlobal (packages: ''
+                  export ZDOTDIR=$PWD/.direnv-zsh
+                  mkdir -p "$ZDOTDIR"
+                  rm -f "$ZDOTDIR/.zcompdump"*
+
+                  cat > "$ZDOTDIR/completions.zsh" <<'EOF'
+                for p in ${concatStringsSep " " (map (p: "${p}") packages)}; do
+                  if [ -d "$p/share/zsh/site-functions" ]; then
+                    fpath=("$p/share/zsh/site-functions" $fpath)
+                  fi
+                done
+                autoload -U compinit
+                compinit
+                EOF
+
+                  cat > "$ZDOTDIR/.zshrc" <<'EOF'
+                if [ -f "$HOME/.zshrc" ]; then
+                  source "$HOME/.zshrc"
+                fi
+
+                source "$ZDOTDIR/completions.zsh"
+                autoload -U compinit
+                compinit -C
+
+                alias zsh-base='unset ZDOTDIR; exec zsh -l'
+                echo
+                echo "To return to your normal zsh without devShell fpath modifications, run \"zsh-base\" before leaving the repo directory,"
+                echo "otherwise, close and open a new zsh shell to avoid lingering devShell command completions."
+                echo
+                EOF
+              '');
+            };
+
             enableFormatter = mkOption {
               type = globalType isGlobal bool;
               description = mdDoc "Enable default cardano-parts formatter in the devShells.";
@@ -173,6 +210,12 @@ in
             enableVars = mkOption {
               type = globalType isGlobal bool;
               description = mdDoc "Enable default cardano-parts env vars in the devShells.";
+              default = globalDefault isGlobal true;
+            };
+
+            enableZshCompFpathLoading = mkOption {
+              type = globalType isGlobal bool;
+              description = mdDoc "Enable default cardano-parts zsh completion loading into fpath in zsh devShells.";
               default = globalDefault isGlobal true;
             };
 
@@ -427,12 +470,17 @@ in
 
           devShells = let
             mkShell = id:
-              pkgs.mkShell ({
+              pkgs.mkShell (rec {
                   packages = allPkgs id;
                   shellHook =
                     # Add optional git/shell and formatter hooks
                     selectScope id optionalString "enableHooks" "defaultHooks"
                     + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
+                    + (selectScope id (cond: as:
+                      if cond
+                      then as
+                      else _: "") "enableZshCompFpathLoading" "defaultZshCompFpathLoading")
+                    packages
                     + ''
                       [ -z "$NOMENU" ] && menu
                     '';
