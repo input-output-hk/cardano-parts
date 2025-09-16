@@ -157,6 +157,11 @@ in
             defaultZshCompFpathLoading = mkOption {
               description = mdDoc "The cardano-parts default zsh completion fpath loading hook.";
               default = globalDefault isGlobal (packages: ''
+                  # Direnv use prevents the dynamic loading of zsh completions,
+                  # requiring a zsh "reentry" upon arriving in the devShell.
+                  # (ie: `zsh` or `exec zsh -l`, etc.
+                  #
+                  # If using plain nix develop, zsh "reentry" is not required.
                   export ZDOTDIR=$PWD/.direnv-zsh
                   mkdir -p "$ZDOTDIR"
                   rm -f "$ZDOTDIR/.zcompdump"*
@@ -184,6 +189,8 @@ in
                 echo
                 echo "To return to your normal zsh without devShell fpath modifications, run \"zsh-base\" before leaving the repo directory,"
                 echo "otherwise, close and open a new zsh shell to avoid lingering devShell command completions."
+                echo
+                echo "To re-enter the completions in this devShell with direnv, run \"zsh\" or similar."
                 echo
                 EOF
               '');
