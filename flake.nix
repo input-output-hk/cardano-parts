@@ -64,6 +64,9 @@
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/10.6.0-pre-updates";
     # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
 
+    # Until blockperf detail fix is merged to master upstream
+    blockperf.url = "github:johnalotoski/blockperf/jl/fix-detail";
+
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
