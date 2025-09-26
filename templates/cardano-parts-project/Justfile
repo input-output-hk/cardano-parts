@@ -112,6 +112,7 @@ checkSshConfig := '''
       | where ($it.machine | str ends-with ".ipv4")
       | rename machine pubIpv4
       | update machine { $in | str replace ".ipv4" "" }
+      | update pubIpv4 { $in | if $in == "unavailable.ipv4" { null } else { $in } }
       | sort-by machine
     )
 
