@@ -43,7 +43,7 @@
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib.types) anything attrs attrsOf bool enum nullOr listOf package str submodule;
+  inherit (lib.types) anything attrs attrsOf bool enum nullOr listOf package str lines submodule;
 in
   with builtins;
   with lib; {
@@ -114,7 +114,7 @@ in
             };
 
             defaultHooks = mkOption {
-              type = globalType isGlobal str;
+              type = globalType isGlobal lines;
               description = mdDoc "The cardano-parts default git and shell hooks.";
               default = globalDefault isGlobal ''
                 if ${isPartsRepo} && [ -d .git/hooks ]; then
