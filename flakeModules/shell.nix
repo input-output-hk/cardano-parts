@@ -359,7 +359,7 @@ in
 
                         gdb
                         process-compose
-                        token-metadata-creator
+                        # token-metadata-creator
                       ]);
                 };
               }
