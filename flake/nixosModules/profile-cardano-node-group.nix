@@ -47,10 +47,16 @@
     inherit (nixos.config.cardano-parts.perNode.meta) cardanoNodePort cardanoNodePrometheusExporterPort hostAddr hostAddrIpv6 nodeId;
     inherit (nixos.config.cardano-parts.perNode.pkgs) cardano-cli cardano-node cardano-node-pkgs cardano-tracer mithril-client-cli;
     inherit (cardanoLib) mkEdgeTopology mkEdgeTopologyP2P;
-    inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
+    inherit (cardanoLib.environments.${environmentName}.${nodeConfigGenesis}) ByronGenesisFile ShelleyGenesisFile;
     inherit (opsLib) mithrilAllowedAncillaryNetworks mithrilAllowedNetworks mithrilVerifyingPools;
     inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
     inherit (fromJSON (readFile ShelleyGenesisFile)) slotsPerKESPeriod;
+
+    # Remove this usage once legacy tracing is dropped from node
+    nodeConfigGenesis =
+      if cardanoLib.environments.${environmentName} ? nodeConfig
+      then "nodeConfig"
+      else "nodeConfigLegacy";
 
     opsLib = self.cardano-parts.lib.opsLib pkgs;
 
