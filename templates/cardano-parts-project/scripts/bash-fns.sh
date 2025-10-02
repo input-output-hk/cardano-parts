@@ -2,13 +2,6 @@
 #
 # Various bash helper fns which aren't used enough to move to just recipes.
 
-# This can be used to simplify ssh sessions, rsync, ex:
-#   ssh -o "$(ssm-proxy-cmd "$REGION")" "$INSTANCE_ID"
-ssm-proxy-cmd() {
-  echo "ProxyCommand=sh -c 'aws --region $1 ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p'"
-}
-
-
 # A handy transaction submission function with mempool monitoring.
 # CARDANO_NODE_{NETWORK_ID,SOCKET_PATH}, TESTNET_MAGIC should already be exported.
 submit() (
