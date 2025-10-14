@@ -91,7 +91,7 @@
         inherit (env) edgeNodes useLedgerAfterSlot;
       };
     in
-      if (cfgNode.useNewTopology or true)
+      if (elem cfgNode.useNewTopology [null true])
       then p2pTopology
       else legacyTopology;
 
@@ -292,8 +292,7 @@
             if optNode.useNewTopology.type.description == "boolean"
             then mkDefault true
             # When ouroboros-network >= 0.22.2 is in use:
-            # else mkDefault null;
-            else mkDefault true;
+            else mkDefault null;
 
           useSystemdReload = mkDefault true;
 
