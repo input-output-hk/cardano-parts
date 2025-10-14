@@ -465,7 +465,7 @@ in
           dbsync-pre-release = "input-output-hk-cardano-db-sync-13-6-0-5-cb61094";
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2524-0-pre-7bf7033";
-          mithril-pre-release = "input-output-hk-mithril-unstable-de4de82";
+          mithril-pre-release = "input-output-hk-mithril-unstable-effe078";
           node-release = "input-output-hk-cardano-node-10-5-1-ca1ec27";
           node-pre-release = "input-output-hk-cardano-node-10-5-1-ca1ec27";
         in
