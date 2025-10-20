@@ -215,11 +215,11 @@
     "cardano-node-service-ng": {
       "flake": false,
       "locked": {
-        "lastModified": 1757635285,
-        "narHash": "sha256-dVYhbEYpl1G5hnQYz42DWFsYzrJ0DmSYhTQ1hIL0co8=",
+        "lastModified": 1760975377,
+        "narHash": "sha256-HJE5R51LyGCGQQJoldWONbr501Ww/juEUOqEIC1yOfY=",
         "owner": "IntersectMBO",
         "repo": "cardano-node",
-        "rev": "edae9912ff7569a48d531be6088470718f73e2cd",
+        "rev": "7697209cab6072598f9dc5f7bc1bf75979199ee9",
         "type": "github"
       },
       "original": {

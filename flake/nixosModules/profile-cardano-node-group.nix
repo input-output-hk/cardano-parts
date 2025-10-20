@@ -37,8 +37,8 @@
     nodeResources,
     ...
   }: let
-    inherit (builtins) elem fromJSON readFile;
-    inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkForce mkIf mkOption optional optionalAttrs optionalString range recursiveUpdate types;
+    inherit (builtins) elem fromJSON isString readFile;
+    inherit (lib) boolToString concatStringsSep flatten foldl' getExe min mkDefault mkForce mkIf mkOption optional optionalAttrs optionalString range recursiveUpdate types versionAtLeast;
     inherit (types) bool float ints listOf oneOf str;
     inherit (nodeResources) cpuCount memMiB;
 
@@ -345,6 +345,14 @@
               ];
 
               defaultScribes = [["JournalSK" "cardano"]];
+            }
+            # Remove this optionalAttrs block once 10.6.0 is the latest full release
+            // optionalAttrs (
+              !(versionAtLeast cfgNode.nodeConfig.MinNodeVersion "10.6.0") && (isString cfgNode.operationalCertificate)
+            ) {
+              PeerSharing = false;
+              TargetNumberOfKnownPeers = 100;
+              TargetNumberOfRootPeers = 100;
             };
 
           extraNodeInstanceConfig = i:
