@@ -67,6 +67,9 @@
     # Until blockperf detail fix is merged to master upstream
     blockperf.url = "github:johnalotoski/blockperf/jl/fix-detail";
 
+    # Until cardano-node 10.6.0 is tagged
+    cardano-node-10-6-0.url = "github:IntersectMBO/cardano-node/ana/10.6-final-integration-mix";
+
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
@@ -106,8 +109,8 @@
 
     cardano-node-service-ng = {
       # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/jl/10.6.0-pre-nix-cfg-updates";
-      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/10.6.0-pre-nix-cfg-updates";
+      url = "github:IntersectMBO/cardano-node/ana/10.6-final-integration-mix";
+      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/ana/10.6-final-integration-mix";
       flake = false;
     };
 
@@ -134,7 +137,7 @@
 
     cardano-submit-api-service-ng = {
       # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/ana/10.6-final-integration-mix";
       flake = false;
     };
 
@@ -146,8 +149,8 @@
 
     cardano-tracer-service-ng = {
       # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/jl/10.6.0-pre-nix-cfg-updates";
-      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/jl/10.6.0-pre-nix-cfg-updates";
+      url = "github:IntersectMBO/cardano-node/ana/10.6-final-integration-mix";
+      # url = "path:/home/jlotoski/work/iohk/cardano-node-wt/ana/10.6-final-integration-mix";
       flake = false;
     };
 
