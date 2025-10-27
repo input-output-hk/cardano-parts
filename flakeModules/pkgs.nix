@@ -467,7 +467,7 @@ in
           mithril-release = "input-output-hk-mithril-2524-0-pre-7bf7033";
           mithril-pre-release = "input-output-hk-mithril-unstable-effe078";
           node-release = "input-output-hk-cardano-node-10-5-1-ca1ec27";
-          node-pre-release = "input-output-hk-cardano-node-10-5-1-ca1ec27";
+          # node-pre-release = "input-output-hk-cardano-node-10-5-1-ca1ec27";
         in
           submodule {
             options = foldl' recursiveUpdate {} [
@@ -481,7 +481,8 @@ in
 
               (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-0-3749045")
               (mkPkg "cardano-cli" (caPkgs."cardano-cli-${node-release}" // {version = "10.11.0.0";}))
-              (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-${node-pre-release}" // {version = "10.11.0.0";}))
+              # (mkPkg "cardano-cli-ng" (caPkgs."cardano-cli-${node-pre-release}" // {version = "10.11.0.0";}))
+              (mkPkg "cardano-cli-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.cardano-cli)
               (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-release}")
               (mkPkg "cardano-db-sync-ng" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-pre-release}")
               (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-${dbsync-release}")
@@ -494,17 +495,21 @@ in
               (mkPkg "cardano-faucet-ng" caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-1-2cccf6d")
 
               (mkPkg "cardano-node" (caPkgs."cardano-node-${node-release}" // {version = "10.5.1";}))
-              (mkPkg "cardano-node-ng" (caPkgs."cardano-node-${node-pre-release}" // {version = "10.5.1";}))
+              # (mkPkg "cardano-node-ng" (caPkgs."cardano-node-${node-pre-release}" // {version = "10.5.1";}))
+              (mkPkg "cardano-node-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.cardano-node)
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-11-2-df5971a)
               (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-29-0-2ef95e1)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")
               (mkPkg "cardano-smash-ng" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-pre-release}")
               (mkPkg "cardano-submit-api" caPkgs."cardano-submit-api-${node-release}")
-              (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-${node-pre-release}")
+              # (mkPkg "cardano-submit-api-ng" caPkgs."cardano-submit-api-${node-pre-release}")
+              (mkPkg "cardano-submit-api-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.cardano-submit-api)
               (mkPkg "cardano-testnet" caPkgs."cardano-testnet-${node-release}")
-              (mkPkg "cardano-testnet-ng" caPkgs."cardano-testnet-${node-pre-release}")
+              # (mkPkg "cardano-testnet-ng" caPkgs."cardano-testnet-${node-pre-release}")
+              (mkPkg "cardano-testnet-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.cardano-testnet)
               (mkPkg "cardano-tracer" caPkgs."cardano-tracer-${node-release}")
-              (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-${node-pre-release}")
+              # (mkPkg "cardano-tracer-ng" caPkgs."cardano-tracer-${node-pre-release}")
+              (mkPkg "cardano-tracer-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.cardano-tracer)
               (mkPkg "cardano-wallet" (caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2025-03-31-1649791
                 // {
                   pname = "cardano-wallet";
@@ -513,11 +518,14 @@ in
               (mkPkg "cc-sign" caPkgs."cc-sign-${credential-manager-release}")
               (mkPkg "colmena" localFlake.inputs.colmena.packages.${system}.colmena)
               (mkPkg "db-analyser" caPkgs."db-analyser-${node-release}")
-              (mkPkg "db-analyser-ng" caPkgs."db-analyser-${node-pre-release}")
+              # (mkPkg "db-analyser-ng" caPkgs."db-analyser-${node-pre-release}")
+              (mkPkg "db-analyser-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.db-analyser)
               (mkPkg "db-synthesizer" caPkgs."db-synthesizer-${node-release}")
-              (mkPkg "db-synthesizer-ng" caPkgs."db-synthesizer-${node-pre-release}")
+              # (mkPkg "db-synthesizer-ng" caPkgs."db-synthesizer-${node-pre-release}")
+              (mkPkg "db-synthesizer-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.db-synthesizer)
               (mkPkg "db-truncater" caPkgs."db-truncater-${node-release}")
-              (mkPkg "db-truncater-ng" caPkgs."db-truncater-${node-pre-release}")
+              # (mkPkg "db-truncater-ng" caPkgs."db-truncater-${node-pre-release}")
+              (mkPkg "db-truncater-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.db-truncater)
               (mkPkg "isd" caPkgs.isd-isd-project-isd-v0-5-1-51d52a2)
               (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v1-46-0-6a1799e)
               (mkPkg "metadata-server" caPkgs."metadata-server-${metadata-server-release}")
@@ -530,7 +538,8 @@ in
               (mkPkg "mithril-signer-ng" (recursiveUpdate caPkgs."mithril-signer-${mithril-pre-release}" {meta.mainProgram = "mithril-signer";}))
               (mkPkg "orchestrator-cli" caPkgs."orchestrator-cli-${credential-manager-release}")
               (mkPkg "snapshot-converter" caPkgs."snapshot-converter-${node-release}")
-              (mkPkg "snapshot-converter-ng" caPkgs."snapshot-converter-${node-pre-release}")
+              # (mkPkg "snapshot-converter-ng" caPkgs."snapshot-converter-${node-pre-release}")
+              (mkPkg "snapshot-converter-ng" localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.snapshot-converter)
               (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs."token-metadata-creator-${metadata-server-release}" {meta.mainProgram = "token-metadata-creator";}))
               (mkPkg "tx-bundle" caPkgs."tx-bundle-${credential-manager-release}")
             ];
