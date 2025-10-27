@@ -21,12 +21,16 @@ with lib; rec {
           cp -v "${cardano-deployment}/$i" "$out/config/$ENV/''${i#"$ENV-"}"
         done
 
-        # Adjust genesis file, config and config-bp refs
-        for i in config config-bp db-sync-config; do
+        # Adjust genesis file, config refs
+        for i in config config-legacy db-sync-config; do
           if [ -f "$out/config/$ENV/$i.json" ]; then
             sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
           fi
         done
+
+        # Normalize the topology file peer snapshot ref for per ENV dir placement
+        ${jq}/bin/jq '.peerSnapshotFile = "peer-snapshot.json"' < "$out/config/$ENV/topology.json" > "$ENV-topology.json"
+        mv -v "$ENV-topology.json" "$out/config/$ENV/topology.json"
 
         # Adjust index.html file refs
         sed -i "s|$ENV-|config/$ENV/|g" "$out/index.html"
