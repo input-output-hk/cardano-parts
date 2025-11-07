@@ -11,8 +11,12 @@
 #   flake.cardano-parts.cluster.infra.aws.region
 #   flake.cardano-parts.cluster.infra.aws.regions
 #   flake.cardano-parts.cluster.infra.generic.abortOnMissingIpModule
+#   flake.cardano-parts.cluster.infra.generic.costCenter
+#   flake.cardano-parts.cluster.infra.generic.environment
 #   flake.cardano-parts.cluster.infra.generic.function
 #   flake.cardano-parts.cluster.infra.generic.organization
+#   flake.cardano-parts.cluster.infra.generic.owner
+#   flake.cardano-parts.cluster.infra.generic.project
 #   flake.cardano-parts.cluster.infra.generic.repo
 #   flake.cardano-parts.cluster.infra.generic.tribe
 #   flake.cardano-parts.cluster.infra.generic.warnOnMissingIpModule
@@ -223,6 +227,35 @@ flake @ {
         default = true;
       };
 
+      costCenter = mkOption {
+        type = optionCheck "string" "infra.generic.costCenter" "str";
+        description = mdDoc ''
+          The cardano-parts cluster infra generic costCenter.
+
+          By default, the costCenter string for tagging cloud resources is
+          treated as a secret and must be added to the
+          secrets/tf/cluster.tfvars file.
+
+          The string declared for this option should be the name of the secret
+          var stored in the cluster.tfvars file.
+
+          This option is required by IOG IT/Finance.
+        '';
+        example = "tag_costCenter";
+        default = null;
+      };
+
+      environment = mkOption {
+        type = optionCheck "string" "infra.generic.environment" "str";
+        description = mdDoc ''
+          The cardano-parts cluster infra generic environment.
+
+          This option is required by IOG IT/Finance.
+        '';
+        example = "testnets";
+        default = null;
+      };
+
       function = mkOption {
         type = optionCheck "string" "infra.generic.function" "str";
         description = mdDoc "The cardano-parts cluster infra generic function.";
@@ -234,6 +267,28 @@ flake @ {
         type = optionCheck "string" "infra.generic.organization" "str";
         description = mdDoc "The cardano-parts cluster infra generic organization.";
         example = "iog";
+        default = null;
+      };
+
+      owner = mkOption {
+        type = optionCheck "string" "infra.generic.owner" "str";
+        description = mdDoc ''
+          The cardano-parts cluster infra generic owner.
+
+          This option is required by IOG IT/Finance.
+        '';
+        example = "ioe";
+        default = null;
+      };
+
+      project = mkOption {
+        type = optionCheck "string" "infra.generic.project" "str";
+        description = mdDoc ''
+          The cardano-parts cluster infra generic project.
+
+          This option is required by IOG IT/Finance.
+        '';
+        example = "cardano-playground";
         default = null;
       };
 
