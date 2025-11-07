@@ -53,7 +53,7 @@ def createTransaction(start, end, txin, payments_txouts, utxo_address, utxo_sign
 
     signed_tx = signTx(tx_prefix, utxo_signing_key_str)
 
-    p = subprocess.run([cardanoCliStr(), "latest", "transaction", "txid", "--tx-file", signed_tx], capture_output=True, text=True)
+    p = subprocess.run([cardanoCliStr(), "latest", "transaction", "txid", "--output-text", "--tx-file", signed_tx], capture_output=True, text=True)
     new_txin = p.stdout.rstrip()
     return (f"{new_txin}#0", tx_out_amount, fee)
 
@@ -66,6 +66,7 @@ def estimateFeeTx(txbody, txin_count, txout_count, pparams) -> int:
         "--tx-out-count", str(txout_count),
         "--witness-count", "1",
         "--protocol-params-file", pparams,
+        "--output-text",
         "--tx-body-file", txbody]
 
     p = subprocess.run(cmd, capture_output=True, text=True)

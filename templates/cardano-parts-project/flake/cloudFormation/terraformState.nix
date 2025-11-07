@@ -12,23 +12,45 @@ with lib; {
           Key = n;
           Value = v;
         }) {
-          inherit (config.flake.cardano-parts.cluster.infra.generic) organization tribe function repo;
-          environment = "generic";
+          inherit
+            (config.flake.cardano-parts.cluster.infra.generic)
+            environment
+            function
+            organization
+            owner
+            project
+            repo
+            tribe
+            ;
         })
       ++ [
         {
           Key = "Name";
           Value = name;
         }
+        {
+          Key = "costCenter";
+          Value = {
+            Ref = "costCenter";
+          };
+        }
       ];
   in {
     AWSTemplateFormatVersion = "2010-09-09";
     Description = "Terraform state handling";
 
+    # The costCenter parameter will be passed to the configuration via a secrets file.
+    # For details, see the just recipe: cf
+    Parameters = {
+      costCenter = {
+        Type = "String";
+        Description = "The costCenter tag";
+      };
+    };
+
     # Resources here will be created in the AWS_REGION and AWS_PROFILE from your
     # environment variables.
     # Execute this using: `just cf terraformState`
-
     Resources = {
       kmsKey = {
         Type = "AWS::KMS::Key";
