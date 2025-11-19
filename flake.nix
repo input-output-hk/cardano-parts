@@ -66,8 +66,8 @@
     # Until blockperf detail fix is merged to master upstream
     blockperf.url = "github:johnalotoski/blockperf/jl/fix-detail";
 
-    # Until cardano-node 10.6.0 is tagged
-    # cardano-node-10-6-0.url = "github:IntersectMBO/cardano-node";
+    # Until cardano-node 10.5.2 is tagged
+    cardano-node-10-5-2.url = "github:IntersectMBO/cardano-node/mw/release/10.5";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
