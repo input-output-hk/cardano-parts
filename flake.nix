@@ -60,9 +60,14 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
-    # iohk-nix.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
-    # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/iohk-nix";
+    # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/10.6.0-pre-updates";
+
+    # Until blockperf detail fix is merged to master upstream
+    blockperf.url = "github:johnalotoski/blockperf/jl/fix-detail";
+
+    # Until cardano-node 10.6.0 is tagged
+    # cardano-node-10-6-0.url = "github:IntersectMBO/cardano-node";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
@@ -96,14 +101,12 @@
     };
 
     cardano-node-service = {
-      # Until 10.6.0 tag is available
       url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.0";
       flake = false;
     };
 
@@ -123,26 +126,22 @@
     };
 
     cardano-submit-api-service = {
-      # Until 10.6.0 tag is available
       url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-submit-api-service-ng = {
-      # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.0";
       flake = false;
     };
 
     cardano-tracer-service = {
-      # Until 10.6.0 tag is available
       url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
       flake = false;
     };
 
     cardano-tracer-service-ng = {
-      # Until 10.6.0 tag is available
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.0";
       flake = false;
     };
 

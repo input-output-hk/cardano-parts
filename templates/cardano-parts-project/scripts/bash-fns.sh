@@ -2,13 +2,6 @@
 #
 # Various bash helper fns which aren't used enough to move to just recipes.
 
-# This can be used to simplify ssh sessions, rsync, ex:
-#   ssh -o "$(ssm-proxy-cmd "$REGION")" "$INSTANCE_ID"
-ssm-proxy-cmd() {
-  echo "ProxyCommand=sh -c 'aws --region $1 ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p'"
-}
-
-
 # A handy transaction submission function with mempool monitoring.
 # CARDANO_NODE_{NETWORK_ID,SOCKET_PATH}, TESTNET_MAGIC should already be exported.
 submit() (
@@ -22,7 +15,7 @@ submit() (
 
   EXISTS="true"
   while [ "$EXISTS" = "true" ]; do
-    EXISTS=$(cardano-cli latest query tx-mempool tx-exists "$TXID" | jq -re .exists)
+    EXISTS=$(cardano-cli latest query tx-mempool tx-exists "$TXID" | jq -re .exists || true)
     if [ "$EXISTS" = "true" ]; then
       echo "The transaction still exists in the mempool, sleeping 5s: $TXID"
     else
@@ -205,4 +198,31 @@ return-utxo() (
   PROMPT
 
   submit "$BASENAME.signed"
+)
+
+# A handy faucet submission function with mempool monitoring, usable on custom networks.
+# CARDANO_NODE_{NETWORK_ID,SOCKET_PATH}, TESTNET_MAGIC should already be exported.
+# SEND_ADDR, LOVELACE, RICH_ADDR and RICH vars need to be provided.
+faucet() (
+  SEND_ADDR="$1"
+  LOVELACE="$2"
+
+  UTXOS=$(cardano-cli query utxo --address "$RICH_ADDR")
+  UTXO=$(jq -r 'to_entries | max_by(.value.value.lovelace) | { (.key): .value }' <<< "$UTXOS")
+  UTXO_TX=$(jq -r 'keys[0]' <<< "$UTXO")
+
+  cardano-cli latest transaction build \
+    --tx-in "$UTXO_TX" \
+    --tx-out "$SEND_ADDR+$LOVELACE" \
+    --change-address "$RICH_ADDR" \
+    --testnet-magic "$TESTNET_MAGIC" \
+    --out-file faucet.txbody
+
+  cardano-cli latest transaction sign \
+    --tx-body-file faucet.txbody \
+    --signing-key-file "$RICH.skey" \
+    --testnet-magic "$TESTNET_MAGIC" \
+    --out-file faucet.txsigned
+
+  submit faucet.txsigned
 )

@@ -1,6 +1,6 @@
 /*.cert
 /cloudFormation/
-/.direnv
+/.direnv*
 /.envrc.local
 /.gcroots
 /*.log

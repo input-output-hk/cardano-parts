@@ -50,11 +50,36 @@
         };
 
         environment = {
+          shellAliases = {
+            # Remote to remote rsync over ssm is likely to be bandwidth limited
+            # due to proxying. Consider using wush instead. An alias is used in
+            # preference over bash function for better discoverability.
+            #
+            # Example usage, where the hostname in the rsync args is the EC2 ID:
+            #   rsync-ssm "$REGION" "$RSYNC_ARGS[@]"
+            rsync-ssm = ''
+              rsyncSsm(){
+                if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
+                  echo "If needed, short term credentials from the deployer can be generated with \"just aws-sso-export\" and sourced on this machine."
+                fi
+                REGION="$1"
+                ARGS="''${@:2}"
+                rsync -e "ssh -o $(ssm-proxy-rsync $REGION)" ''${ARGS[@]};
+              }
+              rsyncSsm "$@" \
+            '';
+          };
+
+          # These can be discovered with `declare -F` for bash function name only and `declare -f` for code
           shellInit = ''
-            # This can be used to simplify ssh sessions, rsync, ex:
-            #   ssh -o "$(ssm-proxy-cmd "$REGION")" "$INSTANCE_ID"
+            # This can be used to simplify ssh sessions, ex: `ssh -o "$(ssm-proxy-cmd "$REGION")" "$INSTANCE_ID"`
             ssm-proxy-cmd() {
               echo "ProxyCommand=sh -c 'aws --region $1 ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p'"
+            }
+
+            # This is used to simplify rsync sessions with the rsync-ssm alias: `rsync-ssm "$REGION" "$RSYNC_ARGS[@]"`
+            ssm-proxy-rsync () {
+              echo "ProxyCommand='sh -c \"aws --region $1 ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p\"'"
             }
           '';
 
@@ -100,6 +125,7 @@
             tcpdump
             tree
             wget
+            wush
           ];
         };
 

@@ -3,15 +3,12 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
+#   flake.cardano-parts.lib.opsLib
 #   flake.cardano-parts.lib.topologyLib
 #
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.lib.<...>
-{
-  config,
-  lib,
-  ...
-}: let
+{lib, ...}: let
   inherit (lib) mdDoc mkDefault mkOption types;
   inherit (types) attrsOf anything functionTo submodule;
 

@@ -992,7 +992,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   EXISTS="true"
 
   while [ "$EXISTS" = "true" ]; do
-    EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists)
+    EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists || true)
     if [ "$EXISTS" = "true" ]; then
       echo "Vote transaction still exists in the mempool, sleeping 5s: $TXID"
     else

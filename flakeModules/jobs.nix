@@ -258,6 +258,7 @@ in {
             #   [$TEMPLATE_DIR]
             #   [$TESTNET_MAGIC]
             #   [$UNSTABLE]
+            #   [$UNSTABLE_LIB]
             #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
@@ -275,6 +276,7 @@ in {
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
+              echo "$TEMPLATE_DIR"
             else
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix}/cardano-lib/testnet-template"}
             fi
@@ -285,7 +287,7 @@ in {
             ENV="''${ENV:-custom}"
 
             mkdir -p "$GENESIS_DIR"
-            "''${CARDANO_CLI_NO_ERA[@]}" legacy genesis create-cardano \
+            "''${CARDANO_CLI_NO_ERA[@]}" legacy genesis create-cardano --conway-era \
               --genesis-dir "$GENESIS_DIR" \
               --gen-genesis-keys "$NUM_GENESIS_KEYS" \
               --gen-utxo-keys 1 \

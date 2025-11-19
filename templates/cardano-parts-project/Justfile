@@ -284,8 +284,17 @@ cardano-testnet isNg *ARGS:
 cf STACKNAME:
   #!/usr/bin/env nu
   mkdir cloudFormation
+  let secretName = (nix eval --raw '.#cardano-parts.cluster.infra.generic.costCenter')
+  let costCenter = (
+    just sops-decrypt-binary secrets/tf/cluster.tfvars
+    | lines
+    | where { |it| $it =~ $secretName }
+    | parse $"($secretName) = \"{secret}\""
+    | get 0.secret
+    | to text
+  )
   nix eval --json '.#cloudFormation.{{STACKNAME}}' | from json | save --force 'cloudFormation/{{STACKNAME}}.json'
-  rain deploy --debug --termination-protection --yes ./cloudFormation/{{STACKNAME}}.json
+  rain deploy --debug --params costCenter=($costCenter) --termination-protection ./cloudFormation/{{STACKNAME}}.json
 
 # Prep dbsync for delegation analysis
 dbsync-prep ENV HOST ACCTS="501":
@@ -401,11 +410,11 @@ dedelegate-pools ENV *IDXS=null:
       --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
       --delegation-index "$i"
 
-    TXID=$(eval "$CARDANO_CLI" latest transaction txid --tx-file tx-deleg-account-$i-restore.txsigned)
+    TXID=$(eval "$CARDANO_CLI" latest transaction txid --tx-file tx-deleg-account-$i-restore.txsigned | jq -r .txhash)
     EXISTS="true"
 
     while [ "$EXISTS" = "true" ]; do
-      EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists)
+      EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists || true)
       if [ "$EXISTS" = "true" ]; then
         echo "Pool de-delegation index $i tx still exists in the mempool, sleeping 5s: $TXID"
       else

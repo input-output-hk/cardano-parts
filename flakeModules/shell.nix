@@ -11,10 +11,12 @@
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultHooks
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultLintPkg
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultVars
+#   perSystem.cardano-parts.shell.<global|<id>>.defaultZshCompFpathLoading
 #   perSystem.cardano-parts.shell.<global|<id>>.enableFormatter
 #   perSystem.cardano-parts.shell.<global|<id>>.enableHooks
 #   perSystem.cardano-parts.shell.<global|<id>>.enableLint
 #   perSystem.cardano-parts.shell.<global|<id>>.enableVars
+#   perSystem.cardano-parts.shell.<global|<id>>.enableZshCompFpathLoading
 #   perSystem.cardano-parts.shell.<global|<id>>.extraPkgs
 #   perSystem.cardano-parts.shell.<global|<id>>.pkgs
 #
@@ -41,7 +43,7 @@
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib.types) anything attrs attrsOf bool enum nullOr listOf package str submodule;
+  inherit (lib.types) anything attrs attrsOf bool enum nullOr listOf package str lines submodule;
 in
   with builtins;
   with lib; {
@@ -112,7 +114,7 @@ in
             };
 
             defaultHooks = mkOption {
-              type = globalType isGlobal str;
+              type = globalType isGlobal lines;
               description = mdDoc "The cardano-parts default git and shell hooks.";
               default = globalDefault isGlobal ''
                 if ${isPartsRepo} && [ -d .git/hooks ]; then
@@ -152,6 +154,48 @@ in
               };
             };
 
+            defaultZshCompFpathLoading = mkOption {
+              description = mdDoc "The cardano-parts default zsh completion fpath loading hook.";
+              default = globalDefault isGlobal (packages: ''
+                  # Direnv use prevents the dynamic loading of zsh completions,
+                  # requiring a zsh "reentry" upon arriving in the devShell.
+                  # (ie: `zsh` or `exec zsh -l`, etc.
+                  #
+                  # If using plain nix develop, zsh "reentry" is not required.
+                  export ZDOTDIR=$PWD/.direnv-zsh
+                  mkdir -p "$ZDOTDIR"
+                  rm -f "$ZDOTDIR/.zcompdump"*
+
+                  cat > "$ZDOTDIR/completions.zsh" <<'EOF'
+                for p in ${concatStringsSep " " (map (p: "${p}") packages)}; do
+                  if [ -d "$p/share/zsh/site-functions" ]; then
+                    fpath=("$p/share/zsh/site-functions" $fpath)
+                  fi
+                done
+                autoload -U compinit
+                compinit
+                EOF
+
+                  cat > "$ZDOTDIR/.zshrc" <<'EOF'
+                if [ -f "$HOME/.zshrc" ]; then
+                  source "$HOME/.zshrc"
+                fi
+
+                source "$ZDOTDIR/completions.zsh"
+                autoload -U compinit
+                compinit -C
+
+                alias zsh-base='unset ZDOTDIR; exec zsh -l'
+                echo
+                echo "To return to your normal zsh without devShell fpath modifications, run \"zsh-base\" before leaving the repo directory,"
+                echo "otherwise, close and open a new zsh shell to avoid lingering devShell command completions."
+                echo
+                echo "To re-enter the completions in this devShell with direnv, run \"zsh\" or similar."
+                echo
+                EOF
+              '');
+            };
+
             enableFormatter = mkOption {
               type = globalType isGlobal bool;
               description = mdDoc "Enable default cardano-parts formatter in the devShells.";
@@ -173,6 +217,12 @@ in
             enableVars = mkOption {
               type = globalType isGlobal bool;
               description = mdDoc "Enable default cardano-parts env vars in the devShells.";
+              default = globalDefault isGlobal true;
+            };
+
+            enableZshCompFpathLoading = mkOption {
+              type = globalType isGlobal bool;
+              description = mdDoc "Enable default cardano-parts zsh completion loading into fpath in zsh devShells.";
               default = globalDefault isGlobal true;
             };
 
@@ -241,6 +291,12 @@ in
                 description = mdDoc "Minimal devShell";
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
+                    # Bash interactive needs to be included, otherwise, the
+                    # default devShell uses a bash without progcomp compiled
+                    # and devShell bins will fail to auto-complete on file
+                    # completions.
+                    bashInteractive
+
                     alejandra
                     bc
                     curl
@@ -421,12 +477,17 @@ in
 
           devShells = let
             mkShell = id:
-              pkgs.mkShell ({
+              pkgs.mkShell (rec {
                   packages = allPkgs id;
                   shellHook =
                     # Add optional git/shell and formatter hooks
                     selectScope id optionalString "enableHooks" "defaultHooks"
                     + selectScope id optionalAttrs "enableFormatter" "defaultFormatterHook"
+                    + (selectScope id (cond: as:
+                      if cond
+                      then as
+                      else _: "") "enableZshCompFpathLoading" "defaultZshCompFpathLoading")
+                    packages
                     + ''
                       [ -z "$NOMENU" ] && menu
                     '';
