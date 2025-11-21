@@ -475,10 +475,10 @@ in
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2543-1-hotfix-5d5571e";
-          mithril-pre-release = "input-output-hk-mithril-unstable-59bf453";
+          mithril-pre-release = "input-output-hk-mithril-unstable-2943337";
 
-          # node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-1-ca1ec27";
-          node-release = pkg: localFlake.inputs.cardano-node-10-5-2.packages.x86_64-linux.${pkg};
+          node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-2-1ec98e9";
+          # node-release = pkg: localFlake.inputs.cardano-node-10-5-2.packages.x86_64-linux.${pkg};
 
           node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-0-f5ac0eb";
           # node-pre-release = pkg: localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.${pkg};
