@@ -36,6 +36,7 @@
 #   perSystem.cardano-parts.pkgs.cardano-db-sync
 #   perSystem.cardano-parts.pkgs.cardano-db-sync-ng
 #   perSystem.cardano-parts.pkgs.cardano-db-tool
+#   perSystem.cardano-parts.pkgs.cardano-db-tool-ng
 #   perSystem.cardano-parts.pkgs.cardano-faucet
 #   perSystem.cardano-parts.pkgs.cardano-faucet-ng
 #   perSystem.cardano-parts.pkgs.cardano-node
@@ -465,7 +466,7 @@ in
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
           dbsync-release = "input-output-hk-cardano-db-sync-13-6-0-5-cb61094";
-          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-6-0-5-cb61094";
+          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-6-0-6-4a0a114";
 
           faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-1-2cccf6d";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
