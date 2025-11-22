@@ -66,9 +66,6 @@
     # Until blockperf detail fix is merged to master upstream
     blockperf.url = "github:johnalotoski/blockperf/jl/fix-detail";
 
-    # Until cardano-node 10.6.0 is tagged
-    # cardano-node-10-6-0.url = "github:IntersectMBO/cardano-node";
-
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
@@ -82,7 +79,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.6.0.5";
+      url = "github:IntersectMBO/cardano-db-sync/13.6.0.6";
       flake = false;
     };
 
@@ -91,12 +88,12 @@
     # flakeModule options and do not necessarily reflect the software
     # versions running on those nixos services.
     cardano-db-sync-service = {
-      url = "github:IntersectMBO/cardano-db-sync";
+      url = "github:IntersectMBO/cardano-db-sync/13.6.0.5";
       flake = false;
     };
 
     cardano-db-sync-service-ng = {
-      url = "github:IntersectMBO/cardano-db-sync";
+      url = "github:IntersectMBO/cardano-db-sync/13.6.0.6";
       flake = false;
     };
 
