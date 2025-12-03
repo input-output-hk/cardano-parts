@@ -476,12 +476,12 @@ in
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2543-1-hotfix-5d5571e";
-          mithril-pre-release = "input-output-hk-mithril-unstable-2943337";
+          mithril-pre-release = "input-output-hk-mithril-unstable-78a2890";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-3-6c034ec";
           # node-release = pkg: localFlake.inputs.cardano-node-10-5-2.packages.x86_64-linux.${pkg};
 
-          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-0-f5ac0eb";
+          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-1-0c220b2";
           # node-pre-release = pkg: localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.${pkg};
         in
           submodule {
@@ -498,8 +498,8 @@ in
               (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-${dbsync-pre-release}")
               (mkPkg "cardano-faucet" faucet)
               (mkPkg "cardano-faucet-ng" faucet-ng)
-              (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "10.5.2";}))
-              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "10.6.0";}))
+              (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "10.5.3";}))
+              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "10.6.1";}))
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-11-2-df5971a)
               (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-29-0-2ef95e1)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")
