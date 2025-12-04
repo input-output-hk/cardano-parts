@@ -489,11 +489,11 @@
                           if [ "$DIGEST" = "latest" ]; then
                             # If digest is "latest" search through all available recent snaps for signing verification.
                             SNAPSHOTS_JSON=$(mithril-client cardano-db snapshot list --json)
-                            HASHES=$(jq -r '.[] | .certificate_hash' <<< "$SNAPSHOTS_JSON")
+                            HASHES=$(jq -r '.[] | "\(.certificate_hash) \(.hash)"' <<< "$SNAPSHOTS_JSON")
                           else
                             # Otherwise, only attempt the specifically declared snapshot digest
                             SNAPSHOTS_JSON=$(mithril-client cardano-db snapshot show "$DIGEST" --json | jq -s)
-                            HASHES=$(jq -r --arg DIGEST "$DIGEST" '.[] | select(.digest == $DIGEST) | .certificate_hash' <<< "$SNAPSHOTS_JSON")
+                            HASHES=$(jq -r --arg DIGEST "$DIGEST" '.[] | select(.digest == $DIGEST) | "\(.certificate_hash) \(.hash)"' <<< "$SNAPSHOTS_JSON")
                           fi
 
                           SNAPSHOTS_COUNT=$(jq '. | length' <<< "$SNAPSHOTS_JSON")
@@ -501,13 +501,13 @@
                           VERIFIED_SIGNED="false"
                           IDX=0
 
-                          while read -r HASH; do
+                          while read -r CERT_HASH DIGEST; do
                             ((IDX+=1))
-                            RESPONSE=$(curl -s "$AGGREGATOR_ENDPOINT/certificate/$HASH")
+                            RESPONSE=$(curl -s "$AGGREGATOR_ENDPOINT/certificate/$CERT_HASH")
                             SIGNERS=$(jq -r '.metadata.signers[] | .party_id' <<< "$RESPONSE")
                             if VERIFIED_BY=$(grep -E "$VERIFYING_POOLS" <<< "$SIGNERS"); then
-                              VERIFIED_HASH="$HASH"
-                              VERIFIED_DIGEST=$(jq -r '.protocol_message.message_parts.snapshot_digest' <<< "$RESPONSE")
+                              VERIFIED_HASH="$CERT_HASH"
+                              VERIFIED_DIGEST="$DIGEST"
                               VERIFIED_SEALED=$(jq -r '.metadata.sealed_at' <<< "$RESPONSE")
                               VERIFIED_SIGNED="true"
                               break
