@@ -622,7 +622,7 @@ save-ssh-config:
   tofu workspace select -or-create cluster
   let tf = (tofu show -json | from json)
   let key = ($tf.values.root_module.resources | where type == local_file and name == ssh_config)
-  $key.values.content | to text | save --force .ssh_config
+  $key.values.content | (parse --regex '(?ms)(.*)\n').capture0 | to text | save --force .ssh_config
   chmod 0600 .ssh_config
 
 # Set the shell's default node env
