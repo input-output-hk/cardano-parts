@@ -60,8 +60,7 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
-    # iohk-nix-ng.url = "path:/home/jlotoski/work/iohk/iohk-nix-wt/jl/10.6.0-pre-updates";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/coot/new-tracing-system";
 
     # Until blockperf detail fix is merged to master upstream
     blockperf.url = "github:johnalotoski/blockperf/jl/fix-detail";
