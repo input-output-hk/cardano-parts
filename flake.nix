@@ -105,6 +105,7 @@
     cardano-node-service-ng = {
       url = "github:IntersectMBO/cardano-node/10.6.0";
       flake = false;
+      
     };
 
     cardano-metadata-service = {
@@ -113,7 +114,7 @@
     };
 
     cardano-ogmios-service = {
-      url = "github:input-output-hk/cardano-ogmios/ogmios-6-3-0";
+      url = "github:input-output-hk/cardano-ogmios";
       flake = false;
     };
 
