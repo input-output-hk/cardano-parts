@@ -1,0 +1,110 @@
+name: Process Compose Tests
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional PR number, for maintainer use
+        required: false
+  push:
+    branches:
+      - main
+  pull_request:
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  # Node Startup Tests (all environments, no Mithril)
+  test-node:
+    name: "Test: cardano-node startup"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect PR context
+        id: detect-pr
+        uses: ./.github/actions/detect-pr
+      - name: Checkout and merge PR
+        uses: ./.github/actions/checkout-merge
+        with:
+          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
+          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
+          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = fetch-closure flakes nix-command
+            substituters = https://cache.iog.io https://cache.nixos.org/
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      - name: Test node startup (mainnet)
+        run: nix run .#test-process-compose-node-mainnet
+      - name: Test node startup (preprod)
+        run: nix run .#test-process-compose-node-preprod
+      - name: Test node startup (preview)
+        run: nix run .#test-process-compose-node-preview
+
+  # DB-Sync Integration Tests (all environments, no Mithril)
+  test-dbsync:
+    name: "Test: db-sync integration"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect PR context
+        id: detect-pr
+        uses: ./.github/actions/detect-pr
+      - name: Checkout and merge PR
+        uses: ./.github/actions/checkout-merge
+        with:
+          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
+          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
+          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = fetch-closure flakes nix-command
+            substituters = https://cache.iog.io https://cache.nixos.org/
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      - name: Test db-sync integration (mainnet)
+        run: nix run .#test-process-compose-dbsync-mainnet
+      - name: Test db-sync integration (preprod)
+        run: nix run .#test-process-compose-dbsync-preprod
+      - name: Test db-sync integration (preview)
+        run: nix run .#test-process-compose-dbsync-preview
+
+  # Mithril Bootstrap Tests (all environments, watches for download to start)
+  test-mithril:
+    name: "Test: Mithril bootstrap"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect PR context
+        id: detect-pr
+        uses: ./.github/actions/detect-pr
+      - name: Checkout and merge PR
+        uses: ./.github/actions/checkout-merge
+        with:
+          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
+          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
+          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = fetch-closure flakes nix-command
+            substituters = https://cache.iog.io https://cache.nixos.org/
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      - name: Test Mithril bootstrap (mainnet)
+        run: nix run .#test-process-compose-node-mithril-mainnet
+      - name: Test Mithril bootstrap (preprod)
+        run: nix run .#test-process-compose-node-mithril-preprod
+      - name: Test Mithril bootstrap (preview)
+        run: nix run .#test-process-compose-node-mithril-preview
