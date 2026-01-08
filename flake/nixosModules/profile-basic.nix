@@ -104,6 +104,9 @@
             self'.packages.isd
             jiq
             jq
+            # Because there's a bug in lnav 0.12.4, when used in tmux.
+            # NOTE: Next update of nixpkgs-unstable will get the version that fixes the tmux bug.
+            inputs.nixpkgs-unstable.legacyPackages.${system}.lnav
             lsof
             nano
             # For nix >= 2.24 build compatibility
