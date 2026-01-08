@@ -14,11 +14,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1747252629,
-        "narHash": "sha256-3VbgOFf3pEo+HGB5vIPxOwe4R2M7qU+VJ+5iS4hBKqI=",
+        "lastModified": 1767897653,
+        "narHash": "sha256-RyzerfnEmoCd6tWgXzbl+X5ioSlYDLaxPVBsOcLFXFg=",
         "owner": "input-output-hk",
         "repo": "auth-keys-hub",
-        "rev": "dd1d9361407457d14bab8f946d10062c487304df",
+        "rev": "0d4fb20e6a57e29bfa5da5ebeea18670dfecc8a8",
         "type": "github"
       },
       "original": {
