@@ -268,11 +268,13 @@ flake @ {inputs, ...}: {
         inputs.services-flake.processComposeModules.default
       ];
 
-      inherit preHook;
-
-      apiServer = false;
+      cli = {
+        inherit preHook;
+        environment = {
+          PC_NO_SERVER = true;
+        };
+      };
       package = self'.packages.process-compose;
-      tui = true;
 
       settings = {
         log_location = "${commonLogDir}/node-stack.log";
@@ -342,11 +344,13 @@ flake @ {inputs, ...}: {
         inputs.services-flake.processComposeModules.default
       ];
 
-      inherit preHook;
-
-      apiServer = false;
+      cli = {
+        inherit preHook;
+        environment = {
+          PC_NO_SERVER = true;
+        };
+      };
       package = self'.packages.process-compose;
-      tui = true;
 
       services.postgres."postgres-${env'}" = {
         inherit socketDir;
@@ -571,7 +575,7 @@ flake @ {inputs, ...}: {
         envList = [env];
         startDisabled = false;
       }) {
-        tui = false;
+        cli.environment.PC_DISABLE_TUI = true;
         settings.processes = {
           access-instructions.disabled = true;
           "cardano-node-${env}${envVer env "isNodeNg"}-query".disabled = true;
@@ -599,7 +603,7 @@ flake @ {inputs, ...}: {
       socketDir = "$TMPDIR/process-compose/${env'}";
     in
       recursiveUpdate (mkDbsyncStack env) {
-        tui = false;
+        cli.environment.PC_DISABLE_TUI = true;
         settings.processes = {
           access-instructions.disabled = true;
           "cardano-node-${env'}${envVer env' "isNodeNg"}-query".disabled = true;
@@ -644,7 +648,8 @@ flake @ {inputs, ...}: {
       availability = {
         exit_on_end = true;
       };
-      depends_on."cardano-node-${env}${envVer env "isNodeNg"}".condition = "process_healthy";
+      # process_log_ready triggers when ready_log_line pattern is matched
+      depends_on."cardano-node-${env}${envVer env "isNodeNg"}".condition = "process_log_ready";
     };
 
     # Node test stack with Mithril enabled - watches for download log line, then exits
@@ -653,17 +658,11 @@ flake @ {inputs, ...}: {
         envList = [env];
         startDisabled = false;
       }) {
-        tui = false;
+        cli.environment.PC_DISABLE_TUI = true;
         settings.processes = {
           access-instructions.disabled = true;
           "cardano-node-${env}${envVer env "isNodeNg"}-query".disabled = true;
-          "cardano-node-${env}${envVer env "isNodeNg"}".readiness_probe = {
-            initial_delay_seconds = 5;
-            period_seconds = 2;
-            timeout_seconds = 5;
-            failure_threshold = 150;
-            exec.command = "grep -q '${mithrilLogPatterns.${env}}' ${stateDir}/${env}/cardano-node/node.log";
-          };
+          "cardano-node-${env}${envVer env "isNodeNg"}".ready_log_line = mithrilLogPatterns.${env};
           "test-mithril-success" = mkTestMithrilSuccess env;
         };
       };
