@@ -73,6 +73,7 @@ flake @ {inputs, ...}: {
     # of node state at ${XDG_DATA_HOME:=$HOME/.local/share}/$REPO
     # in the future
     stateDir = "./.run";
+    testStateDir = "./.run-test";
     commonLogDir = "$TMPDIR/process-compose/";
 
     preHook = ''
@@ -92,7 +93,7 @@ flake @ {inputs, ...}: {
       fi
     '';
 
-    mithril-client-bootstrap = env: let
+    mithril-client-bootstrap' = env: stateDir': let
       inherit ((envs env).${toUnderscore env}) mithrilAggregatorEndpointUrl mithrilAncillaryVerificationKey mithrilGenesisVerificationKey;
 
       isMithrilAncillary =
@@ -118,7 +119,7 @@ flake @ {inputs, ...}: {
 
         if [ -z "''${MITHRIL_DISABLE:-}" ] && [ -z "''${MITHRIL_DISABLE_${env}:-}" ]; then
           MITHRIL_CLIENT="${config.cardano-parts.pkgs."mithril-client-cli${envVer env "isMithrilNg"}"}/bin/mithril-client"
-          DB_DIR="${stateDir}/${env}/cardano-node/db"
+          DB_DIR="${stateDir'}/${env}/cardano-node/db"
           if ! [ -d "$DB_DIR" ]; then
             MITHRIL_SNAPSHOT_DIGEST_${env}="''${MITHRIL_SNAPSHOT_DIGEST_${env}:-latest}"
             DIGEST="$MITHRIL_SNAPSHOT_DIGEST_${env}"
@@ -207,34 +208,34 @@ flake @ {inputs, ...}: {
         fi
       '';
 
-    mkNodeProcess = env: namespace: {
+    mkNodeProcess = env: namespace: stateDir': {
       inherit namespace;
-      log_location = "${stateDir}/${env}/cardano-node/node.log";
+      log_location = "${stateDir'}/${env}/cardano-node/node.log";
       command = pkgs.writeShellApplication {
         name = "cardano-node-${env}${envVer env "isNodeNg"}";
         runtimeInputs = with pkgs; [curl gnugrep jq];
         text = ''
           # Mithril bootstrap code will follow if the environment supports mithril.
           # This can be disabled set setting either MITHRIL_DISABLE or MITHRIL_DISABLE_${env} env vars.
-          ${mithril-client-bootstrap env}
+          ${mithril-client-bootstrap' env stateDir'}
 
           ${config.cardano-parts.pkgs."cardano-node${envVer env "isNodeNg"}"}/bin/cardano-node run +RTS -N -RTS \
           --topology ${envCfgs' env}/config/${toUnderscore env}/topology.json \
-          --database-path ${stateDir}/${env}/cardano-node/db \
-          --socket-path ${stateDir}/${env}/cardano-node/node.socket \
+          --database-path ${stateDir'}/${env}/cardano-node/db \
+          --socket-path ${stateDir'}/${env}/cardano-node/node.socket \
           --config ${envCfgs' env}/config/${toUnderscore env}/config.json
         '';
       };
     };
 
-    mkCliProcess = env: namespace: {
+    mkCliProcess = env: namespace: stateDir': {
       inherit namespace;
-      log_location = "${stateDir}/${env}/cardano-node/cli.log";
+      log_location = "${stateDir'}/${env}/cardano-node/cli.log";
       command = pkgs.writeShellApplication {
         name = "cardano-node-${env}${envVer env "isNodeNg"}-query";
         text = ''
           CLI="${config.cardano-parts.pkgs."cardano-cli${envVer env "isNodeNg"}"}/bin/cardano-cli"
-          SOCKET="${stateDir}/${env}/cardano-node/node.socket"
+          SOCKET="${stateDir'}/${env}/cardano-node/node.socket"
 
           while ! [ -S "$SOCKET" ]; do
             echo "$(date -u --rfc-3339=seconds): Waiting 5 seconds for a node socket at $SOCKET"
@@ -256,32 +257,36 @@ flake @ {inputs, ...}: {
       };
       environment = {
         CARDANO_NODE_NETWORK_ID = envBinCfgs.${env}.magic;
-        CARDANO_NODE_SOCKET_PATH = "${stateDir}/${env}/cardano-node/node.socket";
+        CARDANO_NODE_SOCKET_PATH = "${stateDir'}/${env}/cardano-node/node.socket";
       };
     };
 
     mkNodeStack' = {
       envList ? attrNames envBinCfgs,
       startDisabled ? true,
+      stateDir' ? stateDir,
     }: {
       imports = [
         inputs.services-flake.processComposeModules.default
       ];
 
-      inherit preHook;
-
-      apiServer = false;
+      cli = {
+        inherit preHook;
+        environment = {
+          PC_NO_SERVER = true;
+        };
+      };
       package = self'.packages.process-compose;
-      tui = true;
 
       settings = {
+        disable_env_expansion = false;
         log_location = "${commonLogDir}/node-stack.log";
         processes =
           foldl' (acc: env:
             recursiveUpdate acc
             {
-              "cardano-node-${env}${envVer env "isNodeNg"}" = mkNodeProcess env env // {disabled = startDisabled;};
-              "cardano-node-${env}${envVer env "isNodeNg"}-query" = mkCliProcess env env // {disabled = startDisabled;};
+              "cardano-node-${env}${envVer env "isNodeNg"}" = mkNodeProcess env env stateDir' // {disabled = startDisabled;};
+              "cardano-node-${env}${envVer env "isNodeNg"}-query" = mkCliProcess env env stateDir' // {disabled = startDisabled;};
             }) {}
           envList
           // {
@@ -308,7 +313,7 @@ flake @ {inputs, ...}: {
                   ${concatMapStringsSep "\n"
                     (env: ''
                       echo "${env}:"
-                      echo "  export CARDANO_NODE_SOCKET_PATH=${stateDir}/${env}/cardano-node/node.socket"
+                      echo "  export CARDANO_NODE_SOCKET_PATH=${stateDir'}/${env}/cardano-node/node.socket"
                       echo "  export CARDANO_NODE_NETWORK_ID=${envBinCfgs.${env}.magic}"
                       echo
                     '')
@@ -342,11 +347,13 @@ flake @ {inputs, ...}: {
         inputs.services-flake.processComposeModules.default
       ];
 
-      inherit preHook;
-
-      apiServer = false;
+      cli = {
+        inherit preHook;
+        environment = {
+          PC_NO_SERVER = true;
+        };
+      };
       package = self'.packages.process-compose;
-      tui = true;
 
       services.postgres."postgres-${env'}" = {
         inherit socketDir;
@@ -360,6 +367,7 @@ flake @ {inputs, ...}: {
       };
 
       settings = {
+        disable_env_expansion = false;
         log_location = "${commonLogDir}/${env'}/dbsync-${env'}.log";
         processes = {
           access-instructions = {
@@ -392,9 +400,9 @@ flake @ {inputs, ...}: {
             log_location = "${stateDir}/${env'}/cardano-db-sync/postgres-init.log";
           };
 
-          "cardano-node-${env'}${envVer env' "isNodeNg"}" = mkNodeProcess env' "cardano-node";
+          "cardano-node-${env'}${envVer env' "isNodeNg"}" = mkNodeProcess env' "cardano-node" stateDir;
 
-          "cardano-node-${env'}${envVer env' "isNodeNg"}-query" = mkCliProcess env' "cardano-node";
+          "cardano-node-${env'}${envVer env' "isNodeNg"}-query" = mkCliProcess env' "cardano-node" stateDir;
 
           "cardano-db-sync-${env'}${envVer env' "isDbsyncNg"}" = {
             namespace = "cardano-db-sync";
@@ -571,7 +579,7 @@ flake @ {inputs, ...}: {
         envList = [env];
         startDisabled = false;
       }) {
-        tui = false;
+        cli.environment.PC_DISABLE_TUI = true;
         settings.processes = {
           access-instructions.disabled = true;
           "cardano-node-${env}${envVer env "isNodeNg"}-query".disabled = true;
@@ -599,7 +607,7 @@ flake @ {inputs, ...}: {
       socketDir = "$TMPDIR/process-compose/${env'}";
     in
       recursiveUpdate (mkDbsyncStack env) {
-        tui = false;
+        cli.environment.PC_DISABLE_TUI = true;
         settings.processes = {
           access-instructions.disabled = true;
           "cardano-node-${env'}${envVer env' "isNodeNg"}-query".disabled = true;
@@ -644,7 +652,8 @@ flake @ {inputs, ...}: {
       availability = {
         exit_on_end = true;
       };
-      depends_on."cardano-node-${env}${envVer env "isNodeNg"}".condition = "process_healthy";
+      # process_log_ready triggers when ready_log_line pattern is matched
+      depends_on."cardano-node-${env}${envVer env "isNodeNg"}".condition = "process_log_ready";
     };
 
     # Node test stack with Mithril enabled - watches for download log line, then exits
@@ -652,17 +661,26 @@ flake @ {inputs, ...}: {
       recursiveUpdate (mkNodeStack' {
         envList = [env];
         startDisabled = false;
+        stateDir' = testStateDir;
       }) {
-        tui = false;
+        cli.environment.PC_DISABLE_TUI = true;
         settings.processes = {
           access-instructions.disabled = true;
           "cardano-node-${env}${envVer env "isNodeNg"}-query".disabled = true;
-          "cardano-node-${env}${envVer env "isNodeNg"}".readiness_probe = {
-            initial_delay_seconds = 5;
-            period_seconds = 2;
-            timeout_seconds = 5;
-            failure_threshold = 150;
-            exec.command = "grep -q '${mithrilLogPatterns.${env}}' ${stateDir}/${env}/cardano-node/node.log";
+          # Clean up any existing db so Mithril download is triggered
+          "cleanup-db-${env}" = {
+            command = pkgs.writeShellApplication {
+              name = "cleanup-db-${env}";
+              text = ''
+                echo "Removing existing test db to force Mithril download..."
+                rm -rf "${testStateDir}/${env}/cardano-node/db"
+                echo "Cleanup complete"
+              '';
+            };
+          };
+          "cardano-node-${env}${envVer env "isNodeNg"}" = {
+            ready_log_line = mithrilLogPatterns.${env};
+            depends_on."cleanup-db-${env}".condition = "process_completed_successfully";
           };
           "test-mithril-success" = mkTestMithrilSuccess env;
         };
