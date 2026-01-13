@@ -130,9 +130,9 @@ checkSshConfig := '''
       | collect
       | parse --regex `(?ms)(.*)^  };\nin {.*`
       | get capture0
-      | parse --regex `(?m)    (.*) = {$\n\s+privateIpv4 = \"(.*)";\n\s+publicIpv4 = \"(.*)";\n\s+publicIpv6 = \"(.*)";\n\s+};`
-      | rename machine privIpv4 pubIpv4 pubIpv6
-      | update pubIpv6 { $in | if $in == "" { null } else { $in } }
+      | parse --regex `(?m)    (?<machine>.*) = {$\n(\s+privateIpv4 = \"(?<privIpv4>.*)";\n)?(\s+publicIpv4 = \"(?<pubIpv4>.*)";\n)?(\s+publicIpv6 = \"(?<pubIpv6>.*)";\n)?\s+};`
+      | select machine privIpv4 pubIpv4 pubIpv6
+      | update cells { if ($in | is-empty) { null } else { $in } }
       | sort-by machine
     } else {
       []
