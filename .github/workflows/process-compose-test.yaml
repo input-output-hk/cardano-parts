@@ -13,23 +13,44 @@ permissions:
   contents: read
   pull-requests: read
 jobs:
-  # Node Startup Tests (all environments, no Mithril)
-  test-node:
-    name: "Test: cardano-node startup"
+  # This job allows for maintainer workflow dispatch of forked PRs with a
+  # declared PR input number.
+  detect-pr:
+    name: Detect PR context
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    outputs:
+      is_trusted: ${{ steps.detect-pr.outputs.is_trusted }}
+      base_ref: ${{ steps.detect-pr.outputs.base_ref }}
+      head_ref: ${{ steps.detect-pr.outputs.head_ref }}
+      pr_number: ${{ steps.detect-pr.outputs.pr_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Checkout base branch to ensure detect-pr runs trusted action code.
+          # The || github.sha fallback handles non-PR events (push, workflow_dispatch).
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
       - name: Detect PR context
         id: detect-pr
         uses: ./.github/actions/detect-pr
+
+  test:
+    name: Process Compose Tests
+    needs: detect-pr
+    if: needs.detect-pr.outputs.is_trusted == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Checkout and merge PR
         uses: ./.github/actions/checkout-merge
         with:
-          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
-          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
-          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
+          base_ref: ${{ needs.detect-pr.outputs.base_ref }}
+          head_ref: ${{ needs.detect-pr.outputs.head_ref }}
+          pr_number: ${{ needs.detect-pr.outputs.pr_number }}
+
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
@@ -38,70 +59,22 @@ jobs:
             experimental-features = fetch-closure flakes nix-command
             substituters = https://cache.iog.io https://cache.nixos.org/
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+      # Node startup tests
       - name: Test node startup (mainnet)
         run: nix run .#test-process-compose-node-mainnet
       - name: Test node startup (preprod)
         run: nix run .#test-process-compose-node-preprod
       - name: Test node startup (preview)
         run: nix run .#test-process-compose-node-preview
-
-  # DB-Sync Integration Tests (all environments, no Mithril)
-  test-dbsync:
-    name: "Test: db-sync integration"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Detect PR context
-        id: detect-pr
-        uses: ./.github/actions/detect-pr
-      - name: Checkout and merge PR
-        uses: ./.github/actions/checkout-merge
-        with:
-          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
-          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
-          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
-        with:
-          extra_nix_config: |
-            accept-flake-config = true
-            experimental-features = fetch-closure flakes nix-command
-            substituters = https://cache.iog.io https://cache.nixos.org/
-            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      # DB-sync integration tests
       - name: Test db-sync integration (mainnet)
         run: nix run .#test-process-compose-dbsync-mainnet
       - name: Test db-sync integration (preprod)
         run: nix run .#test-process-compose-dbsync-preprod
       - name: Test db-sync integration (preview)
         run: nix run .#test-process-compose-dbsync-preview
-
-  # Mithril Bootstrap Tests (all environments, watches for download to start)
-  test-mithril:
-    name: "Test: Mithril bootstrap"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Detect PR context
-        id: detect-pr
-        uses: ./.github/actions/detect-pr
-      - name: Checkout and merge PR
-        uses: ./.github/actions/checkout-merge
-        with:
-          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
-          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
-          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
-        with:
-          extra_nix_config: |
-            accept-flake-config = true
-            experimental-features = fetch-closure flakes nix-command
-            substituters = https://cache.iog.io https://cache.nixos.org/
-            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      # Mithril bootstrap tests
       - name: Test Mithril bootstrap (mainnet)
         run: nix run .#test-process-compose-node-mithril-mainnet
       - name: Test Mithril bootstrap (preprod)

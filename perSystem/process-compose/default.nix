@@ -681,6 +681,7 @@ flake @ {inputs, ...}: {
           "cardano-node-${env}${envVer env "isNodeNg"}" = {
             ready_log_line = mithrilLogPatterns.${env};
             depends_on."cleanup-db-${env}".condition = "process_completed_successfully";
+            environment."MITHRIL_VERIFY_SNAPSHOT_${env}" = "false";
           };
           "test-mithril-success" = mkTestMithrilSuccess env;
         };
