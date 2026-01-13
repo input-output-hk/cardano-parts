@@ -2,4 +2,5 @@
 /.envrc.local
 result*
 /.run/
+/.run-test/
 /treefmt.toml

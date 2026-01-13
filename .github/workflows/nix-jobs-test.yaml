@@ -1,3 +1,4 @@
+name: Nix Jobs Tests
 on:
   workflow_dispatch:
     inputs:
@@ -16,26 +17,43 @@ permissions:
   pull-requests: read
 
 jobs:
+  # This job allows for maintainer workflow dispatch of forked PRs with a
+  # declared PR input number.
+  detect-pr:
+    name: Detect PR context
+    runs-on: ubuntu-latest
+    outputs:
+      is_trusted: ${{ steps.detect-pr.outputs.is_trusted }}
+      base_ref: ${{ steps.detect-pr.outputs.base_ref }}
+      head_ref: ${{ steps.detect-pr.outputs.head_ref }}
+      pr_number: ${{ steps.detect-pr.outputs.pr_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Checkout base branch to ensure detect-pr runs trusted action code.
+          # The || github.sha fallback handles non-PR events (push, workflow_dispatch).
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+
+      - name: Detect PR context
+        id: detect-pr
+        uses: ./.github/actions/detect-pr
+
   nix-jobs-test:
-    name: "Test nix jobs"
+    name: Test nix jobs
+    needs: detect-pr
+    if: needs.detect-pr.outputs.is_trusted == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # This step allows for maintainer workflow dispatch of forked PRs with a
-      # declared PR input number.
-      - name: Detect PR context
-        id: detect-pr
-        uses: ./.github/actions/detect-pr
-
-      # For PRs, checkout a merge base, including for forked PRs.
       - name: Checkout and merge PR
         uses: ./.github/actions/checkout-merge
         with:
-          base_ref: ${{ steps.detect-pr.outputs.base_ref }}
-          head_ref: ${{ steps.detect-pr.outputs.head_ref }}
-          pr_number: ${{ steps.detect-pr.outputs.pr_number }}
+          base_ref: ${{ needs.detect-pr.outputs.base_ref }}
+          head_ref: ${{ needs.detect-pr.outputs.head_ref }}
+          pr_number: ${{ needs.detect-pr.outputs.pr_number }}
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
