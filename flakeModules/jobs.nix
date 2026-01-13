@@ -342,11 +342,6 @@ in {
               < "$GENESIS_DIR/conway-genesis.json" \
               | sponge "$GENESIS_DIR/conway-genesis.json"
 
-            # Remove once the cardano-node new tracing is default in nixosModules.
-            jq '. += {UseTraceDispatcher: false}' \
-              < "$GENESIS_DIR/node-config.json" \
-              | sponge "$GENESIS_DIR/node-config.json"
-
             # Calculate genesis hashes and inject them into the node config file
             HASH_BYRON=$("''${CARDANO_CLI_NO_ERA[@]}" byron genesis print-genesis-hash --genesis-json "$GENESIS_DIR/byron-genesis.json")
             HASH_SHELLEY=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/shelley-genesis.json")
@@ -361,8 +356,7 @@ in {
                 ByronGenesisHash: $hashByron,
                 ShelleyGenesisHash: $hashShelley,
                 AlonzoGenesisHash: $hashAlonzo,
-                ConwayGenesisHash: $hashConway,
-                UseTraceDispatcher: false
+                ConwayGenesisHash: $hashConway
               }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
@@ -500,8 +494,7 @@ in {
                 ByronGenesisHash: $hashByron,
                 ShelleyGenesisHash: $hashShelley,
                 AlonzoGenesisHash: $hashAlonzo,
-                ConwayGenesisHash: $hashConway,
-                UseTraceDispatcher: false
+                ConwayGenesisHash: $hashConway
               }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
@@ -750,8 +743,7 @@ in {
                 "TestBabbageHardForkAtEpoch": 0,
                 "TestConwayHardForkAtEpoch": 0,
                 "TestMaryHardForkAtEpoch": 0,
-                "TestShelleyHardForkAtEpoch": 0,
-                "UseTraceDispatcher": false}' \
+                "TestShelleyHardForkAtEpoch": 0}' \
               '. += $jsonUpdates' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
