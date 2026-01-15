@@ -584,6 +584,9 @@ in {
           text = ''
             # Inputs:
             #   [$CC_DIR]
+            #   [$COMMITTEE_MAX_TERM_LENGTH]
+            #   [$COMMITTEE_MIN_SIZE]
+            #   [$COMMITTEE_THRESHOLD]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
@@ -604,14 +607,19 @@ in {
 
             [ -n "''${DEBUG:-}" ] && set -x
 
+            # Some conway related defaults are obtained from corresponding guardrails script limits:
+            # https://github.com/IntersectMBO/plutus/blob/master/cardano-constitution/data/defaultConstitution.json
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
-            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-3}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
             export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
+            export COMMITTEE_MAX_TERM_LENGTH=''${COMMITTEE_MAX_TERM_LENGTH:-293}
+            export COMMITTEE_MIN_SIZE=''${COMMITTEE_MIN_SIZE:-$NUM_CC_KEYS}
+            export COMMITTEE_THRESHOLD=''${COMMITTEE_THRESHOLD:-'{"numerator": 2, "denominator": 3}'}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -720,10 +728,12 @@ in {
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
 
-            # Constitutional committee threshold will be set to 0 by default
             jq --sort-keys \
-              --argjson jsonUpdates '{"numerator": 2, "denominator": 3}' \
-              '.committee.threshold = $jsonUpdates' \
+              --argjson jsonUpdates "{
+                \"committee\": {\"threshold\": $COMMITTEE_THRESHOLD},
+                \"committeeMaxTermLength\": $COMMITTEE_MAX_TERM_LENGTH,
+                \"committeeMinSize\": $COMMITTEE_MIN_SIZE}" \
+              '. *= $jsonUpdates' \
               < "$GENESIS_DIR/conway-genesis.json" \
               | sponge "$GENESIS_DIR/conway-genesis.json"
 
