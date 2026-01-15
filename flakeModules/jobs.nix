@@ -587,6 +587,9 @@ in {
             #   [$COMMITTEE_MAX_TERM_LENGTH]
             #   [$COMMITTEE_MIN_SIZE]
             #   [$COMMITTEE_THRESHOLD]
+            #   [$CONSTITUTION_ANCHOR_DATAHASH]
+            #   [$CONSTITUTION_ANCHOR_URL]
+            #   [$CONSTITUTION_SCRIPT]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
@@ -620,6 +623,8 @@ in {
             export COMMITTEE_MAX_TERM_LENGTH=''${COMMITTEE_MAX_TERM_LENGTH:-293}
             export COMMITTEE_MIN_SIZE=''${COMMITTEE_MIN_SIZE:-$NUM_CC_KEYS}
             export COMMITTEE_THRESHOLD=''${COMMITTEE_THRESHOLD:-'{"numerator": 2, "denominator": 3}'}
+            export CONSTITUTION_ANCHOR_DATAHASH=''${CONSTITUTION_ANCHOR_DATAHASH:-"0000000000000000000000000000000000000000000000000000000000000000"}
+            export CONSTITUTION_ANCHOR_URL=''${CONSTITUTION_ANCHOR_URL:-""}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -732,10 +737,22 @@ in {
               --argjson jsonUpdates "{
                 \"committee\": {\"threshold\": $COMMITTEE_THRESHOLD},
                 \"committeeMaxTermLength\": $COMMITTEE_MAX_TERM_LENGTH,
-                \"committeeMinSize\": $COMMITTEE_MIN_SIZE}" \
+                \"committeeMinSize\": $COMMITTEE_MIN_SIZE,
+                \"constitution\": {\"anchor\": {\"dataHash\": \"$CONSTITUTION_ANCHOR_DATAHASH\", \"url\": \"$CONSTITUTION_ANCHOR_URL\"}}
+              }" \
               '. *= $jsonUpdates' \
               < "$GENESIS_DIR/conway-genesis.json" \
               | sponge "$GENESIS_DIR/conway-genesis.json"
+
+            if [ -n "''${CONSTITUTION_SCRIPT:-}" ]; then
+              jq --sort-keys \
+                --argjson jsonUpdates "{
+                  \"constitution\": {\"script\": \"$CONSTITUTION_SCRIPT\"}
+                }" \
+                '. *= $jsonUpdates' \
+                < "$GENESIS_DIR/conway-genesis.json" \
+                | sponge "$GENESIS_DIR/conway-genesis.json"
+            fi
 
             # Obtain a base node config and topology
             cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
