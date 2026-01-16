@@ -1838,24 +1838,7 @@ in {
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest governance action "$ACTION" \
-              --testnet \
-              "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
-              --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
-              --anchor-url "$PROPOSAL_URL" \
-              --anchor-data-hash "$PROPOSAL_HASH" \
-              "''${PROPOSAL_ARGS[@]}" \
-              --out-file "$ACTION".action
-
-            # Generate transaction
-            UTXO=$(
-              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
-                --address "$CHANGE_ADDRESS" \
-                --testnet-magic "$TESTNET_MAGIC"
-            )
-
-            TXIN=$(jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key' <<< "$UTXO")
-
+            ACTION_ARGS+=()
             if [ -n "''${USE_GUARDRAILS:-}" ]; then
               if [ -z "''${SCRIPT_FILE_URL:-}" ]; then
                 case "$TESTNET_MAGIC" in
@@ -1874,6 +1857,33 @@ in {
                 esac
               fi
 
+              if [[ "$ACTION" =~ ^(create-constitution|create-protocol-parameters-update|create-treasury-withdrawal)$ ]]; then
+                # The CONSTITUTION_SCRIPT hash should match the calculated policyId hash of the --proposal-script-file arg
+                CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file <(curl -sL "$SCRIPT_FILE_URL"))
+                ACTION_ARGS+=("--constitution-script-hash" "$CONSTITUTION_SCRIPT")
+              fi
+            fi
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance action "$ACTION" \
+              --testnet \
+              "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
+              --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
+              --anchor-url "$PROPOSAL_URL" \
+              --anchor-data-hash "$PROPOSAL_HASH" \
+              "''${ACTION_ARGS[@]}" \
+              "''${PROPOSAL_ARGS[@]}" \
+              --out-file "$ACTION".action
+
+            # Generate transaction
+            UTXO=$(
+              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
+                --address "$CHANGE_ADDRESS" \
+                --testnet-magic "$TESTNET_MAGIC"
+            )
+
+            TXIN=$(jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key' <<< "$UTXO")
+
+            if [ -n "''${USE_GUARDRAILS:-}" ] && [[ "$ACTION" =~ ^(create-constitution|create-protocol-parameters-update|create-treasury-withdrawal)$ ]]; then
               TXIN_COLLATERAL=$(
                 jq -r --arg txin "$TXIN" --arg collateral "$COLLATERAL" \
                   'to_entries
