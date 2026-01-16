@@ -511,6 +511,7 @@ in {
               done
 
               mv ../byron-gen-command/genesis-keys.000.key byron.000.key
+              chmod 0600 byron.000.key
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
@@ -530,6 +531,7 @@ in {
                 mv ../byron-gen-command/delegate-keys.000.key byron.000.key
                 mv ../byron-gen-command/delegation-cert.000.json byron.000.cert.json
                 rmdir ../byron-gen-command/
+                chmod 0600 byron.000.*
             popd &> /dev/null
 
             pushd "$GENESIS_DIR/cc-keys" &> /dev/null
@@ -811,6 +813,7 @@ in {
               done
 
               mv ../byron-gen-command/genesis-keys.000.key byron.000.key
+              chmod 0600 byron.000.key
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
