@@ -641,6 +641,8 @@ in {
             ACTIVE_SLOTS_COEFF="0.050"
             EPOCH_LENGTH=$(perl -E "say ((10 * $SECURITY_PARAM) / $ACTIVE_SLOTS_COEFF)")
             SLOT_LENGTH_SEC=$(perl -E "say ($SLOT_LENGTH / 1000)")
+            SLOT_LENGTH_MS_BYRON=$(perl -E "say ($SLOT_LENGTH / $ACTIVE_SLOTS_COEFF)")
+            GOV_ACTION_LIFETIME=$(perl -E "say (30/($EPOCH_LENGTH/86400))")
 
             # Maintain genesis available funds similar to prior testnets
             INITIAL_FUNDS=''${INITIAL_FUNDS:-30000000000000000}
@@ -676,7 +678,11 @@ in {
             # corresponding byron cli options, so purge the auto-generated
             # non-avvm utxo manually.
             jq --sort-keys \
-              '. += {"nonAvvmBalances":{}}' \
+              ". *= {
+                \"nonAvvmBalances\": {},
+                \"blockVersionData\": {\"slotDuration\": \"$SLOT_LENGTH_MS_BYRON\"},
+                \"protocolConsts\": {\"k\": $SECURITY_PARAM}
+              }" \
               < "$GENESIS_DIR/byron-genesis.json" \
               | sponge "$GENESIS_DIR/byron-genesis.json"
 
@@ -740,7 +746,8 @@ in {
                 \"committee\": {\"threshold\": $COMMITTEE_THRESHOLD},
                 \"committeeMaxTermLength\": $COMMITTEE_MAX_TERM_LENGTH,
                 \"committeeMinSize\": $COMMITTEE_MIN_SIZE,
-                \"constitution\": {\"anchor\": {\"dataHash\": \"$CONSTITUTION_ANCHOR_DATAHASH\", \"url\": \"$CONSTITUTION_ANCHOR_URL\"}}
+                \"constitution\": {\"anchor\": {\"dataHash\": \"$CONSTITUTION_ANCHOR_DATAHASH\", \"url\": \"$CONSTITUTION_ANCHOR_URL\"}},
+                \"govActionLifetime\": $GOV_ACTION_LIFETIME
               }" \
               '. *= $jsonUpdates' \
               < "$GENESIS_DIR/conway-genesis.json" \
@@ -2086,6 +2093,10 @@ in {
             "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
               --payment-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file "$DREP_DIR"/drep-"$INDEX".hash
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance drep id \
+              --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/drep-"$INDEX".id
 
             "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address registration-certificate \
               --key-reg-deposit-amt "$STAKE_DEPOSIT" \
