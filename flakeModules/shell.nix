@@ -377,6 +377,7 @@ in
                         cc-sign
                         colmena
                         graphviz
+                        libfaketime
                         mdbook
                         mdbook-kroki-preprocessor
                         localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
