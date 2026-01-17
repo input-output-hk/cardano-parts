@@ -1173,16 +1173,16 @@
         "sodium": "sodium_3"
       },
       "locked": {
-        "lastModified": 1764859324,
-        "narHash": "sha256-cRcdI0wG/mpd2d7E9KSiTu3oUwsk/4tElmLiQcRB9n0=",
+        "lastModified": 1768879711,
+        "narHash": "sha256-DWKhwND/uw+3yud2QzG0ziwWR/GV17se6ImF+UxVHG0=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "64b6d9abd02ac20354b187e610cd0c8c9052ef1b",
+        "rev": "e6b68fe9c580d7009c694c6e9b79754b53d575d6",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "coot/new-tracing-system",
+        "ref": "jl/dijkstra",
         "repo": "iohk-nix",
         "type": "github"
       }
