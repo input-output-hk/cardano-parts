@@ -33,7 +33,7 @@ with lib; rec {
         mv -v "$ENV-topology.json" "$out/config/$ENV/topology.json"
 
         # Adjust index.html file refs
-        sed -i "s|$ENV-|config/$ENV/|g" "$out/index.html"
+        sed -i "s|$ENV-|config/$ENV/|" "$out/index.html"
       done
     '';
 
