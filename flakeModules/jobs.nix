@@ -676,13 +676,19 @@ in {
 
             # There is no create-testnet-data spec arg for byron yet, and no
             # corresponding byron cli options, so purge the auto-generated
-            # non-avvm utxo manually.
+            # non-avvm utxo manually.  A PR for create-testnet-data will soon
+            # also update byron k param automatically to match the shelley
+            # security parameter.
             jq --sort-keys \
-              ". *= {
-                \"nonAvvmBalances\": {},
-                \"blockVersionData\": {\"slotDuration\": \"$SLOT_LENGTH_MS_BYRON\"},
-                \"protocolConsts\": {\"k\": $SECURITY_PARAM}
-              }" \
+              --arg slotLengthMsByron "$SLOT_LENGTH_MS_BYRON" \
+              --argjson securityParam "$SECURITY_PARAM" \
+              '. += {"nonAvvmBalances": {}}
+               | . *= {
+                "nonAvvmBalances": {},
+                "blockVersionData": {"slotDuration": $slotLengthMsByron},
+                "protocolConsts": {"k": $securityParam}
+              }
+              ' \
               < "$GENESIS_DIR/byron-genesis.json" \
               | sponge "$GENESIS_DIR/byron-genesis.json"
 
