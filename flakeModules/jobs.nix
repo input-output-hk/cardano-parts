@@ -674,6 +674,11 @@ in {
               --start-time "$START_TIME" \
               --out-dir "$GENESIS_DIR"
 
+            # Dijkstra does not yet have a spec arg available for
+            # create-testnet-data, so explicitly copy ours until one is
+            # available.
+            cp "$TEMPLATE_DIR/dijkstra.json" "$GENESIS_DIR/dijkstra-genesis.json"
+
             # There is no create-testnet-data spec arg for byron yet, and no
             # corresponding byron cli options, so purge the auto-generated
             # non-avvm utxo manually.  A PR for create-testnet-data will soon
@@ -791,7 +796,7 @@ in {
               | sponge "$GENESIS_DIR/node-config.json"
 
             # Also prettify the other json files prior to hash calcs
-            for i in byron-genesis alonzo-genesis conway-genesis topology; do
+            for i in byron-genesis alonzo-genesis conway-genesis dijkstra-genesis topology; do
               jq --sort-keys < "$GENESIS_DIR/$i.json" | sponge "$GENESIS_DIR/$i.json"
             done
 
@@ -800,16 +805,19 @@ in {
             HASH_SHELLEY=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/shelley-genesis.json")
             HASH_ALONZO=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/alonzo-genesis.json")
             HASH_CONWAY=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/conway-genesis.json")
+            HASH_DIJKSTRA=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/dijkstra-genesis.json")
             jq --sort-keys \
               --arg hashByron "$HASH_BYRON" \
               --arg hashShelley "$HASH_SHELLEY" \
               --arg hashAlonzo "$HASH_ALONZO" \
               --arg hashConway "$HASH_CONWAY" \
+              --arg hashDijkstra "$HASH_DIJKSTRA" \
               '. += {
                 ByronGenesisHash: $hashByron,
                 ShelleyGenesisHash: $hashShelley,
                 AlonzoGenesisHash: $hashAlonzo,
-                ConwayGenesisHash: $hashConway
+                ConwayGenesisHash: $hashConway,
+                DijkstraGenesisHash: $hashDijkstra
               }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
