@@ -99,10 +99,7 @@ with lib; rec {
   # prior to mithril client use when config.mithril-client.verifySnapshotSignature is enabled.
   mithrilVerifyingPools = {
     mainnet = [
-      "pool155efqn9xpcf73pphkk88cmlkdwx4ulkg606tne970qswczg3asc"
-      "pool1gpzkwf3ntp7ky6yvyky8q6qu4dyup5y6v4pxzn56yut8sqp6k53"
       "pool1mxqjlrfskhd5kql9kak06fpdh8xjwc76gec76p3taqy2qmfzs5z"
-      "pool1nee5kmpzv0qfz7lu258fe9ylgxh68lsqqdmjgw7jnheej3usn35"
     ];
 
     preprod = [
