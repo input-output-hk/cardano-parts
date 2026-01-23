@@ -66,7 +66,7 @@
     blockperf.url = "github:johnalotoski/blockperf/jl/fix-detail";
 
     # For tmp local testing pins
-    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/jl/node-9.2";
+    cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
     # cardano-faucet.url = "path:/home/jlotoski/work/iohk/cardano-faucet-wt/jl/node-9.2";
     cardano-node-10-5-4.url = "github:IntersectMBO/cardano-node/a9263dcf3478516f8c4804e679f2598aeea87b1e";
 
