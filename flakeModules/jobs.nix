@@ -760,7 +760,8 @@ in {
                 \"constitution\": {\"anchor\": {\"dataHash\": \"$CONSTITUTION_ANCHOR_DATAHASH\", \"url\": \"$CONSTITUTION_ANCHOR_URL\"}},
                 \"govActionLifetime\": $GOV_ACTION_LIFETIME
               }" \
-              '. *= $jsonUpdates' \
+              --argjson committeeMaxTermLength "$COMMITTEE_MAX_TERM_LENGTH" \
+              '. *= $jsonUpdates | .committee.members[] |= $committeeMaxTermLength' \
               < "$GENESIS_DIR/conway-genesis.json" \
               | sponge "$GENESIS_DIR/conway-genesis.json"
 
