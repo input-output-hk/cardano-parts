@@ -239,6 +239,81 @@
                   FROM active_pools
                   ORDER by lovelace_delegated DESC;
 
+              -- Show delegation for a single pool, with live, epoch and variance stake presented
+              PREPARE show_pool_delegation_fn (varchar) AS
+                WITH current_pool_delegators AS (
+                    SELECT DISTINCT ON (sa.id)
+                        sa.id AS stake_address_id,
+                        sa.view AS stake_address,
+                        ph.view AS pool_id
+                    FROM delegation d
+                    JOIN stake_address sa ON d.addr_id = sa.id
+                    JOIN pool_hash ph ON d.pool_hash_id = ph.id
+                    WHERE ph.view = $1
+                       OR encode(ph.hash_raw, 'hex') = $1
+                    ORDER BY sa.id, d.tx_id DESC
+                ),
+
+                live_balances AS (
+                    SELECT
+                        cd.stake_address_id,
+                        COALESCE(SUM(tx_out.value), 0) AS live_stake_lovelace
+                    FROM current_pool_delegators cd
+                    JOIN tx_out ON tx_out.stake_address_id = cd.stake_address_id
+                    LEFT JOIN tx_in ON tx_out.tx_id = tx_in.tx_out_id
+                        AND tx_out.index = tx_in.tx_out_index
+                    WHERE tx_in.id IS NULL
+                    GROUP BY cd.stake_address_id
+                ),
+
+                epoch_snapshots AS (
+                    SELECT
+                        es.addr_id,
+                        es.amount AS epoch_stake_lovelace
+                    FROM epoch_stake es
+                    WHERE es.epoch_no = (SELECT max(no) FROM epoch)
+                ),
+
+                final_report AS (
+                    SELECT
+                        cpd.pool_id,
+                        cpd.stake_address,
+                        COALESCE(lb.live_stake_lovelace, 0) AS live_stake_lovelace,
+                        COALESCE(es.epoch_stake_lovelace, 0) AS epoch_stake_lovelace
+                    FROM current_pool_delegators cpd
+                    LEFT JOIN live_balances lb ON cpd.stake_address_id = lb.stake_address_id
+                    LEFT JOIN epoch_snapshots es ON cpd.stake_address_id = es.addr_id
+                )
+
+                SELECT
+                    pool_id,
+                    stake_address,
+                    live_stake_lovelace,
+                    epoch_stake_lovelace,
+                    variance
+                FROM (
+                    SELECT
+                        pool_id,
+                        stake_address,
+                        live_stake_lovelace,
+                        epoch_stake_lovelace,
+                        (live_stake_lovelace - epoch_stake_lovelace) AS variance,
+                        0 AS sort_order
+                    FROM final_report
+
+                    UNION ALL
+
+                    SELECT
+                        'SUMMARY' AS pool_id,
+                        'TOTAL DELEGATORS: ' || COUNT(*) AS stake_address,
+                        SUM(live_stake_lovelace) AS live_stake_lovelace,
+                        SUM(epoch_stake_lovelace) AS epoch_stake_lovelace,
+                        SUM(live_stake_lovelace - epoch_stake_lovelace) AS variance,
+                        1 AS sort_order
+                    FROM final_report
+                ) AS combined_results
+                ORDER BY sort_order ASC, live_stake_lovelace DESC;
+
               -- Show pool info for a single pool, best viewed in extended view mode, \x
               PREPARE show_pool_info_fn AS
                 SELECT
