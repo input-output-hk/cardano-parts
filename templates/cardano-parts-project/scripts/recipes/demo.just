@@ -296,18 +296,29 @@ start-demo-ng:
   sleep 30
   echo
 
+  WAIT_FOR_MEMPOOL() {
+    while true; do
+        [ "$(cardano-cli latest query tx-mempool info --testnet-magic $TESTNET_MAGIC | jq -re .numberOfTxs || true)" = "0" ] && break;
+      echo "Waiting for the mempool to settle..."
+      sleep 2
+    done
+    echo "Mempool is clear..."
+  }
+
   echo "Registering stake pools..."
   POOL_RELAY=demo-ng.local \
     POOL_RELAY_PORT=3001 \
     nix run .#job-register-stake-pools
   echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
   sleep 10
+  WAIT_FOR_MEMPOOL
   echo
 
   echo "Delegating rewards stake key..."
   nix run .#job-delegate-rewards-stake-key
   echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
   sleep 10
+  WAIT_FOR_MEMPOOL
   echo
 
   if [ "$RETIRE_BOOTSTRAP_POOL" = "true" ]; then
@@ -317,6 +328,7 @@ start-demo-ng:
       nix run .#job-retire-bootstrap-pool
     echo "Sleeping 10 seconds until $(date -d  @$(($(date +%s) + 10)))"
     sleep 10
+    WAIT_FOR_MEMPOOL
     echo
   else
     echo "Skipping bootstrap pool retirement..."
@@ -339,6 +351,7 @@ start-demo-ng:
     nix run .#job-register-cc
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   sleep "$FIXED_DELAY_SECS"
+  WAIT_FOR_MEMPOOL
   echo
 
   # If both cost model and plomin HF are submitted in the same epoch and
@@ -359,6 +372,7 @@ start-demo-ng:
     nix run .#job-submit-gov-action -- "${PROPOSAL_ARGS[@]}"
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   sleep "$FIXED_DELAY_SECS"
+  WAIT_FOR_MEMPOOL
   echo
 
   # Only the CC member needs to approve the cost model, but CC and SPOs need to approve the HF
@@ -386,6 +400,7 @@ start-demo-ng:
     nix run .#job-submit-vote
   echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   sleep "$FIXED_DELAY_SECS"
+  WAIT_FOR_MEMPOOL
   echo
 
   POOL_NAME_ARR=($POOL_NAMES)
@@ -397,6 +412,7 @@ start-demo-ng:
       nix run .#job-submit-vote
     echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
     sleep "$FIXED_DELAY_SECS"
+    WAIT_FOR_MEMPOOL
   done
   CURRENT_EPOCH=$(jq -re ".epoch" <<< "$(just query-tip demo "$TESTNET_MAGIC")")
   echo "Sleeping until epoch $((CURRENT_EPOCH + 1)) for the plomin HF votes to register..."

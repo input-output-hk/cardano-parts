@@ -342,11 +342,6 @@ in {
               < "$GENESIS_DIR/conway-genesis.json" \
               | sponge "$GENESIS_DIR/conway-genesis.json"
 
-            # Remove once the cardano-node new tracing is default in nixosModules.
-            jq '. += {UseTraceDispatcher: false}' \
-              < "$GENESIS_DIR/node-config.json" \
-              | sponge "$GENESIS_DIR/node-config.json"
-
             # Calculate genesis hashes and inject them into the node config file
             HASH_BYRON=$("''${CARDANO_CLI_NO_ERA[@]}" byron genesis print-genesis-hash --genesis-json "$GENESIS_DIR/byron-genesis.json")
             HASH_SHELLEY=$("''${CARDANO_CLI_NO_ERA[@]}" legacy genesis hash --genesis "$GENESIS_DIR/shelley-genesis.json")
@@ -361,8 +356,7 @@ in {
                 ByronGenesisHash: $hashByron,
                 ShelleyGenesisHash: $hashShelley,
                 AlonzoGenesisHash: $hashAlonzo,
-                ConwayGenesisHash: $hashConway,
-                UseTraceDispatcher: false
+                ConwayGenesisHash: $hashConway
               }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
@@ -500,8 +494,7 @@ in {
                 ByronGenesisHash: $hashByron,
                 ShelleyGenesisHash: $hashShelley,
                 AlonzoGenesisHash: $hashAlonzo,
-                ConwayGenesisHash: $hashConway,
-                UseTraceDispatcher: false
+                ConwayGenesisHash: $hashConway
               }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
@@ -518,6 +511,7 @@ in {
               done
 
               mv ../byron-gen-command/genesis-keys.000.key byron.000.key
+              chmod 0600 byron.000.key
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
@@ -537,6 +531,7 @@ in {
                 mv ../byron-gen-command/delegate-keys.000.key byron.000.key
                 mv ../byron-gen-command/delegation-cert.000.json byron.000.cert.json
                 rmdir ../byron-gen-command/
+                chmod 0600 byron.000.*
             popd &> /dev/null
 
             pushd "$GENESIS_DIR/cc-keys" &> /dev/null
@@ -591,6 +586,12 @@ in {
           text = ''
             # Inputs:
             #   [$CC_DIR]
+            #   [$COMMITTEE_MAX_TERM_LENGTH]
+            #   [$COMMITTEE_MIN_SIZE]
+            #   [$COMMITTEE_THRESHOLD]
+            #   [$CONSTITUTION_ANCHOR_DATAHASH]
+            #   [$CONSTITUTION_ANCHOR_URL]
+            #   [$CONSTITUTION_SCRIPT]
             #   [$DEBUG]
             #   [$ENV]
             #   [$ERA_CMD]
@@ -611,14 +612,21 @@ in {
 
             [ -n "''${DEBUG:-}" ] && set -x
 
+            # Some conway related defaults are obtained from corresponding guardrails script limits:
+            # https://github.com/IntersectMBO/plutus/blob/master/cardano-constitution/data/defaultConstitution.json
             export START_TIME=''${START_TIME:-$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date " now +30 min")}
             export SLOT_LENGTH=''${SLOT_LENGTH:-1000}
             export SECURITY_PARAM=''${SECURITY_PARAM:-36}
-            export NUM_CC_KEYS=''${NUM_CC_KEYS:-1}
+            export NUM_CC_KEYS=''${NUM_CC_KEYS:-3}
             export NUM_GENESIS_KEYS=''${NUM_GENESIS_KEYS:-3}
             export TESTNET_MAGIC=''${TESTNET_MAGIC:-42}
             export GENESIS_DIR=''${GENESIS_DIR:-"./workbench/custom"}
             export CC_DIR=''${CC_DIR:-"./workbench/custom/envs/custom/cc-keys"}
+            export COMMITTEE_MAX_TERM_LENGTH=''${COMMITTEE_MAX_TERM_LENGTH:-293}
+            export COMMITTEE_MIN_SIZE=''${COMMITTEE_MIN_SIZE:-$NUM_CC_KEYS}
+            export COMMITTEE_THRESHOLD=''${COMMITTEE_THRESHOLD:-'{"numerator": 2, "denominator": 3}'}
+            export CONSTITUTION_ANCHOR_DATAHASH=''${CONSTITUTION_ANCHOR_DATAHASH:-"0000000000000000000000000000000000000000000000000000000000000000"}
+            export CONSTITUTION_ANCHOR_URL=''${CONSTITUTION_ANCHOR_URL:-""}
 
             if [ "''${UNSTABLE_LIB:-}" = "true" ]; then
               export TEMPLATE_DIR=''${TEMPLATE_DIR:-"${localFlake.inputs.iohk-nix-ng}/cardano-lib/testnet-template"}
@@ -633,6 +641,8 @@ in {
             ACTIVE_SLOTS_COEFF="0.050"
             EPOCH_LENGTH=$(perl -E "say ((10 * $SECURITY_PARAM) / $ACTIVE_SLOTS_COEFF)")
             SLOT_LENGTH_SEC=$(perl -E "say ($SLOT_LENGTH / 1000)")
+            SLOT_LENGTH_MS_BYRON=$(perl -E "say ($SLOT_LENGTH / $ACTIVE_SLOTS_COEFF)")
+            GOV_ACTION_LIFETIME=$(perl -E "say (30/($EPOCH_LENGTH/86400))")
 
             # Maintain genesis available funds similar to prior testnets
             INITIAL_FUNDS=''${INITIAL_FUNDS:-30000000000000000}
@@ -664,11 +674,26 @@ in {
               --start-time "$START_TIME" \
               --out-dir "$GENESIS_DIR"
 
+            # Dijkstra does not yet have a spec arg available for
+            # create-testnet-data, so explicitly copy ours until one is
+            # available.
+            cp "$TEMPLATE_DIR/dijkstra.json" "$GENESIS_DIR/dijkstra-genesis.json"
+
             # There is no create-testnet-data spec arg for byron yet, and no
             # corresponding byron cli options, so purge the auto-generated
-            # non-avvm utxo manually.
+            # non-avvm utxo manually.  A PR for create-testnet-data will soon
+            # also update byron k param automatically to match the shelley
+            # security parameter.
             jq --sort-keys \
-              '. += {"nonAvvmBalances":{}}' \
+              --arg slotLengthMsByron "$SLOT_LENGTH_MS_BYRON" \
+              --argjson securityParam "$SECURITY_PARAM" \
+              '. += {"nonAvvmBalances": {}}
+               | . *= {
+                "nonAvvmBalances": {},
+                "blockVersionData": {"slotDuration": $slotLengthMsByron},
+                "protocolConsts": {"k": $securityParam}
+              }
+              ' \
               < "$GENESIS_DIR/byron-genesis.json" \
               | sponge "$GENESIS_DIR/byron-genesis.json"
 
@@ -727,12 +752,28 @@ in {
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
 
-            # Constitutional committee threshold will be set to 0 by default
             jq --sort-keys \
-              --argjson jsonUpdates '{"numerator": 2, "denominator": 3}' \
-              '.committee.threshold = $jsonUpdates' \
+              --argjson jsonUpdates "{
+                \"committee\": {\"threshold\": $COMMITTEE_THRESHOLD},
+                \"committeeMaxTermLength\": $COMMITTEE_MAX_TERM_LENGTH,
+                \"committeeMinSize\": $COMMITTEE_MIN_SIZE,
+                \"constitution\": {\"anchor\": {\"dataHash\": \"$CONSTITUTION_ANCHOR_DATAHASH\", \"url\": \"$CONSTITUTION_ANCHOR_URL\"}},
+                \"govActionLifetime\": $GOV_ACTION_LIFETIME
+              }" \
+              --argjson committeeMaxTermLength "$COMMITTEE_MAX_TERM_LENGTH" \
+              '. *= $jsonUpdates | .committee.members[] |= $committeeMaxTermLength' \
               < "$GENESIS_DIR/conway-genesis.json" \
               | sponge "$GENESIS_DIR/conway-genesis.json"
+
+            if [ -n "''${CONSTITUTION_SCRIPT:-}" ]; then
+              jq --sort-keys \
+                --argjson jsonUpdates "{
+                  \"constitution\": {\"script\": \"$CONSTITUTION_SCRIPT\"}
+                }" \
+                '. *= $jsonUpdates' \
+                < "$GENESIS_DIR/conway-genesis.json" \
+                | sponge "$GENESIS_DIR/conway-genesis.json"
+            fi
 
             # Obtain a base node config and topology
             cp "$TEMPLATE_DIR/config.json" "$GENESIS_DIR/node-config.json"
@@ -750,14 +791,13 @@ in {
                 "TestBabbageHardForkAtEpoch": 0,
                 "TestConwayHardForkAtEpoch": 0,
                 "TestMaryHardForkAtEpoch": 0,
-                "TestShelleyHardForkAtEpoch": 0,
-                "UseTraceDispatcher": false}' \
+                "TestShelleyHardForkAtEpoch": 0}' \
               '. += $jsonUpdates' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
 
             # Also prettify the other json files prior to hash calcs
-            for i in byron-genesis alonzo-genesis conway-genesis topology; do
+            for i in byron-genesis alonzo-genesis conway-genesis dijkstra-genesis topology; do
               jq --sort-keys < "$GENESIS_DIR/$i.json" | sponge "$GENESIS_DIR/$i.json"
             done
 
@@ -766,16 +806,19 @@ in {
             HASH_SHELLEY=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/shelley-genesis.json")
             HASH_ALONZO=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/alonzo-genesis.json")
             HASH_CONWAY=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/conway-genesis.json")
+            HASH_DIJKSTRA=$("''${CARDANO_CLI[@]}" genesis hash --genesis "$GENESIS_DIR/dijkstra-genesis.json")
             jq --sort-keys \
               --arg hashByron "$HASH_BYRON" \
               --arg hashShelley "$HASH_SHELLEY" \
               --arg hashAlonzo "$HASH_ALONZO" \
               --arg hashConway "$HASH_CONWAY" \
+              --arg hashDijkstra "$HASH_DIJKSTRA" \
               '. += {
                 ByronGenesisHash: $hashByron,
                 ShelleyGenesisHash: $hashShelley,
                 AlonzoGenesisHash: $hashAlonzo,
-                ConwayGenesisHash: $hashConway
+                ConwayGenesisHash: $hashConway,
+                DijkstraGenesisHash: $hashDijkstra
               }' \
               < "$GENESIS_DIR/node-config.json" \
               | sponge "$GENESIS_DIR/node-config.json"
@@ -792,6 +835,7 @@ in {
               done
 
               mv ../byron-gen-command/genesis-keys.000.key byron.000.key
+              chmod 0600 byron.000.key
             popd &> /dev/null
 
             # Transform the delegate key subdirs into a create-cardano compatible layout
@@ -1819,24 +1863,7 @@ in {
                 --testnet-magic "$TESTNET_MAGIC"
             )
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest governance action "$ACTION" \
-              --testnet \
-              "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
-              --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
-              --anchor-url "$PROPOSAL_URL" \
-              --anchor-data-hash "$PROPOSAL_HASH" \
-              "''${PROPOSAL_ARGS[@]}" \
-              --out-file "$ACTION".action
-
-            # Generate transaction
-            UTXO=$(
-              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
-                --address "$CHANGE_ADDRESS" \
-                --testnet-magic "$TESTNET_MAGIC"
-            )
-
-            TXIN=$(jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key' <<< "$UTXO")
-
+            ACTION_ARGS+=()
             if [ -n "''${USE_GUARDRAILS:-}" ]; then
               if [ -z "''${SCRIPT_FILE_URL:-}" ]; then
                 case "$TESTNET_MAGIC" in
@@ -1855,6 +1882,33 @@ in {
                 esac
               fi
 
+              if [[ "$ACTION" =~ ^(create-constitution|create-protocol-parameters-update|create-treasury-withdrawal)$ ]]; then
+                # The CONSTITUTION_SCRIPT hash should match the calculated policyId hash of the --proposal-script-file arg
+                CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file <(curl -sL "$SCRIPT_FILE_URL"))
+                ACTION_ARGS+=("--constitution-script-hash" "$CONSTITUTION_SCRIPT")
+              fi
+            fi
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance action "$ACTION" \
+              --testnet \
+              "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
+              --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
+              --anchor-url "$PROPOSAL_URL" \
+              --anchor-data-hash "$PROPOSAL_HASH" \
+              "''${ACTION_ARGS[@]}" \
+              "''${PROPOSAL_ARGS[@]}" \
+              --out-file "$ACTION".action
+
+            # Generate transaction
+            UTXO=$(
+              "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
+                --address "$CHANGE_ADDRESS" \
+                --testnet-magic "$TESTNET_MAGIC"
+            )
+
+            TXIN=$(jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key' <<< "$UTXO")
+
+            if [ -n "''${USE_GUARDRAILS:-}" ] && [[ "$ACTION" =~ ^(create-constitution|create-protocol-parameters-update|create-treasury-withdrawal)$ ]]; then
               TXIN_COLLATERAL=$(
                 jq -r --arg txin "$TXIN" --arg collateral "$COLLATERAL" \
                   'to_entries
@@ -2054,6 +2108,10 @@ in {
             "''${CARDANO_CLI_NO_ERA[@]}" latest address key-hash \
               --payment-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file "$DREP_DIR"/drep-"$INDEX".hash
+
+            "''${CARDANO_CLI_NO_ERA[@]}" latest governance drep id \
+              --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
+              --out-file "$DREP_DIR"/drep-"$INDEX".id
 
             "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address registration-certificate \
               --key-reg-deposit-amt "$STAKE_DEPOSIT" \

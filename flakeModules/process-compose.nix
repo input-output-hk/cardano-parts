@@ -13,6 +13,7 @@ in {
           run-process-compose-dbsync-mainnet
           run-process-compose-dbsync-preprod
           run-process-compose-dbsync-preview
+          run-process-compose-dbsync-dijkstra
           run-process-compose-node-stack
           ;
       };

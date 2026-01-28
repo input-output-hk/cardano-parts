@@ -43,6 +43,13 @@ flake @ {inputs, ...}: {
         isNodeNg = false;
         magic = getMagic "preview";
       };
+      dijkstra = {
+        isCardanoLibNg = true;
+        isDbsyncNg = true;
+        isMithrilNg = true;
+        isNodeNg = true;
+        magic = getMagic "dijkstra";
+      };
     };
 
     envVer = env: binCfg:
@@ -691,14 +698,20 @@ flake @ {inputs, ...}: {
       run-process-compose-dbsync-mainnet = mkDbsyncStack "mainnet";
       run-process-compose-dbsync-preprod = mkDbsyncStack "preprod";
       run-process-compose-dbsync-preview = mkDbsyncStack "preview";
+      run-process-compose-dbsync-dijkstra = mkDbsyncStack "dijkstra";
       run-process-compose-node-stack = mkNodeStack;
 
       test-process-compose-node-mainnet = mkNodeTestStack "mainnet";
       test-process-compose-node-preprod = mkNodeTestStack "preprod";
       test-process-compose-node-preview = mkNodeTestStack "preview";
+      test-process-compose-node-dijkstra = mkNodeTestStack "dijkstra";
+
       test-process-compose-dbsync-mainnet = mkDbsyncTestStack "mainnet";
       test-process-compose-dbsync-preprod = mkDbsyncTestStack "preprod";
       test-process-compose-dbsync-preview = mkDbsyncTestStack "preview";
+      # Until db-sync works as expected with dijkstra network:
+      # test-process-compose-dbsync-dijkstra = mkDbsyncTestStack "dijkstra";
+
       test-process-compose-node-mithril-mainnet = mkNodeMithrilTestStack "mainnet";
       test-process-compose-node-mithril-preprod = mkNodeMithrilTestStack "preprod";
       test-process-compose-node-mithril-preview = mkNodeMithrilTestStack "preview";

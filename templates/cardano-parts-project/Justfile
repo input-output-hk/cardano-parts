@@ -130,9 +130,9 @@ checkSshConfig := '''
       | collect
       | parse --regex `(?ms)(.*)^  };\nin {.*`
       | get capture0
-      | parse --regex `(?m)    (.*) = {$\n\s+privateIpv4 = \"(.*)";\n\s+publicIpv4 = \"(.*)";\n\s+publicIpv6 = \"(.*)";\n\s+};`
-      | rename machine privIpv4 pubIpv4 pubIpv6
-      | update pubIpv6 { $in | if $in == "" { null } else { $in } }
+      | parse --regex `(?m)    (?<machine>.*) = {$\n(\s+privateIpv4 = \"(?<privIpv4>.*)";\n)?(\s+publicIpv4 = \"(?<pubIpv4>.*)";\n)?(\s+publicIpv6 = \"(?<pubIpv6>.*)";\n)?\s+};`
+      | select machine privIpv4 pubIpv4 pubIpv6
+      | update cells { if ($in | is-empty) { null } else { $in } }
       | sort-by machine
     } else {
       []
@@ -1150,7 +1150,10 @@ update-ips:
     | update public_ipv6 {|row| if ($row.public_ipv6 | is-not-empty) {$row.public_ipv6.0} else {null}}
   )
 
-  let ipTable = ($eipTable | merge $instanceTable)
+  let ipTable = ($instanceTable
+    | insert private_ipv4 {|row| $eipTable | where name == $row.name | get --ignore-errors 0.private_ipv4}
+    | insert public_ipv4 {|row| $eipTable | where name == $row.name | get --ignore-errors 0.public_ipv4}
+  )
 
   ($ipTable
   | reduce --fold ["
@@ -1158,12 +1161,18 @@ update-ips:
       all = {
     "]
     {|machine, acc|
+      let maybe_field = {|name|
+        if $in != null {
+          $'($name) = "($in)";'
+        }
+      }
       $acc | append $"
-    ($machine.name) = {
-      privateIpv4 = "($machine.private_ipv4)";
-      publicIpv4 = "($machine.public_ipv4)";
-      publicIpv6 = "($machine.public_ipv6)";
-    };"
+        ($machine.name) = {
+          ($machine.private_ipv4 | do $maybe_field privateIpv4)
+          ($machine.public_ipv4 | do $maybe_field publicIpv4)
+          ($machine.public_ipv6 | do $maybe_field publicIpv6)
+        };
+      "
     }
   | append "
       };
@@ -1234,7 +1243,6 @@ update-ips-example:
       machine-example-2 = {
         privateIpv4 = "172.16.0.2";
         publicIpv4 = "1.2.3.5";
-        publicIpv6 = "";
       };
     };
   in {
