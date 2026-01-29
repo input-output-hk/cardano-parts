@@ -59,7 +59,7 @@
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/dijkstra";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/dijkstra";
 
     # Until blockperf detail fix is merged to master upstream
@@ -68,6 +68,7 @@
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
     cardano-node-10-5-4.url = "github:IntersectMBO/cardano-node/a9263dcf3478516f8c4804e679f2598aeea87b1e";
+    cardano-node-10-6-1-lsm.url = "github:IntersectMBO/cardano-node/js/lsm-10.6.1";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
@@ -97,12 +98,12 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/amick/nixos-lsm";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.6.0";
+      url = "github:IntersectMBO/cardano-node/amick/nixos-lsm";
       flake = false;
     };
 
