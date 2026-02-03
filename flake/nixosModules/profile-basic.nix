@@ -26,7 +26,7 @@
       key = ./profile-basic.nix;
 
       config = {
-        deployment.targetHost = name;
+        deployment.targetHost = mkDefault name;
 
         networking = {
           hostName = name;
