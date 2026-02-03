@@ -481,8 +481,8 @@ in
           # node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-3-6c034ec";
           node-release = pkg: localFlake.inputs.cardano-node-10-5-4.packages.x86_64-linux.${pkg};
 
-          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-1-0c220b2";
-          # node-pre-release = pkg: localFlake.inputs.cardano-node-10-6-0.packages.x86_64-linux.${pkg};
+          # node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-1-0c220b2";
+          node-pre-release = pkg: localFlake.inputs.cardano-node-10-6-2.packages.x86_64-linux.${pkg};
         in
           submodule {
             options = foldl' recursiveUpdate {} [
