@@ -475,11 +475,11 @@ in
           # faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
-          mithril-release = "input-output-hk-mithril-2543-1-hotfix-5d5571e";
-          mithril-pre-release = "input-output-hk-mithril-2603-1-pre-567a8e8";
+          mithril-release = "input-output-hk-mithril-2603-1-pre-567a8e8";
+          mithril-pre-release = "input-output-hk-mithril-unstable-7d50344";
 
-          # node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-3-6c034ec";
-          node-release = pkg: localFlake.inputs.cardano-node-10-5-4.packages.x86_64-linux.${pkg};
+          node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-4-b0a1259";
+          # node-release = pkg: localFlake.inputs.cardano-node-10-5-4.packages.x86_64-linux.${pkg};
 
           # node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-1-0c220b2";
           node-pre-release = pkg: localFlake.inputs.cardano-node-10-6-2.packages.x86_64-linux.${pkg};

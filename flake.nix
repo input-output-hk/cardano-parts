@@ -67,7 +67,6 @@
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
-    cardano-node-10-5-4.url = "github:IntersectMBO/cardano-node/a9263dcf3478516f8c4804e679f2598aeea87b1e";
     cardano-node-10-6-2.url = "github:IntersectMBO/cardano-node";
 
     # Cardano-db-sync schema input pins, which must match the
