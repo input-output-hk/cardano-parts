@@ -59,7 +59,12 @@
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
+
+    # The iohk-nix pin deviates from the cardano-node iohkNix pin of
+    # iohk-nix/cardano-node-release/10.5.4 because we need to cherry-pick the
+    # 10.5.4 updates onto the new-tracing branch to accomodate both legacy and
+    # new tracing modules until 10.6.x is a full release.
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/new-tracing-10.5.4";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # Until blockperf detail fix is merged to master upstream
