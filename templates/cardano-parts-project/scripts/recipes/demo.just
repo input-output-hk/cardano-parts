@@ -225,7 +225,7 @@ start-demo:
   echo "Note that any further gov actions will require a constitution to be adopted."
   echo
 
-# Start a fork to plomin demo using create-testnet-data-ng job
+# Start a fork to PV11 intra-era HF demo using create-testnet-data-ng job
 start-demo-ng:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -497,7 +497,7 @@ start-demo-ng:
     echo
   fi
 
-  echo "Submitting a Dijkstra hard fork action..."
+  echo "Submitting an intra-era PV11 hard fork action..."
   PREV_GOV_ACTION=$(cardano-cli latest query gov-state --testnet-magic "$TESTNET_MAGIC" | jq -r '.nextRatifyState.nextEnactState.prevGovActionIds.HardFork')
   PREV_GOV_ACTION_TX_ID=$(jq '.txId' <<< "$PREV_GOV_ACTION")
   PREV_GOV_ACTION_INDEX=$(jq '.govActionIx' <<< "$PREV_GOV_ACTION")
@@ -519,7 +519,7 @@ start-demo-ng:
   )
 
   for i in $(seq 1 "$NUM_CC_KEYS"); do
-    echo "Submitting the CC$i vote for the Dijkstra hard fork..."
+    echo "Submitting the CC$i vote for the intra-era PV11 hard fork..."
     DECISION=yes \
       ROLE=cc \
       VOTE_KEY="$CC_DIR/cc-$i-hot" \
@@ -530,7 +530,7 @@ start-demo-ng:
 
   POOL_NAME_ARR=($POOL_NAMES)
   for i in $(seq 1 "${#POOL_NAME_ARR[@]}"); do
-    echo "Submitting the pool $i vote for the Dijkstra hard fork..."
+    echo "Submitting the pool $i vote for the intra-era PV11 hard fork..."
     DECISION=yes \
       ROLE=spo \
       VOTE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f${i} -d' ' <<< "$POOL_NAMES")-cold" \
@@ -538,7 +538,7 @@ start-demo-ng:
     wait-for-mempool
   done
 
-  echo "Submitting the drep-0 vote for the Dijkstra hard fork..."
+  echo "Submitting the drep-0 vote for the intra-era PV11 hard fork..."
     DECISION=yes \
     ROLE=drep \
     VOTE_KEY="$DREP_DIR/drep-0" \
@@ -547,11 +547,11 @@ start-demo-ng:
   echo
 
   CURRENT_EPOCH=$(jq -re ".epoch" <<< "$(just query-tip demo "$TESTNET_MAGIC")")
-  echo "Sleeping until epoch $((CURRENT_EPOCH + 1)) for the Dijkstra hard fork to ratify..."
+  echo "Sleeping until epoch $((CURRENT_EPOCH + 1)) for the intra-era PV11 hard fork to ratify..."
   wait-for-tip "epoch" "$((CURRENT_EPOCH + 1))"
   echo
 
-  echo "Sleeping until epoch $((CURRENT_EPOCH + 2)) for the Dijkstra hard fork to enact..."
+  echo "Sleeping until epoch $((CURRENT_EPOCH + 2)) for the intra-era PV11 hard fork to enact..."
   wait-for-tip "epoch" "$((CURRENT_EPOCH + 2))"
   echo
 
