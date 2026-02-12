@@ -461,8 +461,8 @@ in
         };
 
         pkgsSubmodule = let
-          inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
-          # blockperf = caPkgs.blockperf-cardano-foundation-blockperf-main-d757f38;
+          # inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
+          blockperf = caPkgs.blockperf-cardano-foundation-blockperf-main-626ad7b;
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
           dbsync-release = "input-output-hk-cardano-db-sync-13-6-0-5-cb61094";
@@ -510,7 +510,7 @@ in
               (mkPkg "cardano-testnet-ng" (node-pre-release "cardano-testnet"))
               (mkPkg "cardano-tracer" (node-release "cardano-tracer"))
               (mkPkg "cardano-tracer-ng" (node-pre-release "cardano-tracer"))
-              (mkPkg "cardano-wallet" caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2025-03-31-1649791)
+              (mkPkg "cardano-wallet" caPkgs.cardano-wallet-cardano-foundation-cardano-wallet-v2025-12-15-b13cf08)
               (mkPkg "cc-sign" caPkgs."cc-sign-${credential-manager-release}")
               (mkPkg "colmena" localFlake.inputs.colmena.packages.${system}.colmena)
               (mkPkg "db-analyser" (node-release "db-analyser"))
