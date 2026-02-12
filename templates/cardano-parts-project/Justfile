@@ -36,8 +36,8 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^demo$ ]]; then
-    echo "Error: only node environments for demo, mainnet, preprod and preview are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$ ]]; then
+    echo "Error: only node environments for demo, dijkstra, mainnet, preprod and preview are supported"
     exit 1
   fi
 
@@ -47,6 +47,8 @@ checkEnvWithoutOverride := '''
     MAGIC="1"
   elif [ "$ENV" = "preview" ]; then
     MAGIC="2"
+  elif [ "$ENV" = "dijkstra" ]; then
+    MAGIC="6"
   elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
   fi
@@ -130,9 +132,9 @@ checkSshConfig := '''
       | collect
       | parse --regex `(?ms)(.*)^  };\nin {.*`
       | get capture0
-      | parse --regex `(?m)    (.*) = {$\n\s+privateIpv4 = \"(.*)";\n\s+publicIpv4 = \"(.*)";\n\s+publicIpv6 = \"(.*)";\n\s+};`
-      | rename machine privIpv4 pubIpv4 pubIpv6
-      | update pubIpv6 { $in | if $in == "" { null } else { $in } }
+      | parse --regex `(?m)    (?<machine>.*) = {$\n(\s+privateIpv4 = \"(?<privIpv4>.*)";\n)?(\s+publicIpv4 = \"(?<pubIpv4>.*)";\n)?(\s+publicIpv6 = \"(?<pubIpv6>.*)";\n)?\s+};`
+      | select machine privIpv4 pubIpv4 pubIpv6
+      | update cells { if ($in | is-empty) { null } else { $in } }
       | sort-by machine
     } else {
       []
@@ -300,13 +302,17 @@ cf STACKNAME:
 dbsync-prep ENV HOST ACCTS="501":
   #!/usr/bin/env bash
   set -euo pipefail
+  {{checkEnvWithoutOverride}}
+
   TMPFILE="/tmp/create-faucet-stake-keys-table-{{ENV}}.sql"
 
   echo "Creating stake key sql injection command for environment {{ENV}} (this will take a minute)..."
   NOMENU=true \
   scripts/setup-delegation-accounts.py \
     --print-only \
+    --testnet-magic "$MAGIC" \
     --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
+    --signing-key-file <(sops -d secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey) \
     --num-accounts {{ACCTS}} \
     > "$TMPFILE"
 
@@ -372,8 +378,8 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^preprod$|^preview$ ]]; then
-    echo "Error: only node environments for preprod and preview are supported"
+  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra$ ]]; then
+    echo "Error: only node environments for preprod, preview and dijkstra are supported"
     exit 1
   fi
 
@@ -549,7 +555,7 @@ query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
   QUERIED=0
-  for i in mainnet preprod preview demo; do
+  for i in mainnet preprod preview dijkstra demo; do
     TIP=$(just query-tip $i 2>&1) && {
       echo "Environment: $i"
       echo "$TIP"
@@ -574,7 +580,7 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli-ng"
   elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ ^demo$ ]]; then
+  elif [[ "$ENV" =~ ^dijkstra$|^demo$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
   fi
 
@@ -891,8 +897,8 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, and preview are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview and dijkstra are supported for start-node recipe"
     exit 1
   fi
 
@@ -928,7 +934,7 @@ start-node ENV:
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
-  for i in mainnet preprod preview demo; do
+  for i in mainnet preprod preview dijkstra demo; do
     just stop-node $i
   done
 
@@ -1068,8 +1074,8 @@ truncate-chain ENV SLOT:
   [ -n "${DEBUG:-}" ] && set -x
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, and preview are supported for truncate-chain recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview and dijkstra are supported for truncate-chain recipe"
     exit 1
   fi
 
@@ -1150,7 +1156,10 @@ update-ips:
     | update public_ipv6 {|row| if ($row.public_ipv6 | is-not-empty) {$row.public_ipv6.0} else {null}}
   )
 
-  let ipTable = ($eipTable | merge $instanceTable)
+  let ipTable = ($instanceTable
+    | insert private_ipv4 {|row| $eipTable | where name == $row.name | get --ignore-errors 0.private_ipv4}
+    | insert public_ipv4 {|row| $eipTable | where name == $row.name | get --ignore-errors 0.public_ipv4}
+  )
 
   ($ipTable
   | reduce --fold ["
@@ -1158,12 +1167,18 @@ update-ips:
       all = {
     "]
     {|machine, acc|
+      let maybe_field = {|name|
+        if $in != null {
+          $'($name) = "($in)";'
+        }
+      }
       $acc | append $"
-    ($machine.name) = {
-      privateIpv4 = "($machine.private_ipv4)";
-      publicIpv4 = "($machine.public_ipv4)";
-      publicIpv6 = "($machine.public_ipv6)";
-    };"
+        ($machine.name) = {
+          ($machine.private_ipv4 | do $maybe_field privateIpv4)
+          ($machine.public_ipv4 | do $maybe_field publicIpv4)
+          ($machine.public_ipv6 | do $maybe_field publicIpv6)
+        };
+      "
     }
   | append "
       };
@@ -1234,7 +1249,6 @@ update-ips-example:
       machine-example-2 = {
         privateIpv4 = "172.16.0.2";
         publicIpv4 = "1.2.3.5";
-        publicIpv6 = "";
       };
     };
   in {

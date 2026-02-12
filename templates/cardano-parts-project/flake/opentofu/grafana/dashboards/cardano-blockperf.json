@@ -966,8 +966,7 @@
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
+            "type": "prometheus"
           },
           "editorMode": "code",
           "expr": "round(increase((time() - cardano_node_metrics_node_start_time_int{instance=~\"$instances\"} < bool 300)[1h:]))",

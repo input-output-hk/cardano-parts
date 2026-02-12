@@ -25,7 +25,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 22,
+  "id": 35,
   "links": [],
   "panels": [
     {
@@ -61,7 +61,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -97,9 +97,7 @@
       "id": 5,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -118,7 +116,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_blockNum_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance_name\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -163,7 +161,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -199,9 +197,7 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -220,7 +216,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_slotNum_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance_name\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{instance}}",
@@ -264,7 +260,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -300,10 +296,7 @@
       "id": 18,
       "options": {
         "legend": {
-          "calcs": [
-            "last",
-            "mean"
-          ],
+          "calcs": ["last", "mean"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -322,7 +315,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "quantile(0.5,cardano_node_metrics_density_real{environment=\"$environment\"}) / 0.05",
+          "expr": "quantile(0.5,cardano_node_metrics_density_real{environment=\"$environment\",instance=~\"$instance_name\"}) / 0.05",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -368,7 +361,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -404,9 +397,7 @@
       "id": 3,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -425,7 +416,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_epoch_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_epoch_int{environment=\"$environment\",instance=~\"$instance_name\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -469,7 +460,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -507,9 +498,7 @@
       "interval": "20s",
       "options": {
         "legend": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -528,7 +517,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(cardano_node_metrics_nodeIsLeader_int{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\"}[1h]) / 0.05",
+          "expr": "rate(cardano_node_metrics_nodeIsLeader_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h]) / 0.05",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -540,14 +529,14 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(rate(cardano_node_metrics_nodeIsLeader_int{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\"}[1h])) / 0.05",
+          "expr": "sum(rate(cardano_node_metrics_nodeIsLeader_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h])) / 0.05",
           "interval": "",
           "legendFormat": "Total led slots",
           "range": true,
           "refId": "D"
         }
       ],
-      "title": "Slot leading share (% of slots led)",
+      "title": "Slot leading share (% of slots led / 1h)",
       "type": "timeseries"
     },
     {
@@ -583,7 +572,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -621,9 +610,7 @@
       "id": 41,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -642,7 +629,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum_over_time(abs((cardano_node_metrics_forgedSlotLast_int{environment=\"$environment\"} - cardano_node_metrics_forgedSlotLast_int {environment=\"$environment\"} == bool 0) - 1)[1d:])",
+          "expr": "sum_over_time(abs((cardano_node_metrics_forgedSlotLast_int{environment=\"$environment\",instance=~\"$instance_name\"} - cardano_node_metrics_forgedSlotLast_int {environment=\"$environment\",instance=~\"$instance_name\"} == bool 0) - 1)[1d:])",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -685,7 +672,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -721,9 +708,7 @@
       "id": 19,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -742,9 +727,9 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_slotInEpoch_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_slotInEpoch_int{environment=\"$environment\",instance=~\"$instance_name\"}",
           "interval": "",
-          "legendFormat": "{{environment}}",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "B"
         }
@@ -785,7 +770,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -820,9 +805,7 @@
       "id": 62,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -841,7 +824,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(cardano_node_metrics_slotsMissed_int{environment=\"$environment\"}[1h]) * 3600",
+          "expr": "rate(cardano_node_metrics_slotsMissed_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h]) * 3600",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -885,7 +868,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -940,7 +923,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_txsInMempool_int{environment=\"$environment\"}[30m]))",
+          "expr": "avg(avg_over_time(cardano_node_metrics_txsInMempool_int{environment=\"$environment\",instance=~\"$instance_name\"}[30m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "30 min average",
@@ -984,7 +967,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1020,9 +1003,7 @@
       "id": 28,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1041,7 +1022,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(cardano_node_metrics_blockNum_int{environment=\"$environment\"}[150s])*60",
+          "expr": "rate(cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[150s])*60",
           "hide": false,
           "interval": "",
           "legendFormat": "{{instance}}",
@@ -1085,7 +1066,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1121,9 +1102,7 @@
       "id": 66,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1142,7 +1121,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "quantile(0.5, cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\"} / 90112)",
+          "expr": "quantile(0.5, cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\",instance=~\"$instance_name\"} / 90112)",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1156,7 +1135,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\"}[15m]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\",instance=~\"$instance_name\"}[15m]) / 90112)",
           "hide": false,
           "interval": "",
           "legendFormat": "15 min average",
@@ -1169,7 +1148,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\"}[4h]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\",instance=~\"$instance_name\"}[4h]) / 90112)",
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
@@ -1183,7 +1162,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\"}[24h]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\",instance=~\"$instance_name\"}[24h]) / 90112)",
           "hide": false,
           "interval": "",
           "intervalFactor": 3,
@@ -1197,7 +1176,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\"}[7d]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize_int{environment=\"$environment\",instance=~\"$instance_name\"}[7d]) / 90112)",
           "hide": false,
           "interval": "",
           "intervalFactor": 10,
@@ -1243,7 +1222,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1279,9 +1258,7 @@
       "id": 52,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1300,7 +1277,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average{environment=\"$environment\"}",
+          "expr": "netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average{environment=\"$environment\",instance=~\"$instance_name\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1363,9 +1340,7 @@
         "orientation": "horizontal",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1381,7 +1356,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "quantile(0.5,cardano_node_metrics_currentKESPeriod_int{environment=\"$environment\"})",
+          "expr": "quantile(0.5,cardano_node_metrics_currentKESPeriod_int{environment=\"$environment\",instance=~\"$instance_name\"})",
           "interval": "",
           "legendFormat": "",
           "range": true,
@@ -1424,7 +1399,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1460,9 +1435,7 @@
       "id": 17,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1481,7 +1454,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "(irate(rts_gc_cpu_ms{environment=\"$environment\"}[2m]) + irate(rts_gc_mutator_cpu_ms{environment=\"$environment\"}[2m]) + irate(rts_gc_init_cpu_ms{environment=\"$environment\"}[2m])) / 1000",
+          "expr": "(irate(rts_gc_cpu_ms{environment=\"$environment\",instance=~\"$instance_name\"}[2m]) + irate(rts_gc_mutator_cpu_ms{environment=\"$environment\",instance=~\"$instance_name\"}[2m]) + irate(rts_gc_init_cpu_ms{environment=\"$environment\",instance=~\"$instance_name\"}[2m])) / 1000",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1524,7 +1497,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1547,7 +1520,7 @@
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -1560,9 +1533,7 @@
       "id": 37,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1581,14 +1552,14 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rts_gc_current_bytes_used{environment=\"$environment\"}",
+          "expr": "rts_gc_current_bytes_used{environment=\"$environment\",instance=~\"$instance_name\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Node current \"residency\" (amount of live data, MBytes)",
+      "title": "Node current \"residency\" (amount of live data)",
       "type": "timeseries"
     },
     {
@@ -1625,7 +1596,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1661,9 +1632,7 @@
       "id": 49,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1682,7 +1651,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_remainingKESPeriods_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_remainingKESPeriods_int{environment=\"$environment\",instance=~\"$instance_name\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1726,7 +1695,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1749,7 +1718,7 @@
               }
             ]
           },
-          "unit": "mbytes"
+          "unit": "decmbytes"
         },
         "overrides": []
       },
@@ -1762,9 +1731,7 @@
       "id": 34,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1783,7 +1750,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rts_gc_peak_megabytes_allocated{environment=\"$environment\"}",
+          "expr": "rts_gc_peak_megabytes_allocated{environment=\"$environment\",instance=~\"$instance_name\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1826,7 +1793,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1849,7 +1816,7 @@
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -1862,9 +1829,7 @@
       "id": 32,
       "options": {
         "legend": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1883,7 +1848,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rts_gc_max_bytes_used{environment=\"$environment\"}",
+          "expr": "rts_gc_max_bytes_used{environment=\"$environment\",instance=~\"$instance_name\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1891,6 +1856,807 @@
         }
       ],
       "title": "Node max \"residency\" (amount of live data)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "description": "Transactions accepted into the mempool, shown as a per-second rate averaged over the displayed interval.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 48
+      },
+      "id": 70,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(cardano_node_metrics_submissions_accepted_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Tx Submissions Accepted per second, averaged over $rate_interval_mimic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "description": "Transactions rejected during submission (validation failures, mempool policy, etc.), shown as a per-second rate averaged over the displayed interval.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 48
+      },
+      "id": 71,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(cardano_node_metrics_submissions_rejected_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Tx Submissions Rejected per second, averaged over $rate_interval_mimic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "description": "Percentage of submitted transactions that are rejected, averaged over the displayed interval.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 48
+      },
+      "id": 72,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(cardano_node_metrics_submissions_rejected_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic]) \n/\nrate(cardano_node_metrics_submissions_submitted_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Tx Rejection Rate %, averaged over $rate_interval_mimic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "description": "The number (after merges) of I/O requests completed per second for the device",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "IO read (-) / write (+)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "iops"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*Read.*/"
+            },
+            "properties": [
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sda_.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#7EB26D",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdb_.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EAB839",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdc_.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#6ED0E0",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdd_.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EF843C",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sde_.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E24D42",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sda1.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#584477",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sda2_.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#BA43A9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sda3_.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#F4D598",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdb1.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#0A50A1",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdb2.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#BF1B00",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdb3.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E0752D",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdc1.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#962D82",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdc2.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#614D93",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdc3.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#9AC48A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdd1.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#65C5DB",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdd2.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#F9934E",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdd3.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EA6460",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sde1.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E0F9D7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sdd2.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FCEACA",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*sde3.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#F9E2D2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 56
+      },
+      "id": 73,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull", "max", "min"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "irate(node_disk_reads_completed_total{instance=~\"$instance_name\"}[$rate_interval_mimic]) * -1",
+          "instant": false,
+          "legendFormat": "{{instance}} - IOPS reads",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "irate(node_disk_writes_completed_total{instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{instance}}  - IOPS writes",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Disk IOps Completed averaged over $rate_interval_mimic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 56
+      },
+      "id": 68,
+      "options": {
+        "legend": {
+          "calcs": ["last", "mean"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "avg(increase(cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])) / ($rate_interval_mimic / 20)",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{environment}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Cardano Chain Density using $rate_interval_mimic resolution",
       "type": "timeseries"
     },
     {
@@ -1927,7 +2693,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1958,14 +2724,12 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 48
+        "y": 56
       },
       "id": 67,
       "options": {
         "legend": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1984,7 +2748,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "(time() - cardano_node_metrics_node_start_time_int{environment=\"$environment\"}) / 86400",
+          "expr": "(time() - cardano_node_metrics_node_start_time_int{environment=\"$environment\",instance=~\"$instance_name\"}) / 86400",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1993,6 +2757,360 @@
       ],
       "title": "Node Uptime (days)",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 64
+      },
+      "id": 74,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "cardano_node_metrics_txsMempoolTimeoutHard_counter{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Mempool Tx Timeouts Hard",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 64
+      },
+      "id": 75,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "cardano_node_metrics_txsMempoolTimeoutSoft_counter{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Mempool Tx Timeouts Soft",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Version"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Compiler Version"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 135
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Git Revision"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Instance"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 175
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 64
+      },
+      "id": 77,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Git Revision"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Cardano Node Build Info",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": ["compiler_version", "instance", "revision", "version"]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "compiler_version": 3,
+              "instance": 0,
+              "revision": 2,
+              "version": 1
+            },
+            "renameByName": {
+              "compiler_version": "Compiler Version",
+              "instance": "Instance",
+              "revision": "Git Revision",
+              "version": "Version"
+            }
+          }
+        },
+        {
+          "id": "formatString",
+          "options": {
+            "outputFormat": "Substring",
+            "stringField": "Git Revision",
+            "substringEnd": 7
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "preload": false,
@@ -2003,8 +3121,8 @@
     "list": [
       {
         "current": {
-          "text": "mainnet",
-          "value": "mainnet"
+          "text": "preprod",
+          "value": "preprod"
         },
         "datasource": {
           "type": "prometheus"
@@ -2022,6 +3140,105 @@
         "refresh": 2,
         "regex": "",
         "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "definition": "label_values(rts_gc_current_bytes_used{environment=\"$environment\"},instance)",
+        "includeAll": true,
+        "label": "instance",
+        "multi": true,
+        "name": "instance_name",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(rts_gc_current_bytes_used{environment=\"$environment\"},instance)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "auto": true,
+        "auto_count": 200,
+        "auto_min": "4m",
+        "current": {
+          "text": "$__auto",
+          "value": "$__auto"
+        },
+        "description": "Exactly mimics Grafana's $__rate_interval variable, so that we can display it.",
+        "label": "rate interval",
+        "name": "rate_interval_mimic",
+        "options": [
+          {
+            "selected": false,
+            "text": "4m",
+            "value": "4m"
+          },
+          {
+            "selected": false,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": false,
+            "text": "3h",
+            "value": "3h"
+          },
+          {
+            "selected": false,
+            "text": "6h",
+            "value": "6h"
+          },
+          {
+            "selected": false,
+            "text": "12h",
+            "value": "12h"
+          },
+          {
+            "selected": false,
+            "text": "24h",
+            "value": "24h"
+          },
+          {
+            "selected": false,
+            "text": "3d",
+            "value": "3d"
+          },
+          {
+            "selected": false,
+            "text": "7d",
+            "value": "7d"
+          },
+          {
+            "selected": false,
+            "text": "14d",
+            "value": "14d"
+          },
+          {
+            "selected": false,
+            "text": "30d",
+            "value": "30d"
+          }
+        ],
+        "query": "4m,10m,30m,1h,3h,6h,12h,24h,3d,7d,14d,30d",
+        "refresh": 2,
+        "type": "interval"
       }
     ]
   },
@@ -2033,5 +3250,5 @@
   "timezone": "utc",
   "title": "Cardano Node: Application metrics (New Tracing)",
   "uid": "Oe0reiHea",
-  "version": 14
+  "version": 21
 }

@@ -33,6 +33,14 @@
       key = ./profile-common.nix;
 
       config = {
+        environment = {
+          # Enable terminfo for common terminal types like `xterm-256color` and `tmux-256color`.
+          enableAllTerminfo = mkDefault true;
+
+          # Use C locale for time to ensure consistent date retrieval and log timestamp formatting.
+          variables.LC_TIME = mkDefault "C";
+        };
+
         programs = {
           auth-keys-hub = {
             enable = mkDefault true;

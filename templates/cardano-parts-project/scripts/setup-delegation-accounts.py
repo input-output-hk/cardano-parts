@@ -8,7 +8,7 @@ Usage:
 
 Options:
     -h --help                    Show this screen
-    -p --print-only              Print sql for creation of faucet_stake_addr table only, take no other action
+    -p --print-only              Print sql for creation of faucet_stake_addr and faucet_deleg_addr tables only, take no other action
     -t --testnet-magic <INT>     Testnet Magic
     -s --signing-key-file <FILE> Signing Key
     -w --wallet-mnemonic <FILE>  mnemonic file cardano-address uses
@@ -39,17 +39,16 @@ if arguments["--delegation-amount"]:
 else:
   delegation_amount = 10000000000000
 
-if not arguments["--print-only"]:
-  if arguments["--signing-key-file"] and os.path.exists(arguments["--signing-key-file"]):
-    utxo_signing_key = Path(arguments["--signing-key-file"])
-  else:
-    print("Must specify signing key file")
-    exit(1)
+if arguments["--signing-key-file"] and os.path.exists(arguments["--signing-key-file"]):
+  utxo_signing_key = Path(arguments["--signing-key-file"])
+else:
+  print("Must specify signing key file")
+  exit(1)
 
-  if arguments["--testnet-magic"]:
-    network_args = ["--testnet-magic", arguments["--testnet-magic"]]
-  else:
-    network_args = ["--mainnet"]
+if arguments["--testnet-magic"]:
+  network_args = ["--testnet-magic", arguments["--testnet-magic"]]
+else:
+  network_args = ["--mainnet"]
 
 last_txin = ""
 
@@ -174,6 +173,25 @@ def derive_child_key(key, derivation, public=False, chain_code=True):
   else:
     return skey
 
+def derive_stake_skey(stake_xsk):
+  cli_args = [
+      "cardano-cli",
+      "latest",
+      "key",
+      "convert-cardano-address-key",
+      "--shelley-stake-key",
+      "--signing-key-file",
+      "/dev/stdin",
+      "--out-file",
+      "/dev/stdout"
+  ]
+  p = subprocess.run(cli_args, input=stake_xsk, capture_output=True, text=True)
+  if p.returncode != 0:
+      print(p.stderr)
+      raise Exception(f"Unknown error deriving stake skey")
+  skey = p.stdout.rstrip()
+  return skey
+
 def generateStakeRegistration(stake_vkey, file):
   network_args = []
   pparams = cli.getPParamsJson(*network_args)
@@ -195,7 +213,7 @@ def generateStakeRegistration(stake_vkey, file):
       raise Exception(f"Unknown error generating registration certificate")
   return
 
-def createTx(txin, stake_vkey, delegation_address, change_address, payment_signing_key_str, out_file, delegation_amount):
+def createTx(txin, stake_vkey, stake_skey, delegation_address, change_address, payment_signing_key_str, out_file, delegation_amount):
   with tempfile.NamedTemporaryFile("w+") as stake_reg_cert, tempfile.NamedTemporaryFile("w+") as tx_body:
     generateStakeRegistration(stake_vkey, stake_reg_cert)
     new_lovelace = txin[1] - 2000000 - 200000 - delegation_amount
@@ -222,7 +240,7 @@ def createTx(txin, stake_vkey, delegation_address, change_address, payment_signi
         print(p.stderr)
         print(f"died at tx file: {out_file}")
         raise Exception(f"Unknown error creating transaction")
-    txid = signTx(tx_body, payment_signing_key_str, out_file)
+    txid = signTx(tx_body, payment_signing_key_str, stake_skey, out_file)
     return (f"{txid}#0", new_lovelace)
 
 def getLargestUtxoForAddress(address):
@@ -243,19 +261,20 @@ def getLargestUtxoForAddress(address):
       exit(1)
     return txin
 
-def signTx(tx_body, utxo_signing_key_str, out_file):
+def signTx(tx_body, utxo_signing_key_str, stake_skey_str, out_file):
   cli_args = [
     "bash",
     "-c",
     f"cardano-cli latest transaction sign --tx-body-file {tx_body.name}"
     f" --signing-key-file <(echo '{utxo_signing_key_str}')"
+    f" --signing-key-file <(echo '{stake_skey_str}')"
     f" --out-file {out_file}"
   ]
   p = subprocess.run(cli_args, input=None, capture_output=True, text=True)
   if p.returncode != 0:
       print(p.stderr)
       raise Exception(f"Unknown error signing transaction")
-  cli_args = ["cardano-cli", "latest", "transaction", "txid", "--tx-file", out_file]
+  cli_args = ["cardano-cli", "latest", "transaction", "txid", "--tx-file", out_file, "--output-text"]
   p = subprocess.run(cli_args, input=None, capture_output=True, text=True)
   if p.returncode != 0:
       print(p.stderr)
@@ -273,35 +292,42 @@ if arguments["--wallet-mnemonic"]:
   with open(arguments["--wallet-mnemonic"], 'r') as file:
     mnemonic = file.read().replace('\n', '')
   wallet_root_skey = initialize_root_key(mnemonic)
-  wallet_account_vkey = derive_account_key(wallet_root_skey, public=False)
-  wallet_account_skey = derive_account_key(wallet_root_skey, public=True)
+  wallet_account_skey = derive_account_key(wallet_root_skey, public=False)
+  wallet_account_vkey = derive_account_key(wallet_root_skey, public=True)
 else:
   print("Must specify wallet mnemonic")
   exit(1)
 
 # Convert the signing key to a str so sops decryption and file redirection can be used for the file input arg
-if not arguments["--print-only"]:
-  with open(utxo_signing_key, "r") as file:
-    utxo_signing_key_str = file.read()
-  payment_addr = derive_payment_address_cli_skey(utxo_signing_key_str)
-  txin = getLargestUtxoForAddress(payment_addr)
+with open(utxo_signing_key, "r") as file:
+  utxo_signing_key_str = file.read()
+payment_addr = derive_payment_address_cli_skey(utxo_signing_key_str)
+txin = getLargestUtxoForAddress(payment_addr)
 
-printStr = ""
+faucetStakeSql = ""
+faucetDelegSql = ""
 for i in range(0, num_accounts):
   with tempfile.NamedTemporaryFile("w+") as registration_cert:
-    stake_vkey_ext = derive_child_key(wallet_account_vkey, f"2/{i}", public=True, chain_code=True)
-    stake_vkey = derive_child_key(wallet_account_vkey, f"2/{i}", public=True, chain_code=False)
+    stake_vkey_ext = derive_child_key(wallet_account_skey, f"2/{i}", public=True, chain_code=True)
+    stake_vkey = derive_child_key(wallet_account_skey, f"2/{i}", public=True, chain_code=False)
+    stake_xsk = derive_child_key(wallet_account_skey, f"2/{i}", public=False)
+    stake_skey = derive_stake_skey(stake_xsk)
     stake_address = derive_stake_address(stake_vkey_ext)
+    delegation_address = derive_delegation_address(payment_addr, stake_vkey_ext)
     if arguments["--print-only"]:
       if i == 0:
-        printStr="CREATE TABLE IF NOT EXISTS faucet_stake_addr AS (SELECT * FROM json_each_text('{"
-      printStr+=f'"{i}":"{stake_address}",'
+        faucetStakeSql="CREATE TABLE IF NOT EXISTS faucet_stake_addr AS (SELECT * FROM json_each_text('{"
+        faucetDelegSql="CREATE TABLE IF NOT EXISTS faucet_deleg_addr AS (SELECT * FROM json_each_text('{"
+
+      faucetStakeSql+=f'"{i}":"{stake_address}",'
+      faucetDelegSql+=f'"{i}":"{delegation_address}",'
     else:
-      delegation_address = derive_delegation_address(payment_addr, stake_vkey_ext)
-      txin = createTx(txin, stake_vkey, delegation_address, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{i}.txsigned", delegation_amount)
-      print(f"Setting up delegation for {i} and submitting the transaction")
-      sendTx(f"tx-deleg-account-{i}.txsigned")
+      txin = createTx(txin, stake_vkey, stake_skey, delegation_address, payment_addr, utxo_signing_key_str, f"tx-deleg-account-{i:03}.txsigned", delegation_amount)
+      print(f"Setting up delegation for {i:03} and submitting the transaction")
+      sendTx(f"tx-deleg-account-{i:03}.txsigned")
 
 if arguments["--print-only"]:
-  printStr = printStr.rstrip(',') + "}'));"
-  print(printStr)
+  faucetStakeSql = faucetStakeSql.rstrip(',') + "}'));"
+  faucetDelegSql = faucetDelegSql.rstrip(',') + "}'));"
+  print(faucetStakeSql)
+  print(faucetDelegSql)
