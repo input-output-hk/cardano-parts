@@ -163,7 +163,7 @@
           };
         };
 
-        system.extraSystemBuilderCmds = ''
+        system.systemBuilderCommands = ''
           ln -sv ${pkgs.path} $out/nixpkgs
         '';
 

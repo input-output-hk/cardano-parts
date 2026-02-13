@@ -12,10 +12,9 @@
 #   * This module assists with configuring multiple local db-sync consumers
 #   * The upstream cardano-db-sync nixos service module should still be imported separately
 {moduleWithSystem, ...}: {
-  flake.nixosModules.profile-cardano-db-sync = moduleWithSystem ({config, ...}: nixos @ {
+  flake.nixosModules.profile-cardano-db-sync = moduleWithSystem (_: nixos @ {
     pkgs,
     lib,
-    name,
     nodeResources,
     ...
   }:

@@ -2,11 +2,7 @@
   inherit (flake-parts-lib) mkPerSystemOption;
 in {
   options = {
-    perSystem = mkPerSystemOption ({
-      config,
-      system,
-      ...
-    }: {
+    perSystem = mkPerSystemOption ({system, ...}: {
       config.packages = {
         inherit
           (localFlake.packages.${system})

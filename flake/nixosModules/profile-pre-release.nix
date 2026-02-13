@@ -7,10 +7,7 @@
 # Tips:
 #
 flake @ {moduleWithSystem, ...}: {
-  flake.nixosModules.profile-pre-release = moduleWithSystem ({
-    config,
-    system,
-  }: nixos: let
+  flake.nixosModules.profile-pre-release = moduleWithSystem ({system}: nixos: let
     inherit (groupCfg) groupFlake;
 
     groupCfg = nixos.config.cardano-parts.cluster.group;
