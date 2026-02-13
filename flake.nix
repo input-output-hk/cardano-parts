@@ -27,8 +27,8 @@
     };
 
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
-    nix.url = "github:nixos/nix/2.29-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nix.url = "github:nixos/nix/2.33-maintenance";
 
     opentofu-registry = {
       url = "github:opentofu/registry";
@@ -104,7 +104,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.6.2";
+      url = "github:IntersectMBO/cardano-node/amick/add-dmq-node";
       flake = false;
     };
 
@@ -114,12 +114,12 @@
     };
 
     cardano-ogmios-service = {
-      url = "github:input-output-hk/cardano-ogmios/ogmios-6-3-0";
+      url = "github:input-output-hk/cardano-ogmios/v6.14.0";
       flake = false;
     };
 
     blockfrost-platform-service = {
-      url = "github:blockfrost/blockfrost-platform";
+      url = "github:blockfrost/blockfrost-platform/0.0.3-rc.3";
       flake = false;
     };
 
@@ -129,7 +129,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.6.2";
+      url = "github:IntersectMBO/cardano-node/amick/add-dmq-node";
       flake = false;
     };
 
@@ -139,7 +139,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.6.2";
+      url = "github:IntersectMBO/cardano-node/amick/add-dmq-node";
       flake = false;
     };
 
