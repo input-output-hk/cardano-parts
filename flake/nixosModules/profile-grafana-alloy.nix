@@ -24,7 +24,6 @@ flake @ {moduleWithSystem, ...}: {
     lib,
     name,
     pkgs,
-    self,
     ...
   }:
     with builtins;

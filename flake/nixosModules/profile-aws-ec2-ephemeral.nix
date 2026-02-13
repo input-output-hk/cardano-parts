@@ -52,7 +52,7 @@
 #   ephemeral block device formatting with label assignment and then
 #   leverages nixos `fileSystems` to handle discovery (ie: fstab), mounting
 #   and unmounting tasks via label attribute.
-flake: {
+{
   flake.nixosModules.profile-aws-ec2-ephemeral = {
     config,
     lib,

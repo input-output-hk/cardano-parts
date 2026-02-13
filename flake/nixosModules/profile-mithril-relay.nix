@@ -9,11 +9,10 @@
 #
 # Tips:
 #   * This module relays requests from a mithril-signer to the mithril network aggregator using a forward proxy
-flake: {
+{
   flake.nixosModules.profile-mithril-relay = {
     config,
     lib,
-    name,
     pkgs,
     ...
   }: let
