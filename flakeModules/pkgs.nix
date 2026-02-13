@@ -476,7 +476,7 @@ in
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2603-1-pre-567a8e8";
-          mithril-pre-release = "input-output-hk-mithril-unstable-9ed09c3";
+          mithril-pre-release = "input-output-hk-mithril-unstable-ce6e77b";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-4-b0a1259";
           # node-release = pkg: localFlake.inputs.cardano-node-10-5-4.packages.x86_64-linux.${pkg};
@@ -487,9 +487,9 @@ in
           submodule {
             options = foldl' recursiveUpdate {} [
               (mkPkg "bech32" (node-release "bech32"))
-              (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-2-e06029b)
+              (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-3-rc-3-e8da785)
               (mkPkg "blockperf" blockperf)
-              (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-0-3749045")
+              (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-2-5c00d7b")
               (mkPkg "cardano-cli" ((node-release "cardano-cli") // {version = "10.11.0.0";}))
               (mkPkg "cardano-cli-ng" ((node-pre-release "cardano-cli") // {version = "10.15.0.0";}))
               (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-release}")
@@ -500,8 +500,8 @@ in
               (mkPkg "cardano-faucet-ng" faucet-ng)
               (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "10.5.4";}))
               (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "10.6.2";}))
-              (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-11-2-df5971a)
-              (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-29-0-2ef95e1)
+              (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-14-0-5752501)
+              (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-34-0-4108dd3)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")
               (mkPkg "cardano-smash-ng" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-pre-release}")
               (mkPkg "cardano-submit-api" (node-release "cardano-submit-api"))
@@ -519,8 +519,8 @@ in
               (mkPkg "db-synthesizer-ng" (node-pre-release "db-synthesizer"))
               (mkPkg "db-truncater" (node-release "db-truncater"))
               (mkPkg "db-truncater-ng" (node-pre-release "db-truncater"))
-              (mkPkg "isd" caPkgs.isd-isd-project-isd-v0-5-1-51d52a2)
-              (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v1-46-0-6a1799e)
+              (mkPkg "isd" caPkgs.isd-isd-project-isd-v0-6-1-a4a5099)
+              (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v1-90-0-50c81a8)
               (mkPkg "metadata-server" caPkgs."metadata-server-${metadata-server-release}")
               (mkPkg "metadata-sync" caPkgs."metadata-sync-${metadata-server-release}")
               (mkPkg "metadata-validator-github" caPkgs."metadata-validator-github-${metadata-server-release}")
