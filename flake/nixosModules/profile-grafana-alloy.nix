@@ -628,7 +628,7 @@ flake @ {moduleWithSystem, ...}: {
               + cfg.extraAlloyConfig
             );
         in
-          (pkgs.runCommandNoCCLocal "alloy.config" {} ''
+          (pkgs.runCommandLocal "alloy.config" {} ''
             ${getExe cfg.package} fmt ${alloyCfg'} > $out
           '')
           .out;
