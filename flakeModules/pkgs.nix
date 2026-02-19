@@ -466,7 +466,7 @@ in
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
           dbsync-release = "input-output-hk-cardano-db-sync-13-6-0-5-cb61094";
-          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-0-389df80";
+          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-1-3c8724b";
 
           faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-6-762bb26";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
@@ -476,7 +476,7 @@ in
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2603-1-pre-567a8e8";
-          mithril-pre-release = "input-output-hk-mithril-unstable-ce6e77b";
+          mithril-pre-release = "input-output-hk-mithril-unstable-2529e72";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-5-4-b0a1259";
           # node-release = pkg: localFlake.inputs.cardano-node-10-5-4.packages.x86_64-linux.${pkg};
