@@ -80,7 +80,7 @@
   ...
 }: let
   inherit (flake-parts-lib) mkPerSystemOption;
-  inherit (lib) filterAttrs init last mdDoc mkOption updateManyAttrsByPath;
+  inherit (lib) filterAttrs init last mkOption updateManyAttrsByPath;
   inherit (lib.types) anything attrsOf functionTo package path str submodule;
 
   removeManyByPath = listofPathLists:
@@ -108,7 +108,7 @@
     options = {
       pkgs = mkOption {
         type = mainPkgsSubmodule;
-        description = mdDoc "Cardano-parts packages options";
+        description = "Cardano-parts packages options";
         default = {};
       };
     };
@@ -118,7 +118,7 @@
     options = {
       special = mkOption {
         type = specialPkgsSubmodule;
-        description = mdDoc "Cardano-parts special package options";
+        description = "Cardano-parts special package options";
         default = {};
       };
     };
@@ -128,13 +128,13 @@
     options = {
       blockfrost-platform-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default blockfrost-platform-service import path string.";
+        description = "The cardano-parts default blockfrost-platform-service import path string.";
         default = "${localFlake.inputs.blockfrost-platform-service}/nix/nixos";
       };
 
       cardanoLib = mkOption {
         type = anything;
-        description = mdDoc ''
+        description = ''
           The cardano-parts system dependent default package for cardanoLib.
 
           Iohk-nix cardanoLib is not a proper package derivation and
@@ -147,11 +147,12 @@
           The definition must be a function of system.
         '';
         default = system: mkCardanoLib system localFlake.inputs.iohk-nix;
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardanoLibCustom = mkOption {
         type = anything;
-        description = mdDoc ''
+        description = ''
           The cardano-parts system dependent default package for cardanoLibCustom.
 
           This is the same as the cardanoLib option with the exception that a
@@ -160,11 +161,12 @@
           The definition must be a function of iohk-nix input and system.
         '';
         default = iohk-nix: system: mkCardanoLib system iohk-nix;
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardanoLibNg = mkOption {
         type = anything;
-        description = mdDoc ''
+        description = ''
           The cardano-parts system dependent default package for cardanoLibNg.
 
           This is the same as the cardanoLib option with the exception that the
@@ -173,11 +175,12 @@
           The definition must be a function of system.
         '';
         default = system: mkCardanoLib system localFlake.inputs.iohk-nix-ng;
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-db-sync-pkgs = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           The cardano-parts default cardano-db-sync-pkgs attrset.
 
           Used in cardano-db-sync nixos related services, such as smash and
@@ -192,11 +195,12 @@
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
           schema = flake.config.flake.cardano-parts.pkgs.special.cardano-db-sync-schema;
         };
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-db-sync-pkgs-ng = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           The cardano-parts default cardano-db-sync-pkgs-ng attrset.
 
           This is the same as the cardano-db-sync-pkgs option with the exception that the
@@ -210,11 +214,12 @@
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
           schema = flake.config.flake.cardano-parts.pkgs.special.cardano-db-sync-schema-ng;
         };
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-db-sync-schema = mkOption {
         type = path;
-        description = mdDoc ''
+        description = ''
           The cardano-parts default cardano-db-sync-schema path.
 
           Used in cardano-db-sync to provide migration schema.
@@ -226,7 +231,7 @@
 
       cardano-db-sync-schema-ng = mkOption {
         type = path;
-        description = mdDoc ''
+        description = ''
           The cardano-parts default cardano-db-sync-schema-ng path.
 
           This is the same as the cardano-db-sync-schema option with the exception that the
@@ -237,7 +242,7 @@
 
       cardano-metadata-pkgs = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           The cardano-parts default cardano-metadata-pkgs attrset.
 
           The definition must be a function of system.
@@ -249,11 +254,12 @@
           metadata-webhook = withSystem system ({config, ...}: config.cardano-parts.pkgs.metadata-webhook);
           token-metadata-creator = withSystem system ({config, ...}: config.cardano-parts.pkgs.token-metadata-creator);
         };
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-node-pkgs = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           The cardano-parts default cardano-node-pkgs attrset.
 
           Used in cardano-node nixos service as an alternative to specifying
@@ -269,11 +275,12 @@
           cardano-tracer = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-tracer);
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLib system;
         };
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-node-pkgs-ng = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           The cardano-parts default cardano-node-pkgs-ng attrset.
 
           This is the same as the cardano-node-pkgs option with the exception that the
@@ -288,79 +295,80 @@
           cardano-tracer = withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-tracer-ng);
           cardanoLib = flake.config.flake.cardano-parts.pkgs.special.cardanoLibNg system;
         };
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-db-sync-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-db-sync-service import path string.";
+        description = "The cardano-parts default cardano-db-sync-service import path string.";
         default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/cardano-db-sync-service.nix";
       };
 
       cardano-db-sync-service-ng = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-db-sync-service-ng import path string.";
+        description = "The cardano-parts default cardano-db-sync-service-ng import path string.";
         default = "${localFlake.inputs.cardano-db-sync-service-ng}/nix/nixos/cardano-db-sync-service.nix";
       };
 
       # TODO: Module import fixup for local services
       cardano-faucet-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-faucet-service import path string.";
+        description = "The cardano-parts default cardano-faucet-service import path string.";
         # default = localFlake.nixosModules.service-cardano-faucet;
         default = "${localFlake}/flake/nixosModules/service-cardano-faucet.nix";
       };
 
       cardano-metadata-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-metadata-service import path string.";
+        description = "The cardano-parts default cardano-metadata-service import path string.";
         default = "${localFlake.inputs.cardano-metadata-service}/nix/nixos/default.nix";
       };
 
       cardano-node-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-node-service import path string.";
+        description = "The cardano-parts default cardano-node-service import path string.";
         default = "${localFlake.inputs.cardano-node-service}/nix/nixos/cardano-node-service.nix";
       };
 
       cardano-node-service-ng = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-node-service-ng import path string.";
+        description = "The cardano-parts default cardano-node-service-ng import path string.";
         default = "${localFlake.inputs.cardano-node-service-ng}/nix/nixos/cardano-node-service.nix";
       };
 
       cardano-ogmios-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-ogmios-service import path string.";
+        description = "The cardano-parts default cardano-ogmios-service import path string.";
         default = "${localFlake.inputs.cardano-ogmios-service}/nix/nixos";
       };
 
       cardano-smash-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-smash-service import path string.";
+        description = "The cardano-parts default cardano-smash-service import path string.";
         default = "${localFlake.inputs.cardano-db-sync-service}/nix/nixos/smash-service.nix";
       };
 
       cardano-submit-api-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-submit-api-service import path string.";
+        description = "The cardano-parts default cardano-submit-api-service import path string.";
         default = "${localFlake.inputs.cardano-submit-api-service}/nix/nixos/cardano-submit-api-service.nix";
       };
 
       cardano-submit-api-service-ng = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-submit-api-service-ng import path string.";
+        description = "The cardano-parts default cardano-submit-api-service-ng import path string.";
         default = "${localFlake.inputs.cardano-submit-api-service-ng}/nix/nixos/cardano-submit-api-service.nix";
       };
 
       cardano-tracer-service = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-tracer-service import path string.";
+        description = "The cardano-parts default cardano-tracer-service import path string.";
         default = "${localFlake.inputs.cardano-tracer-service}/nix/nixos/cardano-tracer-service.nix";
       };
 
       cardano-tracer-service-ng = mkOption {
         type = str;
-        description = mdDoc "The cardano-parts default cardano-tracer-service-ng import path string.";
+        description = "The cardano-parts default cardano-tracer-service-ng import path string.";
         default = "${localFlake.inputs.cardano-tracer-service-ng}/nix/nixos/cardano-tracer-service.nix";
       };
     };
@@ -386,8 +394,9 @@ in
         mkPkg = name: pkg: {
           ${name} = mkOption {
             type = package;
-            description = mdDoc "The cardano-parts default package for ${name}.";
+            description = "The cardano-parts default package for ${name}.";
             default = pkg;
+            defaultText = lib.literalMD "*see source*";
           };
         };
 
@@ -454,7 +463,7 @@ in
           options = {
             pkgs = mkOption {
               type = pkgsSubmodule;
-              description = mdDoc "Cardano-parts packages options";
+              description = "Cardano-parts packages options";
               default = {};
             };
           };

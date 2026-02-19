@@ -13,7 +13,7 @@
   lib,
   ...
 }: let
-  inherit (lib) foldl' mdDoc mkDefault mkOption recursiveUpdate types;
+  inherit (lib) foldl' mkDefault mkOption recursiveUpdate types;
   inherit (types) anything attrsOf submodule;
 
   cfg = config.flake.cardano-parts;
@@ -23,7 +23,7 @@
     options = {
       aws = mkOption {
         type = awsSubmodule;
-        description = mdDoc "Cardano-parts aws options";
+        description = "Cardano-parts aws options";
         default = {};
       };
     };
@@ -33,7 +33,7 @@
     options = {
       ec2 = mkOption {
         type = ec2Submodule;
-        description = mdDoc "Cardano-parts aws ec2 options";
+        description = "Cardano-parts aws ec2 options";
         default = {};
       };
     };
@@ -43,13 +43,18 @@
     options = {
       rawSpec = mkOption {
         type = anything;
-        description = mdDoc "The cardano-parts aws ec2 instance type raw spec reference.";
+        description = "The cardano-parts aws ec2 instance type raw spec reference.";
         default = builtins.fromJSON (builtins.readFile ./aws/ec2-spec.json);
+        defaultText = lib.literalExpression "builtins.fromJSON (builtins.readFile ./aws/ec2-spec.json)";
       };
 
       spec = mkOption {
         type = attrsOf anything;
-        description = mdDoc "The cardano-parts aws ec2 instance type spec reference.";
+        description = "The cardano-parts aws ec2 instance type spec reference.";
+        defaultText = lib.literalExpression ''
+          # Attrset of EC2 instance specs keyed by InstanceType, derived from rawSpec.
+          # Each entry has: provider, nodeType, coreCount, cpuCount, memMiB, threadsPerCore.
+        '';
         default = foldl' (acc: spec:
           recursiveUpdate acc {
             ${spec.InstanceType} = {

@@ -9,14 +9,14 @@
 # Tips:
 #   * flake level attrs are accessed from flake level at [config.]flake.cardano-parts.lib.<...>
 {lib, ...}: let
-  inherit (lib) mdDoc mkDefault mkOption types;
+  inherit (lib) mkDefault mkOption types;
   inherit (types) attrsOf anything functionTo submodule;
 
   mainSubmodule = submodule {
     options = {
       lib = mkOption {
         type = libSubmodule;
-        description = mdDoc "Cardano-parts lib options";
+        description = "Cardano-parts lib options";
         default = {};
       };
     };
@@ -26,7 +26,7 @@
     options = {
       opsLib = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           The cardano-parts ops library.
 
           A miscellaneous library for shared code used in various places
@@ -40,7 +40,7 @@
 
       topologyLib = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           The cardano-parts topology library.
 
           Consumers of the default definition of this library
