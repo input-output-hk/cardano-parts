@@ -83,13 +83,14 @@ in
           {
             defaultFormatterCheck = mkOption {
               type = globalType isGlobal package;
-              description = mdDoc "The cardano-parts default formatter check package.";
+              description = "The cardano-parts default formatter check package.";
               default = globalDefault isGlobal (treefmtEval.config.build.check flake.self);
+              defaultText = lib.literalMD "*see source*";
             };
 
             defaultFormatterCfg = mkOption {
               type = globalType isGlobal (attrsOf anything);
-              description = mdDoc "The cardano-parts default formatter config.";
+              description = "The cardano-parts default formatter config.";
               default = globalDefault isGlobal {
                 projectRootFile = "flake.nix";
                 programs.alejandra.enable = true;
@@ -99,33 +100,36 @@ in
 
             defaultFormatterHook = mkOption {
               type = globalType isGlobal str;
-              description = mdDoc "The cardano-parts default formatter hook.";
+              description = "The cardano-parts default formatter hook.";
               default = globalDefault isGlobal ''
                 if ${isPartsRepo}; then
                   ln -sf ${treefmtEval.config.build.configFile} treefmt.toml
                 fi
               '';
+              defaultText = lib.literalMD "*see source*";
             };
 
             defaultFormatterPkg = mkOption {
               type = globalType isGlobal package;
-              description = mdDoc "The cardano-parts default flake formatter package.";
+              description = "The cardano-parts default flake formatter package.";
               default = globalDefault isGlobal treefmtEval.config.build.wrapper;
+              defaultText = lib.literalMD "*see source*";
             };
 
             defaultHooks = mkOption {
               type = globalType isGlobal lines;
-              description = mdDoc "The cardano-parts default git and shell hooks.";
+              description = "The cardano-parts default git and shell hooks.";
               default = globalDefault isGlobal ''
                 if ${isPartsRepo} && [ -d .git/hooks ]; then
                   ln -sf ${getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
                 fi
               '';
+              defaultText = lib.literalMD "*see source*";
             };
 
             defaultLintPkg = mkOption {
               type = globalType isGlobal package;
-              description = mdDoc "The cardano-parts default lint package.";
+              description = "The cardano-parts default lint package.";
               default = globalDefault isGlobal (
                 pkgs.runCommand "lint" {
                   nativeBuildInputs = with pkgs; [
@@ -141,21 +145,23 @@ in
                   touch $out
                 ''
               );
+              defaultText = lib.literalMD "*see source*";
             };
 
             defaultVars = mkOption {
               type = globalType isGlobal attrs;
-              description = mdDoc "The cardano-parts default devShell env vars.";
+              description = "The cardano-parts default devShell env vars.";
               default = globalDefault isGlobal {
                 AWS_PROFILE = flakeCfg.cluster.infra.aws.profile;
                 AWS_REGION = flakeCfg.cluster.infra.aws.region;
                 KMS = flakeCfg.cluster.infra.aws.kms;
                 SSH_CONFIG_FILE = ".ssh_config";
               };
+              defaultText = lib.literalMD "*see source*";
             };
 
             defaultZshCompFpathLoading = mkOption {
-              description = mdDoc "The cardano-parts default zsh completion fpath loading hook.";
+              description = "The cardano-parts default zsh completion fpath loading hook.";
               default = globalDefault isGlobal (packages: ''
                   # Direnv use prevents the dynamic loading of zsh completions,
                   # requiring a zsh "reentry" upon arriving in the devShell.
@@ -194,47 +200,48 @@ in
                 echo
                 EOF
               '');
+              defaultText = lib.literalMD "*see source*";
             };
 
             enableFormatter = mkOption {
               type = globalType isGlobal bool;
-              description = mdDoc "Enable default cardano-parts formatter in the devShells.";
+              description = "Enable default cardano-parts formatter in the devShells.";
               default = globalDefault isGlobal true;
             };
 
             enableHooks = mkOption {
               type = globalType isGlobal bool;
-              description = mdDoc "Enable default cardano-parts git and shell hooks in the devShells.";
+              description = "Enable default cardano-parts git and shell hooks in the devShells.";
               default = globalDefault isGlobal true;
             };
 
             enableLint = mkOption {
               type = globalType isGlobal bool;
-              description = mdDoc "Enable default cardano-parts lint check in the devShells.";
+              description = "Enable default cardano-parts lint check in the devShells.";
               default = globalDefault isGlobal true;
             };
 
             enableVars = mkOption {
               type = globalType isGlobal bool;
-              description = mdDoc "Enable default cardano-parts env vars in the devShells.";
+              description = "Enable default cardano-parts env vars in the devShells.";
               default = globalDefault isGlobal true;
             };
 
             enableZshCompFpathLoading = mkOption {
               type = globalType isGlobal bool;
-              description = mdDoc "Enable default cardano-parts zsh completion loading into fpath in zsh devShells.";
+              description = "Enable default cardano-parts zsh completion loading into fpath in zsh devShells.";
               default = globalDefault isGlobal true;
             };
 
             extraPkgs = mkOption {
               type = listOf package;
-              description = mdDoc "Extra packages.";
+              description = "Extra packages.";
               default = [];
             };
 
             pkgs = mkOption {
               type = listOf package;
-              description = mdDoc "Packages.";
+              description = "Packages.";
               default = [];
             };
           }
@@ -259,7 +266,7 @@ in
           options = {
             shell = mkOption {
               type = shellSubmodule;
-              description = mdDoc "Cardano-parts shell options";
+              description = "Cardano-parts shell options";
               default = {};
             };
           };
@@ -271,11 +278,11 @@ in
             mkShellSubmodule {
               isGlobal = true;
               id = "global";
-              description = mdDoc "The cardano-parts devShell global configuration options.";
+              description = "The cardano-parts devShell global configuration options.";
               extraCfg = {
                 defaultShell = mkOption {
                   type = nullOr (enum definedIds);
-                  description = mdDoc "The cardano-parts devShell to set as default, if desired.";
+                  description = "The cardano-parts devShell to set as default, if desired.";
                   default = null;
                 };
 
@@ -288,7 +295,7 @@ in
             // (foldl' (acc: shellCfg: recursiveUpdate acc (mkShellSubmodule ({isGlobal = false;} // shellCfg))) {} [
               {
                 id = "min";
-                description = mdDoc "Minimal devShell";
+                description = "Minimal devShell";
                 extraCfg.pkgs = mkOption {
                   default = with pkgs; [
                     # Bash interactive needs to be included, otherwise, the
@@ -324,7 +331,7 @@ in
               }
               {
                 id = "test";
-                description = mdDoc "Testing devShell";
+                description = "Testing devShell";
                 extraCfg.pkgs = mkOption {
                   default =
                     config.cardano-parts.shell.min.pkgs
@@ -365,7 +372,7 @@ in
               }
               {
                 id = "ops";
-                description = mdDoc "Operations devShell";
+                description = "Operations devShell";
                 extraCfg.pkgs = mkOption {
                   default =
                     config.cardano-parts.shell.test.pkgs

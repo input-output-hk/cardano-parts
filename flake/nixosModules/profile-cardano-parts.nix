@@ -55,7 +55,7 @@ flake @ {moduleWithSystem, ...}: {
     ...
   }: let
     inherit (builtins) attrNames deepSeq elem head stringLength;
-    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mdDoc mapAttrs' mkIf mkOption nameValuePair optional optionalString pipe recursiveUpdate types;
+    inherit (lib) count filterAttrs foldl' isList mapAttrsToList mapAttrs' mkIf mkOption nameValuePair optional optionalString pipe recursiveUpdate types;
     inherit (types) anything attrsOf bool enum ints listOf oneOf package port nullOr str submodule;
     inherit (cfg.group) groupFlake;
     inherit (cfgPerNode.lib) topologyLib;
@@ -71,7 +71,7 @@ flake @ {moduleWithSystem, ...}: {
     mkPkgOpt = name: pkg: {
       ${name} = mkOption {
         type = package;
-        description = mdDoc "The cardano-parts nixos default package for ${name}.";
+        description = "The cardano-parts nixos default package for ${name}.";
         default = pkg;
       };
     };
@@ -79,7 +79,7 @@ flake @ {moduleWithSystem, ...}: {
     mkSpecialOpt = name: type: specialPkg: {
       ${name} = mkOption {
         inherit type;
-        description = mdDoc "The cardano-parts nixos default special package for ${name}.";
+        description = "The cardano-parts nixos default special package for ${name}.";
         default = specialPkg;
       };
     };
@@ -88,13 +88,13 @@ flake @ {moduleWithSystem, ...}: {
       options = {
         cluster = mkOption {
           type = clusterSubmodule;
-          description = mdDoc "Cardano-parts nixos cluster submodule";
+          description = "Cardano-parts nixos cluster submodule";
           default = {};
         };
 
         perNode = mkOption {
           type = perNodeSubmodule;
-          description = mdDoc "Cardano-parts nixos perNode submodule";
+          description = "Cardano-parts nixos perNode submodule";
           default = {};
         };
       };
@@ -105,7 +105,7 @@ flake @ {moduleWithSystem, ...}: {
         group = mkOption {
           type = attrsOf anything;
           inherit (flake.config.flake.cardano-parts.cluster.groups) default;
-          description = mdDoc "The cardano group to associate with the nixos node.";
+          description = "The cardano group to associate with the nixos node.";
         };
       };
     };
@@ -114,31 +114,31 @@ flake @ {moduleWithSystem, ...}: {
       options = {
         generic = mkOption {
           type = genericSubmodule;
-          description = mdDoc "Cardano-parts nixos perNode generic submodule";
+          description = "Cardano-parts nixos perNode generic submodule";
           default = {};
         };
 
         lib = mkOption {
           type = libSubmodule;
-          description = mdDoc "Cardano-parts nixos perNode lib submodule";
+          description = "Cardano-parts nixos perNode lib submodule";
           default = {};
         };
 
         meta = mkOption {
           type = metaSubmodule;
-          description = mdDoc "Cardano-parts nixos perNode meta submodule";
+          description = "Cardano-parts nixos perNode meta submodule";
           default = {};
         };
 
         pkgs = mkOption {
           type = pkgsSubmodule;
-          description = mdDoc "Cardano-parts nixos perNode pkgs submodule";
+          description = "Cardano-parts nixos perNode pkgs submodule";
           default = {};
         };
 
         roles = mkOption {
           type = rolesSubmodule;
-          description = mdDoc "Cardano-parts nixos perNode roles submodule";
+          description = "Cardano-parts nixos perNode roles submodule";
           default = {};
         };
       };
@@ -148,7 +148,7 @@ flake @ {moduleWithSystem, ...}: {
       options = {
         abortOnMissingIpModule = mkOption {
           type = bool;
-          description = mdDoc ''
+          description = ''
             The option to abort on missing downstream provided "ip-module" nixosModule.
           '';
           default = cfg.group.generic.abortOnMissingIpModule;
@@ -156,7 +156,7 @@ flake @ {moduleWithSystem, ...}: {
 
         warnOnMissingIpModule = mkOption {
           type = bool;
-          description = mdDoc ''
+          description = ''
             The option to warn on missing downstream provided "ip-module" nixosModule.
           '';
           default = cfg.group.generic.warnOnMissingIpModule;
@@ -176,91 +176,91 @@ flake @ {moduleWithSystem, ...}: {
       options = {
         addressType = mkOption {
           type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"];
-          description = mdDoc "The default addressType for topologyLib mkProducer function.";
+          description = "The default addressType for topologyLib mkProducer function.";
           default = cfg.group.meta.addressType;
         };
 
         blockfrost-platform-service = mkOption {
           type = str;
-          description = mdDoc "The blockfrost-platform-service import path string.";
+          description = "The blockfrost-platform-service import path string.";
           default = cfg.group.meta.blockfrost-platform-service;
         };
 
         cardanoDbSyncPrometheusExporterPort = mkOption {
           type = port;
-          description = mdDoc "The port to associate with the nixos cardano-db-sync prometheus exporter.";
+          description = "The port to associate with the nixos cardano-db-sync prometheus exporter.";
           default = cfg.group.meta.cardanoDbSyncPrometheusExporterPort;
         };
 
         cardanoNodePort = mkOption {
           type = port;
-          description = mdDoc "The port to associate with the nixos cardano-node.";
+          description = "The port to associate with the nixos cardano-node.";
           default = cfg.group.meta.cardanoNodePort;
         };
 
         cardanoNodePrometheusExporterPort = mkOption {
           type = port;
-          description = mdDoc "The port to associate with the nixos cardano-node prometheus exporter.";
+          description = "The port to associate with the nixos cardano-node prometheus exporter.";
           default = cfg.group.meta.cardanoNodePrometheusExporterPort;
         };
 
         cardanoSmashDelistedPools = mkOption {
           type = listOf str;
-          description = mdDoc "The cardano-smash delisted pools.";
+          description = "The cardano-smash delisted pools.";
           default = cfg.group.meta.cardanoSmashDelistedPools;
         };
 
         cardano-db-sync-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-db-sync-service import path string.";
+          description = "The cardano-db-sync-service import path string.";
           default = cfg.group.meta.cardano-db-sync-service;
         };
 
         cardano-faucet-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-faucet-service import path string.";
+          description = "The cardano-faucet-service import path string.";
           default = cfg.group.meta.cardano-faucet-service;
         };
 
         cardano-metadata-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-metadata-service import path string.";
+          description = "The cardano-metadata-service import path string.";
           default = cfg.group.meta.cardano-metadata-service;
         };
 
         cardano-node-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-node-service import path string.";
+          description = "The cardano-node-service import path string.";
           default = cfg.group.meta.cardano-node-service;
         };
 
         cardano-ogmios-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-ogmios-service import path string.";
+          description = "The cardano-ogmios-service import path string.";
           default = cfg.group.meta.cardano-ogmios-service;
         };
 
         cardano-smash-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-smash-service import path string.";
+          description = "The cardano-smash-service import path string.";
           default = cfg.group.meta.cardano-smash-service;
         };
 
         cardano-submit-api-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-submit-api-service import path string.";
+          description = "The cardano-submit-api-service import path string.";
           default = cfg.group.meta.cardano-submit-api-service;
         };
 
         cardano-tracer-service = mkOption {
           type = str;
-          description = mdDoc "The cardano-tracer-service import path string.";
+          description = "The cardano-tracer-service import path string.";
           default = cfg.group.meta.cardano-tracer-service;
         };
 
         enableAlertCount = mkOption {
           type = bool;
-          description = mdDoc ''
+          description = ''
             Whether to count this machine as an expected machine to appear in grafana/prometheus metrics.
 
             In cases where this machine may be created, but mostly kept in a stopped state such that it will
@@ -275,7 +275,7 @@ flake @ {moduleWithSystem, ...}: {
 
         enableDns = mkOption {
           type = bool;
-          description = mdDoc ''
+          description = ''
             Whether to create a DNS for this machine when running `just tofu apply`.
 
             Typically, only block producers or other sensitive machines would want to set this to false.
@@ -285,19 +285,19 @@ flake @ {moduleWithSystem, ...}: {
 
         hostAddr = mkOption {
           type = str;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node for ipv4 binding.";
+          description = "The hostAddr to associate with the nixos cardano-node for ipv4 binding.";
           default = "0.0.0.0";
         };
 
         hostAddrIpv6 = mkOption {
           type = str;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node for ipv6 binding.";
+          description = "The hostAddr to associate with the nixos cardano-node for ipv6 binding.";
           default = "::0";
         };
 
         hostsList = mkOption {
           type = oneOf [(enum ["all" "group"]) (listOf str)];
-          description = mdDoc ''
+          description = ''
             A list of Colmena machine names for which /etc/hosts will be configured for if
             nixosModule.ip-module is available in the downstream repo and profile-cardano-parts
             nixosModule is imported.
@@ -313,7 +313,7 @@ flake @ {moduleWithSystem, ...}: {
 
         nodeId = mkOption {
           type = nullOr ints.unsigned;
-          description = mdDoc "The hostAddr to associate with the nixos cardano-node.";
+          description = "The hostAddr to associate with the nixos cardano-node.";
           default = 0;
         };
       };

@@ -79,16 +79,17 @@ flake @ {
   withSystem,
   ...
 }: let
-  inherit (lib) mdDoc mkDefault mkOption types;
+  inherit (lib) mkDefault mkOption types;
   inherit (types) addCheck anything attrsOf bool enum functionTo listOf nullOr oneOf package port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
 
   # TODO: improved function to do real type checking while still providing a useful message
+  # null is allowed since many of these options have null defaults and are set by the user.
   optionCheck = type: optionName: typeName:
     addCheck anything (f:
-      if builtins.typeOf f == type
+      if f == null || builtins.typeOf f == type
       then true
       else builtins.abort "flake.cardano-parts.cluster.${optionName} must be a declared type of: ${typeName}");
 
@@ -96,7 +97,7 @@ flake @ {
     options = {
       cluster = mkOption {
         type = clusterSubmodule;
-        description = mdDoc "Cardano-parts cluster options.";
+        description = "Cardano-parts cluster options.";
         default = {};
       };
     };
@@ -106,13 +107,13 @@ flake @ {
     options = {
       infra = mkOption {
         type = infraSubmodule;
-        description = mdDoc "Cardano-parts cluster infra submodule.";
+        description = "Cardano-parts cluster infra submodule.";
         default = {};
       };
 
       groups = mkOption {
         type = attrsOf groupSubmodule;
-        description = mdDoc "Cardano-parts cluster group submodule.";
+        description = "Cardano-parts cluster group submodule.";
         default = {};
       };
     };
@@ -122,19 +123,19 @@ flake @ {
     options = {
       aws = mkOption {
         type = awsSubmodule;
-        description = mdDoc "Cardano-parts cluster infra aws submodule.";
+        description = "Cardano-parts cluster infra aws submodule.";
         default = {};
       };
 
       grafana = mkOption {
         type = grafanaSubmodule;
-        description = mdDoc "Cardano-parts cluster infra grafana submodule.";
+        description = "Cardano-parts cluster infra grafana submodule.";
         default = {};
       };
 
       generic = mkOption {
         type = genericSubmodule;
-        description = mdDoc "Cardano-parts cluster infra generic submodule.";
+        description = "Cardano-parts cluster infra generic submodule.";
         default = {};
       };
     };
@@ -144,19 +145,19 @@ flake @ {
     options = {
       orgId = mkOption {
         type = optionCheck "string" "infra.aws.orgId" "str";
-        description = mdDoc "The cardano-parts cluster infra AWS organization ID.";
+        description = "The cardano-parts cluster infra AWS organization ID.";
         default = null;
       };
 
       region = mkOption {
         type = optionCheck "string" "infra.aws.region" "str";
-        description = mdDoc "The cardano-parts cluster infra AWS default region.";
+        description = "The cardano-parts cluster infra AWS default region.";
         default = null;
       };
 
       regions = mkOption {
         type = optionCheck "set" "infra.aws.regions" "attrsOf bool";
-        description = mdDoc ''
+        description = ''
           The cardano-parts cluster infra AWS regions in use, including the default region.
 
           Regions are given as attrNames with a value of bool.
@@ -171,26 +172,34 @@ flake @ {
 
       kms = mkOption {
         type = optionCheck "string" "infra.aws.kms" "str";
-        description = mdDoc "The cardano-parts cluster infra AWS KMS ARN.";
-        default = "arn:aws:kms:${cfgAws.region}:${cfgAws.orgId}:alias/kmsKey";
+        description = "The cardano-parts cluster infra AWS KMS ARN.";
+        default =
+          if cfgAws.region != null && cfgAws.orgId != null
+          then "arn:aws:kms:${cfgAws.region}:${cfgAws.orgId}:alias/kmsKey"
+          else null;
+        defaultText = lib.literalMD "*see source*";
       };
 
       profile = mkOption {
         type = optionCheck "string" "infra.aws.profile" "str";
-        description = mdDoc "The cardano-parts cluster AWS infra profile to use.";
+        description = "The cardano-parts cluster AWS infra profile to use.";
         default = null;
       };
 
       domain = mkOption {
         type = optionCheck "string" "infra.aws.domain" "str";
-        description = mdDoc "The cardano-parts cluster AWS infra domain to use.";
+        description = "The cardano-parts cluster AWS infra domain to use.";
         default = null;
       };
 
       bucketName = mkOption {
         type = optionCheck "string" "infra.aws.bucketName" "str";
-        description = mdDoc "The cardano-parts cluster infra AWS S3 bucket to use for Terraform state.";
-        default = "${cfgAws.profile}-terraform";
+        description = "The cardano-parts cluster infra AWS S3 bucket to use for Terraform state.";
+        default =
+          if cfgAws.profile != null
+          then "${cfgAws.profile}-terraform"
+          else null;
+        defaultText = lib.literalMD "*see source*";
       };
     };
   };
@@ -199,7 +208,7 @@ flake @ {
     options = {
       stackName = mkOption {
         type = optionCheck "string" "infra.grafana.stackName" "str";
-        description = mdDoc "The cardano-parts cluster infra grafana cloud stack name.";
+        description = "The cardano-parts cluster infra grafana cloud stack name.";
         default = null;
       };
     };
@@ -209,7 +218,7 @@ flake @ {
     options = {
       abortOnMissingIpModule = mkOption {
         type = bool;
-        description = mdDoc ''
+        description = ''
           The cardano-parts cluster infra generic option to abort if the
           downstream provided "ip-module" nixosModule is missing.
 
@@ -229,7 +238,7 @@ flake @ {
 
       costCenter = mkOption {
         type = optionCheck "string" "infra.generic.costCenter" "str";
-        description = mdDoc ''
+        description = ''
           The cardano-parts cluster infra generic costCenter.
 
           By default, the costCenter string for tagging cloud resources is
@@ -247,7 +256,7 @@ flake @ {
 
       environment = mkOption {
         type = optionCheck "string" "infra.generic.environment" "str";
-        description = mdDoc ''
+        description = ''
           The cardano-parts cluster infra generic environment.
 
           This option is required by IOG IT/Finance.
@@ -258,21 +267,21 @@ flake @ {
 
       function = mkOption {
         type = optionCheck "string" "infra.generic.function" "str";
-        description = mdDoc "The cardano-parts cluster infra generic function.";
+        description = "The cardano-parts cluster infra generic function.";
         example = "cardano-parts";
         default = null;
       };
 
       organization = mkOption {
         type = optionCheck "string" "infra.generic.organization" "str";
-        description = mdDoc "The cardano-parts cluster infra generic organization.";
+        description = "The cardano-parts cluster infra generic organization.";
         example = "iog";
         default = null;
       };
 
       owner = mkOption {
         type = optionCheck "string" "infra.generic.owner" "str";
-        description = mdDoc ''
+        description = ''
           The cardano-parts cluster infra generic owner.
 
           This option is required by IOG IT/Finance.
@@ -283,7 +292,7 @@ flake @ {
 
       project = mkOption {
         type = optionCheck "string" "infra.generic.project" "str";
-        description = mdDoc ''
+        description = ''
           The cardano-parts cluster infra generic project.
 
           This option is required by IOG IT/Finance.
@@ -294,21 +303,21 @@ flake @ {
 
       repo = mkOption {
         type = optionCheck "string" "infra.generic.repo" "str";
-        description = mdDoc "The cardano-parts cluster infra generic repo.";
+        description = "The cardano-parts cluster infra generic repo.";
         example = "https://github.com/input-output-hk/cardano-playground";
         default = null;
       };
 
       tribe = mkOption {
         type = optionCheck "string" "infra.generic.tribe" "str";
-        description = mdDoc "The cardano-parts cluster infra generic tribe.";
+        description = "The cardano-parts cluster infra generic tribe.";
         example = "coretech";
         default = null;
       };
 
       warnOnMissingIpModule = mkOption {
         type = bool;
-        description = mdDoc ''
+        description = ''
           The cardano-parts cluster infra generic option to warn if the
           downstream provided "ip-module" nixosModule is missing.
 
@@ -332,7 +341,7 @@ flake @ {
     options = {
       bookRelayMultivalueDns = mkOption {
         type = nullOr str;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group(s) multivalue DNS.
           Machines belonging to this group and in the relay role have their IP A address added to this multivalue DNS record.
           This is intended to aggregate all group relays for a given environment to a single DNS for use as an upstream publicRoots.
@@ -342,13 +351,13 @@ flake @ {
 
       generic = mkOption {
         type = groupGenericSubmodule;
-        description = mdDoc "Cardano-parts cluster group generic submodule.";
+        description = "Cardano-parts cluster group generic submodule.";
         default = {};
       };
 
       groupBlockProducerSubstring = mkOption {
         type = str;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group block producer substring.
           Machines belonging to this group and in the block producer role will have Colmena names containing this substring.
         '';
@@ -357,7 +366,7 @@ flake @ {
 
       groupFlake = mkOption {
         type = attrsOf raw;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster flake of the consuming repository.
 
           In certain cases, the cardano-parts flake will be used instead of the
@@ -376,17 +385,18 @@ flake @ {
           should also originate from groupFlake.
         '';
         default = flake;
+        defaultText = lib.literalMD "*see source*";
       };
 
       groupName = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group name.";
+        description = "Cardano-parts cluster group name.";
         default = name;
       };
 
       groupPrefix = mkOption {
         type = str;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group prefix.
           Machines belonging to this group will have Colmena names starting with this prefix.
         '';
@@ -395,7 +405,7 @@ flake @ {
 
       groupRelayMultivalueDns = mkOption {
         type = nullOr str;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group multivalue DNS.
           Machines belonging to this group and in the relay role have their IP A address added to this multivalue DNS record.
           This is intended to aggregate all group relays for a given pool to a single DNS for use as registered pool relay DNS contact.
@@ -405,7 +415,7 @@ flake @ {
 
       groupRelaySubstring = mkOption {
         type = str;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group relay substring.
           Machines belonging to this group and having Colmena names containing this substring,
           will be considered relays for the purposes of multivalue DNS generation via the
@@ -416,19 +426,19 @@ flake @ {
 
       meta = mkOption {
         type = groupMetaSubmodule;
-        description = mdDoc "Cardano-parts cluster group meta submodule.";
+        description = "Cardano-parts cluster group meta submodule.";
         default = {};
       };
 
       pkgs = mkOption {
         type = groupPkgsSubmodule;
-        description = mdDoc "Cardano-parts cluster group pkgs submodule.";
+        description = "Cardano-parts cluster group pkgs submodule.";
         default = {};
       };
 
       lib = mkOption {
         type = groupLibSubmodule;
-        description = mdDoc "Cardano-parts cluster group lib submodule.";
+        description = "Cardano-parts cluster group lib submodule.";
         default = {};
       };
     };
@@ -438,7 +448,7 @@ flake @ {
     options = {
       abortOnMissingIpModule = mkOption {
         type = bool;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group option to abort on missing downstream provided "ip-module" nixosModule.
         '';
         default = cfg.cluster.infra.generic.abortOnMissingIpModule;
@@ -446,7 +456,7 @@ flake @ {
 
       warnOnMissingIpModule = mkOption {
         type = bool;
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group option to warn on missing downstream provided "ip-module" nixosModule.
         '';
         default = cfg.cluster.infra.generic.warnOnMissingIpModule;
@@ -458,24 +468,27 @@ flake @ {
     options = {
       cardanoLib = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group default cardanoLib.
 
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardanoLib;
+        defaultText = lib.literalMD "*see source*";
       };
 
       opsLib = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc "Cardano-parts cluster group opsLib.";
+        description = "Cardano-parts cluster group opsLib.";
         default = cfg.lib.opsLib;
+        defaultText = lib.literalMD "*see source*";
       };
 
       topologyLib = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc "Cardano-parts cluster group topologyLib.";
+        description = "Cardano-parts cluster group topologyLib.";
         default = cfg.lib.topologyLib;
+        defaultText = lib.literalMD "*see source*";
       };
     };
   };
@@ -484,7 +497,7 @@ flake @ {
     options = {
       addressType = mkOption {
         type = enum ["fqdn" "namePrivateIpv4" "namePublicIpv4" "namePublicIpv6" "privateIpv4" "publicIpv4" "publicIpv6"];
-        description = mdDoc "Cardano-parts cluster group default addressType for topologyLib mkProducer function.";
+        description = "Cardano-parts cluster group default addressType for topologyLib mkProducer function.";
         default =
           if flake.config.flake.nixosModules ? ips
           then "namePublicIpv4"
@@ -493,121 +506,121 @@ flake @ {
 
       blockfrost-platform-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group blockfrost-platform-service import path string.";
+        description = "Cardano-parts cluster group blockfrost-platform-service import path string.";
         default = cfg.pkgs.special.blockfrost-platform-service;
       };
 
       cardanoDbSyncPrometheusExporterPort = mkOption {
         type = port;
-        description = mdDoc "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
+        description = "Cardano-parts cluster group cardanoDbSyncPrometheusExporterPort.";
         default = 8080;
       };
 
       cardanoNodePort = mkOption {
         type = port;
-        description = mdDoc "Cardano-parts cluster group cardanoNodePort.";
+        description = "Cardano-parts cluster group cardanoNodePort.";
         default = 3001;
       };
 
       cardanoNodePrometheusExporterPort = mkOption {
         type = port;
-        description = mdDoc "Cardano-parts cluster group cardanoNodePrometheusExporterPort.";
+        description = "Cardano-parts cluster group cardanoNodePrometheusExporterPort.";
         default = 12798;
       };
 
       cardanoSmashDelistedPools = mkOption {
         type = listOf str;
-        description = mdDoc "Cardano-parts cluster group cardano-smash delisted pools.";
+        description = "Cardano-parts cluster group cardano-smash delisted pools.";
         default = [];
       };
 
       cardano-db-sync-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-db-sync-service import path string.";
+        description = "Cardano-parts cluster group cardano-db-sync-service import path string.";
         default = cfg.pkgs.special.cardano-db-sync-service;
       };
 
       cardano-db-sync-service-ng = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-db-sync-service-ng import path string.";
+        description = "Cardano-parts cluster group cardano-db-sync-service-ng import path string.";
         default = cfg.pkgs.special.cardano-db-sync-service-ng;
       };
 
       cardano-faucet-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-faucet-service import path string.";
+        description = "Cardano-parts cluster group cardano-faucet-service import path string.";
         default = cfg.pkgs.special.cardano-faucet-service;
       };
 
       cardano-metadata-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-metadata-service import path string.";
+        description = "Cardano-parts cluster group cardano-metadata-service import path string.";
         default = cfg.pkgs.special.cardano-metadata-service;
       };
 
       cardano-node-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-node-service import path string.";
+        description = "Cardano-parts cluster group cardano-node-service import path string.";
         default = cfg.pkgs.special.cardano-node-service;
       };
 
       cardano-node-service-ng = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-node-service-ng import path string.";
+        description = "Cardano-parts cluster group cardano-node-service-ng import path string.";
         default = cfg.pkgs.special.cardano-node-service-ng;
       };
 
       cardano-ogmios-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-ogmios-service import path string.";
+        description = "Cardano-parts cluster group cardano-ogmios-service import path string.";
         default = cfg.pkgs.special.cardano-ogmios-service;
       };
 
       cardano-smash-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-smash-service import path string.";
+        description = "Cardano-parts cluster group cardano-smash-service import path string.";
         default = cfg.pkgs.special.cardano-smash-service;
       };
 
       cardano-submit-api-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-submit-api-service import path string.";
+        description = "Cardano-parts cluster group cardano-submit-api-service import path string.";
         default = cfg.pkgs.special.cardano-submit-api-service;
       };
 
       cardano-submit-api-service-ng = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-submit-api-service-ng import path string.";
+        description = "Cardano-parts cluster group cardano-submit-api-service-ng import path string.";
         default = cfg.pkgs.special.cardano-submit-api-service-ng;
       };
 
       cardano-tracer-service = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-tracer-service import path string.";
+        description = "Cardano-parts cluster group cardano-tracer-service import path string.";
         default = cfg.pkgs.special.cardano-tracer-service;
       };
 
       cardano-tracer-service-ng = mkOption {
         type = str;
-        description = mdDoc "Cardano-parts cluster group cardano-tracer-service-ng import path string.";
+        description = "Cardano-parts cluster group cardano-tracer-service-ng import path string.";
         default = cfg.pkgs.special.cardano-tracer-service-ng;
       };
 
       domain = mkOption {
-        type = str;
-        description = mdDoc "Cardano-parts cluster group domain.";
+        type = nullOr str;
+        description = "Cardano-parts cluster group domain.";
         default = cfgAws.domain;
       };
 
       environmentName = mkOption {
         type = nullOr str;
-        description = mdDoc "Cardano-parts cluster group environmentName.";
+        description = "Cardano-parts cluster group environmentName.";
         default = "custom";
       };
 
       hostsList = mkOption {
         type = oneOf [(enum ["all" "group"]) (listOf str)];
-        description = mdDoc ''
+        description = ''
           A list of Colmena machine names for which /etc/hosts will be configured for if
           nixosModule.ip-module is available in the downstream repo and profile-cardano-parts
           nixosModule is imported.
@@ -627,110 +640,126 @@ flake @ {
     options = {
       blockfrost-platform = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default blockfrost-platform package.";
+        description = "Cardano-parts cluster group default blockfrost-platform package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockfrost-platform);
+        defaultText = lib.literalMD "*see source*";
       };
 
       blockperf = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default blockperf package.";
+        description = "Cardano-parts cluster group default blockperf package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.blockperf);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-cli = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-cli package.";
+        description = "Cardano-parts cluster group default cardano-cli package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-cli);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-db-sync = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-db-sync package.";
+        description = "Cardano-parts cluster group default cardano-db-sync package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-sync);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-db-sync-pkgs = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group default cardano-db-sync-pkgs.
 
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardano-db-sync-pkgs;
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-db-tool = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-db-tool package.";
+        description = "Cardano-parts cluster group default cardano-db-tool package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-db-tool);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-faucet = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-faucet package.";
+        description = "Cardano-parts cluster group default cardano-faucet package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-faucet);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-metadata-pkgs = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group default cardano-metadata-pkgs.
 
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardano-metadata-pkgs;
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-node = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-node package.";
+        description = "Cardano-parts cluster group default cardano-node package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-node);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-node-pkgs = mkOption {
         type = functionTo (attrsOf anything);
-        description = mdDoc ''
+        description = ''
           Cardano-parts cluster group default cardano-node-pkgs.
 
           The definition must be a function of system.
         '';
         default = cfg.pkgs.special.cardano-node-pkgs;
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-ogmios = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-ogmios package.";
+        description = "Cardano-parts cluster group default cardano-ogmios package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-ogmios);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-smash = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-smash package.";
+        description = "Cardano-parts cluster group default cardano-smash package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-smash);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-submit-api = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-submit-api package.";
+        description = "Cardano-parts cluster group default cardano-submit-api package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-submit-api);
+        defaultText = lib.literalMD "*see source*";
       };
 
       cardano-tracer = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default cardano-tracer package.";
+        description = "Cardano-parts cluster group default cardano-tracer package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.cardano-tracer);
+        defaultText = lib.literalMD "*see source*";
       };
 
       mithril-client-cli = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default mithril-client-cli package.";
+        description = "Cardano-parts cluster group default mithril-client-cli package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-client-cli);
+        defaultText = lib.literalMD "*see source*";
       };
 
       mithril-signer = mkOption {
         type = functionTo package;
-        description = mdDoc "Cardano-parts cluster group default mithril-signer package.";
+        description = "Cardano-parts cluster group default mithril-signer package.";
         default = system: withSystem system ({config, ...}: config.cardano-parts.pkgs.mithril-signer);
+        defaultText = lib.literalMD "*see source*";
       };
     };
   };
