@@ -60,11 +60,7 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
-    # The iohk-nix pin deviates from the cardano-node iohkNix pin of
-    # iohk-nix/cardano-node-release/10.5.4 because we need to cherry-pick the
-    # 10.5.4 updates onto the new-tracing branch to accomodate both legacy and
-    # new tracing modules until 10.6.x is a full release.
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/new-tracing-10.5.4";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
 
     # For tmp local testing pins
@@ -99,12 +95,12 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/amick/add-dmq-node";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
@@ -124,22 +120,22 @@
     };
 
     cardano-submit-api-service = {
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/amick/add-dmq-node";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/amick/add-dmq-node";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
