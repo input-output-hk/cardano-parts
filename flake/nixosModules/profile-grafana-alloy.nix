@@ -4,6 +4,7 @@
 #
 # Attributes available on nixos module import:
 #   config.services.alloy.enableLiveDebugging
+#   config.services.alloy.enableLoki
 #   config.services.alloy.extraAlloyConfig
 #   config.services.alloy.labels
 #   config.services.alloy.logLevel
@@ -24,7 +25,6 @@ flake @ {moduleWithSystem, ...}: {
     lib,
     name,
     pkgs,
-    self,
     ...
   }:
     with builtins;
@@ -73,6 +73,11 @@ flake @ {moduleWithSystem, ...}: {
             filename = "/run/secrets/grafana-alloy-metrics-url"
           }
 
+          ${optionalString cfg.enableLoki ''
+            local.file "remote_write_url_logs" {
+              filename = "/run/secrets/grafana-alloy-loki-url"
+            }''}
+
           local.file "remote_write_username" {
             filename = "/run/secrets/grafana-alloy-metrics-username"
           }
@@ -81,7 +86,6 @@ flake @ {moduleWithSystem, ...}: {
             filename = "/run/secrets/grafana-alloy-metrics-password"
             is_secret = true
           }
-
         '';
 
         remoteWrite = ''
@@ -214,6 +218,49 @@ flake @ {moduleWithSystem, ...}: {
               source_labels = ["mode"]
               regex = "^|system|user|iowait|steal|idle$"
               action = "keep"
+            }
+          }
+
+        '';
+
+        loki = ''
+          loki.write "default" {
+            endpoint {
+              url = local.file.remote_write_url_logs.content
+
+              basic_auth {
+                username = local.file.remote_write_username.content
+                password = local.file.remote_write_password.content
+              }
+            }
+          }
+
+          loki.source.journal "default" {
+            relabel_rules = discovery.relabel.journal.rules
+            forward_to    = [loki.write.default.receiver]
+            labels        = {
+              job = "systemd-journal",
+              group = "${groupName}",
+              environment = "${environmentName}",
+            }
+          }
+
+          discovery.relabel "journal" {
+            targets = []
+
+            rule {
+              source_labels = ["__journal__hostname"]
+              target_label  = "instance"
+            }
+
+            rule {
+              source_labels = ["__journal__systemd_unit"]
+              target_label  = "systemd_unit"
+            }
+
+            rule {
+              source_labels = ["__journal_syslog_identifier"]
+              target_label  = "syslog_identifier"
             }
           }
 
@@ -430,6 +477,12 @@ flake @ {moduleWithSystem, ...}: {
             description = "Whether to enable live debugging for grafana alloy.";
           };
 
+          enableLoki = mkOption {
+            type = bool;
+            default = true;
+            description = "Enable loki with default configuration.";
+          };
+
           extraAlloyConfig = mkOption {
             type = lines;
             default = "";
@@ -603,7 +656,7 @@ flake @ {moduleWithSystem, ...}: {
             toFile "alloy-unformatted.config"
             (
               #
-              # Base required component configuration snippets
+              # Base component configuration snippets
               #
               alloyComponentCfg.logging
               + alloyComponentCfg.livedebugging
@@ -611,6 +664,7 @@ flake @ {moduleWithSystem, ...}: {
               + alloyComponentCfg.remoteWrite
               + alloyComponentCfg.alloy
               + alloyComponentCfg.exporter
+              + optionalString cfg.enableLoki alloyComponentCfg.loki
               #
               # Cardano-parts optional component configuration snippets
               #
@@ -628,7 +682,7 @@ flake @ {moduleWithSystem, ...}: {
               + cfg.extraAlloyConfig
             );
         in
-          (pkgs.runCommandNoCCLocal "alloy.config" {} ''
+          (pkgs.runCommandLocal "alloy.config" {} ''
             ${getExe cfg.package} fmt ${alloyCfg'} > $out
           '')
           .out;
@@ -666,6 +720,7 @@ flake @ {moduleWithSystem, ...}: {
           mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
           // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-username")
           // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-password")
+          // (optionalAttrs cfg.enableLoki (mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")))
         );
       };
     });

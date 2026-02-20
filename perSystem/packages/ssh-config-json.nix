@@ -15,6 +15,9 @@
           hash = "sha256-XKjOnJw5fCSAjkNpZwz+hdrvdVZLfJezgtFOBBHeP+I=";
         };
 
+        pyproject = true;
+        build-system = [setuptools];
+
         propagatedBuildInputs = [docopt pycryptodome];
 
         patchPhase = ''
