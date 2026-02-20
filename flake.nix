@@ -65,7 +65,7 @@
     # 10.5.4 updates onto the new-tracing branch to accomodate both legacy and
     # new tracing modules until 10.6.x is a full release.
     iohk-nix.url = "github:input-output-hk/iohk-nix/jl/new-tracing-10.5.4";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
