@@ -10,6 +10,7 @@ in {
           run-process-compose-dbsync-preprod
           run-process-compose-dbsync-preview
           run-process-compose-dbsync-dijkstra
+          run-process-compose-dbsync-sanchonet
           run-process-compose-node-stack
           ;
       };
