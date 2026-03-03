@@ -503,7 +503,7 @@ flake @ {moduleWithSystem, ...}: {
 
           logLevel = mkOption {
             type = enum ["debug" "info" "warn" "error"];
-            default = "debug";
+            default = "info";
             description = "The default log level for grafana alloy.";
           };
 
