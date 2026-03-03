@@ -22,7 +22,7 @@
 # Tips:
 #   * This service-cardano-faucet nixos module provides a basic cardano-faucet service
 {moduleWithSystem, ...}: {
-  flake.nixosModules.service-cardano-faucet = moduleWithSystem ({config, ...}: nixos @ {
+  flake.nixosModules.service-cardano-faucet = moduleWithSystem (_: nixos @ {
     pkgs,
     lib,
     name,

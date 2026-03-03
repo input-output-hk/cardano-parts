@@ -36,8 +36,9 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$ ]]; then
-    echo "Error: only node environments for demo, dijkstra, mainnet, preprod and preview are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo|^sanchonet$ ]]; then
+    >&2 echo "Error: only node environments for demo, dijkstra, mainnet, preprod, preview and sanchonet are supported"
+    >&2 echo "Usage: just set-default-cardano-env <env>"
     exit 1
   fi
 
@@ -47,6 +48,8 @@ checkEnvWithoutOverride := '''
     MAGIC="1"
   elif [ "$ENV" = "preview" ]; then
     MAGIC="2"
+  elif [ "$ENV" = "sanchonet" ]; then
+    MAGIC="4"
   elif [ "$ENV" = "dijkstra" ]; then
     MAGIC="6"
   elif [ "$ENV" = "demo" ]; then
@@ -176,7 +179,7 @@ checkSshConfig := '''
 
     let inconsistent = (
       $comparisons
-      | filter {|comp| $comp.result | is-not-empty }
+      | where {|comp| $comp.result | is-not-empty}
     )
 
     $inconsistent | each {|comp|
@@ -378,8 +381,8 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra$ ]]; then
-    echo "Error: only node environments for preprod, preview and dijkstra are supported"
+  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+    echo "Error: only node environments for preprod, preview, dijkstra and sanchonet are supported"
     exit 1
   fi
 
@@ -387,7 +390,8 @@ dedelegate-pools ENV *IDXS=null:
     echo "Dedelegation cannot be performed on the mainnet environment"
     exit 1
   fi
-  just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
+
+  source <(just set-default-cardano-env {{ENV}})
 
   if [ "$(jq -re .syncProgress <<< "$(just query-tip {{ENV}})")" != "100.00" ]; then
     echo "Please wait until the local tip of environment {{ENV}} is 100.00 before dedelegation"
@@ -479,7 +483,7 @@ list-machines:
     let sshJson = (safe-run { ^scj dump /dev/stdout -c .ssh_config } "scj failed.")
 
     let baseTable = ($nixosJson | from json | each { |it| default-row $it })
-    let sshTable = ($sshJson | from json | where {|e| $e | get -i HostName | is-not-empty } | reject -i ProxyCommand)
+    let sshTable = ($sshJson | from json | where {|e| $e | get -o HostName | is-not-empty } | reject -o ProxyCommand)
 
     let mergeTable = (
       $sshTable | reduce --fold $baseTable { |it, acc|
@@ -555,7 +559,7 @@ query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
   QUERIED=0
-  for i in mainnet preprod preview dijkstra demo; do
+  for i in mainnet preprod preview dijkstra demo sanchonet; do
     TIP=$(just query-tip $i 2>&1) && {
       echo "Environment: $i"
       echo "$TIP"
@@ -580,7 +584,7 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli-ng"
   elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ ^dijkstra$|^demo$ ]]; then
+  elif [[ "$ENV" =~ ^dijkstra$|^demo|^sanchonet$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
   fi
 
@@ -631,91 +635,28 @@ save-ssh-config:
   $key.values.content | (parse --regex '(?ms)(.*)\n').capture0 | to text | save --force .ssh_config
   chmod 0600 .ssh_config
 
-# Set the shell's default node env
-set-default-cardano-env ENV TESTNET_MAGIC=null PPID=null:
+# Set the shell's default node env - outputs export commands to stdout for sourcing
+set-default-cardano-env ENV TESTNET_MAGIC=null:
   #!/usr/bin/env bash
   set -euo pipefail
   {{checkEnv}}
   {{stateDir}}
+
   # The log and socket file may not exist immediately upon node startup, so only check for the pid file
   if ! [ -s "$STATEDIR/node-{{ENV}}.pid" ]; then
-    echo "Environment {{ENV}} does not appear to be running as $STATEDIR/node-{{ENV}}.pid does not exist"
+    >&2 echo "Error: Environment {{ENV}} does not appear to be running as $STATEDIR/node-{{ENV}}.pid does not exist"
     exit 1
   fi
 
-  echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.socket" node.socket)"
-  echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.log" node.log)"
-  echo
+  >&2 echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.socket" node.socket)"
+  >&2 echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.log" node.log)"
+  >&2 echo ""
+  >&2 echo "To set environment variables in your shell, run:"
+  >&2 echo "  source <(just set-default-cardano-env {{ENV}})"
 
-  if [ -n "{{PPID}}" ]; then
-    PARENTID="{{PPID}}"
-  else
-    PARENTID="$PPID"
-  fi
-
-  SHELLPID=$(cat /proc/$PARENTID/status | awk '/PPid/ {print $2}')
-  DEFAULT_PATH=$(pwd)/node.socket
-
-  echo "Updating shell env vars:"
-  echo "  CARDANO_NODE_SOCKET_PATH=$DEFAULT_PATH"
-  echo "  CARDANO_NODE_NETWORK_ID=$MAGIC"
-  echo "  TESTNET_MAGIC=$MAGIC"
-
-  # Ptrace permissions are no longer "classic" by default starting in nixpkgs 24.05
-  AUTO_SET_ENV={{autoSetEnv}}
-  if [ -f /proc/sys/kernel/yama/ptrace_scope ] && [ "$AUTO_SET_ENV" != "false" ]; then
-     if [ "$(cat /proc/sys/kernel/yama/ptrace_scope)" = "0" ]; then
-       AUTO_SET_ENV=true
-     else
-       echo
-       echo "For just scripts to automatically set cardano environment variables in bash and zsh shells, ptrace classic permission needs to be enabled."
-       echo "This requires sudo access and will persist ptrace classic permission until the next reboot by writing:"
-       echo "  echo 0 > /proc/sys/kernel/yama/ptrace_scope"
-       echo
-       read -p "Do you have sudo access and wish to proceed [yY]? " -n 1 -r
-       echo
-       if [[ $REPLY =~ ^[Yy]$ ]]; then
-         if sudo bash -c 'echo 0 > /proc/sys/kernel/yama/ptrace_scope'; then
-           echo "ptrace_scope classic permission successfully set."
-           AUTO_SET_ENV=true
-         else
-           echo "ptrace_scope classic permission change unsuccessful."
-         fi
-       fi
-     fi
-  fi
-
-  SH=$(cat /proc/$SHELLPID/comm)
-  if [[ "$SH" =~ bash$|zsh$ ]] && [ "$AUTO_SET_ENV" = "true" ]; then
-    # Modifying a parent shells env vars is generally not done
-    # This is a hacky way to accomplish it in bash and zsh
-    gdb -iex "set auto-load no" /proc/$SHELLPID/exe $SHELLPID <<END >/dev/null
-      call (int) setenv("CARDANO_NODE_SOCKET_PATH", "$DEFAULT_PATH", 1)
-      call (int) setenv("CARDANO_NODE_NETWORK_ID", "$MAGIC", 1)
-      call (int) setenv("TESTNET_MAGIC", "$MAGIC", 1)
-  END
-
-    # Zsh env vars get updated, but the shell doesn't reflect this
-    if [ "$SH" = "zsh" ]; then
-      echo
-      echo "Cardano env vars have been updated as seen by \`env\`, but zsh \`echo \$VAR\` will not reflect this."
-      echo "To sync zsh shell vars with env vars:"
-      echo "  source scripts/sync-env-vars.sh"
-    fi
-  else
-    echo
-    if ! [[ "$SH" =~ bash$|zsh$ ]]; then
-      echo "Unexpected shell: $SH"
-    fi
-
-    if [ "$AUTO_SET_ENV" != "true" ]; then
-      echo "ptrace_scope: classic permission not enabled"
-    fi
-    echo "The following vars will need to be manually exported, or the equivalent operation for your shell:"
-    echo "  export CARDANO_NODE_SOCKET_PATH=$DEFAULT_PATH"
-    echo "  export CARDANO_NODE_NETWORK_ID=$MAGIC"
-    echo "  export TESTNET_MAGIC=$MAGIC"
-  fi
+  echo "export CARDANO_NODE_SOCKET_PATH=\"$(pwd)/node.socket\""
+  echo "export CARDANO_NODE_NETWORK_ID=\"$MAGIC\""
+  echo "export TESTNET_MAGIC=\"$MAGIC\""
 
 # Show nix flake details
 show-flake *ARGS:
@@ -897,8 +838,8 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview and dijkstra are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for start-node recipe"
     exit 1
   fi
 
@@ -928,13 +869,16 @@ start-node ENV:
   DATA_DIR="$STATEDIR" \
   SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
   nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
-  just set-default-cardano-env {{ENV}} "" "$PPID"
+  echo "Node started for {{ENV}}"
+  echo ""
+  echo "Set up your shell environment with:"
+  echo "  source <(just set-default-cardano-env {{ENV}})"
 
 # Stop all local nodes
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
-  for i in mainnet preprod preview dijkstra demo; do
+  for i in mainnet preprod preview dijkstra demo sanchonet; do
     just stop-node $i
   done
 
@@ -1037,7 +981,7 @@ template-patch FILE:
   patch "{{FILE}}" < <(echo "$PATCH_FILE")
   git add -p "{{FILE}}"
 
-# Run tofu for cluster or grafana workspace
+# Run tofu for bootstrap, cluster or grafana workspace
 tofu *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -1047,7 +991,7 @@ tofu *ARGS:
   SOPS=("sops" "--input-type" "binary" "--output-type" "binary" "--decrypt")
 
   read -r -a ARGS <<< "{{ARGS}}"
-  if [[ ${ARGS[0]} =~ cluster|grafana ]]; then
+  if [[ ${ARGS[0]} =~ bootstrap|cluster|grafana ]]; then
     WORKSPACE="${ARGS[0]}"
     ARGS=("${ARGS[@]:1}")
   else
@@ -1074,8 +1018,8 @@ truncate-chain ENV SLOT:
   [ -n "${DEBUG:-}" ] && set -x
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview and dijkstra are supported for truncate-chain recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for truncate-chain recipe"
     exit 1
   fi
 
@@ -1157,8 +1101,8 @@ update-ips:
   )
 
   let ipTable = ($instanceTable
-    | insert private_ipv4 {|row| $eipTable | where name == $row.name | get --ignore-errors 0.private_ipv4}
-    | insert public_ipv4 {|row| $eipTable | where name == $row.name | get --ignore-errors 0.public_ipv4}
+    | insert private_ipv4 {|row| $eipTable | where name == $row.name | get -o 0.private_ipv4}
+    | insert public_ipv4 {|row| $eipTable | where name == $row.name | get -o 0.public_ipv4}
   )
 
   ($ipTable
