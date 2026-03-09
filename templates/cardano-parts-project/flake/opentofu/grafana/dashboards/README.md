@@ -5,9 +5,9 @@
   * See `flakeModule/cluster.nix` option: `flake.cardano-parts.cluster.infra.grafana.stackName`
 * Corresponding grafana cloud secrets must also exist in encrypted files:
 ```
-secrets/monitoring/grafana-agent-metrics-password.enc
-secrets/monitoring/grafana-agent-metrics-url.enc
-secrets/monitoring/grafana-agent-metrics-username.enc
+secrets/monitoring/grafana-alloy-metrics-password.enc
+secrets/monitoring/grafana-alloy-metrics-url.enc
+secrets/monitoring/grafana-alloy-metrics-username.enc
 secrets/tf/grafana.tfvars
 ```
 * Delete any files in this directory whose dashboards are not desired

@@ -27,8 +27,8 @@
     };
 
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
-    nix.url = "github:nixos/nix/2.29-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nix.url = "github:nixos/nix/2.33-maintenance";
 
     opentofu-registry = {
       url = "github:opentofu/registry";
@@ -60,12 +60,8 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
-    # The iohk-nix pin deviates from the cardano-node iohkNix pin of
-    # iohk-nix/cardano-node-release/10.5.4 because we need to cherry-pick the
-    # 10.5.4 updates onto the new-tracing branch to accomodate both legacy and
-    # new tracing modules until 10.6.x is a full release.
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/new-tracing-10.5.4";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
@@ -80,7 +76,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.1";
       flake = false;
     };
 
@@ -94,12 +90,12 @@
     };
 
     cardano-db-sync-service-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.1";
       flake = false;
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
@@ -114,17 +110,17 @@
     };
 
     cardano-ogmios-service = {
-      url = "github:input-output-hk/cardano-ogmios/ogmios-6-3-0";
+      url = "github:input-output-hk/cardano-ogmios/v6.14.0";
       flake = false;
     };
 
     blockfrost-platform-service = {
-      url = "github:blockfrost/blockfrost-platform";
+      url = "github:blockfrost/blockfrost-platform/0.0.3-rc.3";
       flake = false;
     };
 
     cardano-submit-api-service = {
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 
@@ -134,7 +130,7 @@
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/f11e0f303ddf3e5b8975daf72ceaa522ddb98426";
+      url = "github:IntersectMBO/cardano-node/10.6.2";
       flake = false;
     };
 

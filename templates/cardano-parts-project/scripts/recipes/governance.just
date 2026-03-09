@@ -9,8 +9,8 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview and dijkstra and demo are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, demo and sanchonet are supported"
     exit 1
   fi
 
@@ -848,8 +848,8 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview, dijkstra and demo are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, demo and sanchonet are supported"
     exit 1
   fi
 
