@@ -263,23 +263,23 @@ flake: {
 
               # Wait for postgres
               while true; do
-                nc -z localhost 5432 && sleep 2 && break
-                echo "Waiting for postgresql service availability for 2 seconds..."
-                sleep 2
+                nc -z localhost 5432 && sleep 10 && break
+                echo "Waiting for postgresql service availability for 10 seconds..."
+                sleep 10
               done
 
               # Wait for the node socket
               while true; do
-                [ -S "$SOCKET" ] && sleep 2 && break
-                echo "Waiting for cardano node socket at $SOCKET for 2 seconds..."
-                sleep 2
+                [ -S "$SOCKET" ] && sleep 10 && break
+                echo "Waiting for cardano node socket at $SOCKET for 10 seconds..."
+                sleep 10
               done
 
               # Wait for the node socket to become group writeable
               while true; do
-                [ "$(find "$SOCKET" -type s -perm -g+w)" = "$SOCKET" ] && sleep 2 && break
-                echo "Waiting for cardano node socket group write permission at $SOCKET for 2 seconds..."
-                sleep 2
+                [ "$(find "$SOCKET" -type s -perm -g+w)" = "$SOCKET" ] && sleep 10 && break
+                echo "Waiting for cardano node socket group write permission at $SOCKET for 10 seconds..."
+                sleep 10
               done
             '';
 
@@ -415,6 +415,11 @@ flake: {
               StateDirectory = "registered-relays-dump";
               Restart = "always";
               RestartSec = "30s";
+
+              # Allow a bit more time for delayed node start up.
+              # Extended node outages, such as full ledger replay, will likely
+              # still cause startup to fail.
+              TimeoutStartSec = "300s";
             };
           };
 
