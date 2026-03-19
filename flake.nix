@@ -65,7 +65,7 @@
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
-    # cardano-node-10-6-2.url = "github:IntersectMBO/cardano-node";
+    cardano-node-10-7-0.url = "github:IntersectMBO/cardano-node/jl/10.7.0-sre";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
@@ -100,7 +100,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.6.2";
+      url = "github:IntersectMBO/cardano-node/jl/10.7.0-sre";
       flake = false;
     };
 
@@ -125,7 +125,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.6.2";
+      url = "github:IntersectMBO/cardano-node/jl/10.7.0-sre";
       flake = false;
     };
 
@@ -135,7 +135,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.6.2";
+      url = "github:IntersectMBO/cardano-node/jl/10.7.0-sre";
       flake = false;
     };
 

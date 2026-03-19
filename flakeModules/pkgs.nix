@@ -481,8 +481,8 @@ in
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-2-0d697f1";
           # node-release = pkg: localFlake.inputs.cardano-node-10-5-4.packages.x86_64-linux.${pkg};
 
-          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-2-0d697f1";
-          # node-pre-release = pkg: localFlake.inputs.cardano-node-10-6-2.packages.x86_64-linux.${pkg};
+          # node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-2-0d697f1";
+          node-pre-release = pkg: localFlake.inputs.cardano-node-10-7-0.packages.x86_64-linux.${pkg};
         in
           submodule {
             options = foldl' recursiveUpdate {} [
@@ -499,7 +499,7 @@ in
               (mkPkg "cardano-faucet" faucet)
               (mkPkg "cardano-faucet-ng" faucet-ng)
               (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "10.6.2";}))
-              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "10.6.2";}))
+              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "10.7.0";}))
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-14-0-5752501)
               (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-34-0-4108dd3)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")
