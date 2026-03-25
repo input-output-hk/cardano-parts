@@ -61,11 +61,10 @@
     capkgs.url = "github:input-output-hk/capkgs";
 
     iohk-nix.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
-    cardano-node-10-7-0.url = "github:IntersectMBO/cardano-node/6fa442ddcb669538e495587f85f85f0fb755173a";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
@@ -100,7 +99,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/6fa442ddcb669538e495587f85f85f0fb755173a";
+      url = "github:IntersectMBO/cardano-node/10.7.0";
       flake = false;
     };
 
@@ -125,7 +124,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/6fa442ddcb669538e495587f85f85f0fb755173a";
+      url = "github:IntersectMBO/cardano-node/10.7.0";
       flake = false;
     };
 
@@ -135,7 +134,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/6fa442ddcb669538e495587f85f85f0fb755173a";
+      url = "github:IntersectMBO/cardano-node/10.7.0";
       flake = false;
     };
 
