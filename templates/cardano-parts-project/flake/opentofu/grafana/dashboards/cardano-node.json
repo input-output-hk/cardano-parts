@@ -19,15 +19,64 @@
           "type": "dashboard"
         },
         "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir"
+        },
+        "enable": false,
+        "hide": false,
+        "iconColor": "light-orange",
+        "name": "Restarts",
+        "target": {
+          "expr": "cardano_node_metrics_node_start_time_int{environment=\"$environment\",instance=~\"$instance\"} * 1000",
+          "interval": "",
+          "refId": "Anno"
+        },
+        "textFormat": "{{instance}}",
+        "titleFormat": "Node Restarted",
+        "useValueForTime": true
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir"
+        },
+        "enable": false,
+        "hide": false,
+        "iconColor": "light-green",
+        "name": "Version Changes",
+        "tagKeys": "revision,version",
+        "target": {
+          "expr": "cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance\"} unless (cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance\"} offset 4m)",
+          "interval": "",
+          "refId": "Anno"
+        },
+        "textFormat": "{{instance}}",
+        "titleFormat": "Version Change"
       }
     ]
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 10,
+  "id": 41,
   "links": [],
   "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 79,
+      "panels": [],
+      "title": "Blocks, Slots, Epochs, and Quality",
+      "type": "row"
+    },
     {
       "datasource": {
         "type": "prometheus"
@@ -92,7 +141,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 0
+        "y": 1
       },
       "id": 5,
       "options": {
@@ -116,7 +165,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "expr": "cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -192,7 +241,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 0
+        "y": 1
       },
       "id": 2,
       "options": {
@@ -216,7 +265,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "expr": "cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{instance}}",
@@ -283,7 +332,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -291,7 +340,203 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 0
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "cardano_node_metrics_epoch_int{environment=\"$environment\",instance=~\"$instance\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Cardano Last Block Epoch",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 9
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "cardano_node_metrics_slotInEpoch_int{environment=\"$environment\",instance=~\"$instance\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Cardano Last Block Slot",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 9
       },
       "id": 18,
       "options": {
@@ -315,7 +560,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "quantile(0.5,cardano_node_metrics_density_real{environment=\"$environment\",instance=~\"$instance_name\"}) / 0.05",
+          "expr": "quantile(0.5,cardano_node_metrics_density_real{environment=\"$environment\",instance=~\"$instance\"}) / 0.05",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -384,106 +629,6 @@
               }
             ]
           },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 8
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": ["lastNotNull"],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.2+security-01",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "cardano_node_metrics_epoch_int{environment=\"$environment\",instance=~\"$instance_name\"}",
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Cardano Last Block Epoch",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus"
-      },
-      "description": "Calculated at a 1 hr averaging window",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "decimals": 1,
-          "links": [],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -491,129 +636,16 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 8,
-        "y": 8
-      },
-      "id": 39,
-      "interval": "20s",
-      "options": {
-        "legend": {
-          "calcs": ["mean"],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.2+security-01",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "rate(cardano_node_metrics_nodeIsLeader_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h]) / 0.05",
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum(rate(cardano_node_metrics_Forge_node_is_leader_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h])) / 0.05",
-          "interval": "",
-          "legendFormat": "Total led slots",
-          "range": true,
-          "refId": "D"
-        }
-      ],
-      "title": "Slot leading share (% of slots led / 1h)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "decimals": 0,
-          "links": [],
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
         "x": 16,
-        "y": 8
+        "y": 9
       },
-      "id": 41,
+      "id": 74,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": ["last", "mean"],
           "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "hideZeros": false,
@@ -629,19 +661,23 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_Forge_forged_int{environment=\"$environment\",instance=~\"$instance_name\"} - cardano_node_metrics_Forge_adopted_int{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "expr": "avg(increase(cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance\"}[$rate_interval_mimic])) / ($rate_interval_mimic / 20)",
+          "format": "time_series",
+          "hide": false,
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "intervalFactor": 1,
+          "legendFormat": "{{environment}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Rejected blocks since last restart",
+      "title": "Cardano Chain Density using $rate_interval_mimic resolution",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "mimir"
       },
       "fieldConfig": {
         "defaults": {
@@ -657,7 +693,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -671,7 +707,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -681,7 +717,6 @@
               "mode": "off"
             }
           },
-          "links": [],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -694,8 +729,7 @@
                 "value": 80
               }
             ]
-          },
-          "unit": "none"
+          }
         },
         "overrides": []
       },
@@ -703,205 +737,9 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 16
+        "y": 17
       },
-      "id": 19,
-      "options": {
-        "legend": {
-          "calcs": ["lastNotNull"],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.2+security-01",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "cardano_node_metrics_slotInEpoch_int{environment=\"$environment\",instance=~\"$instance_name\"}",
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Cardano Last Block Slot",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 16
-      },
-      "id": 62,
-      "options": {
-        "legend": {
-          "calcs": ["lastNotNull"],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.0.2+security-01",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "rate(cardano_node_metrics_slotsMissedNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[1h]) * 3600",
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Missed slots rate (slots/h)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 16
-      },
-      "id": 51,
+      "id": 80,
       "options": {
         "legend": {
           "calcs": [],
@@ -918,20 +756,14 @@
       "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus"
-          },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_txsInMempool_int{environment=\"$environment\",instance=~\"$instance_name\"}[30m]))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "30 min average",
+          "expr": "round(increase(cardano_node_metrics_forks_counter{environment=\"$environment\", instance=~\"$instance\"}[$rate_interval_mimic]))",
+          "legendFormat": "{{instance}}",
           "range": true,
-          "refId": "C"
+          "refId": "A"
         }
       ],
-      "title": "Mempool Txs",
+      "title": "Forks over $rate_interval_mimic",
       "type": "timeseries"
     },
     {
@@ -1020,8 +852,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 24
+        "x": 8,
+        "y": 17
       },
       "id": 28,
       "options": {
@@ -1045,7 +877,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[150s])*60",
+          "expr": "rate(cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance\"}[150s])*60",
           "hide": false,
           "interval": "",
           "legendFormat": "{{instance}}",
@@ -1054,6 +886,98 @@
         }
       ],
       "title": "Block sync speed (blocks / min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 17
+      },
+      "id": 81,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "cardano_node_metrics_blockReplayProgress_real{environment=\"$environment\", instance=~\"$instance\"}",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Block Replay Progress",
       "type": "timeseries"
     },
     {
@@ -1119,8 +1043,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 8,
-        "y": 24
+        "x": 0,
+        "y": 25
       },
       "id": 66,
       "options": {
@@ -1144,7 +1068,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "quantile(0.5, cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance_name\"} / 90112)",
+          "expr": "quantile(0.5, cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance\"} / 90112)",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1158,7 +1082,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance_name\"}[15m]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance\"}[15m]) / 90112)",
           "hide": false,
           "interval": "",
           "legendFormat": "15 min average",
@@ -1171,7 +1095,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance_name\"}[4h]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance\"}[4h]) / 90112)",
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
@@ -1185,7 +1109,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance_name\"}[24h]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance\"}[24h]) / 90112)",
           "hide": false,
           "interval": "",
           "intervalFactor": 3,
@@ -1199,7 +1123,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance_name\"}[7d]) / 90112)",
+          "expr": "avg(avg_over_time(cardano_node_metrics_blockfetchclient_blocksize{environment=\"$environment\",instance=~\"$instance\"}[7d]) / 90112)",
           "hide": false,
           "interval": "",
           "intervalFactor": 10,
@@ -1209,6 +1133,98 @@
         }
       ],
       "title": "Block utilization (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 25
+      },
+      "id": 82,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "round(increase(cardano_node_metrics_blockfetchclient_lateblocks_counter{environment=\"$environment\", instance=~\"$instance\"}[$rate_interval_mimic]))",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Late Blocks over $rate_interval_mimic",
       "type": "timeseries"
     },
     {
@@ -1276,7 +1292,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 24
+        "y": 25
       },
       "id": 52,
       "options": {
@@ -1300,7 +1316,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "expr": "netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average{environment=\"$environment\",instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1308,6 +1324,324 @@
         }
       ],
       "title": "Ping latency (ms)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "id": 83,
+      "panels": [],
+      "title": "Forging",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "description": "Calculated at a 1 hr averaging window",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 1,
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 34
+      },
+      "id": 39,
+      "interval": "20s",
+      "options": {
+        "legend": {
+          "calcs": ["mean"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "rate(cardano_node_metrics_nodeIsLeader_int{environment=\"$environment\",instance=~\"$instance\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance\"}[1h]) / 0.05",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(rate(cardano_node_metrics_Forge_node_is_leader_int{environment=\"$environment\",instance=~\"$instance\"}[1h])/rate(cardano_node_metrics_slotNum_int{environment=\"$environment\",instance=~\"$instance\"}[1h])) / 0.05",
+          "interval": "",
+          "legendFormat": "Total led slots",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Slot leading share (% of slots led / 1h)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 34
+      },
+      "id": 78,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(cardano_node_metrics_blocksForgedNum_int{environment=\"$environment\", instance=~\"$instance\"}[$rate_interval_mimic])",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Blocks Forged per $rate_interval_mimic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 34
+      },
+      "id": 41,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "cardano_node_metrics_Forge_forged_int{environment=\"$environment\",instance=~\"$instance\"} - cardano_node_metrics_Forge_adopted_int{environment=\"$environment\",instance=~\"$instance\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Rejected blocks since last restart",
       "type": "timeseries"
     },
     {
@@ -1352,7 +1686,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 32
+        "y": 42
       },
       "id": 45,
       "maxDataPoints": 100,
@@ -1379,7 +1713,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "quantile(0.5,cardano_node_metrics_currentKESPeriod_int{environment=\"$environment\",instance=~\"$instance_name\"})",
+          "expr": "quantile(0.5,cardano_node_metrics_currentKESPeriod_int{environment=\"$environment\",instance=~\"$instance\"})",
           "interval": "",
           "legendFormat": "",
           "range": true,
@@ -1431,7 +1765,6 @@
               "mode": "off"
             }
           },
-          "links": [],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1445,7 +1778,7 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -1453,9 +1786,9 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 32
+        "y": 42
       },
-      "id": 17,
+      "id": 62,
       "options": {
         "legend": {
           "calcs": ["lastNotNull"],
@@ -1477,19 +1810,20 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "(irate(rts_gc_cpu_ms{environment=\"$environment\",instance=~\"$instance_name\"}[2m]) + irate(rts_gc_mutator_cpu_ms{environment=\"$environment\",instance=~\"$instance_name\"}[2m]) + irate(rts_gc_init_cpu_ms{environment=\"$environment\",instance=~\"$instance_name\"}[2m])) / 1000",
+          "expr": "rate(cardano_node_metrics_slotsMissedNum_int{environment=\"$environment\",instance=~\"$instance\"}[1h]) * 3600",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "RTS GC CPU Utilization (2m avg)",
+      "title": "Missed slots rate (slots/h)",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "mimir"
       },
       "fieldConfig": {
         "defaults": {
@@ -1505,7 +1839,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -1519,7 +1853,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1529,7 +1863,6 @@
               "mode": "off"
             }
           },
-          "links": [],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1542,8 +1875,7 @@
                 "value": 80
               }
             ]
-          },
-          "unit": "bytes"
+          }
         },
         "overrides": []
       },
@@ -1551,38 +1883,33 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 32
+        "y": 42
       },
-      "id": 37,
+      "id": 84,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
-          "displayMode": "table",
-          "placement": "right",
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "multi",
+          "mode": "single",
           "sort": "none"
         }
       },
       "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus"
-          },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "rts_gc_current_bytes_used{environment=\"$environment\",instance=~\"$instance_name\"}",
-          "interval": "",
+          "expr": "round(increase(cardano_node_metrics_nodeCannotForge_int{environment=\"$environment\", instance=~\"$instance\"}[$rate_interval_mimic]))",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Node current \"residency\" (amount of live data, MBytes)",
+      "title": "Cannot Forge over $rate_interval_mimic",
       "type": "timeseries"
     },
     {
@@ -1650,7 +1977,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 40
+        "y": 50
       },
       "id": 49,
       "options": {
@@ -1674,7 +2001,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_remainingKESPeriods_int{environment=\"$environment\",instance=~\"$instance_name\"}",
+          "expr": "cardano_node_metrics_remainingKESPeriods_int{environment=\"$environment\",instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1685,10 +2012,23 @@
       "type": "timeseries"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "id": 85,
+      "panels": [],
+      "title": "Mempool and Transactions",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "prometheus"
       },
-      "description": "Counts only memory that is physically free",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1741,7 +2081,105 @@
               }
             ]
           },
-          "unit": "mbytes"
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 59
+      },
+      "id": 51,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "avg(avg_over_time(cardano_node_metrics_txsInMempool_int{environment=\"$environment\",instance=~\"$instance\"}[30m]))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "30 min average",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Mempool Txs",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -1749,14 +2187,14 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 40
+        "y": 59
       },
-      "id": 34,
+      "id": 76,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
-          "displayMode": "table",
-          "placement": "right",
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
@@ -1768,24 +2206,20 @@
       "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus"
-          },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "rts_gc_peak_megabytes_allocated{environment=\"$environment\",instance=~\"$instance_name\"}",
-          "interval": "",
+          "expr": "txsMempoolTimeoutSoft{environment=\"$environment\",instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Node peak memory allocated (from OS)",
+      "title": "Mempool Tx Timeouts Soft",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "mimir"
       },
       "fieldConfig": {
         "defaults": {
@@ -1801,7 +2235,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -1815,7 +2249,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1825,7 +2259,6 @@
               "mode": "off"
             }
           },
-          "links": [],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1838,8 +2271,7 @@
                 "value": 80
               }
             ]
-          },
-          "unit": "bytes"
+          }
         },
         "overrides": []
       },
@@ -1847,45 +2279,40 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 40
+        "y": 59
       },
-      "id": 32,
+      "id": 75,
       "options": {
         "legend": {
-          "calcs": ["last"],
-          "displayMode": "table",
-          "placement": "right",
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus"
-          },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "rts_gc_max_bytes_used{environment=\"$environment\",instance=~\"$instance_name\"}",
-          "interval": "",
+          "expr": "txsMempoolTimeoutHard{environment=\"$environment\",instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Node max \"residency\" (amount of live data)",
+      "title": "Mempool Tx Timeouts Hard",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus"
       },
-      "description": "Transactions accepted into the mempool, shown as a per-second rate averaged over the displayed interval.",
+      "description": "Transactions accepted into the mempool, averaged over the displayed interval.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1944,7 +2371,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 48
+        "y": 67
       },
       "id": 70,
       "options": {
@@ -1964,20 +2391,20 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(cardano_node_metrics_submissions_accepted_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "expr": "round(increase(cardano_node_metrics_submissions_accepted_counter{environment=\"$environment\",instance=~\"$instance\"}[$rate_interval_mimic]))",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Tx Submissions Accepted per second, averaged over $rate_interval_mimic",
+      "title": "Tx Submissions Accepted over $rate_interval_mimic",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus"
       },
-      "description": "Transactions rejected during submission (validation failures, mempool policy, etc.), shown as a per-second rate averaged over the displayed interval.",
+      "description": "Transactions rejected during submission (validation failures, mempool policy, etc.), averaged over the displayed interval.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2036,7 +2463,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 48
+        "y": 67
       },
       "id": 71,
       "options": {
@@ -2056,13 +2483,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(cardano_node_metrics_submissions_rejected_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "expr": "round(increase(cardano_node_metrics_submissions_rejected_counter{environment=\"$environment\",instance=~\"$instance\"}[$rate_interval_mimic]))",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Tx Submissions Rejected per second, averaged over $rate_interval_mimic",
+      "title": "Tx Submissions Rejected over $rate_interval_mimic",
       "type": "timeseries"
     },
     {
@@ -2129,7 +2556,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 48
+        "y": 67
       },
       "id": 72,
       "options": {
@@ -2149,7 +2576,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(cardano_node_metrics_submissions_rejected_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic]) \n/\nrate(cardano_node_metrics_submissions_submitted_counter{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "expr": "rate(cardano_node_metrics_submissions_rejected_counter{environment=\"$environment\",instance=~\"$instance\"}[$rate_interval_mimic]) \n/\nrate(cardano_node_metrics_submissions_submitted_counter{environment=\"$environment\",instance=~\"$instance\"}[$rate_interval_mimic])",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
@@ -2157,6 +2584,19 @@
       ],
       "title": "Tx Rejection Rate %, averaged over $rate_interval_mimic",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "id": 86,
+      "panels": [],
+      "title": "CPU, Memory, Disk, Info",
+      "type": "row"
     },
     {
       "datasource": {
@@ -2536,7 +2976,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 56
+        "y": 76
       },
       "id": 73,
       "options": {
@@ -2559,7 +2999,7 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "irate(node_disk_reads_completed_total{instance=~\"$instance_name\"}[$rate_interval_mimic]) * -1",
+          "expr": "irate(node_disk_reads_completed_total{instance=~\"$instance\"}[$rate_interval_mimic]) * -1",
           "instant": false,
           "legendFormat": "{{instance}} - IOPS reads",
           "range": true,
@@ -2570,7 +3010,7 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "irate(node_disk_writes_completed_total{instance=~\"$instance_name\"}[$rate_interval_mimic])",
+          "expr": "irate(node_disk_writes_completed_total{instance=~\"$instance\"}[$rate_interval_mimic])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{instance}}  - IOPS writes",
@@ -2637,7 +3077,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -2645,15 +3085,15 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 56
+        "y": 76
       },
-      "id": 74,
+      "id": 17,
       "options": {
         "legend": {
-          "calcs": ["last", "mean"],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": false
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
@@ -2669,17 +3109,112 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(increase(cardano_node_metrics_blockNum_int{environment=\"$environment\",instance=~\"$instance_name\"}[$rate_interval_mimic])) / ($rate_interval_mimic / 20)",
-          "format": "time_series",
-          "hide": false,
+          "expr": "(irate(rts_gc_cpu_ms{environment=\"$environment\",instance=~\"$instance\"}[2m]) + irate(rts_gc_mutator_cpu_ms{environment=\"$environment\",instance=~\"$instance\"}[2m]) + irate(rts_gc_init_cpu_ms{environment=\"$environment\",instance=~\"$instance\"}[2m])) / 1000",
           "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{environment}}",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Cardano Chain Density using $rate_interval_mimic resolution",
+      "title": "RTS GC CPU Utilization (2m avg)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 76
+      },
+      "id": 37,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "rts_gc_current_bytes_used{environment=\"$environment\",instance=~\"$instance\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Node current \"residency\" (amount of live data, MBytes)",
       "type": "timeseries"
     },
     {
@@ -2746,8 +3281,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 56
+        "x": 0,
+        "y": 84
       },
       "id": 67,
       "options": {
@@ -2771,7 +3306,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "(time() - cardano_node_metrics_nodeStartTime_int{environment=\"$environment\",instance=~\"$instance_name\"}) / 86400",
+          "expr": "(time() - cardano_node_metrics_nodeStartTime_int{environment=\"$environment\",instance=~\"$instance\"}) / 86400",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -2780,6 +3315,461 @@
       ],
       "title": "Node Uptime (days)",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "description": "Counts only memory that is physically free",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "mbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 84
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "rts_gc_peak_megabytes_allocated{environment=\"$environment\",instance=~\"$instance\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Node peak memory allocated (from OS)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 84
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": ["last"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "rts_gc_max_bytes_used{environment=\"$environment\",instance=~\"$instance\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Node max \"residency\" (amount of live data)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Version"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Compiler Version"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 135
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Git Revision"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Instance"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 175
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 92
+      },
+      "id": 77,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Git Revision"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Cardano Node Build Info",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": ["compiler_version", "instance", "revision", "version"]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "compiler_version": 3,
+              "instance": 0,
+              "revision": 2,
+              "version": 1
+            },
+            "renameByName": {
+              "compiler_version": "Compiler Version",
+              "instance": "Instance",
+              "revision": "Git Revision",
+              "version": "Version"
+            }
+          }
+        },
+        {
+          "id": "formatString",
+          "options": {
+            "outputFormat": "Substring",
+            "stringField": "Git Revision",
+            "substringEnd": 7
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 92
+      },
+      "id": 87,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "12.0.2+security-01",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "node_os_info{instance=~\"$instance\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "OS Version",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": ["instance", "pretty_name"]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "instance": "Instance",
+              "pretty_name": "Version"
+            }
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "preload": false,
@@ -2789,16 +3779,17 @@
   "templating": {
     "list": [
       {
+        "allowCustomValue": false,
         "current": {
-          "text": "preprod",
-          "value": "preprod"
+          "text": "preview",
+          "value": "preview"
         },
         "datasource": {
           "type": "prometheus"
         },
         "definition": "label_values(cardano_node_metrics_blockNum_int,environment)",
         "includeAll": false,
-        "label": "environment",
+        "label": "Environment",
         "name": "environment",
         "options": [],
         "query": {
@@ -2814,18 +3805,18 @@
         "allowCustomValue": false,
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": ["$__all"]
         },
-        "definition": "label_values({environment=\"$environment\", instance=~\"$environment.*\"},instance)",
+        "definition": "label_values({environment=\"$environment\"},instance)",
         "description": "",
         "includeAll": true,
-        "label": "instance",
+        "label": "Instance",
         "multi": true,
-        "name": "instance_name",
+        "name": "instance",
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({environment=\"$environment\", instance=~\"$environment.*\"},instance)",
+          "query": "label_values({environment=\"$environment\"},instance)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -2841,8 +3832,8 @@
           "text": "$__auto",
           "value": "$__auto"
         },
-        "description": "Exactly mimics Grafana's $__rate_interval variable, so that we can display it.",
-        "label": "rate interval",
+        "description": "Mimics Grafana's $__rate_interval variable, so that we can display it.",
+        "label": "Rate Interval",
         "name": "rate_interval_mimic",
         "options": [
           {
@@ -2920,5 +3911,5 @@
   "timezone": "utc",
   "title": "Cardano Node: Application metrics",
   "uid": "Oe0reiHez",
-  "version": 13
+  "version": 14
 }

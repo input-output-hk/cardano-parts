@@ -19,13 +19,49 @@
           "type": "dashboard"
         },
         "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir"
+        },
+        "enable": false,
+        "hide": false,
+        "iconColor": "orange",
+        "name": "Restarts",
+        "target": {
+          "expr": "cardano_node_metrics_node_start_time_int{environment=\"$environment\",instance=~\"$instance\"} * 1000",
+          "interval": "",
+          "refId": "Anno"
+        },
+        "textFormat": "{{instance}}",
+        "titleFormat": "Node Restarted",
+        "useValueForTime": true
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir"
+        },
+        "enable": false,
+        "hide": false,
+        "iconColor": "green",
+        "name": "Version Changes",
+        "tagKeys": "revision,version",
+        "target": {
+          "expr": "cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance\"} unless (cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance\"} offset 4m)",
+          "interval": "",
+          "refId": "Anno"
+        },
+        "textFormat": "{{instance}}",
+        "titleFormat": "Version Change"
       }
     ]
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 27,
+  "id": 39,
   "links": [],
   "panels": [
     {
@@ -99,9 +135,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -120,7 +154,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_block_no{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_block_no{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -203,10 +237,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
+          "calcs": ["lastNotNull", "mean"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -225,7 +256,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_block_delay{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_block_delay{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -308,10 +339,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
+          "calcs": ["lastNotNull", "mean"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -330,7 +358,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_header_delta{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_header_delta{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -413,10 +441,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
+          "calcs": ["lastNotNull", "mean"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -435,7 +460,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_block_req_delta{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_block_req_delta{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -518,10 +543,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
+          "calcs": ["lastNotNull", "mean"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -540,7 +562,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_block_rsp_delta{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_block_rsp_delta{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -623,10 +645,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
+          "calcs": ["lastNotNull", "mean"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -645,7 +664,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_block_adopt_delta{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_block_adopt_delta{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -728,10 +747,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
+          "calcs": ["lastNotNull", "mean"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -750,7 +766,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg_over_time(avg by (instance) (irate(node_cpu_seconds_total{instance=~\"$instances\", mode=\"iowait\"}[2m]))[1m:]) * 100",
+          "expr": "avg_over_time(avg by (instance) (irate(node_cpu_seconds_total{instance=~\"$instance\", mode=\"iowait\"}[2m]))[1m:]) * 100",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -833,9 +849,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -854,7 +868,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -934,9 +948,7 @@
       "id": 88,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -955,7 +967,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "round(increase((time() - cardano_node_metrics_nodeStartTime_int{instance=~\"$instances\"} < bool 300)[1h:]))",
+          "expr": "round(increase((time() - cardano_node_metrics_nodeStartTime_int{environment=\"$environment\",instance=~\"$instance\"} < bool 300)[1h:]))",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -969,7 +981,7 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "round(increase((time() - cardano_node_metrics_node_start_time_int{instance=~\"$instances\"} < bool 300)[1h:]))",
+          "expr": "round(increase((time() - cardano_node_metrics_node_start_time_int{environment=\"$environment\",instance=~\"$instance\"} < bool 300)[1h:]))",
           "hide": false,
           "instant": false,
           "legendFormat": "{{instance}}",
@@ -1051,9 +1063,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1072,7 +1082,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_valid_samples_total{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_valid_samples_total{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1155,9 +1165,7 @@
       "interval": "10s",
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1176,7 +1184,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "blockperf_invalid_samples_total{environment=\"$environment\", instance=~\"$instances\"}",
+          "expr": "blockperf_invalid_samples_total{environment=\"$environment\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1220,18 +1228,16 @@
       {
         "current": {
           "text": "All",
-          "value": [
-            "$__all"
-          ]
+          "value": ["$__all"]
         },
         "datasource": {
           "type": "prometheus"
         },
         "definition": "label_values(blockperf_block_no,instance)",
         "includeAll": true,
-        "label": "instances",
+        "label": "Instance",
         "multi": true,
-        "name": "instances",
+        "name": "instance",
         "options": [],
         "query": {
           "qryType": 1,
@@ -1252,5 +1258,5 @@
   "timezone": "utc",
   "title": "Cardano Node: Block Performance",
   "uid": "ddvq1aojpkikgd",
-  "version": 5
+  "version": 6
 }

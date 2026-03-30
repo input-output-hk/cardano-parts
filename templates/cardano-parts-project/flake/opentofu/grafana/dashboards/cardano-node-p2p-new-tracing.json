@@ -14,13 +14,49 @@
           "type": "dashboard"
         },
         "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir"
+        },
+        "enable": false,
+        "hide": false,
+        "iconColor": "light-orange",
+        "name": "Restarts",
+        "target": {
+          "expr": "cardano_node_metrics_node_start_time_int{environment=\"$environment\",instance=~\"$instance\"} * 1000",
+          "interval": "",
+          "refId": "Anno"
+        },
+        "textFormat": "{{instance}}",
+        "titleFormat": "Node Restarted",
+        "useValueForTime": true
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir"
+        },
+        "enable": false,
+        "hide": false,
+        "iconColor": "light-green",
+        "name": "Version Changes",
+        "tagKeys": "revision,version",
+        "target": {
+          "expr": "cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance\"} unless (cardano_node_metrics_cardano_build_info{environment=\"$environment\",instance=~\"$instance\"} offset 4m)",
+          "interval": "",
+          "refId": "Anno"
+        },
+        "textFormat": "{{instance}}",
+        "titleFormat": "Version Change"
       }
     ]
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 24,
+  "id": 40,
   "links": [],
   "panels": [
     {
@@ -91,9 +127,7 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -112,7 +146,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_connectionManager_duplexConns_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_duplexConns_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -190,9 +224,7 @@
       "id": 8,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -211,7 +243,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_peerSelection_Hot_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_peerSelection_Hot_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -289,9 +321,7 @@
       "id": 7,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -310,7 +340,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_inboundGovernor_hot_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_inboundGovernor_hot_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -388,9 +418,7 @@
       "id": 6,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -409,7 +437,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_connectionManager_unidirectionalConns_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_unidirectionalConns_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -487,9 +515,7 @@
       "id": 11,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -508,7 +534,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_peerSelection_Warm_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_peerSelection_Warm_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -586,9 +612,7 @@
       "id": 9,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -607,7 +631,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_inboundGovernor_warm_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_inboundGovernor_warm_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -685,9 +709,7 @@
       "id": 3,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -706,7 +728,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_connectionManager_inboundConns_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_inboundConns_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -784,9 +806,7 @@
       "id": 10,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -805,7 +825,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_peerSelection_Cold_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_peerSelection_Cold_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -883,9 +903,7 @@
       "id": 12,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -904,7 +922,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(cardano_node_metrics_served_block_counter{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\"}[1h])",
+          "expr": "rate(cardano_node_metrics_served_block_counter{environment=\"$environment\", instance=~\"$instance\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\", instance=~\"$instance\"}[1h])",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -982,9 +1000,7 @@
       "id": 4,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1003,7 +1019,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_connectionManager_outboundConns_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_outboundConns_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1081,9 +1097,7 @@
       "id": 14,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1102,7 +1116,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfOne_real{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfOne_real{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1180,9 +1194,7 @@
       "id": 17,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true,
@@ -1203,7 +1215,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(quantile_over_time(0.5,cardano_node_metrics_blockfetchclient_blockdelay_real{environment=\"$environment\"}[15m]))",
+          "expr": "avg(quantile_over_time(0.5,cardano_node_metrics_blockfetchclient_blockdelay_real{environment=\"$environment\", instance=~\"$instance\"}[15m]))",
           "interval": "",
           "legendFormat": "P50",
           "range": true,
@@ -1215,7 +1227,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(quantile_over_time(0.95,cardano_node_metrics_blockfetchclient_blockdelay_real{environment=\"$environment\"}[15m]))",
+          "expr": "avg(quantile_over_time(0.95,cardano_node_metrics_blockfetchclient_blockdelay_real{environment=\"$environment\", instance=~\"$instance\"}[15m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "P95",
@@ -1227,6 +1239,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1291,9 +1307,7 @@
       "id": 5,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1307,10 +1321,12 @@
       "pluginVersion": "12.0.2+security-01",
       "targets": [
         {
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_connectionManager_fullDuplexConns_int{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_connectionManager_fullDuplexConns_int{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1385,9 +1401,7 @@
       "id": 15,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1406,7 +1420,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfThree_real{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfThree_real{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1484,9 +1498,7 @@
       "id": 18,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1505,7 +1517,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(cardano_node_metrics_blockfetchclient_lateblocks_counter{environment=\"$environment\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\"}[1h])",
+          "expr": "rate(cardano_node_metrics_blockfetchclient_lateblocks_counter{environment=\"$environment\", instance=~\"$instance\"}[1h])/rate(cardano_node_metrics_blockNum_int{environment=\"$environment\", instance=~\"$instance\"}[1h])",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1583,9 +1595,7 @@
       "id": 16,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -1604,7 +1614,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfFive_real{environment=\"$environment\"}",
+          "expr": "cardano_node_metrics_blockfetchclient_blockdelay_cdfFive_real{environment=\"$environment\", instance=~\"$instance\"}",
           "interval": "",
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1631,7 +1641,7 @@
         },
         "definition": "label_values(environment)",
         "includeAll": false,
-        "label": "environment",
+        "label": "Environment",
         "name": "environment",
         "options": [],
         "query": {
@@ -1640,6 +1650,28 @@
         },
         "refresh": 1,
         "regex": "",
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "definition": "label_values(rts_gc_current_bytes_used{environment=\"$environment\"},instance)",
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(rts_gc_current_bytes_used{environment=\"$environment\"},instance)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
         "type": "query"
       }
     ]
@@ -1652,5 +1684,5 @@
   "timezone": "",
   "title": "Cardano Node: P2P Metrics (New Tracing)",
   "uid": "EcsJoV6Ma",
-  "version": 9
+  "version": 10
 }
