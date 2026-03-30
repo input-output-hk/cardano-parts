@@ -228,9 +228,10 @@ flake: {
         // {
           tcpdump-upload = {
             wantedBy = ["multi-user.target"];
-            after = ["tcpdump.service"];
+            after = ["tcpdump.service"] ++ (lib.optional cfg.useSopsSecrets "sops-nix.service");
+            wants = lib.optional cfg.useSopsSecrets "sops-nix.service";
 
-            startLimitIntervalSec = 10;
+            startLimitIntervalSec = 60;
             startLimitBurst = 10;
 
             serviceConfig = {
@@ -240,6 +241,7 @@ flake: {
               EnvironmentFile = cfg.environmentFile;
 
               Restart = "always";
+              RestartSec = 5;
               StateDirectory = "tcpdump";
               WorkingDirectory = "/var/lib/tcpdump";
 

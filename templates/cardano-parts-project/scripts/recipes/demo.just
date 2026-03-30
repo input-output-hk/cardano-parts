@@ -77,7 +77,7 @@ start-demo:
     NODE_TOPOLOGY="$DATA_DIR/topology.json" \
     SOCKET_PATH="$STATEDIR/node-demo.socket" \
     nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-demo.log" & echo $! > "$STATEDIR/node-demo.pid" &
-  just set-default-cardano-env demo "$TESTNET_MAGIC" "$PPID"
+  source <(just set-default-cardano-env demo)
   echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
   sleep 30
   echo
@@ -317,7 +317,7 @@ start-demo-ng:
     NODE_TOPOLOGY="$DATA_DIR/topology.json" \
     SOCKET_PATH="$STATEDIR/node-demo.socket" \
     nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-demo.log" & echo $! > "$STATEDIR/node-demo.pid" &
-  just set-default-cardano-env demo "$TESTNET_MAGIC" "$PPID"
+  source <(just set-default-cardano-env demo)
   echo "Sleeping 30 seconds until $(date -d  @$(($(date +%s) + 30)))"
   sleep 30
   echo

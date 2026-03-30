@@ -260,6 +260,16 @@ in
         inputs.cardano-parts.nixosModules.profile-grafana-alloy
         nixosModules.common
         nixosModules.ip-module-check
+
+        # If all machines have been spun up with the zfs ami, include the ami
+        # module in the default imports.
+        #
+        # Otherwise, attach the ami module selectively to only the machines
+        # that use it by declaring the following definition above and using it
+        # on the appropriate machines:
+        #
+        #   amiZfs = {imports = [nixosModules.ami];};
+        nixosModules.ami
       ];
 
       preview1-bp-a-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node bp];};

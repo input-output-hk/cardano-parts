@@ -127,6 +127,7 @@
             sysstat
             tcpdump
             tree
+            unixtools.net-tools
             wget
             wush
           ];
@@ -163,7 +164,7 @@
           };
         };
 
-        system.extraSystemBuilderCmds = ''
+        system.systemBuilderCommands = ''
           ln -sv ${pkgs.path} $out/nixpkgs
         '';
 

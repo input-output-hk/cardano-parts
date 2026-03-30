@@ -3,6 +3,16 @@
   name = "cardano-node-generic";
   rule = [
     {
+      alert = "cardano_node_blockheight_unchanged";
+      expr = "rate(cardano_node_metrics_blockNum_int[5m]) == 0";
+      for = "2m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 7 minutes.";
+        description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 7 minutes.";
+      };
+    }
+    {
       alert = "cardano_node_elevated_restarts";
       # The systemd expression can be used but only in systems with high sampling frequency, otherwise, the state change may not be detected.
       # Therefore the second expression is preferred although not yet available in the new tracing system:
@@ -16,16 +26,6 @@
       };
     }
     {
-      alert = "cardano_node_blockheight_unchanged";
-      expr = "rate(cardano_node_metrics_blockNum_int[2m]) == 0";
-      for = "10m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes.";
-        description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes at a 2 minute rate resolution.";
-      };
-    }
-    {
       alert = "cardano_node_mempool_high";
       expr = "cardano_node_metrics_txsInMempool_int > 200";
       for = "10m";
@@ -33,6 +33,28 @@
       annotations = {
         summary = "{{$labels.instance}}: cardano-node transactions in mempool have been elevated for more than 10 minutes.";
         description = "{{$labels.instance}}: cardano-node transactions in mempool have been greater than 200 for more than 10 minutes.";
+      };
+    }
+    {
+      alert = "cardano_node_mempool_soft_timeouts_detected";
+      # Alert on any increase in soft timeouts over a 1-hour lookback window.
+      expr = "increase(txsMempoolTimeoutSoft[1h]) > 2 or increase(cardano_node_metrics_txsMempoolTimeoutSoft_counter[1h]) > 2";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node mempool soft timeouts detected.";
+        description = "{{$labels.instance}}: cardano-node mempool has rejected {{ printf \"%.0f\" $value }} transaction(s) due to soft timeout in the past hour.";
+      };
+    }
+    {
+      alert = "cardano_node_mempool_hard_timeouts_detected";
+      # Alert on any increase in hard timeouts over a 1-hour lookback window.
+      expr = "increase(txsMempoolTimeoutHard[1h]) > 0 or increase(cardano_node_metrics_txsMempoolTimeoutHard_counter[1h]) > 0";
+      for = "1m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node mempool hard timeouts detected.";
+        description = "{{$labels.instance}}: cardano-node mempool has rejected {{ printf \"%.0f\" $value }} transaction(s) due to hard timeout in the past hour.";
       };
     }
     # Note: This alert will automatically disable after 6 hours (360 minutes) even if there are still no expected metrics available.

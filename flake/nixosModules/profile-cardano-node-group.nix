@@ -383,21 +383,27 @@
             };
           };
 
-          # These RTS changes from nixos upstream defaults of: `-N2 -A16 -qg -qb`
-          # improve chainsync speed when -N >= 4 and minimize blockperf measured
+          # These RTS changes from nixos upstream defaults: `-N2`
+          # improving chainsync speed when -N >= 4 and minimize blockperf measured
           # late delta_headers >= 10 seconds.  The primary factors in the late
           # delta_header reduction were observed to be:
           #   * -N >= 4 with a sufficiently sized machine
           #   * -M is sufficiently high. ex: ~13 -> 24 GiB on mainnet lowered late blocks significantly
-          #   * -I3 may offer minimal benefit with low signal to noise
-          #   * Dropping of -qg -qb results in improved parallel Gen1 gc performance compared to historical perf
           #
-          # RTS ref: https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
+          # -qg1 -qb1 is adopted as recommended for newer GHC compiler usage:
+          #
+          #
+          # Refs:
+          #   https://github.com/IntersectMBO/cardano-node/pull/6222
+          #   https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
           rtsArgs = [
             # See the defn of cores above -- this will be constrained between 2 and 8, inclusive
             "-N${toString cores}"
+            "-I0"
             "-A16m"
-            "-I3"
+            "-qg1"
+            "-qb1"
+            "--disable-delayed-os-memory-return"
             "-M${toString (1.024 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M"
           ];
 

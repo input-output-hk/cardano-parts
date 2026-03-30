@@ -13,6 +13,7 @@
 # * Example:
 #   ../../templates/cardano-parts-project/flake/nixosModules/common.nix
 {
+  self,
   inputs,
   moduleWithSystem,
   ...
@@ -22,7 +23,9 @@
     pkgs,
     lib,
     ...
-  }:
+  }: let
+    inherit (builtins) toJSON;
+  in
     with pkgs;
     with lib; {
       imports = [
@@ -73,6 +76,12 @@
             collect-frequency = "*:*:00/10";
           };
         };
+
+        system.systemBuilderCommands = ''
+          printf '%s' ${
+            escapeShellArg (toJSON ((removeAttrs self.sourceInfo ["outPath"]) // {outPathStr = self.sourceInfo.outPath;}))
+          } > $out/source-info-cardano-parts.json
+        '';
 
         systemd = {
           services = {
