@@ -314,8 +314,8 @@ dbsync-prep ENV HOST ACCTS="501":
   scripts/setup-delegation-accounts.py \
     --print-only \
     --testnet-magic "$MAGIC" \
-    --wallet-mnemonic <(sops -d secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
-    --signing-key-file <(sops -d secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey) \
+    --wallet-mnemonic <(sops -d "secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic") \
+    --signing-key-file <(sops -d "secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey") \
     --num-accounts {{ACCTS}} \
     > "$TMPFILE"
 
@@ -391,9 +391,9 @@ dedelegate-pools ENV *IDXS=null:
     exit 1
   fi
 
-  source <(just set-default-cardano-env {{ENV}})
+  source <(just set-default-cardano-env "{{ENV}}")
 
-  if [ "$(jq -re .syncProgress <<< "$(just query-tip {{ENV}})")" != "100.00" ]; then
+  if [ "$(jq -re .syncProgress <<< "$(just query-tip "{{ENV}}")")" != "100.00" ]; then
     echo "Please wait until the local tip of environment {{ENV}} is 100.00 before dedelegation"
     exit 1
   fi
@@ -416,8 +416,8 @@ dedelegate-pools ENV *IDXS=null:
     echo "De-delegating index $i"
     NOMENU=true scripts/restore-delegation-accounts.py \
       --testnet-magic "$MAGIC" \
-      --signing-key-file <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey) \
-      --wallet-mnemonic <(just sops-decrypt-binary secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic) \
+      --signing-key-file <(just sops-decrypt-binary "secrets/envs/{{ENV}}/utxo-keys/rich-utxo.skey") \
+      --wallet-mnemonic <(just sops-decrypt-binary "secrets/envs/{{ENV}}/utxo-keys/faucet.mnemonic") \
       --delegation-index "$i"
 
     TXID=$(eval "$CARDANO_CLI" latest transaction txid --tx-file tx-deleg-account-$i-restore.txsigned | jq -r .txhash)
@@ -611,7 +611,7 @@ save-bulk-creds ENV COMMIT="HEAD":
   DATE=$(git show --no-patch --format=%cs {{COMMIT}})
   for i in 1 2 3; do
     sops --config /dev/null --input-type binary --output-type binary --decrypt \
-    <(git cat-file blob {{COMMIT}}:secrets/groups/{{ENV}}$i/no-deploy/bulk.creds.pools.json) \
+    <(git cat-file blob "{{COMMIT}}:secrets/groups/{{ENV}}$i/no-deploy/bulk.creds.pools.json") \
     | jq -r '.[]'
   done \
     | jq -s \
@@ -652,7 +652,7 @@ set-default-cardano-env ENV TESTNET_MAGIC=null:
   >&2 echo "Linking: $(ln -sfv "$STATEDIR/node-{{ENV}}.log" node.log)"
   >&2 echo ""
   >&2 echo "To set environment variables in your shell, run:"
-  >&2 echo "  source <(just set-default-cardano-env {{ENV}})"
+  >&2 echo "  source <(just set-default-cardano-env \"{{ENV}}\")"
 
   echo "export CARDANO_NODE_SOCKET_PATH=\"$(pwd)/node.socket\""
   echo "export CARDANO_NODE_NETWORK_ID=\"$MAGIC\""
@@ -683,7 +683,7 @@ sops-decrypt-binary FILE:
 
   # Default to stdout decrypted output.
   # This supports the common use case of obtaining decrypted state for cmd arg input while leaving the encrypted file intact on disk.
-  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}}
+  sops --config "$(sops_config "{{FILE}}")" --input-type binary --output-type binary --decrypt "{{FILE}}"
 
 # Decrypt a file in place using .sops.yaml rules
 sops-decrypt-binary-in-place FILE:
@@ -692,7 +692,7 @@ sops-decrypt-binary-in-place FILE:
   {{sopsConfigSetup}}
   [ -n "${DEBUG:-}" ] && set -x
 
-  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --decrypt {{FILE}} | sponge {{FILE}}
+  sops --config "$(sops_config "{{FILE}}")" --input-type binary --output-type binary --decrypt "{{FILE}}" | sponge "{{FILE}}"
 
 # Encrypt a file in place using .sops.yaml rules
 sops-encrypt-binary FILE:
@@ -703,7 +703,7 @@ sops-encrypt-binary FILE:
 
   # Default to in-place encrypted output.
   # This supports the common use case of first time encrypting plaintext state for public storage, ex: git repo commit.
-  sops --config "$(sops_config {{FILE}})" --input-type binary --output-type binary --encrypt {{FILE}} | sponge {{FILE}}
+  sops --config "$(sops_config "{{FILE}}")" --input-type binary --output-type binary --encrypt "{{FILE}}" | sponge "{{FILE}}"
 
 # Rotate sops encryption using .sops.yaml rules
 sops-rotate-binary FILE:
@@ -714,8 +714,8 @@ sops-rotate-binary FILE:
 
   # Default to in-place encryption rotation.
   # This supports the common use case of rekeying, for example if recipient keys have changed.
-  just sops-decrypt-binary {{FILE}} | sponge {{FILE}}
-  just sops-encrypt-binary {{FILE}}
+  just sops-decrypt-binary "{{FILE}}" | sponge "{{FILE}}"
+  just sops-encrypt-binary "{{FILE}}"
 
 # Scp using repo ssh config
 scp *ARGS:
@@ -727,7 +727,7 @@ scp *ARGS:
 ssh HOSTNAME *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
-  ssh -o LogLevel=ERROR -F .ssh_config {{HOSTNAME}} {{ARGS}}
+  ssh -o LogLevel=ERROR -F .ssh_config "{{HOSTNAME}}" {{ARGS}}
 
 # Generate example .ssh_config code
 ssh-config-example:
@@ -768,7 +768,7 @@ ssh-bootstrap HOSTNAME *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
   {{checkSshKey}}
-  ssh -o LogLevel=ERROR -F .ssh_config -i .ssh_key {{HOSTNAME}} {{ARGS}}
+  ssh -o LogLevel=ERROR -F .ssh_config -i .ssh_key "{{HOSTNAME}}" {{ARGS}}
 
 # Ssh to all
 ssh-for-all *ARGS:
@@ -784,7 +784,7 @@ ssh-for-all *ARGS:
 
 # Ssh for select
 ssh-for-each HOSTNAMES *ARGS:
-  colmena exec --verbose --parallel 0 --on {{HOSTNAMES}} {{ARGS}}
+  colmena exec --verbose --parallel 0 --on "{{HOSTNAMES}}" {{ARGS}}
 
 # List machine id, ipv4, ipv6, name or region based on regex pattern
 ssh-list TYPE PATTERN:
@@ -844,7 +844,7 @@ start-node ENV:
   fi
 
   # Stop any existing running local node env for a clean restart
-  just stop-node {{ENV}}
+  just stop-node "{{ENV}}"
   echo "Starting cardano-node for envrionment {{ENV}}"
   mkdir -p "$STATEDIR"
 
@@ -872,7 +872,7 @@ start-node ENV:
   echo "Node started for {{ENV}}"
   echo ""
   echo "Set up your shell environment with:"
-  echo "  source <(just set-default-cardano-env {{ENV}})"
+  echo "  source <(just set-default-cardano-env \"{{ENV}}\")"
 
 # Stop all local nodes
 stop-all:
@@ -1029,7 +1029,7 @@ truncate-chain ENV SLOT:
   fi
 
   echo "Truncating cardano-node chain for envrionment {{ENV}} to slot {{SLOT}}"
-  just stop-node {{ENV}}
+  just stop-node "{{ENV}}"
   mkdir -p "$STATEDIR"
 
   SYNTH_ARGS=(

@@ -14,14 +14,12 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     exit 1
   fi
 
-  just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
-  export CARDANO_NODE_NETWORK_ID="$MAGIC"
-  export TESTNET_MAGIC="$MAGIC"
+  source <(just set-default-cardano-env "{{ENV}}")
   echo
 
   [ -n "${DEBUG:-}" ] && set -x
 
-  TIP=$(just query-tip {{ENV}})
+  TIP=$(just query-tip "{{ENV}}")
   if [ "$(jq -re .syncProgress <<< "$TIP")" != "100.00" ]; then
     echo "Please wait until the local tip of environment {{ENV}} is 100.00 before voting"
     exit 1
@@ -853,14 +851,12 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
     exit 1
   fi
 
-  just set-default-cardano-env {{ENV}} "$MAGIC" "$PPID"
-  export CARDANO_NODE_NETWORK_ID="$MAGIC"
-  export TESTNET_MAGIC="$MAGIC"
+  source <(just set-default-cardano-env "{{ENV}}")
   echo
 
   [ -n "${DEBUG:-}" ] && set -x
 
-  if [ "$(jq -re .syncProgress <<< "$(just query-tip {{ENV}})")" != "100.00" ]; then
+  if [ "$(jq -re .syncProgress <<< "$(just query-tip "{{ENV}}")")" != "100.00" ]; then
     echo "Please wait until the local tip of environment {{ENV}} is 100.00 before voting"
     exit 1
   fi
@@ -939,7 +935,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
     exit 1
   fi
 
-  RICH_ADDR=$(just sops-decrypt-binary secrets/envs/${ENV}/utxo-keys/rich-utxo.addr)
+  RICH_ADDR=$(just sops-decrypt-binary "secrets/envs/${ENV}/utxo-keys/rich-utxo.addr")
 
   # Select the smallest available UTxO without native tokens attached and greater than 5 ADA automatically with jq:
   RICH_UTXOS=$(eval "$CARDANO_CLI" latest query utxo --address "$RICH_ADDR" --out-file /dev/stdout)
@@ -966,7 +962,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
 
   eval "$CARDANO_CLI" latest transaction sign \
     --tx-body-file "$FILE.raw" \
-    --signing-key-file <(just sops-decrypt-binary secrets/envs/${ENV}/utxo-keys/rich-utxo.skey) \
+    --signing-key-file <(just sops-decrypt-binary "secrets/envs/${ENV}/utxo-keys/rich-utxo.skey") \
     --signing-key-file <(just sops-decrypt-binary "$COLD_SKEY") \
     --testnet-magic "$TESTNET_MAGIC" \
     --out-file "$FILE.signed"
