@@ -4,12 +4,12 @@
   rule = [
     {
       alert = "cardano_node_blockheight_unchanged";
-      expr = "rate(cardano_node_metrics_blockNum_int[2m]) == 0";
-      for = "10m";
+      expr = "rate(cardano_node_metrics_blockNum_int[5m]) == 0";
+      for = "2m";
       labels.severity = "page";
       annotations = {
-        summary = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes.";
-        description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 10 minutes at a 2 minute rate resolution.";
+        summary = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 7 minutes.";
+        description = "{{$labels.instance}}: cardano-node blockheight unchanged for more than 7 minutes.";
       };
     }
     {
