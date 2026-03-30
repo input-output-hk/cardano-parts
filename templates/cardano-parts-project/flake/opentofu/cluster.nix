@@ -115,7 +115,7 @@ with lib; let
                 {
                   name = "${nodeName}-${md5 dns}-AAAA";
                   value = {
-                    count = "\${length(aws_instance.${nodeName}[0].ipv6_addresses) > 0 ? 1 : 0}";
+                    count = "\${data.aws_vpc.${underscore nodes.${nodeName}.aws.region}.ipv6_cidr_block != \"\" ? 1 : 0}";
                     zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                     name = dns;
                     type = "AAAA";
@@ -204,19 +204,22 @@ in {
           aws_route53_zone.selected.name = "${cluster.domain}.";
 
           aws_ami = mapRegions ({region, ...}: {
-            "nixos_${system}_${region}" = {
-              owners = ["427812963091"];
-              most_recent = true;
+            "nixos_${system}_${underscore region}" = {
               provider = "aws.${region}";
-
+              most_recent = true;
+              owners = [infra.aws.orgId];
               filter = [
                 {
                   name = "name";
-                  values = ["nixos/25.05*"];
+                  values = ["NixOS/*"];
                 }
                 {
-                  name = "architecture";
-                  values = [(builtins.head (splitString "-" system))];
+                  name = "tag:system";
+                  values = [system];
+                }
+                {
+                  name = "tag:version";
+                  values = ["25.11.*"];
                 }
               ];
             };
@@ -401,7 +404,10 @@ in {
                 inherit (node.aws.instance) count instance_type;
 
                 provider = awsProviderFor region;
-                ami = "\${data.aws_ami.nixos_${system}_${underscore region}.id}";
+                ami =
+                  node.aws.instance.ami or "\${data.aws_ami.nixos_${
+                    with node.nixpkgs; crossSystem.system or localSystem.system
+                  }_${underscore region}.id}";
                 iam_instance_profile = "\${aws_iam_instance_profile.ec2_profile.name}";
 
                 monitoring = true;
