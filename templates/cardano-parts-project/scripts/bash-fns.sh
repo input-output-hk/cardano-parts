@@ -235,12 +235,16 @@ run-node-faketime() (
     CMD="cardano-node"
   fi
 
+  # If an older glibc is needed, obtain it from the correct nixpkgs:
+  # nix run github:nixos/nixpkgs/nixos-23.05#libfaketime -- "$1" "$CMD" run \
   faketime "$1" "$CMD" run \
     --config "$DATA_DIR"/node-config.json \
     --database-path "$DATA_DIR"/db \
     --topology "$DATA_DIR"/topology.json \
     +RTS -N2 -A16m -qg -qb -M3584M -RTS \
     --socket-path "$DATA_DIR"/node.socket \
+    --host-addr 0.0.0.0 \
+    --port 3001 \
     --bulk-credentials-file "$GENESIS_DIR"/bulk.creds.all.json \
     | tee -a "$DATA_DIR"/node.log
 )
