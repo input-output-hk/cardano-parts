@@ -151,7 +151,13 @@ in
 
             CHANGE_ROUTE "-4" "$DEFAULT_ROUTE"
 
-            DEFAULT_ROUTE=$(ip -6 route list default)
+            # Default ipv6 route output may look like:
+            #   default via fe80::8c2:6ff:feb3:c2d dev ens5 proto ra metric 1002 expires 1795sec pref medium
+            #
+            # The `1795sec` arg will not be accepted in a route change
+            # statement so must be filtered.
+            DEFAULT_ROUTE=$(ip -6 route list default | sed 's/ expires [0-9]\+sec//')
+
             if [ "$DEFAULT_ROUTE" = "" ]; then
               echo "The -6 default route is not set, skipping."
             else
