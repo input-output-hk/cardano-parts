@@ -476,7 +476,9 @@ in
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2603-1-pre-567a8e8";
-          mithril-pre-release = "input-output-hk-mithril-unstable-b31ce25";
+          # The current mithril unstable tag has broken nix builds, so set to the current release until fixed
+          # mithril-pre-release = "input-output-hk-mithril-unstable-b31ce25";
+          mithril-pre-release = "input-output-hk-mithril-2603-1-pre-567a8e8";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-6-3-e252ede";
           # node-release = pkg: localFlake.inputs.cardano-node-10-6-3.packages.x86_64-linux.${pkg};
