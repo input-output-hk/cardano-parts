@@ -465,8 +465,8 @@ in
           blockperf = caPkgs.blockperf-cardano-foundation-blockperf-main-626ad7b;
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
-          dbsync-release = "input-output-hk-cardano-db-sync-13-6-0-7-39c66db";
-          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-1-3c8724b";
+          dbsync-release = "input-output-hk-cardano-db-sync-13-6-0-8-2017bda";
+          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-2-0acc69f";
 
           faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-6-762bb26";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
