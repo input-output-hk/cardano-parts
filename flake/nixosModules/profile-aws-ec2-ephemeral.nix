@@ -157,7 +157,7 @@
           if (config.services ? cardano-node && config.services.cardano-node.enable)
           then ''
             mkdir -p ${cfg.mountPoint}/cardano-node
-            chown -R cardano-node:cardano-node ${cfg.mountPoint}/cardano-node
+            chown -R cardano-node:cardano-node ${cfg.mountPoint}/cardano-node || true
           ''
           else ''
             echo "Cardano node module not detected, exiting."
