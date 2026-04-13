@@ -8,7 +8,7 @@ Usage:
 
 Options:
     -h --help                    Show this screen
-    -p --print-only              Print sql for creation of faucet_stake_addr and faucet_deleg_addr tables only, take no other action
+    -p --print-only              Print sql for creation of faucet_stake_addr and faucet_deleg_addr tables only, submit no transactions
     -t --testnet-magic <INT>     Testnet Magic
     -s --signing-key-file <FILE> Signing Key
     -w --wallet-mnemonic <FILE>  mnemonic file cardano-address uses
