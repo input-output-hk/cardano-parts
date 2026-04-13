@@ -98,6 +98,7 @@ aws-sso-login-link AWS_PROFILE=null:
     echo "Logging into AWS SSO using profile \"$PROFILE\" from env var AWS_PROFILE..."
   else
     echo "ERROR: Either a recipe AWS_PROFILE arg must be given or the env var AWS_PROFILE must be set."
+    exit 1
   fi
 
   echo
@@ -116,6 +117,7 @@ aws-sso-login-code AWS_PROFILE=null:
     echo "Logging into AWS SSO using profile \"$PROFILE\" from env var AWS_PROFILE..."
   else
     echo "ERROR: Either a recipe AWS_PROFILE arg must be given or the env var AWS_PROFILE must be set."
+    exit 1
   fi
 
   echo
