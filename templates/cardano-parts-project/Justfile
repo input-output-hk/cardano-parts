@@ -36,7 +36,7 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo|^sanchonet$ ]]; then
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$ ]]; then
     >&2 echo "Error: only node environments for demo, dijkstra, mainnet, preprod, preview and sanchonet are supported"
     >&2 echo "Usage: just set-default-cardano-env <env>"
     exit 1
@@ -381,7 +381,7 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
     echo "Error: only node environments for preprod, preview, dijkstra and sanchonet are supported"
     exit 1
   fi
@@ -584,7 +584,7 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli-ng"
   elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ ^dijkstra$|^demo|^sanchonet$ ]]; then
+  elif [[ "$ENV" =~ ^dijkstra$|^demo$|^sanchonet$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
   fi
 
@@ -838,7 +838,7 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
     echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for start-node recipe"
     exit 1
   fi
@@ -1018,7 +1018,7 @@ truncate-chain ENV SLOT:
   [ -n "${DEBUG:-}" ] && set -x
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
     echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for truncate-chain recipe"
     exit 1
   fi
