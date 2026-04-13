@@ -302,7 +302,8 @@ else:
 with open(utxo_signing_key, "r") as file:
   utxo_signing_key_str = file.read()
 payment_addr = derive_payment_address_cli_skey(utxo_signing_key_str)
-txin = getLargestUtxoForAddress(payment_addr)
+if not arguments["--print-only"]:
+  txin = getLargestUtxoForAddress(payment_addr)
 
 faucetStakeSql = ""
 faucetDelegSql = ""
