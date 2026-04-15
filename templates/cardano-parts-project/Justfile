@@ -13,8 +13,9 @@ null := ""
 stateDir := "STATEDIR=" + statePrefix / "$(basename $(git remote get-url origin))"
 statePrefix := "~/.local/share"
 
-# To skip ptrace permission modification prompting, env var AUTO_SET_ENV can be set to `false`
-autoSetEnv := env_var_or_default("AUTO_SET_ENV","unset")
+# Machines provisioned directly by tofu, not managed by colmena/NixOS
+# The list structure should be like: ["machine-a", "machine-b"] with optional comma delimiter
+nonNixosMachines := '[]'
 
 # Environment variables can be used to change the default template diff and path comparison sources.
 # If TEMPLATE_PATH is set, it will have precedence, otherwise git url will be used for source templates.
@@ -36,7 +37,7 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo|^sanchonet$ ]]; then
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$ ]]; then
     >&2 echo "Error: only node environments for demo, dijkstra, mainnet, preprod, preview and sanchonet are supported"
     >&2 echo "Usage: just set-default-cardano-env <env>"
     exit 1
@@ -102,6 +103,8 @@ checkSshConfig := '''
   if $runCheck {
     print "Checking nixosCfg, sshCfg, and ipModuleCfg for consistency..."
 
+    let nonNixosMachines = ''' + nonNixosMachines + '''
+
     let nixosCfg = (nix eval --json ".#nixosConfigurations" --apply "builtins.attrNames" | from json)
 
     let sshCfg = (
@@ -138,20 +141,24 @@ checkSshConfig := '''
       | parse --regex `(?m)    (?<machine>.*) = {$\n(\s+privateIpv4 = \"(?<privIpv4>.*)";\n)?(\s+publicIpv4 = \"(?<pubIpv4>.*)";\n)?(\s+publicIpv6 = \"(?<pubIpv6>.*)";\n)?\s+};`
       | select machine privIpv4 pubIpv4 pubIpv6
       | update cells { if ($in | is-empty) { null } else { $in } }
+      | where {|r| ($nonNixosMachines | where {|m| $m == $r.machine} | is-empty) }
       | sort-by machine
     } else {
       []
     }
 
+    let ssh4NixosCfg = ($ssh4Cfg | where {|r| ($nonNixosMachines | where {|m| $m == $r.machine} | is-empty) })
+    let ssh6NixosCfg = ($ssh6Cfg | where {|r| ($nonNixosMachines | where {|m| $m == $r.machine} | is-empty) })
+
     let comparisons = [
       {
         label: "NixosConfigurations vs SSH hosts",
-        result: (list-diff $nixosCfg ($ssh4Cfg | get machine) onlyInNixosCfg onlyInSshCfg),
+        result: (list-diff $nixosCfg ($ssh4NixosCfg | get machine) onlyInNixosCfg onlyInSshCfg),
         hint: "just save-ssh-config or just tf apply"
       }
       {
         label: "SSH IPv4 vs SSH IPv6 machines",
-        result: (list-diff ($ssh4Cfg | get machine) ($ssh6Cfg | get machine) onlyInSsh4Cfg onlyInSsh6Cfg),
+        result: (list-diff ($ssh4NixosCfg | get machine) ($ssh6NixosCfg | get machine) onlyInSsh4Cfg onlyInSsh6Cfg),
         hint: "just save-ssh-config or just tf apply"
       }
       {
@@ -164,14 +171,14 @@ checkSshConfig := '''
       {
         label: "SSH public IPv4 vs IP module IPv4 values",
         result: (if $hasIpModule {
-          list-diff ($ssh4Cfg | get pubIpv4) ($moduleIps | get pubIpv4) onlyInSshCfg onlyInIpsModuleCfg
+          list-diff ($ssh4NixosCfg | get pubIpv4) ($moduleIps | get pubIpv4) onlyInSshCfg onlyInIpsModuleCfg
         } else {[]}),
         hint: "just update-ips"
       }
       {
         label: "SSH public IPv6 vs IP module IPv6 values",
         result: (if $hasIpModule {
-          list-diff ($ssh6Cfg | get pubIpv6) ($moduleIps | get pubIpv6) onlyInSshCfg onlyInIpsModuleCfg
+          list-diff ($ssh6NixosCfg | get pubIpv6) ($moduleIps | get pubIpv6) onlyInSshCfg onlyInIpsModuleCfg
         } else {[]}),
         hint: "just update-ips"
       }
@@ -381,7 +388,7 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
     echo "Error: only node environments for preprod, preview, dijkstra and sanchonet are supported"
     exit 1
   fi
@@ -584,7 +591,7 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli-ng"
   elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$ ]]; then
     CARDANO_CLI="cardano-cli"
-  elif [[ "$ENV" =~ ^dijkstra$|^demo|^sanchonet$ ]]; then
+  elif [[ "$ENV" =~ ^dijkstra$|^demo$|^sanchonet$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
   fi
 
@@ -838,7 +845,7 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
     echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for start-node recipe"
     exit 1
   fi
@@ -1018,7 +1025,7 @@ truncate-chain ENV SLOT:
   [ -n "${DEBUG:-}" ] && set -x
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra|^sanchonet$ ]]; then
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
     echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for truncate-chain recipe"
     exit 1
   fi
@@ -1073,9 +1080,10 @@ update-ips:
   tofu init -reconfigure
   tofu workspace select -or-create cluster
 
+  let nonNixosMachines = {{nonNixosMachines}}
+
   print "\n"
-  let nodeCount = nix eval .#nixosConfigurations --raw --apply 'let f = x: toString (builtins.length (builtins.attrNames x)); in f'
-  print $"Processing ip information for ($nodeCount) nixos machine configurations..."
+  let nixosNodeCount = nix eval .#nixosConfigurations --raw --apply 'let f = x: toString (builtins.length (builtins.attrNames x)); in f'
 
   let tofuJson = (tofu show -json | from json)
 
@@ -1159,10 +1167,15 @@ update-ips:
   # The pre-push git hook will complain if this file has been committed accidently.
   git add --intent-to-add flake/nixosModules/ips-DONT-COMMIT.nix
 
-  print $"Ips were written for a machine count of: ($eipRecords | length)"
-  if $nodeCount != ($eipRecords | length | into string) {
+  let machineCount = ($ipTable | length)
+  let nonNixosMachineCount = ($nonNixosMachines | length)
+
+  print $"Processing ip information for ($nixosNodeCount) nixos machine(s) and ($nonNixosMachineCount) non-nixos machine(s)..."
+  print $"Ips were written for a machine count of: ($machineCount)"
+
+  if $nixosNodeCount != ($machineCount | $in - $nonNixosMachineCount | into string) {
     print "\n"
-    print $"(ansi bg_red)WARNING:(ansi reset) There are ($nodeCount) nixos machine configurations but ($eipRecords | length) ip record sets were written."
+    print $"(ansi bg_red)WARNING:(ansi reset) There are ($nixosNodeCount) nixos machine configurations but ($machineCount | $in - $nonNixosMachineCount) ip nixos record sets were written."
     print "\n"
   }
 
