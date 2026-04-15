@@ -12,7 +12,7 @@ aws-ec2-describe NAME REGION:
 aws-ec2-id NAME REGION:
   #!/usr/bin/env bash
   set -e
-  ID=$(aws --region {{REGION}} ec2 describe-instances --filters "Name=tag:Name,Values={{NAME}}" --output text --query "Reservations[*].Instances[*].InstanceId")
+  ID=$(aws --region {{REGION}} ec2 describe-instances --filters "Name=tag:Name,Values={{NAME}}" "Name=instance-state-name,Values=pending,running,stopping,stopped" --output text --query "Reservations[*].Instances[*].InstanceId")
   if [ -z "${ID:-}" ]; then
     echo >&2 "ERROR: Machine {{NAME}} not found in region {{REGION}}"
     exit 1
