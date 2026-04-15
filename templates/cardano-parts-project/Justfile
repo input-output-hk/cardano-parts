@@ -1170,7 +1170,7 @@ update-ips:
   let machineCount = ($ipTable | length)
   let nonNixosMachineCount = ($nonNixosMachines | length)
 
-  print $"Processing ip information for ($nixosNodeCount) nixos machine(s) and ($nonNixosMachineCount) non-nixos machine(s)..."
+  print $"Processing ip information for ($nixosNodeCount) nixos machine\(s) and ($nonNixosMachineCount) non-nixos machine\(s)..."
   print $"Ips were written for a machine count of: ($machineCount)"
 
   if $nixosNodeCount != ($machineCount | $in - $nonNixosMachineCount | into string) {
