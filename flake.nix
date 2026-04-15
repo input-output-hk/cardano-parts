@@ -99,7 +99,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.7.0";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
@@ -124,7 +124,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.7.0";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
@@ -134,7 +134,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.7.0";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
