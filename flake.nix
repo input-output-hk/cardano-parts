@@ -60,7 +60,7 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # For tmp local testing pins
@@ -94,7 +94,7 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/10.6.4";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
@@ -119,7 +119,7 @@
     };
 
     cardano-submit-api-service = {
-      url = "github:IntersectMBO/cardano-node/10.6.4";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
@@ -129,7 +129,7 @@
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/10.6.4";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
