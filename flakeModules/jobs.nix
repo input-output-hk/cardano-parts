@@ -1846,6 +1846,7 @@ in {
             #   $PROPOSAL_ARGS
             #   [$PROPOSAL_HASH]
             #   [$PROPOSAL_URL]
+            #   [$SCRIPT_FILE]
             #   [$SCRIPT_FILE_URL]
             #   $STAKE_KEY
             #   [$SUBMIT_TX]
@@ -1884,7 +1885,7 @@ in {
 
             ACTION_ARGS+=()
             if [ -n "''${USE_GUARDRAILS:-}" ]; then
-              if [ -z "''${SCRIPT_FILE_URL:-}" ]; then
+              if [ -z "''${SCRIPT_FILE:-}" ] && [ -z "''${SCRIPT_FILE_URL:-}" ]; then
                 case "$TESTNET_MAGIC" in
                   764824073)
                     SCRIPT_FILE_URL="https://book.play.dev.cardano.org/environments/mainnet/guardrails-script.plutus"
@@ -1903,7 +1904,12 @@ in {
 
               if [[ "$ACTION" =~ ^(create-constitution|create-protocol-parameters-update|create-treasury-withdrawal)$ ]]; then
                 # The CONSTITUTION_SCRIPT hash should match the calculated policyId hash of the --proposal-script-file arg
-                CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file <(curl -sL "$SCRIPT_FILE_URL"))
+                if [ -n "''${SCRIPT_FILE:-}" ]; then
+                  CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file "$SCRIPT_FILE")
+                else
+                  CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file <(curl -sL "$SCRIPT_FILE_URL"))
+                fi
+
                 ACTION_ARGS+=("--constitution-script-hash" "$CONSTITUTION_SCRIPT")
               fi
             fi
@@ -1937,11 +1943,15 @@ in {
                   ' <<< "$UTXO"
               )
 
-              BUILD_TX_ARGS+=(
-                "--tx-in-collateral" "$TXIN_COLLATERAL"
-                "--proposal-script-file" "<(curl -sL \"$SCRIPT_FILE_URL\")"
-                "--proposal-redeemer-value" "{}"
-              )
+              BUILD_TX_ARGS+=("--tx-in-collateral" "$TXIN_COLLATERAL")
+
+              if [ -n "''${SCRIPT_FILE:-}" ]; then
+                BUILD_TX_ARGS+=("--proposal-script-file" "$SCRIPT_FILE")
+              else
+                BUILD_TX_ARGS+=("--proposal-script-file" "<(curl -sL \"$SCRIPT_FILE_URL\")")
+              fi
+
+              BUILD_TX_ARGS+=("--proposal-redeemer-value" "{}")
             fi
 
             # Generate arrays needed for build/sign commands
