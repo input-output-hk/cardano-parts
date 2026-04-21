@@ -1194,8 +1194,8 @@ in {
             #   [$POOL_METADATA_URL]
             #   $POOL_NAMES
             #   [$POOL_PLEDGE]
-            #   $POOL_RELAY
-            #   $POOL_RELAY_PORT
+            #   [$POOL_RELAY]
+            #   [$POOL_RELAY_PORT]
             #   [$STAKE_ADDRESS_DEPOSIT]
             #   [$STAKE_POOL_DEPOSIT]
             #   [$STAKE_POOL_DIR]
@@ -1210,6 +1210,7 @@ in {
 
             export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
             METADATA_ARGS=()
+            POOL_ARGS=()
 
             ${secretsFns}
             ${selectCardanoCli}
@@ -1270,6 +1271,14 @@ in {
                 METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
               fi
 
+              if [ -n "''${POOL_RELAY:-}" ]; then
+                POOL_ARGS+=(--single-host-pool-relay "$POOL_RELAY")
+              fi
+
+              if [ -n "''${POOL_RELAY_PORT:-}" ]; then
+                POOL_ARGS+=(--pool-relay-port "$POOL_RELAY_PORT")
+              fi
+
               # Generate stake registration and delegation certificate
               if [ "$ERA_CMD" = "conway" ]; then
                 eraArgs=("--key-reg-deposit-amt" "$STAKE_ADDRESS_DEPOSIT")
@@ -1310,8 +1319,7 @@ in {
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
-                  --single-host-pool-relay "$POOL_RELAY" \
-                  --pool-relay-port "$POOL_RELAY_PORT" \
+                  "''${POOL_ARGS[@]}" \
                   --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                   --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
                   "''${METADATA_ARGS[@]}" \
@@ -1329,8 +1337,7 @@ in {
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
-                  --single-host-pool-relay "$POOL_RELAY" \
-                  --pool-relay-port "$POOL_RELAY_PORT" \
+                  "''${POOL_ARGS[@]}" \
                   --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                   --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
                   "''${METADATA_ARGS[@]}" \
