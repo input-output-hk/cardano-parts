@@ -600,6 +600,8 @@ in {
             #   [$MAX_SUPPLY]
             #   [$NUM_CC_KEYS]
             #   [$NUM_GENESIS_KEYS]
+            #   [$PROTOCOL_VERSION_MAJOR]
+            #   [$PROTOCOL_VERSION_MINOR]
             #   [$SECURITY_PARAM]
             #   [$SLOT_LENGTH]
             #   [$START_TIME]
@@ -741,6 +743,14 @@ in {
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
 
+            if [ -z "''${PROTOCOL_VERSION_MAJOR:-}" ]; then
+              PROTOCOL_VERSION_MAJOR="9"
+            fi
+
+            if [ -z "''${PROTOCOL_VERSION_MINOR:-}" ]; then
+              PROTOCOL_VERSION_MAJOR="0"
+            fi
+
             # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide args for these
             jq --sort-keys \
               --argjson jsonUpdates "{
@@ -748,7 +758,9 @@ in {
                 \"epochLength\": $EPOCH_LENGTH,
                 \"securityParam\": $SECURITY_PARAM,
                 \"slotLength\": $SLOT_LENGTH_SEC}" \
-              '. += $jsonUpdates | .protocolParams.protocolVersion = {"major": 9, "minor": 0}' \
+                --argjson PROTOCOL_VERSION_MAJOR "$PROTOCOL_VERSION_MAJOR" \
+                --argjson PROTOCOL_VERSION_MINOR "$PROTOCOL_VERSION_MINOR" \
+              '. += $jsonUpdates | .protocolParams.protocolVersion = {"major": $PROTOCOL_VERSION_MAJOR, "minor": $PROTOCOL_VERSION_MINOR}' \
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
 
