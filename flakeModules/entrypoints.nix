@@ -257,8 +257,13 @@ in {
             args+=("--topology" "$NODE_TOPOLOGY")
             echo "Running node as:"
             if [ "''${USE_SHELL_BINS:-}" = "true" ]; then
-              echo "cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
-              exec cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              if [ -n "''${CARDANO_NODE_SHELL_BIN:-}" ]; then
+                echo "$CARDANO_NODE_SHELL_BIN run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec $CARDANO_NODE_SHELL_BIN run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              else
+                echo "cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              fi
             elif [ "''${UNSTABLE:-}" = "true" ]; then
               echo "${getExe cfgPkgs.cardano-node-ng} run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
               exec ${getExe cfgPkgs.cardano-node-ng} run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
