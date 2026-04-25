@@ -748,7 +748,7 @@ in {
             fi
 
             if [ -z "''${PROTOCOL_VERSION_MINOR:-}" ]; then
-              PROTOCOL_VERSION_MAJOR="0"
+              PROTOCOL_VERSION_MINOR="0"
             fi
 
             # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide args for these
