@@ -60,7 +60,7 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/leios";
 
     # For tmp local testing pins
