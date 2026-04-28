@@ -36,18 +36,21 @@ in {
           );
       in ''
         # Prepare standard env configs
-        ENVS=(${escapeShellArgs (attrNames environments)})
-        for ENV in "''${ENVS[@]}"; do
-          cp -r "${envCfgs}/config/$ENV" "$DATA_DIR/config/"
-        done
+        if [ -z "''${NODE_CONFIG_SKIP_COPY:-}" ]; then
+          ENVS=(${escapeShellArgs (attrNames environments)})
 
-        # Required for direct entrypoint access.
-        # Can be removed once the find command below is removed
-        chmod -R +w "$DATA_DIR"
+          for ENV in "''${ENVS[@]}"; do
+            cp -r "${envCfgs}/config/$ENV" "$DATA_DIR/config/"
+          done
 
-        # Until https://github.com/IntersectMBO/cardano-node/pull/6282 is merged and released,
-        # remove PrometheusSimple from configs so multiple instances can be started without fatal error.
-        find "$DATA_DIR" -name 'config*.json' -type f -exec sed -i '/PrometheusSimple/d' {} +
+          # Required for direct entrypoint access.
+          # Can be removed once the find command below is removed
+          chmod -R +w "$DATA_DIR"
+
+          # Until https://github.com/IntersectMBO/cardano-node/pull/6282 is merged and released,
+          # remove PrometheusSimple from configs so multiple instances can be started without fatal error.
+          find "$DATA_DIR" -name 'config*.json' -type f -exec sed -i '/PrometheusSimple/d' {} +
+        fi
 
         # Prepare mithril client env configs
         ${
