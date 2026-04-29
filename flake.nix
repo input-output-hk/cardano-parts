@@ -75,7 +75,7 @@
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.2";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.4";
       flake = false;
     };
 
@@ -89,7 +89,7 @@
     };
 
     cardano-db-sync-service-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.2";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.4";
       flake = false;
     };
 
