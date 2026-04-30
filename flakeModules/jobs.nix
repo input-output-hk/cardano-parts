@@ -600,6 +600,8 @@ in {
             #   [$MAX_SUPPLY]
             #   [$NUM_CC_KEYS]
             #   [$NUM_GENESIS_KEYS]
+            #   [$PROTOCOL_VERSION_MAJOR]
+            #   [$PROTOCOL_VERSION_MINOR]
             #   [$SECURITY_PARAM]
             #   [$SLOT_LENGTH]
             #   [$START_TIME]
@@ -741,6 +743,14 @@ in {
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
 
+            if [ -z "''${PROTOCOL_VERSION_MAJOR:-}" ]; then
+              PROTOCOL_VERSION_MAJOR="9"
+            fi
+
+            if [ -z "''${PROTOCOL_VERSION_MINOR:-}" ]; then
+              PROTOCOL_VERSION_MINOR="0"
+            fi
+
             # cardano-cli "$ERA_CMD" genesis create-testnet-data doesn't provide args for these
             jq --sort-keys \
               --argjson jsonUpdates "{
@@ -748,7 +758,9 @@ in {
                 \"epochLength\": $EPOCH_LENGTH,
                 \"securityParam\": $SECURITY_PARAM,
                 \"slotLength\": $SLOT_LENGTH_SEC}" \
-              '. += $jsonUpdates | .protocolParams.protocolVersion = {"major": 9, "minor": 0}' \
+                --argjson PROTOCOL_VERSION_MAJOR "$PROTOCOL_VERSION_MAJOR" \
+                --argjson PROTOCOL_VERSION_MINOR "$PROTOCOL_VERSION_MINOR" \
+              '. += $jsonUpdates | .protocolParams.protocolVersion = {"major": $PROTOCOL_VERSION_MAJOR, "minor": $PROTOCOL_VERSION_MINOR}' \
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
 
@@ -1182,8 +1194,8 @@ in {
             #   [$POOL_METADATA_URL]
             #   $POOL_NAMES
             #   [$POOL_PLEDGE]
-            #   $POOL_RELAY
-            #   $POOL_RELAY_PORT
+            #   [$POOL_RELAY]
+            #   [$POOL_RELAY_PORT]
             #   [$STAKE_ADDRESS_DEPOSIT]
             #   [$STAKE_POOL_DEPOSIT]
             #   [$STAKE_POOL_DIR]
@@ -1198,6 +1210,7 @@ in {
 
             export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
             METADATA_ARGS=()
+            POOL_ARGS=()
 
             ${secretsFns}
             ${selectCardanoCli}
@@ -1258,6 +1271,14 @@ in {
                 METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
               fi
 
+              if [ -n "''${POOL_RELAY:-}" ]; then
+                POOL_ARGS+=(--single-host-pool-relay "$POOL_RELAY")
+              fi
+
+              if [ -n "''${POOL_RELAY_PORT:-}" ]; then
+                POOL_ARGS+=(--pool-relay-port "$POOL_RELAY_PORT")
+              fi
+
               # Generate stake registration and delegation certificate
               if [ "$ERA_CMD" = "conway" ]; then
                 eraArgs=("--key-reg-deposit-amt" "$STAKE_ADDRESS_DEPOSIT")
@@ -1298,8 +1319,7 @@ in {
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
-                  --single-host-pool-relay "$POOL_RELAY" \
-                  --pool-relay-port "$POOL_RELAY_PORT" \
+                  "''${POOL_ARGS[@]}" \
                   --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                   --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
                   "''${METADATA_ARGS[@]}" \
@@ -1317,8 +1337,7 @@ in {
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
-                  --single-host-pool-relay "$POOL_RELAY" \
-                  --pool-relay-port "$POOL_RELAY_PORT" \
+                  "''${POOL_ARGS[@]}" \
                   --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                   --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
                   "''${METADATA_ARGS[@]}" \
@@ -1827,6 +1846,7 @@ in {
             #   $PROPOSAL_ARGS
             #   [$PROPOSAL_HASH]
             #   [$PROPOSAL_URL]
+            #   [$SCRIPT_FILE]
             #   [$SCRIPT_FILE_URL]
             #   $STAKE_KEY
             #   [$SUBMIT_TX]
@@ -1865,7 +1885,7 @@ in {
 
             ACTION_ARGS+=()
             if [ -n "''${USE_GUARDRAILS:-}" ]; then
-              if [ -z "''${SCRIPT_FILE_URL:-}" ]; then
+              if [ -z "''${SCRIPT_FILE:-}" ] && [ -z "''${SCRIPT_FILE_URL:-}" ]; then
                 case "$TESTNET_MAGIC" in
                   764824073)
                     SCRIPT_FILE_URL="https://book.play.dev.cardano.org/environments/mainnet/guardrails-script.plutus"
@@ -1884,7 +1904,12 @@ in {
 
               if [[ "$ACTION" =~ ^(create-constitution|create-protocol-parameters-update|create-treasury-withdrawal)$ ]]; then
                 # The CONSTITUTION_SCRIPT hash should match the calculated policyId hash of the --proposal-script-file arg
-                CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file <(curl -sL "$SCRIPT_FILE_URL"))
+                if [ -n "''${SCRIPT_FILE:-}" ]; then
+                  CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file "$SCRIPT_FILE")
+                else
+                  CONSTITUTION_SCRIPT=$("''${CARDANO_CLI_NO_ERA[@]}" latest transaction policyid --script-file <(curl -sL "$SCRIPT_FILE_URL"))
+                fi
+
                 ACTION_ARGS+=("--constitution-script-hash" "$CONSTITUTION_SCRIPT")
               fi
             fi
@@ -1918,11 +1943,15 @@ in {
                   ' <<< "$UTXO"
               )
 
-              BUILD_TX_ARGS+=(
-                "--tx-in-collateral" "$TXIN_COLLATERAL"
-                "--proposal-script-file" "<(curl -sL \"$SCRIPT_FILE_URL\")"
-                "--proposal-redeemer-value" "{}"
-              )
+              BUILD_TX_ARGS+=("--tx-in-collateral" "$TXIN_COLLATERAL")
+
+              if [ -n "''${SCRIPT_FILE:-}" ]; then
+                BUILD_TX_ARGS+=("--proposal-script-file" "$SCRIPT_FILE")
+              else
+                BUILD_TX_ARGS+=("--proposal-script-file" "<(curl -sL \"$SCRIPT_FILE_URL\")")
+              fi
+
+              BUILD_TX_ARGS+=("--proposal-redeemer-value" "{}")
             fi
 
             # Generate arrays needed for build/sign commands

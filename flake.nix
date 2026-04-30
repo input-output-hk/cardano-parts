@@ -60,8 +60,8 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
-    iohk-nix.url = "github:input-output-hk/iohk-nix/jl/dijkstra-respin-2026-02-19";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/leios";
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
@@ -70,12 +70,12 @@
     # versioning of the release and pre-release (-ng) dbsync
     # definitions found in flakeModule/pkgs.nix.
     cardano-db-sync-schema = {
-      url = "github:IntersectMBO/cardano-db-sync/13.6.0.8";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.4";
       flake = false;
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.2";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.4";
       flake = false;
     };
 
@@ -84,22 +84,22 @@
     # flakeModule options and do not necessarily reflect the software
     # versions running on those nixos services.
     cardano-db-sync-service = {
-      url = "github:IntersectMBO/cardano-db-sync/13.6.0.8";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.4";
       flake = false;
     };
 
     cardano-db-sync-service-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.2";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.0.4";
       flake = false;
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/10.6.4";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.7.0";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
@@ -119,22 +119,22 @@
     };
 
     cardano-submit-api-service = {
-      url = "github:IntersectMBO/cardano-node/10.6.4";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.7.0";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/10.6.4";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/10.7.0";
+      url = "github:IntersectMBO/cardano-node/10.7.1";
       flake = false;
     };
 

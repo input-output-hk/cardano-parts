@@ -44,10 +44,21 @@
     config = let
       arcMaxBytes = calcArcMaxBytes config.boot.zfs.zfsArcPct;
     in {
-      # Set ZFS ARC max size via kernel parameter
-      boot.kernelParams = mkIf (config.boot.zfs.zfsArcPct != null) [
-        "zfs.zfs_arc_max=${toString arcMaxBytes}"
-      ];
+      boot = {
+        # Cardano-node >= 10.7.0 requires kernel >= 6.15 for LSM, without which
+        # large IOWAIT will be observed.
+        kernelPackages = pkgs.linuxPackages_6_18;
+
+        # Set ZFS ARC max size via kernel parameter
+        kernelParams = mkIf (config.boot.zfs.zfsArcPct != null) [
+          "zfs.zfs_arc_max=${toString arcMaxBytes}"
+        ];
+
+        # Use ZFS 2.4 with the latest compatible kernel (6.18)
+        # ZFS 2.3.5 only supports up to 6.17, and no 6.15-6.17 kernels are packaged.
+        # ZFS 2.4.0 supports up to 6.18, and linuxPackages_6_18 is available.
+        zfs.package = pkgs.zfs_2_4;
+      };
 
       ec2 = {
         efi = true;
