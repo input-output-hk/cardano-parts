@@ -6,6 +6,7 @@
 #   config.services.alloy.enableLiveDebugging
 #   config.services.alloy.enableLoki
 #   config.services.alloy.extraAlloyConfig
+#   config.services.alloy.extraJournalReceivers
 #   config.services.alloy.labels
 #   config.services.alloy.logLevel
 #   config.services.alloy.prometheusExporterUnixNodeSetCollectors
@@ -223,7 +224,13 @@ flake @ {moduleWithSystem, ...}: {
 
         '';
 
-        loki = ''
+        loki = let
+          e = "${
+            if (length cfg.extraJournalReceivers == 0)
+            then ""
+            else ", "
+          }${(concatMapStringsSep ", " (r: r) cfg.extraJournalReceivers)}";
+        in ''
           loki.write "default" {
             endpoint {
               url = local.file.remote_write_url_logs.content
@@ -237,7 +244,7 @@ flake @ {moduleWithSystem, ...}: {
 
           loki.source.journal "default" {
             relabel_rules = discovery.relabel.journal.rules
-            forward_to    = [loki.write.default.receiver]
+            forward_to    = [loki.write.default.receiver${e}]
             labels        = {
               job = "systemd-journal",
               group = "${groupName}",
@@ -488,6 +495,14 @@ flake @ {moduleWithSystem, ...}: {
             default = "";
             description = ''
               Extra configuration appended to the /etc/alloy/config.alloy file prior to formatting.
+            '';
+          };
+
+          extraJournalReceivers = mkOption {
+            type = listOf str;
+            default = [];
+            description = ''
+              Extra alloy receivers for loki journald log data.
             '';
           };
 
