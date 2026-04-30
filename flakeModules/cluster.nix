@@ -21,6 +21,17 @@
 #   flake.cardano-parts.cluster.infra.generic.tribe
 #   flake.cardano-parts.cluster.infra.generic.warnOnMissingIpModule
 #   flake.cardano-parts.cluster.infra.grafana.stackName
+#   flake.cardano-parts.cluster.infra.monitoring.bucketLoki
+#   flake.cardano-parts.cluster.infra.monitoring.bucketMimir
+#   flake.cardano-parts.cluster.infra.monitoring.email
+#   flake.cardano-parts.cluster.infra.monitoring.enable
+#   flake.cardano-parts.cluster.infra.monitoring.hostname
+#   flake.cardano-parts.cluster.infra.monitoring.oauth.google.allowedDomains
+#   flake.cardano-parts.cluster.infra.monitoring.objectLockMode
+#   flake.cardano-parts.cluster.infra.monitoring.provisionPath
+#   flake.cardano-parts.cluster.infra.monitoring.retentionLogsDays
+#   flake.cardano-parts.cluster.infra.monitoring.retentionMetricsDays
+#   flake.cardano-parts.cluster.infra.monitoring.subdomain
 #   flake.cardano-parts.cluster.groups.<default|name>.bookRelayMultivalueDns
 #   flake.cardano-parts.cluster.groups.<default|name>.generic.abortOnMissingIpModule
 #   flake.cardano-parts.cluster.groups.<default|name>.generic.warnOnMissingIpModule
@@ -80,10 +91,11 @@ flake @ {
   ...
 }: let
   inherit (lib) mdDoc mkDefault mkOption types;
-  inherit (types) addCheck anything attrsOf bool enum functionTo listOf nullOr oneOf package port raw str submodule;
+  inherit (types) addCheck anything attrsOf bool enum functionTo listOf nullOr oneOf package path port raw str submodule;
 
   cfg = config.flake.cardano-parts;
   cfgAws = cfg.cluster.infra.aws;
+  cfgMon = cfg.cluster.infra.monitoring;
 
   # TODO: improved function to do real type checking while still providing a useful message
   optionCheck = type: optionName: typeName:
@@ -129,6 +141,12 @@ flake @ {
       grafana = mkOption {
         type = grafanaSubmodule;
         description = mdDoc "Cardano-parts cluster infra grafana submodule.";
+        default = {};
+      };
+
+      monitoring = mkOption {
+        type = monitoringSubmodule;
+        description = mdDoc "Cardano-parts cluster infra in-cluster monitoring submodule.";
         default = {};
       };
 
@@ -201,6 +219,179 @@ flake @ {
         type = optionCheck "string" "infra.grafana.stackName" "str";
         description = mdDoc "The cardano-parts cluster infra grafana cloud stack name.";
         default = null;
+      };
+    };
+  };
+
+  monitoringSubmodule = submodule {
+    options = {
+      enable = mkOption {
+        type = bool;
+        description = mdDoc ''
+          Whether to enable the in-cluster monitoring stack profile.
+
+          When true, downstream:
+
+          * Provisions an S3 bucket pair via opentofu for Mimir blocks and Loki chunks.
+          * Provisions DNS for the monitoring node based on `hostname` and `infra.aws.domain`.
+          * Auto-targets profile-grafana-alloy at the in-cluster monitoring node when no explicit remote write URL is configured.
+
+          A Colmena machine matching `hostname` is expected to import the
+          `nixosModules.profile-monitoring` module from cardano-parts.
+        '';
+        default = false;
+      };
+
+      hostname = mkOption {
+        type = optionCheck "string" "infra.monitoring.hostname" "str";
+        description = mdDoc ''
+          The Colmena machine name expected to host the in-cluster monitoring stack.
+          Used by opentofu to provision DNS, and by profile-grafana-alloy to
+          derive the default remote write target.
+        '';
+        default = "monitoring";
+      };
+
+      subdomain = mkOption {
+        type = optionCheck "string" "infra.monitoring.subdomain" "str";
+        description = mdDoc ''
+          The DNS label under `infra.aws.domain` at which Grafana is published.
+          Defaults to `hostname` so the FQDN is `''${hostname}.''${infra.aws.domain}`.
+        '';
+        default = cfgMon.hostname;
+      };
+
+      bucketMimir = mkOption {
+        type = optionCheck "string" "infra.monitoring.bucketMimir" "str";
+        description = mdDoc ''
+          The S3 bucket name used to store Mimir blocks and ruler state.
+          Created by opentofu in the bootstrap workspace when monitoring is enabled.
+        '';
+        default = "${cfgAws.profile}-mimir";
+      };
+
+      bucketLoki = mkOption {
+        type = optionCheck "string" "infra.monitoring.bucketLoki" "str";
+        description = mdDoc ''
+          The S3 bucket name used to store Loki chunks and indexes.
+          Created by opentofu in the bootstrap workspace when monitoring is enabled.
+        '';
+        default = "${cfgAws.profile}-loki";
+      };
+
+      retentionMetricsDays = mkOption {
+        type = optionCheck "int" "infra.monitoring.retentionMetricsDays" "int";
+        description = mdDoc ''
+          Mimir block retention in days. Drives both Mimir's compactor
+          block retention and the S3 lifecycle expiration on the mimir
+          bucket, so app-level and storage-level retention stay in lockstep.
+        '';
+        default = 365;
+      };
+
+      retentionLogsDays = mkOption {
+        type = optionCheck "int" "infra.monitoring.retentionLogsDays" "int";
+        description = mdDoc ''
+          Loki retention in days. Drives both Loki's retention period and
+          the S3 lifecycle expiration on the loki bucket.
+        '';
+        default = 180;
+      };
+
+      objectLockMode = mkOption {
+        type = enum ["soft" "governance"];
+        description = mdDoc ''
+          S3 Object Lock policy applied to the mimir and loki buckets.
+          Both options use GOVERNANCE-mode locks so a separately-permissioned
+          ops role holding `s3:BypassGovernanceRetention` can break-glass for
+          legitimate recovery (e.g. accidental secret leak); the EC2 role
+          attached to monitoring nodes does not get that permission.
+
+          * `"soft"` (default) — 1-day default retention. Stops a same-day
+            compromise of the monitoring node from wiping fresh data.
+            Compaction-driven source-block deletes succeed once objects
+            age past the lock. Storage stays roughly 1× retention.
+
+          * `"governance"` — default retention spans the full app
+            retention window (`retentionMetricsDays` / `retentionLogsDays`).
+            Compaction's source-block deletes fail until expiry, so storage
+            roughly doubles during the retention window.
+
+          Only the lock duration differs between modes. Switching modes
+          after initial deploy applies to newly written objects only;
+          existing locks are immutable.
+        '';
+        default = "soft";
+      };
+
+      email = mkOption {
+        type = nullOr (optionCheck "string" "infra.monitoring.email" "str");
+        description = mdDoc ''
+          ACME contact email used by Caddy for the Grafana virtual host.
+
+          Required when monitoring is enabled.
+        '';
+        default = null;
+      };
+
+      oauth = mkOption {
+        type = monitoringOauthSubmodule;
+        description = mdDoc ''
+          Cardano-parts cluster infra monitoring oauth submodule.
+
+          Currently only Google OAuth is exposed. Settings beyond what this
+          submodule covers can be applied directly to
+          `services.grafana.settings."auth.google"` on the monitoring machine.
+        '';
+        default = {};
+      };
+
+      provisionPath = mkOption {
+        type = nullOr path;
+        description = mdDoc ''
+          Path to a directory containing monitoring assets to provision on
+          the monitoring node.
+
+          Currently the following layout is consumed:
+
+          * `''${provisionPath}/dashboards/` — Grafana dashboard JSON files.
+            All `*.json` files in this directory are picked up by Grafana
+            file-based provisioning. Subdirectories are honored as folders.
+
+          When null, no provisioning is configured; dashboards and alerts
+          can still be edited in the Grafana UI but will not be persisted
+          across redeploys.
+
+          A typical downstream value is `''${self.outPath}/monitoring`.
+        '';
+        default = null;
+      };
+    };
+  };
+
+  monitoringOauthSubmodule = submodule {
+    options = {
+      google = mkOption {
+        type = monitoringOauthGoogleSubmodule;
+        description = mdDoc "Google OAuth submodule.";
+        default = {};
+      };
+    };
+  };
+
+  monitoringOauthGoogleSubmodule = submodule {
+    options = {
+      allowedDomains = mkOption {
+        type = listOf str;
+        description = mdDoc ''
+          Email domains permitted to log into Grafana via Google OAuth.
+
+          Each entry is applied to both the `allowed_domains` and
+          `hosted_domain` Grafana settings so the login is restricted to a
+          single Google Workspace tenant.
+        '';
+        default = [];
+        example = ["iohk.io"];
       };
     };
   };

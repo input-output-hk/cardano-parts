@@ -228,6 +228,18 @@ in
           {services.cardano-faucet.acmeEmail = "devops@iohk.io";}
         ];
       };
+      # Optional in-cluster monitoring node. Use only when
+      # `flake.cardano-parts.cluster.infra.monitoring.enable = true`.
+      # The machine name must match `infra.monitoring.hostname` (default
+      # "monitoring") so the DNS A record lands at the expected subdomain.
+      # Uncomment together with the host declaration below.
+      #
+      # monitoring = {
+      #   imports = [
+      #     inputs.cardano-parts.nixosModules.profile-monitoring
+      #     {cardano-parts.perNode.meta.enableDns = true;}
+      #   ];
+      # };
     in {
       meta = {
         nixpkgs = import inputs.nixpkgs {
@@ -284,6 +296,10 @@ in
       preview1-rel-c-1 = {imports = [eu-central-1 t3a-small (ebs 40) (group "preview1") node rel tcpTxOpt];};
       preview1-dbsync-a-1 = {imports = [eu-central-1 m5a-large (ebs 40) (group "preview1") dbsync smash];};
       preview1-faucet-a-1 = {imports = [eu-central-1 t3a-medium (ebs 40) (group "preview1") node faucet pre];};
+
+      # Optional in-cluster monitoring host; uncomment together with
+      # `infra.monitoring.enable = true` in flake/cluster.nix.
+      # monitoring = {imports = [eu-central-1 t3a-medium (ebs 50) (group "preview1") monitoring];};
     };
 
     flake.colmenaHive = inputs.cardano-parts.inputs.colmena.lib.makeHive self.outputs.colmena;

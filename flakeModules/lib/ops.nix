@@ -49,6 +49,26 @@ with lib; rec {
     })
     .cardanoLib;
 
+  # Walk a directory non-recursively, returning a list of absolute paths
+  # to regular files matching the given suffix. Returns [] if dir is missing.
+  parseDir = dirPath: suffix:
+    if !pathExists dirPath
+    then []
+    else
+      mapAttrsToList (n: _: "${dirPath}/${n}") (
+        filterAttrs (n: v: hasSuffix suffix n && v == "regular") (readDir dirPath)
+      );
+
+  # Read a `.nix-import` file. Files may evaluate to either a plain attrset
+  # or a function of a caller-supplied argument (typically the consuming
+  # repo's flake `self`).
+  readNixImport = arg: path: let
+    raw = import path;
+  in
+    if isFunction raw
+    then raw arg
+    else raw;
+
   mkSopsSecret = {
     name ? "unknown",
     secretName,

@@ -134,6 +134,60 @@ Similarly, for monitoring resources:
     just tofu grafana plan
     just tofu grafana apply
 
+## Optional: in-cluster monitoring
+
+By default, monitoring metrics and logs are pushed to a centralized
+[cardano-monitoring](https://github.com/input-output-hk/cardano-monitoring)
+stack. To run an in-cluster monitoring machine instead (or in addition),
+set `flake.cardano-parts.cluster.infra.monitoring.enable = true` in
+`./flake/cluster.nix` and uncomment the `monitoring` machine declaration
+in `./flake/colmena.nix`.
+
+When enabled, opentofu/bootstrap creates `${profile}-mimir` and
+`${profile}-loki` S3 buckets with Object Lock + lifecycle wired
+together so app-level retention and storage-level retention stay in
+lockstep. The EC2 role gets least-privilege data-plane access (no
+`s3:DeleteBucket`, `s3:PutBucketPolicy`, no governance bypass).
+`profile-grafana-alloy` on every other machine auto-targets the
+in-cluster monitoring node — the `grafana-alloy-{metrics,loki}-url`
+sops secrets become optional. Username/password basic-auth credentials
+are still required.
+
+Retention is configured in days via
+`infra.monitoring.retentionMetricsDays` (default 365) and
+`infra.monitoring.retentionLogsDays` (default 180). The same number
+drives both Mimir/Loki retention and S3 lifecycle expiration on the
+matching bucket.
+
+`infra.monitoring.objectLockMode` controls the S3 Object Lock policy:
+
+  * `"soft"` (default) — 1-day GOVERNANCE lock. Stops a same-day
+    compromise of the monitoring node from wiping fresh data;
+    compaction-driven deletes succeed once objects age past the lock.
+    Storage stays ~1× retention.
+  * `"governance"` — lock spans the full retention window. A compromised
+    monitoring node cannot delete data pre-expiry; storage roughly
+    doubles during the retention window because compaction sources
+    cannot be deleted. A separately-permissioned operator role holding
+    `s3:BypassGovernanceRetention` can break-glass for legitimate
+    recovery.
+
+Required sops-managed secrets at `./secrets/monitoring/`:
+
+  * `grafana-password.enc`
+  * `grafana-oauth-client-id.enc`
+  * `grafana-oauth-client-secret.enc`
+  * `caddy-environment-monitoring.enc` (provides `ADMIN_HASH` and
+    `WRITE_HASH` env vars consumed by the monitoring machine's Caddyfile)
+
+Dashboards, alert rules, and recording rules are read from the directory
+specified by `infra.monitoring.provisionPath`. Pointing it at the
+existing `./flake/opentofu/grafana` directory shares the same
+`.nix-import` files between the in-cluster Mimir/Grafana and any
+external tofu-driven cardano-monitoring workspace; both consumers
+transform from the tofu-mimir-provider schema to their respective
+target formats at evaluation time.
+
 ## SSH
 
 If your credentials are correct, and the cluster is already provisioned with

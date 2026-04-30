@@ -4,6 +4,7 @@
 #
 # Attributes available on flakeModule import:
 #   flake.cardano-parts.lib.opsLib
+#   flake.cardano-parts.lib.opsTf
 #   flake.cardano-parts.lib.topologyLib
 #
 # Tips:
@@ -49,6 +50,20 @@
           cardano environment.
         '';
         default = import ./lib/topology.nix lib;
+      };
+
+      opsTf = mkOption {
+        type = attrsOf anything;
+        description = mdDoc ''
+          The cardano-parts opentofu helper library.
+
+          Pure helpers (no `pkgs` dependency) that return terraform
+          configuration fragments suitable for inclusion in any
+          terranix-driven workspace. Includes the AWS provider alias
+          helper, the secure-transport bucket policy statement, and
+          the Mimir + Loki monitoring bucket / IAM policy builders.
+        '';
+        default = import ./lib/opsTf.nix lib;
       };
     };
   };
