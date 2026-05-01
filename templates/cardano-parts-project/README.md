@@ -127,6 +127,10 @@ All other cluster resource configuration is in `./flake/opentofu/cluster.nix`
 The wrapper to setup the state, workspace, evaluate the config, and run `tofu`
 for cluster resources is:
 
+    # Ensure tf secrets are created and encrypted
+    # Follow the instructions in the secrets/tf/*.tfvars files
+    # See additional encryption instructions below
+
     # Required for AMI generation
     just tofu bootstrap plan
     just tofu bootstrap apply
