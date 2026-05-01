@@ -106,7 +106,8 @@ go into OpenTofu since they are harder to configure and reuse otherwise.
 All configuration is in `./flake/cloudFormation/terraformState.nix`
 
 We use [Rain](https://github.com/aws-cloudformation/rain) to apply the
-configuration. There is a wrapper that evaluates the config and deploys it:
+configuration. Before running Cloudformation, update and encrypt any tf
+secrets. There is a wrapper that evaluates the config and deploys it:
 
     just cf terraformState
 
