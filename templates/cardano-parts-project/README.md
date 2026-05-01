@@ -106,7 +106,8 @@ go into OpenTofu since they are harder to configure and reuse otherwise.
 All configuration is in `./flake/cloudFormation/terraformState.nix`
 
 We use [Rain](https://github.com/aws-cloudformation/rain) to apply the
-configuration. There is a wrapper that evaluates the config and deploys it:
+configuration. Before running Cloudformation, update and encrypt any tf
+secrets. There is a wrapper that evaluates the config and deploys it:
 
     just cf terraformState
 
@@ -126,6 +127,15 @@ All other cluster resource configuration is in `./flake/opentofu/cluster.nix`
 The wrapper to setup the state, workspace, evaluate the config, and run `tofu`
 for cluster resources is:
 
+    # Ensure tf secrets are created and encrypted
+    # Follow the instructions in the secrets/tf/*.tfvars files
+    # See additional encryption instructions below
+
+    # Required for AMI generation
+    just tofu bootstrap plan
+    just tofu bootstrap apply
+
+    # Uses the AMI generated above
     just tofu [cluster] plan
     just tofu [cluster] apply
 

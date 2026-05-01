@@ -37,8 +37,8 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$ ]]; then
-    >&2 echo "Error: only node environments for demo, dijkstra, mainnet, preprod, preview and sanchonet are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^leios$|^sanchonet$ ]]; then
+    >&2 echo "Error: only node environments for demo, dijkstra, leios, mainnet, preprod, preview and sanchonet are supported"
     >&2 echo "Usage: just set-default-cardano-env <env>"
     exit 1
   fi
@@ -53,6 +53,8 @@ checkEnvWithoutOverride := '''
     MAGIC="4"
   elif [ "$ENV" = "dijkstra" ]; then
     MAGIC="6"
+  elif [ "$ENV" = "leios" ]; then
+    MAGIC="164"
   elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
   fi
@@ -255,7 +257,7 @@ apply-bootstrap *ARGS:
 
   [ -f .ssh_key ] || just save-bootstrap-ssh-key
 
-  sed '2i \ \ IdentityFile .ssh_key' .ssh_config > .ssh_config_bootstrap
+  sed '/^Host /a\  IdentityFile .ssh_key\n  IdentitiesOnly yes' .ssh_config > .ssh_config_bootstrap
   SSH_CONFIG_FILE=".ssh_config_bootstrap" just apply {{ARGS}}
   rm .ssh_config_bootstrap
 
@@ -388,8 +390,8 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
-    echo "Error: only node environments for preprod, preview, dijkstra and sanchonet are supported"
+  if ! [[ "$ENV" =~ ^dijkstra$|^leios$|^preprod$|^preview$|^sanchonet$ ]]; then
+    echo "Error: only node environments for preprod, preview, dijkstra, leios and sanchonet are supported"
     exit 1
   fi
 
@@ -526,47 +528,32 @@ list-machines:
       | each { |r| { index: ($r.index + 1) } | merge $r.item }
   }
 
-# Check mimir required config
-mimir-alertmanager-bootstrap:
+# Copy a nix store path to a machine and pin it with a gc root
+nix-copy-to-machine MACHINE STORE_PATH:
   #!/usr/bin/env bash
   set -euo pipefail
-  echo "Enter the mimir admin username: "
-  read -s MIMIR_USER
-  echo
+  echo "Copying {{STORE_PATH}} to {{MACHINE}}..."
+  NIX_SSHOPTS="-F $(pwd)/.ssh_config" nix copy --to "ssh://{{MACHINE}}" "{{STORE_PATH}}"
+  echo "Creating GC root on {{MACHINE}}..."
+  just ssh {{MACHINE}} "nix-store --add-root /nix/var/nix/gcroots/$(basename {{STORE_PATH}}) --realise {{STORE_PATH}}"
+  echo "Done. Store path pinned on {{MACHINE}}."
 
-  echo "Enter the mimir admin token: "
-  read -s MIMIR_TOKEN
-  echo
-
-  echo "Enter the mimir base monitoring fqdn without the HTTPS:// scheme: "
-  read URL
-  echo
-
-  echo "Obtaining current mimir alertmanager config:"
-  echo "-----------"
-  mimirtool alertmanager get --address "https://$MIMIR_USER:$MIMIR_TOKEN@$URL/mimir" --id 1
-  echo "-----------"
-
-  echo
-  echo "If the output between the dashed lines above is blank, you may need to preload an initial alertmanager ruleset"
-  echo "for the mimir TF plugin to succeed, where the command to preload alertmanager is:"
-  echo
-  echo "mimirtool alertmanager load --address \"https://\$MIMIR_USER:\$MIMIR_TOKEN@$URL/mimir\" --id 1 alertmanager-bootstrap-config.yaml"
-  echo
-  echo "The contents of alertmanager-bootstrap-config.yaml can be:"
-  echo
-  echo "route:"
-  echo "  group_wait: 0s"
-  echo "  receiver: empty-receiver"
-  echo "receivers:"
-  echo "  - name: 'empty-receiver'"
+# Pin a path to the local nix store
+nix-store-pin PATH:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "Adding {{PATH}} to the nix store..."
+  STORE_PATH=$(nix store add "{{PATH}}")
+  echo "Creating GC root..."
+  sudo nix-store --add-root "/nix/var/nix/gcroots/$(basename "$STORE_PATH")" --realise "$STORE_PATH"
+  echo "Done. Stored and pinned at: $STORE_PATH"
 
 # Query the tip of all running envs
 query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
   QUERIED=0
-  for i in mainnet preprod preview dijkstra demo sanchonet; do
+  for i in mainnet preprod preview dijkstra demo leios sanchonet; do
     TIP=$(just query-tip $i 2>&1) && {
       echo "Environment: $i"
       echo "$TIP"
@@ -589,7 +576,7 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$ ]]; then
+  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^leios$ ]]; then
     CARDANO_CLI="cardano-cli"
   elif [[ "$ENV" =~ ^dijkstra$|^demo$|^sanchonet$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
@@ -775,7 +762,7 @@ ssh-bootstrap HOSTNAME *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
   {{checkSshKey}}
-  ssh -o LogLevel=ERROR -F .ssh_config -i .ssh_key "{{HOSTNAME}}" {{ARGS}}
+  ssh -o LogLevel=ERROR -o IdentitiesOnly=yes -F .ssh_config -i .ssh_key "{{HOSTNAME}}" {{ARGS}}
 
 # Ssh to all
 ssh-for-all *ARGS:
@@ -845,8 +832,8 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^leios$|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, leios and sanchonet are supported for start-node recipe"
     exit 1
   fi
 
@@ -860,6 +847,14 @@ start-node ENV:
     UNSTABLE_LIB=false
     UNSTABLE_MITHRIL=false
     USE_NODE_CONFIG_BP=false
+  elif [[ "{{ENV}}" == leios ]]; then
+    export CARDANO_NODE_SHELL_BIN="$(nix build -Lv github:IntersectMBO/cardano-node/leios-prototype#cardano-node --no-link --print-out-paths)/bin/cardano-node"
+    export USE_SHELL_BINS=true
+    export LEIOS_DB_PATH="$STATEDIR/db-leios/node/leios.db"
+    UNSTABLE=false
+    UNSTABLE_LIB=true
+    UNSTABLE_MITHRIL=false
+    USE_NODE_CONFIG_BP=false
   else
     UNSTABLE=true
     UNSTABLE_LIB=true
@@ -869,13 +864,13 @@ start-node ENV:
 
   # Set required entrypoint vars and run node in a new nohup background session
   ENVIRONMENT="{{ENV}}" \
-  UNSTABLE="$UNSTABLE" \
-  UNSTABLE_LIB="$UNSTABLE_LIB" \
-  UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
-  USE_NODE_CONFIG_BP="$USE_NODE_CONFIG_BP" \
-  DATA_DIR="$STATEDIR" \
-  SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
-  nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
+    UNSTABLE="$UNSTABLE" \
+    UNSTABLE_LIB="$UNSTABLE_LIB" \
+    UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
+    USE_NODE_CONFIG_BP="$USE_NODE_CONFIG_BP" \
+    DATA_DIR="$STATEDIR" \
+    SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
+    nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
   echo "Node started for {{ENV}}"
   echo ""
   echo "Set up your shell environment with:"
@@ -885,7 +880,7 @@ start-node ENV:
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
-  for i in mainnet preprod preview dijkstra demo sanchonet; do
+  for i in mainnet preprod preview dijkstra demo leios sanchonet; do
     just stop-node $i
   done
 
@@ -1170,7 +1165,7 @@ update-ips:
   let machineCount = ($ipTable | length)
   let nonNixosMachineCount = ($nonNixosMachines | length)
 
-  print $"Processing ip information for ($nixosNodeCount) nixos machine(s) and ($nonNixosMachineCount) non-nixos machine(s)..."
+  print $"Processing ip information for ($nixosNodeCount) nixos machine\(s) and ($nonNixosMachineCount) non-nixos machine\(s)..."
   print $"Ips were written for a machine count of: ($machineCount)"
 
   if $nixosNodeCount != ($machineCount | $in - $nonNixosMachineCount | into string) {

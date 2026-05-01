@@ -44,10 +44,32 @@
     config = let
       arcMaxBytes = calcArcMaxBytes config.boot.zfs.zfsArcPct;
     in {
-      # Set ZFS ARC max size via kernel parameter
-      boot.kernelParams = mkIf (config.boot.zfs.zfsArcPct != null) [
-        "zfs.zfs_arc_max=${toString arcMaxBytes}"
+      # The nixpkgs AMI image builder (make-multi-disk-zfs-image.nix) uses
+      # pkgs.zfs for the build VM's kernel modules and userspace tools.
+      # Since we use a non-default kernel (6.18), the default ZFS (2.3.5)
+      # is incompatible and marked broken. This overlay aligns pkgs.zfs
+      # with our boot.zfs.package so the build VM can load ZFS modules.
+      nixpkgs.overlays = [
+        (final: _: {
+          zfs = final.zfs_2_4;
+        })
       ];
+
+      boot = {
+        # Cardano-node >= 10.7.0 requires kernel >= 6.15 for LSM, without which
+        # large IOWAIT will be observed.
+        kernelPackages = pkgs.linuxPackages_6_18;
+
+        # Set ZFS ARC max size via kernel parameter
+        kernelParams = mkIf (arcMaxBytes != null) [
+          "zfs.zfs_arc_max=${toString arcMaxBytes}"
+        ];
+
+        # Use ZFS 2.4 with the latest compatible kernel (6.18)
+        # ZFS 2.3.5 only supports up to 6.17, and no 6.15-6.17 kernels are packaged.
+        # ZFS 2.4.0 supports up to 6.18, and linuxPackages_6_18 is available.
+        zfs.package = pkgs.zfs_2_4;
+      };
 
       ec2 = {
         efi = true;

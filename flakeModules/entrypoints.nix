@@ -36,18 +36,21 @@ in {
           );
       in ''
         # Prepare standard env configs
-        ENVS=(${escapeShellArgs (attrNames environments)})
-        for ENV in "''${ENVS[@]}"; do
-          cp -r "${envCfgs}/config/$ENV" "$DATA_DIR/config/"
-        done
+        if [ -z "''${NODE_CONFIG_SKIP_COPY:-}" ]; then
+          ENVS=(${escapeShellArgs (attrNames environments)})
 
-        # Required for direct entrypoint access.
-        # Can be removed once the find command below is removed
-        chmod -R +w "$DATA_DIR"
+          for ENV in "''${ENVS[@]}"; do
+            cp -r "${envCfgs}/config/$ENV" "$DATA_DIR/config/"
+          done
 
-        # Until https://github.com/IntersectMBO/cardano-node/pull/6282 is merged and released,
-        # remove PrometheusSimple from configs so multiple instances can be started without fatal error.
-        find "$DATA_DIR" -name 'config*.json' -type f -exec sed -i '/PrometheusSimple/d' {} +
+          # Required for direct entrypoint access.
+          # Can be removed once the find command below is removed
+          chmod -R +w "$DATA_DIR"
+
+          # Until https://github.com/IntersectMBO/cardano-node/pull/6282 is merged and released,
+          # remove PrometheusSimple from configs so multiple instances can be started without fatal error.
+          find "$DATA_DIR" -name 'config*.json' -type f -exec sed -i '/PrometheusSimple/d' {} +
+        fi
 
         # Prepare mithril client env configs
         ${
@@ -257,8 +260,13 @@ in {
             args+=("--topology" "$NODE_TOPOLOGY")
             echo "Running node as:"
             if [ "''${USE_SHELL_BINS:-}" = "true" ]; then
-              echo "cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
-              exec cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              if [ -n "''${CARDANO_NODE_SHELL_BIN:-}" ]; then
+                echo "$CARDANO_NODE_SHELL_BIN run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec $CARDANO_NODE_SHELL_BIN run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              else
+                echo "cardano-node run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
+                exec cardano-node run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}
+              fi
             elif [ "''${UNSTABLE:-}" = "true" ]; then
               echo "${getExe cfgPkgs.cardano-node-ng} run ''${args[*]} ''${RTS_FLAGS:+''${RTS_FLAGS[*]}}"
               exec ${getExe cfgPkgs.cardano-node-ng} run "''${args[@]}" ''${RTS_FLAGS:+''${RTS_FLAGS[@]}}

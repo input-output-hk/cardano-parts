@@ -229,24 +229,49 @@ faucet() (
 )
 
 run-node-faketime() (
-  if [ "${UNSTABLE:-}" = "true" ]; then
+  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+    CMD=$(alias cardano-node | cut -d"'" -f2)
+  elif [ "${UNSTABLE:-}" = "true" ]; then
     CMD="cardano-node-ng"
   else
     CMD="cardano-node"
   fi
 
-  # If an older glibc is needed, obtain it from the correct nixpkgs:
-  # nix run github:nixos/nixpkgs/nixos-23.05#libfaketime -- "$1" "$CMD" run \
-  faketime "$1" "$CMD" run \
-    --config "$DATA_DIR"/node-config.json \
-    --database-path "$DATA_DIR"/db \
-    --topology "$DATA_DIR"/topology.json \
-    +RTS -N2 -A16m -qg -qb -M3584M -RTS \
-    --socket-path "$DATA_DIR"/node.socket \
-    --host-addr 0.0.0.0 \
-    --port 3001 \
-    --bulk-credentials-file "$GENESIS_DIR"/bulk.creds.all.json \
+  if [ -n "${DEBUG:-}" ]; then
+    echo "Node command: $CMD"
+    "$CMD" --version
+
+    if [ -n "${FAKETIME_FLAKE:-}" ]; then
+      echo "Using faketime from nixpkgs pin: $FAKETIME_FLAKE"
+    fi
+  fi
+
+  ARGS=(
+    "$1" "$CMD" "run"
+    "--config" "$DATA_DIR/node-config.json"
+    "--database-path" "$DATA_DIR/db"
+    "--topology" "$DATA_DIR/topology.json"
+    "+RTS" "-N2" "-A16m" "-qg" "-qb" "-M3584M" "-RTS"
+    "--socket-path" "$DATA_DIR/node.socket"
+    "--host-addr" "0.0.0.0"
+    "--port" "3001"
+    "--bulk-credentials-file" "$GENESIS_DIR/bulk.creds.all.json"
+  )
+
+  # If an older glibc is needed, obtain it from the correct nixpkgs.
+  # To do so, set FAKETIME_FLAKE in the caller, example:
+  #
+  # export FAKETIME_FLAKE="github:nixos/nixpkgs/nixos-23.05"
+  #
+  if [ -n "${FAKETIME_FLAKE:-}" ]; then
+    nix run "$FAKETIME_FLAKE"#libfaketime -- \
+      "${ARGS[@]}" \
     | tee -a "$DATA_DIR"/node.log
+  else
+    faketime \
+      "${ARGS[@]}" \
+    | tee -a "$DATA_DIR"/node.log
+  fi
 )
 
 synth-prep() (
@@ -261,7 +286,9 @@ synth-restore() (
 )
 
 synth-slots() (
-  if [ "${UNSTABLE:-}" = "true" ]; then
+  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+    CMD=$(alias db-synthesizer | cut -d"'" -f2)
+  elif [ "${UNSTABLE:-}" = "true" ]; then
     CMD="db-synthesizer-ng"
   else
     CMD="db-synthesizer"
@@ -278,7 +305,9 @@ synth-slots() (
 )
 
 synth-epochs() (
-  if [ "${UNSTABLE:-}" = "true" ]; then
+  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+    CMD=$(alias db-synthesizer | cut -d"'" -f2)
+  elif [ "${UNSTABLE:-}" = "true" ]; then
     CMD="db-synthesizer-ng"
   else
     CMD="db-synthesizer"

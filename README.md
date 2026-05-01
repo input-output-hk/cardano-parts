@@ -43,6 +43,9 @@ Git add all new project files:
 
 Update the following files in the `<NEW_DIRECTORY>`:
 
+    # Update with your desired flake pins
+    flake.nix
+
     # Update with details of your new cluster
     flake/cluster.nix
 
@@ -55,6 +58,9 @@ Update the following files in the `<NEW_DIRECTORY>`:
     # If needed: resource customization
     flake/cloudFormation/terraformState.nix
     flake/opentofu/cluster.nix
+
+    # Update your flake.lock
+    nix flake update
 
 Continue following the [README](templates/cardano-parts-project/README.md)
 found in your <NEW_DIRECTORY> and customize it as desired.

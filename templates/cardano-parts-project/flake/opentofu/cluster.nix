@@ -435,7 +435,7 @@ in {
                 metadata_options = {
                   http_endpoint = "enabled";
                   http_put_response_hop_limit = 2;
-                  http_tokens = "optional";
+                  http_tokens = "required";
                 };
 
                 lifecycle = [{ignore_changes = ["ami" "user_data"];}];
@@ -443,20 +443,7 @@ in {
               // optionalAttrs (node.aws.instance ? availability_zone) {
                 inherit (node.aws.instance) availability_zone;
               }
-              # Use nix declared ipv6 if available.  This should only be used
-              # for public machines where ip exposure in committed code is
-              # acceptable and a vanity address is needed. Ie: don't use this
-              # for bps.
-              #
-              # NOTE: As of aws provider 5.66.0, switching from
-              # ipv6_address_count to ipv6_addresses will force an instance
-              # replacement. If a self-declared ipv6 is required but
-              # destroying and re-creating instances to change ipv6 is not
-              # acceptable, then until the bug is fixed, continue using
-              # auto-assignment only, manually change the ipv6 in the console
-              # ui, and run tf apply to update state.
-              #
-              # Ref: https://github.com/hashicorp/terraform-provider-aws/issues/39433
+              # Use declared ipv6 if set
               // optionalAttrs (node.aws.instance ? ipv6) {
                 ipv6_addresses = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : tolist([\"${node.aws.instance.ipv6}\"])}";
               }
@@ -655,13 +642,11 @@ in {
             )
             dnsEnabledNodes
             // mapAttrs' (
-              nodeName: _:
+              nodeName: node:
                 nameValuePair "${nodeName}-AAAA" {
-                  # When transitioning into ipv6 dual stack and some instances still have ipv4 only, include the following line.
-                  # count = "\${length(aws_instance.${nodeName}[0].ipv6_addresses) > 0 ? 1 : 0}";
-                  #
-                  # When migration to ipv4/ipv6 dual stack is complete, comment the above line and uncomment the following line.
-                  count = "1";
+                  # When tofu applying a new aws org, tofu will need to be
+                  # applied twice to create the ipv6 dns record.
+                  count = "\${data.aws_vpc.${underscore node.aws.region}.ipv6_cidr_block != \"\" ? 1 : 0}";
 
                   zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                   name = "${nodeName}.\${data.aws_route53_zone.selected.name}";

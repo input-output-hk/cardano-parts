@@ -36,6 +36,12 @@
       key = ./profile-common.nix;
 
       config = {
+        # Cardano-node >= 10.7.0 requires kernel >= 6.15 for LSM, without which
+        # large IOWAIT will be observed.
+        #
+        # Kernel 6.18 is the most recent kernel which is compatible with ZFS.
+        boot.kernelPackages = mkDefault pkgs.linuxPackages_6_18;
+
         environment = {
           # Enable terminfo for common terminal types like `xterm-256color` and `tmux-256color`.
           enableAllTerminfo = mkDefault true;

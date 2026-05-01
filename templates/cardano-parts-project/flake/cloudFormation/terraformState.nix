@@ -139,31 +139,9 @@ with lib; {
           };
         };
 
-        S3BucketPolicyS3ServerAccessLogs = {
-          Type = "AWS::S3::BucketPolicy";
-          Properties = {
-            Bucket.Ref = "S3BucketS3ServerAccessLogs";
-            PolicyDocument = {
-              Version = "2012-10-17";
-              Statement = [
-                {
-                  Sid = "S3ServerAccessLogsPolicy";
-                  Effect = "Allow";
-                  Principal.Service = "logging.s3.amazonaws.com";
-                  Action = "s3:PutObject";
-                  Resource = "arn:aws:s3:::${s3ServerAccessLogsBucket}/*";
-                  Condition = {
-                    ArnLike."aws:SourceArn" = "arn:aws:s3:::*";
-                    StringEquals."aws:SourceAccount" = orgId;
-                  };
-                }
-              ];
-            };
-          };
-        };
-
         DynamoDB = {
           Type = "AWS::DynamoDB::Table";
+          DependsOn = "kmsKeyAlias";
           DeletionPolicy = "RetainExceptOnCreate";
           Properties = {
             Tags = tagWith "terraform-DynamoDB";
@@ -201,34 +179,56 @@ with lib; {
         };
       }
       // lib.mapAttrs' (
-        resourceName: bucketName:
+        resourceName: {
+          bucketName,
+          extraStatements ? [],
+        }:
           lib.nameValuePair
-          "${resourceName}PolicySecureTransport"
+          "${resourceName}Policy"
           {
             Type = "AWS::S3::BucketPolicy";
             Properties = {
               Bucket.Ref = resourceName;
               PolicyDocument = {
                 Version = "2012-10-17";
-                Statement = [
-                  {
-                    Sid = "RestrictToTLSRequestsOnly";
-                    Effect = "Deny";
-                    Action = "s3:*";
-                    Resource = [
-                      "arn:aws:s3:::${bucketName}"
-                      "arn:aws:s3:::${bucketName}/*"
-                    ];
-                    Condition.Bool."aws:SecureTransport" = "false";
-                    Principal = "*";
-                  }
-                ];
+                Statement =
+                  [
+                    {
+                      Sid = "RestrictToTLSRequestsOnly";
+                      Effect = "Deny";
+                      Action = "s3:*";
+                      Resource = [
+                        "arn:aws:s3:::${bucketName}"
+                        "arn:aws:s3:::${bucketName}/*"
+                      ];
+                      Condition.Bool."aws:SecureTransport" = "false";
+                      Principal = "*";
+                    }
+                  ]
+                  ++ extraStatements;
               };
             };
           }
       ) {
-        S3BucketS3ServerAccessLogs = s3ServerAccessLogsBucket;
-        S3Bucket = bucketName;
+        S3BucketS3ServerAccessLogs = {
+          bucketName = s3ServerAccessLogsBucket;
+          extraStatements = [
+            {
+              Sid = "S3ServerAccessLogsPolicy";
+              Effect = "Allow";
+              Principal.Service = "logging.s3.amazonaws.com";
+              Action = "s3:PutObject";
+              Resource = "arn:aws:s3:::${s3ServerAccessLogsBucket}/*";
+              Condition = {
+                ArnLike."aws:SourceArn" = "arn:aws:s3:::*";
+                StringEquals."aws:SourceAccount" = orgId;
+              };
+            }
+          ];
+        };
+        S3Bucket = {
+          inherit bucketName;
+        };
       };
   };
 }

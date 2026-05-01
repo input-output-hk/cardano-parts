@@ -23,6 +23,7 @@ in
 
       # Helper fns:
       ebs = size: {aws.instance.root_block_device.volume_size = mkDefault size;};
+      # noBPerf = {services.blockperf.enable = false;};
       # ebsIops = iops: {aws.instance.root_block_device.iops = mkDefault iops;};
       # ebsTp = tp: {aws.instance.root_block_device.throughput = mkDefault tp;};
       # ebsHighPerf = recursiveUpdate (ebsIops 10000) (ebsTp 1000);
@@ -44,23 +45,6 @@ in
         };
       };
 
-      # Declare a static ipv6. This should only be used for public machines
-      # where ip exposure in committed code is acceptable and a vanity address
-      # is needed. Ie: don't use this for bps.
-      #
-      # In the case that a staticIpv6 is not declared, aws will assign one
-      # automatically.
-      #
-      # NOTE: As of aws provider 5.66.0, switching from ipv6_address_count to
-      # ipv6_addresses will force an instance replacement. If a self-declared
-      # ipv6 is required but destroying and re-creating instances to change
-      # ipv6 is not acceptable, then until the bug is fixed, continue using
-      # auto-assignment only, manually change the ipv6 in the console ui, and
-      # run tf apply to update state.
-      #
-      # Ref: https://github.com/hashicorp/terraform-provider-aws/issues/39433
-      # staticIpv6 = ipv6: {aws.instance.ipv6 = ipv6;};
-
       # Cardano-node modules for group deployment
       node = {
         imports = [
@@ -76,24 +60,6 @@ in
           # To continue using legacy tracing, this option will be available for a few
           # more cardano-node and cardano-parts releases.
           # {services.cardano-node.useLegacyTracing = true;}
-
-          # By default, the new tracing system will forward metrics and logs to
-          # cardano-tracer. To use only the native logging and PrometheusSimple
-          # metrics from cardano-node, cardano-tracer can be disabled with the
-          # following options.
-          #
-          # Note that in the new tracing system, blockperf service will *not*
-          # work without cardano-tracer, as node cannot export logs in a
-          # blockperf consumable manner, so blockperf service should also be
-          # disabled if imported.
-          # {
-          #   services = {
-          #     # If blockperf is also enabled, disable it:
-          #     # blockperf.enable = false;
-          #     cardano-node.tracerSocketPathConnect = null;
-          #     cardano-tracer.enable = false;
-          #   };
-          # }
         ];
       };
 
@@ -238,22 +204,27 @@ in
           foldl'
           (acc: node: let
             instanceType = node: nixosConfigurations.${node}.config.aws.instance.instance_type;
+
+            # Handle when cardano-parts isn't fully initialized (new machines)
+            hasCardanoParts = config.flake ? cardano-parts && config.flake.cardano-parts ? aws;
           in
-            recursiveUpdate acc {
-              ${node} = {
-                nodeResources = {
-                  inherit
-                    (config.flake.cardano-parts.aws.ec2.spec.${instanceType node})
-                    provider
-                    coreCount
-                    cpuCount
-                    memMiB
-                    nodeType
-                    threadsPerCore
-                    ;
+            recursiveUpdate acc (
+              optionalAttrs hasCardanoParts {
+                ${node} = {
+                  nodeResources = {
+                    inherit
+                      (config.flake.cardano-parts.aws.ec2.spec.${instanceType node})
+                      provider
+                      coreCount
+                      cpuCount
+                      memMiB
+                      nodeType
+                      threadsPerCore
+                      ;
+                  };
                 };
-              };
-            })
+              }
+            ))
           {} (attrNames nixosConfigurations);
       };
 
