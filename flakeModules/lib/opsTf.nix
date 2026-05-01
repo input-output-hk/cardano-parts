@@ -10,6 +10,9 @@ with lib; rec {
   # Translate a region like `eu-central-1` into `eu_central_1` for use
   # in the `aws.<region>` provider alias names that downstream tofu
   # workspaces declare.
+  #
+  # Local copy (not config.flake.lib.strings.dashToSnake) so opsTf stays
+  # callable from any terranix workspace without a cardano-parts flake closure.
   dashToSnake = replaceStrings ["-"] ["_"];
 
   # Provider alias for an AWS region. Workspaces declare one provider

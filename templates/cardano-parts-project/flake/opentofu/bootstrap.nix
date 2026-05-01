@@ -15,6 +15,8 @@
 
   system = "x86_64-linux";
 
+  # All `forEach unmanagedBuckets` loops below scope to this list only;
+  # opsTf-managed buckets (mimir, loki) flow through mkMonitoringBucketResources.
   unmanagedBuckets = ["rain_artifacts"];
 
   workspace = "bootstrap";

@@ -200,8 +200,12 @@ flake: {
           # Avoid mimir failing on reboot due to a network interface not yet
           # being available when it tries to bind.
           mimir = {
-            startLimitIntervalSec = 10;
-            startLimitBurst = 10;
+            # Cap retries so a permanently-broken mimir doesn't generate
+            # boot-loop journal noise. RestartSec=10s combined with these
+            # bounds gives ~5 attempts per 10-minute window before failing
+            # the unit and waiting for operator intervention.
+            startLimitIntervalSec = 600;
+            startLimitBurst = 5;
 
             serviceConfig = {
               Restart = "always";
@@ -406,6 +410,10 @@ flake: {
 
             virtualHosts."${fqdn}".extraConfig =
               ''
+                # Caddy `handle` blocks are mutually exclusive and most-specific
+                # wins. The narrower `/mimir/api/v1/push` and `/loki/api/v1/push`
+                # write-hash routes must remain split from the broader
+                # `/mimir/*` and `/loki/*` admin-hash routes; do not collapse them.
                 encode zstd gzip
 
                 handle /blackbox/* {
