@@ -127,6 +127,11 @@ All other cluster resource configuration is in `./flake/opentofu/cluster.nix`
 The wrapper to setup the state, workspace, evaluate the config, and run `tofu`
 for cluster resources is:
 
+    # Required for AMI generation
+    just tofu bootstrap plan
+    just tofu bootstrap apply
+
+    # Uses the AMI generated above
     just tofu [cluster] plan
     just tofu [cluster] apply
 
