@@ -141,6 +141,7 @@ with lib; {
 
         S3BucketPolicyS3ServerAccessLogs = {
           Type = "AWS::S3::BucketPolicy";
+          DependsOn = "S3BucketS3ServerAccessLogsPolicySecureTransport";
           Properties = {
             Bucket.Ref = "S3BucketS3ServerAccessLogs";
             PolicyDocument = {
@@ -164,6 +165,7 @@ with lib; {
 
         DynamoDB = {
           Type = "AWS::DynamoDB::Table";
+          DependsOn = "kmsKeyAlias";
           DeletionPolicy = "RetainExceptOnCreate";
           Properties = {
             Tags = tagWith "terraform-DynamoDB";
