@@ -44,6 +44,17 @@
     config = let
       arcMaxBytes = calcArcMaxBytes config.boot.zfs.zfsArcPct;
     in {
+      # The nixpkgs AMI image builder (make-multi-disk-zfs-image.nix) uses
+      # pkgs.zfs for the build VM's kernel modules and userspace tools.
+      # Since we use a non-default kernel (6.18), the default ZFS (2.3.5)
+      # is incompatible and marked broken. This overlay aligns pkgs.zfs
+      # with our boot.zfs.package so the build VM can load ZFS modules.
+      nixpkgs.overlays = [
+        (final: _: {
+          zfs = final.zfs_2_4;
+        })
+      ];
+
       boot = {
         # Cardano-node >= 10.7.0 requires kernel >= 6.15 for LSM, without which
         # large IOWAIT will be observed.
