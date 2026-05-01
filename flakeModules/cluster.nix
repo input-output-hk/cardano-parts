@@ -26,7 +26,7 @@
 #   flake.cardano-parts.cluster.infra.monitoring.email
 #   flake.cardano-parts.cluster.infra.monitoring.enable
 #   flake.cardano-parts.cluster.infra.monitoring.hostname
-#   flake.cardano-parts.cluster.infra.monitoring.oauth.google.allowedDomains
+#   flake.cardano-parts.cluster.infra.monitoring.oauth.google.allowedDomain
 #   flake.cardano-parts.cluster.infra.monitoring.objectLockMode
 #   flake.cardano-parts.cluster.infra.monitoring.provisionPath
 #   flake.cardano-parts.cluster.infra.monitoring.retentionLogsDays
@@ -381,17 +381,21 @@ flake @ {
 
   monitoringOauthGoogleSubmodule = submodule {
     options = {
-      allowedDomains = mkOption {
-        type = listOf str;
+      allowedDomain = mkOption {
+        type = nullOr (optionCheck "string" "infra.monitoring.oauth.google.allowedDomain" "str");
         description = mdDoc ''
-          Email domains permitted to log into Grafana via Google OAuth.
+          Email domain permitted to log into Grafana via Google OAuth.
 
-          Each entry is applied to both the `allowed_domains` and
-          `hosted_domain` Grafana settings so the login is restricted to a
-          single Google Workspace tenant.
+          Applied to both Grafana's `hosted_domain` and `allowed_domains`
+          settings, so login is restricted to a single Google Workspace
+          tenant. Single-valued because Google's `hd` OAuth parameter is
+          single-valued; cross-tenant access is intentionally not
+          supported by this profile.
+
+          Required when monitoring is enabled.
         '';
-        default = [];
-        example = ["iohk.io"];
+        default = null;
+        example = "iohk.io";
       };
     };
   };

@@ -69,7 +69,7 @@
     # infra.monitoring = {
     #   enable = true;
     #   email = "devops+monitoring@UPDATE_ME";
-    #   oauth.google.allowedDomains = ["UPDATE_ME"];
+    #   oauth.google.allowedDomain = "UPDATE_ME";
     #
     #   # Reuse the existing tofu grafana directory so dashboards, alerts,
     #   # and recording rules feed both the in-cluster Mimir/Grafana and

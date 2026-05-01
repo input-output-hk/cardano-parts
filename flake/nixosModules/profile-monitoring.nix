@@ -145,18 +145,18 @@ flake: {
         restartUnit = "caddy.service";
       });
 
-      googleDomains = monitoring.oauth.google.allowedDomains;
+      googleAllowedDomain = monitoring.oauth.google.allowedDomain;
     in {
       key = ./profile-monitoring.nix;
 
       config = {
         assertions = [
           {
-            assertion = googleDomains != [];
+            assertion = googleAllowedDomain != null;
             message = ''
-              profile-monitoring requires a non-empty
-              `flake.cardano-parts.cluster.infra.monitoring.oauth.google.allowedDomains`
-              so that Grafana Google OAuth is restricted to a known tenant.
+              profile-monitoring requires
+              `flake.cardano-parts.cluster.infra.monitoring.oauth.google.allowedDomain`
+              to be set so that Grafana Google OAuth is restricted to a known tenant.
             '';
           }
           {
@@ -278,8 +278,8 @@ flake: {
                 auth_url = "https://accounts.google.com/o/oauth2/v2/auth";
                 token_url = "https://oauth2.googleapis.com/token";
                 api_url = "https://openidconnect.googleapis.com/v1/userinfo";
-                allowed_domains = concatStringsSep " " googleDomains;
-                hosted_domain = head googleDomains;
+                allowed_domains = googleAllowedDomain;
+                hosted_domain = googleAllowedDomain;
                 use_pkce = true;
               };
             };
@@ -455,28 +455,24 @@ flake: {
               '';
           };
 
-          prometheus = {
+          # Blackbox-exporter only — no Prometheus server. Alloy is the
+          # universal scrape-and-forward agent in this stack (imported via
+          # the consuming repo's `defaults.imports`), and on the monitoring
+          # node `useClusterMonitoring = true` causes alloy to remote_write
+          # directly into local Mimir. Blackbox is reached on-demand via
+          # the Caddy `/blackbox/*` route for ad-hoc HTTPS probes;
+          # continuous uptime probing belongs in a follow-up that adds a
+          # `prometheus.scrape` block to profile-grafana-alloy.
+          prometheus.exporters.blackbox = {
             enable = true;
-
-            alertmanagers = [
-              {
-                scheme = "http";
-                path_prefix = "/mimir";
-                static_configs = [{targets = ["127.0.0.1:${toString mimirHttpPort}"];}];
-              }
-            ];
-
-            exporters.blackbox = {
-              enable = true;
-              configFile = pkgs.writeText "blackbox-exporter.json" (builtins.toJSON {
-                modules.https_2xx = {
-                  prober = "http";
-                  timeout = "5s";
-                  http.fail_if_not_ssl = true;
-                  http.preferred_ip_protocol = "ip4";
-                };
-              });
-            };
+            configFile = pkgs.writeText "blackbox-exporter.json" (builtins.toJSON {
+              modules.https_2xx = {
+                prober = "http";
+                timeout = "5s";
+                http.fail_if_not_ssl = true;
+                http.preferred_ip_protocol = "ip4";
+              };
+            });
           };
 
           loki = {

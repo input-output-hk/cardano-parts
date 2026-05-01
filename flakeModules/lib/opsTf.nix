@@ -149,6 +149,18 @@ with lib; rec {
               noncurrent_version_expiration.noncurrent_days = 1;
               abort_incomplete_multipart_upload.days_after_initiation = 7;
             }
+            # Mimir / Loki compactors call DeleteObject; under versioning
+            # that creates a delete marker rather than purging the object.
+            # Without this rule the markers accumulate forever once their
+            # underlying versions expire. Must be a separate rule because
+            # `expired_object_delete_marker` cannot coexist with `days` /
+            # `date` in the same `expiration` block.
+            {
+              id = "expire-delete-markers-${n}";
+              status = "Enabled";
+              filter = {};
+              expiration.expired_object_delete_marker = true;
+            }
           ];
         });
 
@@ -184,6 +196,17 @@ with lib; rec {
           Effect = "Allow";
           Action = [
             "s3:AbortMultipartUpload"
+            # `s3:DeleteObject` is granted but Object Lock GOVERNANCE
+            # rejects pre-expiry deletes at the API layer — defense in
+            # depth. The grant lets the compactor create delete markers
+            # under versioning, which is the legitimate path for
+            # retention-driven deletion.
+            #
+            # `s3:DeleteObjectVersion` is intentionally omitted: the
+            # compactor only needs to mark current versions as deleted,
+            # not purge underlying versions. Version purges happen
+            # automatically via the bucket's lifecycle
+            # `noncurrent_version_expiration` rule.
             "s3:DeleteObject"
             "s3:GetBucketLocation"
             "s3:GetObject"
