@@ -238,22 +238,27 @@ in
           foldl'
           (acc: node: let
             instanceType = node: nixosConfigurations.${node}.config.aws.instance.instance_type;
+
+            # Handle when cardano-parts isn't fully initialized (new machines)
+            hasCardanoParts = config.flake ? cardano-parts && config.flake.cardano-parts ? aws;
           in
-            recursiveUpdate acc {
-              ${node} = {
-                nodeResources = {
-                  inherit
-                    (config.flake.cardano-parts.aws.ec2.spec.${instanceType node})
-                    provider
-                    coreCount
-                    cpuCount
-                    memMiB
-                    nodeType
-                    threadsPerCore
-                    ;
+            recursiveUpdate acc (
+              optionalAttrs hasCardanoParts {
+                ${node} = {
+                  nodeResources = {
+                    inherit
+                      (config.flake.cardano-parts.aws.ec2.spec.${instanceType node})
+                      provider
+                      coreCount
+                      cpuCount
+                      memMiB
+                      nodeType
+                      threadsPerCore
+                      ;
+                  };
                 };
-              };
-            })
+              }
+            ))
           {} (attrNames nixosConfigurations);
       };
 
