@@ -50,7 +50,7 @@
         kernelPackages = pkgs.linuxPackages_6_18;
 
         # Set ZFS ARC max size via kernel parameter
-        kernelParams = mkIf (config.boot.zfs.zfsArcPct != null) [
+        kernelParams = mkIf (arcMaxBytes != null) [
           "zfs.zfs_arc_max=${toString arcMaxBytes}"
         ];
 
