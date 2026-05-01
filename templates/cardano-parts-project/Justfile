@@ -37,8 +37,8 @@ checkEnv := '''
 checkEnvWithoutOverride := '''
   ENV="${1:-}"
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$ ]]; then
-    >&2 echo "Error: only node environments for demo, dijkstra, mainnet, preprod, preview and sanchonet are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^leios$|^sanchonet$ ]]; then
+    >&2 echo "Error: only node environments for demo, dijkstra, leios, mainnet, preprod, preview and sanchonet are supported"
     >&2 echo "Usage: just set-default-cardano-env <env>"
     exit 1
   fi
@@ -53,6 +53,8 @@ checkEnvWithoutOverride := '''
     MAGIC="4"
   elif [ "$ENV" = "dijkstra" ]; then
     MAGIC="6"
+  elif [ "$ENV" = "leios" ]; then
+    MAGIC="164"
   elif [ "$ENV" = "demo" ]; then
     MAGIC="42"
   fi
@@ -388,8 +390,8 @@ dedelegate-pools ENV *IDXS=null:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
-    echo "Error: only node environments for preprod, preview, dijkstra and sanchonet are supported"
+  if ! [[ "$ENV" =~ ^dijkstra$|^leios$|^preprod$|^preview$|^sanchonet$ ]]; then
+    echo "Error: only node environments for preprod, preview, dijkstra, leios and sanchonet are supported"
     exit 1
   fi
 
@@ -551,7 +553,7 @@ query-tip-all:
   #!/usr/bin/env bash
   set -euo pipefail
   QUERIED=0
-  for i in mainnet preprod preview dijkstra demo sanchonet; do
+  for i in mainnet preprod preview dijkstra demo leios sanchonet; do
     TIP=$(just query-tip $i 2>&1) && {
       echo "Environment: $i"
       echo "$TIP"
@@ -574,7 +576,7 @@ query-tip ENV TESTNET_MAGIC=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$ ]]; then
+  elif [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^leios$ ]]; then
     CARDANO_CLI="cardano-cli"
   elif [[ "$ENV" =~ ^dijkstra$|^demo$|^sanchonet$ ]]; then
     CARDANO_CLI="cardano-cli-ng"
@@ -830,8 +832,8 @@ start-node ENV:
   set -euo pipefail
   {{stateDir}}
 
-  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^sanchonet$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview, dijkstra and sanchonet are supported for start-node recipe"
+  if ! [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^leios$|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, leios and sanchonet are supported for start-node recipe"
     exit 1
   fi
 
@@ -845,6 +847,14 @@ start-node ENV:
     UNSTABLE_LIB=false
     UNSTABLE_MITHRIL=false
     USE_NODE_CONFIG_BP=false
+  elif [[ "{{ENV}}" == leios ]]; then
+    export CARDANO_NODE_SHELL_BIN="$(nix build -Lv github:IntersectMBO/cardano-node/leios-prototype#cardano-node --no-link --print-out-paths)/bin/cardano-node"
+    export USE_SHELL_BINS=true
+    export LEIOS_DB_PATH="$STATEDIR/db-leios/node/leios.db"
+    UNSTABLE=false
+    UNSTABLE_LIB=true
+    UNSTABLE_MITHRIL=false
+    USE_NODE_CONFIG_BP=false
   else
     UNSTABLE=true
     UNSTABLE_LIB=true
@@ -854,13 +864,13 @@ start-node ENV:
 
   # Set required entrypoint vars and run node in a new nohup background session
   ENVIRONMENT="{{ENV}}" \
-  UNSTABLE="$UNSTABLE" \
-  UNSTABLE_LIB="$UNSTABLE_LIB" \
-  UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
-  USE_NODE_CONFIG_BP="$USE_NODE_CONFIG_BP" \
-  DATA_DIR="$STATEDIR" \
-  SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
-  nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
+    UNSTABLE="$UNSTABLE" \
+    UNSTABLE_LIB="$UNSTABLE_LIB" \
+    UNSTABLE_MITHRIL="$UNSTABLE_MITHRIL" \
+    USE_NODE_CONFIG_BP="$USE_NODE_CONFIG_BP" \
+    DATA_DIR="$STATEDIR" \
+    SOCKET_PATH="$STATEDIR/node-{{ENV}}.socket" \
+    nohup setsid nix run .#run-cardano-node &> "$STATEDIR/node-{{ENV}}.log" & echo $! > "$STATEDIR/node-{{ENV}}.pid" &
   echo "Node started for {{ENV}}"
   echo ""
   echo "Set up your shell environment with:"
@@ -870,7 +880,7 @@ start-node ENV:
 stop-all:
   #!/usr/bin/env bash
   set -euo pipefail
-  for i in mainnet preprod preview dijkstra demo sanchonet; do
+  for i in mainnet preprod preview dijkstra demo leios sanchonet; do
     just stop-node $i
   done
 
