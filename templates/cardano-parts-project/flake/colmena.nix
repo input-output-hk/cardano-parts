@@ -23,6 +23,7 @@ in
 
       # Helper fns:
       ebs = size: {aws.instance.root_block_device.volume_size = mkDefault size;};
+      # noBPerf = {services.blockperf.enable = false;};
       # ebsIops = iops: {aws.instance.root_block_device.iops = mkDefault iops;};
       # ebsTp = tp: {aws.instance.root_block_device.throughput = mkDefault tp;};
       # ebsHighPerf = recursiveUpdate (ebsIops 10000) (ebsTp 1000);
@@ -59,24 +60,6 @@ in
           # To continue using legacy tracing, this option will be available for a few
           # more cardano-node and cardano-parts releases.
           # {services.cardano-node.useLegacyTracing = true;}
-
-          # By default, the new tracing system will forward metrics and logs to
-          # cardano-tracer. To use only the native logging and PrometheusSimple
-          # metrics from cardano-node, cardano-tracer can be disabled with the
-          # following options.
-          #
-          # Note that in the new tracing system, blockperf service will *not*
-          # work without cardano-tracer, as node cannot export logs in a
-          # blockperf consumable manner, so blockperf service should also be
-          # disabled if imported.
-          # {
-          #   services = {
-          #     # If blockperf is also enabled, disable it:
-          #     # blockperf.enable = false;
-          #     cardano-node.tracerSocketPathConnect = null;
-          #     cardano-tracer.enable = false;
-          #   };
-          # }
         ];
       };
 
