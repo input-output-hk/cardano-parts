@@ -443,20 +443,7 @@ in {
               // optionalAttrs (node.aws.instance ? availability_zone) {
                 inherit (node.aws.instance) availability_zone;
               }
-              # Use nix declared ipv6 if available.  This should only be used
-              # for public machines where ip exposure in committed code is
-              # acceptable and a vanity address is needed. Ie: don't use this
-              # for bps.
-              #
-              # NOTE: As of aws provider 5.66.0, switching from
-              # ipv6_address_count to ipv6_addresses will force an instance
-              # replacement. If a self-declared ipv6 is required but
-              # destroying and re-creating instances to change ipv6 is not
-              # acceptable, then until the bug is fixed, continue using
-              # auto-assignment only, manually change the ipv6 in the console
-              # ui, and run tf apply to update state.
-              #
-              # Ref: https://github.com/hashicorp/terraform-provider-aws/issues/39433
+              # Use declared ipv6 if set
               // optionalAttrs (node.aws.instance ? ipv6) {
                 ipv6_addresses = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : tolist([\"${node.aws.instance.ipv6}\"])}";
               }
