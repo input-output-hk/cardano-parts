@@ -255,7 +255,7 @@ apply-bootstrap *ARGS:
 
   [ -f .ssh_key ] || just save-bootstrap-ssh-key
 
-  sed '2i \ \ IdentityFile .ssh_key' .ssh_config > .ssh_config_bootstrap
+  sed '/^Host /a\  IdentityFile .ssh_key\n  IdentitiesOnly yes' .ssh_config > .ssh_config_bootstrap
   SSH_CONFIG_FILE=".ssh_config_bootstrap" just apply {{ARGS}}
   rm .ssh_config_bootstrap
 
@@ -740,7 +740,7 @@ ssh-bootstrap HOSTNAME *ARGS:
   #!/usr/bin/env nu
   {{checkSshConfig}}
   {{checkSshKey}}
-  ssh -o LogLevel=ERROR -F .ssh_config -i .ssh_key "{{HOSTNAME}}" {{ARGS}}
+  ssh -o LogLevel=ERROR -o IdentitiesOnly=yes -F .ssh_config -i .ssh_key "{{HOSTNAME}}" {{ARGS}}
 
 # Ssh to all
 ssh-for-all *ARGS:
