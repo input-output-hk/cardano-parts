@@ -642,13 +642,11 @@ in {
             )
             dnsEnabledNodes
             // mapAttrs' (
-              nodeName: _:
+              nodeName: node:
                 nameValuePair "${nodeName}-AAAA" {
-                  # When transitioning into ipv6 dual stack and some instances still have ipv4 only, include the following line.
-                  # count = "\${length(aws_instance.${nodeName}[0].ipv6_addresses) > 0 ? 1 : 0}";
-                  #
-                  # When migration to ipv4/ipv6 dual stack is complete, comment the above line and uncomment the following line.
-                  count = "1";
+                  # When tofu applying a new aws org, tofu will need to be
+                  # applied twice to create the ipv6 dns record.
+                  count = "\${data.aws_vpc.${underscore node.aws.region}.ipv6_cidr_block != \"\" ? 1 : 0}";
 
                   zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                   name = "${nodeName}.\${data.aws_route53_zone.selected.name}";
