@@ -492,7 +492,7 @@ in
               (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-3-rc-3-e8da785)
               (mkPkg "blockperf" blockperf)
               (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-2-5c00d7b")
-              (mkPkg "cardano-cli" ((node-release "cardano-cli") // {version = "10.16.0.0";}))
+              (mkPkg "cardano-cli" ((node-release "cardano-cli") // {version = "11.0.0.0";}))
               (mkPkg "cardano-cli-ng" ((node-pre-release "cardano-cli") // {version = "11.0.0.0";}))
               (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-release}")
               (mkPkg "cardano-db-sync-ng" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-pre-release}")
