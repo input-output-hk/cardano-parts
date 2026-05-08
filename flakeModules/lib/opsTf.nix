@@ -43,6 +43,18 @@ with lib; rec {
     };
   };
 
+  # Object Lock retention duration, by mode.
+  # "soft" → minimum 1 day (AWS API floor). Survives same-day
+  # compromise; compaction-driven deletes succeed once objects age
+  # past the lock.
+  # "governance" → full app retention. Compaction sources cannot be
+  # deleted before expiry, so storage roughly doubles during the
+  # retention window.
+  lockDaysFor = objectLockMode: retentionDays:
+    if objectLockMode == "governance"
+    then retentionDays
+    else 1;
+
   # Mimir + Loki S3 bucket resources for the in-cluster monitoring
   # stack. Returns a workspace fragment ({data, resource}) suitable for
   # merging via `imports = [... (mkMonitoringBucketResources {...})]`.
@@ -61,27 +73,16 @@ with lib; rec {
   }: let
     inherit (monitoring) bucketLoki bucketMimir objectLockMode retentionLogsDays retentionMetricsDays;
 
-    # "soft" → minimum 1 day (AWS API floor). Survives same-day
-    # compromise; compaction-driven deletes succeed once objects age
-    # past the lock.
-    # "governance" → full app retention. Compaction sources cannot be
-    # deleted before expiry, so storage roughly doubles during the
-    # retention window.
-    lockDaysFor = retentionDays:
-      if objectLockMode == "governance"
-      then retentionDays
-      else 1;
-
     bucketSpecs = {
       mimir = {
         bucket = bucketMimir;
         retentionDays = retentionMetricsDays;
-        lockDays = lockDaysFor retentionMetricsDays;
+        lockDays = lockDaysFor objectLockMode retentionMetricsDays;
       };
       loki = {
         bucket = bucketLoki;
         retentionDays = retentionLogsDays;
-        lockDays = lockDaysFor retentionLogsDays;
+        lockDays = lockDaysFor objectLockMode retentionLogsDays;
       };
     };
 
@@ -168,58 +169,65 @@ with lib; rec {
     };
   };
 
-  # IAM policy granting the EC2 role data-plane access on the Mimir +
-  # Loki monitoring buckets. Returns a single tofu policy attrset
-  # suitable for placement under `aws_iam_policy.<name>`. The default
-  # name is `monitoringS3`; the resource attribute key is the caller's
-  # decision.
+  # Pre-JSON IAM policy document for the Mimir + Loki monitoring
+  # buckets. Returned as a plain attrset so callers (and tests) can
+  # inspect the structure directly without round-tripping through
+  # JSON. `mkMonitoringIamPolicy` wraps this for placement under
+  # `aws_iam_policy.<name>`.
   #
   # Action list excludes bucket-management calls (DeleteBucket,
   # PutBucketPolicy, PutBucketPublicAccessBlock, …) and governance
   # bypass so a compromised monitoring node cannot destroy or
   # republish historical data.
-  mkMonitoringIamPolicy = {
-    monitoring,
-    defaultTags ? {},
-    name ? "monitoringS3",
-  }: let
+  mkMonitoringIamPolicyDoc = monitoring: let
     bucketArns = bucket: [
       "arn:aws:s3:::${bucket}"
       "arn:aws:s3:::${bucket}/*"
     ];
   in {
+    Version = "2012-10-17";
+    Statement = [
+      {
+        Effect = "Allow";
+        Action = [
+          "s3:AbortMultipartUpload"
+          # `s3:DeleteObject` is granted but Object Lock GOVERNANCE
+          # rejects pre-expiry deletes at the API layer — defense in
+          # depth. The grant lets the compactor create delete markers
+          # under versioning, which is the legitimate path for
+          # retention-driven deletion.
+          #
+          # `s3:DeleteObjectVersion` is intentionally omitted: the
+          # compactor only needs to mark current versions as deleted,
+          # not purge underlying versions. Version purges happen
+          # automatically via the bucket's lifecycle
+          # `noncurrent_version_expiration` rule.
+          "s3:DeleteObject"
+          "s3:GetBucketLocation"
+          "s3:GetObject"
+          "s3:ListBucket"
+          "s3:ListMultipartUploadParts"
+          "s3:PutObject"
+        ];
+        Resource =
+          bucketArns monitoring.bucketMimir
+          ++ bucketArns monitoring.bucketLoki;
+      }
+    ];
+  };
+
+  # IAM policy granting the EC2 role data-plane access on the Mimir +
+  # Loki monitoring buckets. Returns a single tofu policy attrset
+  # suitable for placement under `aws_iam_policy.<name>`. The default
+  # name is `monitoringS3`; the resource attribute key is the caller's
+  # decision.
+  mkMonitoringIamPolicy = {
+    monitoring,
+    defaultTags ? {},
+    name ? "monitoringS3",
+  }: {
     inherit name;
-    policy = builtins.toJSON {
-      Version = "2012-10-17";
-      Statement = [
-        {
-          Effect = "Allow";
-          Action = [
-            "s3:AbortMultipartUpload"
-            # `s3:DeleteObject` is granted but Object Lock GOVERNANCE
-            # rejects pre-expiry deletes at the API layer — defense in
-            # depth. The grant lets the compactor create delete markers
-            # under versioning, which is the legitimate path for
-            # retention-driven deletion.
-            #
-            # `s3:DeleteObjectVersion` is intentionally omitted: the
-            # compactor only needs to mark current versions as deleted,
-            # not purge underlying versions. Version purges happen
-            # automatically via the bucket's lifecycle
-            # `noncurrent_version_expiration` rule.
-            "s3:DeleteObject"
-            "s3:GetBucketLocation"
-            "s3:GetObject"
-            "s3:ListBucket"
-            "s3:ListMultipartUploadParts"
-            "s3:PutObject"
-          ];
-          Resource =
-            bucketArns monitoring.bucketMimir
-            ++ bucketArns monitoring.bucketLoki;
-        }
-      ];
-    };
+    policy = builtins.toJSON (mkMonitoringIamPolicyDoc monitoring);
     tags = defaultTags;
   };
 }
