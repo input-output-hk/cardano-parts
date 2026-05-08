@@ -64,7 +64,7 @@
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/leios";
 
     # For tmp local testing pins
-    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-10.6";
+    cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-11.0";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
