@@ -496,34 +496,49 @@ in {
               policyList);
           in
             foldl' recursiveUpdate {} [
-              (mkRoleAttachments "ec2_role" [
-                "kms_user"
-                {
-                  name = "ssm";
-                  arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore";
-                }
-              ])
+              (mkRoleAttachments "ec2_role" (
+                [
+                  "kms_user"
+                  {
+                    name = "ssm";
+                    arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore";
+                  }
+                ]
+                ++ optional infra.monitoring.enable "monitoring_s3"
+              ))
             ];
 
-          aws_iam_policy.kms_user = {
-            name = "kmsUser";
-            policy = toJSON {
-              Version = "2012-10-17";
-              Statement = [
-                {
-                  Effect = "Allow";
-                  Action = ["kms:Decrypt" "kms:DescribeKey"];
+          aws_iam_policy =
+            {
+              kms_user = {
+                name = "kmsUser";
+                policy = toJSON {
+                  Version = "2012-10-17";
+                  Statement = [
+                    {
+                      Effect = "Allow";
+                      Action = ["kms:Decrypt" "kms:DescribeKey"];
 
-                  # KMS `kmsKey` is bootstrapped by cloudFormation rain.
-                  # Scope this policy to a specific resource to allow for multiple keys and key policies.
-                  Resource = "arn:aws:kms:*:\${data.aws_caller_identity.current.account_id}:key/*";
-                  Condition."ForAnyValue:StringLike"."kms:ResourceAliases" = "alias/kmsKey";
-                }
-              ];
+                      # KMS `kmsKey` is bootstrapped by cloudFormation rain.
+                      # Scope this policy to a specific resource to allow for multiple keys and key policies.
+                      Resource = "arn:aws:kms:*:\${data.aws_caller_identity.current.account_id}:key/*";
+                      Condition."ForAnyValue:StringLike"."kms:ResourceAliases" = "alias/kmsKey";
+                    }
+                  ];
+                };
+
+                tags = defaultTags;
+              };
+            }
+            // optionalAttrs infra.monitoring.enable {
+              # Built in `cardano-parts.lib.opsTf` so existing downstream
+              # repos can attach the same least-privilege policy without
+              # copying it.
+              monitoring_s3 = config.flake.cardano-parts.lib.opsTf.mkMonitoringIamPolicy {
+                inherit (infra) monitoring;
+                inherit defaultTags;
+              };
             };
-
-            tags = defaultTags;
-          };
 
           tls_private_key.bootstrap.algorithm = "ED25519";
 

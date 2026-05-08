@@ -50,6 +50,46 @@
     # If using grafana cloud stack based monitoring.
     # infra.grafana.stackName = "UPDATE_ME";
 
+    # Optional: in-cluster monitoring stack (Grafana + Mimir + Loki + Caddy).
+    # Deploys a single monitoring machine that consumes metrics and logs
+    # from the rest of the cluster via profile-grafana-alloy.
+    #
+    # When enabled:
+    #   * opentofu/bootstrap creates `${profile}-mimir` and `${profile}-loki`
+    #     S3 buckets with Object Lock + lifecycle. The EC2 role gets
+    #     least-privilege data-plane access (no bucket-management actions,
+    #     no governance bypass).
+    #   * profile-grafana-alloy auto-targets the in-cluster monitoring node;
+    #     `grafana-alloy-{metrics,loki}-url` sops secrets become optional.
+    #   * A Colmena machine matching `infra.monitoring.hostname` (default
+    #     "monitoring") must be declared with `profile-monitoring` imported
+    #     and `enableDns = true` so the DNS A record is created at
+    #     `${subdomain}.${infra.aws.domain}`.
+    #
+    # infra.monitoring = {
+    #   enable = true;
+    #   email = "devops+monitoring@UPDATE_ME";
+    #   oauth.google.allowedDomain = "UPDATE_ME";
+    #
+    #   # Reuse the existing tofu grafana directory so dashboards, alerts,
+    #   # and recording rules feed both the in-cluster Mimir/Grafana and
+    #   # any external tofu-driven cardano-monitoring workspace.
+    #   provisionPath = ./opentofu/grafana;
+    #
+    #   # Storage retention. Drives both app-level retention and S3
+    #   # lifecycle expiration so they cannot drift.
+    #   # retentionMetricsDays = 365;
+    #   # retentionLogsDays = 180;
+    #
+    #   # S3 Object Lock policy. "soft" (default) gives a 1-day immutability
+    #   # window — cheap, blocks same-day mass-delete from a compromised
+    #   # node. "governance" locks for the full retention window — roughly
+    #   # doubles storage cost but a compromised node cannot delete pre-
+    #   # expiry. Both modes are GOVERNANCE-mode; a separately-permissioned
+    #   # operator role with `s3:BypassGovernanceRetention` can break-glass.
+    #   # objectLockMode = "soft";
+    # };
+
     # For defining deployment groups with varying configuration.  Adjust as needed.
     groups = {
       preview1 = {

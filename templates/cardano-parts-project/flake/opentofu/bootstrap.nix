@@ -5,35 +5,22 @@
   ...
 }: let
   inherit (config.flake.lib.strings) dashToSnake;
-
   inherit (config.flake.cardano-parts.cluster) infra;
+  inherit
+    (config.flake.cardano-parts.lib.opsTf)
+    awsProviderFor
+    bucketPolicyStatementSecureTransport
+    mkMonitoringBucketResources
+    ;
 
   system = "x86_64-linux";
 
-  bucketPolicyStatementSecureTransport = bucketArn: {
-    sid = "RestrictToTLSRequestsOnly";
-    effect = "Deny";
-    actions = ["s3:*"];
-    resources = [
-      bucketArn
-      "${bucketArn}/*"
-    ];
-    condition = {
-      test = "Bool";
-      variable = "aws:SecureTransport";
-      values = ["false"];
-    };
-    principals = {
-      type = "*";
-      identifiers = ["*"];
-    };
-  };
-
+  # All `forEach unmanagedBuckets` loops below scope to this list only;
+  # opsTf-managed buckets (mimir, loki) flow through mkMonitoringBucketResources.
   unmanagedBuckets = ["rain_artifacts"];
 
   workspace = "bootstrap";
 
-  awsProviderFor = region: "aws.${dashToSnake region}";
   awsccProviderFor = region: "awscc.${dashToSnake region}";
 
   sensitiveString = {
@@ -436,6 +423,18 @@ in {
           };
         };
       }
+
+      # Monitoring (Mimir + Loki) S3 buckets, only when monitoring is
+      # enabled. Bucket access for the EC2 role is granted in the
+      # cluster workspace. Construction lives in
+      # `cardano-parts.lib.opsTf` so existing downstream repos that
+      # don't use this template's bootstrap workspace can still pull
+      # in the same Object Lock + lifecycle wiring.
+      (lib.mkIf infra.monitoring.enable (mkMonitoringBucketResources {
+        inherit (infra) monitoring;
+        awsRegion = infra.aws.region;
+        awsOrgId = infra.aws.orgId;
+      }))
     ];
   };
 }

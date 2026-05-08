@@ -16,6 +16,7 @@
 #   config.services.alloy.systemdEnableTaskMetrics
 #   config.services.alloy.systemdUnitExclude
 #   config.services.alloy.systemdUnitInclude
+#   config.services.alloy.useClusterMonitoring
 #   config.services.alloy.useSopsSecrets
 #
 # Tips:
@@ -39,6 +40,28 @@ flake @ {moduleWithSystem, ...}: {
       groupCfg = config.cardano-parts.cluster.group;
       groupOutPath = groupFlake.self.outPath;
       opsLib = flake.config.flake.cardano-parts.lib.opsLib pkgs;
+
+      clusterMonitoringFqdn = let
+        # Read through groupFlake (consumer's `self`) instead of
+        # `flake.config`; the latter closes over cardano-parts' own
+        # eval where these options carry their declared null defaults.
+        inherit (groupFlake.config.flake.cardano-parts.cluster.infra) aws monitoring;
+      in "${monitoring.subdomain}.${aws.domain}";
+
+      # Alloy HCL expressions for the remote_write target URLs. When
+      # useClusterMonitoring is true we substitute literal interpolated URLs
+      # so the matching `grafana-alloy-{metrics,loki}-url` sops secrets
+      # become unnecessary; otherwise the URLs are read at runtime from those
+      # sops files via local.file references.
+      metricsUrlExpr =
+        if cfg.useClusterMonitoring
+        then "\"https://${clusterMonitoringFqdn}/mimir/api/v1/push\""
+        else "local.file.remote_write_url.content";
+
+      logsUrlExpr =
+        if cfg.useClusterMonitoring
+        then "\"https://${clusterMonitoringFqdn}/loki/api/v1/push\""
+        else "local.file.remote_write_url_logs.content";
 
       mkSopsSecretParams = secretName: {
         inherit groupOutPath groupName name secretName;
@@ -70,14 +93,16 @@ flake @ {moduleWithSystem, ...}: {
 
         secrets = ''
           // Secrets
-          local.file "remote_write_url" {
-            filename = "/run/secrets/grafana-alloy-metrics-url"
-          }
-
-          ${optionalString cfg.enableLoki ''
+          ${optionalString (!cfg.useClusterMonitoring) ''
+            local.file "remote_write_url" {
+              filename = "/run/secrets/grafana-alloy-metrics-url"
+            }
+          ''}
+          ${optionalString (cfg.enableLoki && !cfg.useClusterMonitoring) ''
             local.file "remote_write_url_logs" {
               filename = "/run/secrets/grafana-alloy-loki-url"
-            }''}
+            }
+          ''}
 
           local.file "remote_write_username" {
             filename = "/run/secrets/grafana-alloy-metrics-username"
@@ -93,7 +118,7 @@ flake @ {moduleWithSystem, ...}: {
           // Default prometheus remote write target
           prometheus.remote_write "integrations" {
             endpoint {
-              url = local.file.remote_write_url.content
+              url = ${metricsUrlExpr}
 
               basic_auth {
                 username = local.file.remote_write_username.content
@@ -233,7 +258,7 @@ flake @ {moduleWithSystem, ...}: {
         in ''
           loki.write "default" {
             endpoint {
-              url = local.file.remote_write_url_logs.content
+              url = ${logsUrlExpr}
 
               basic_auth {
                 username = local.file.remote_write_username.content
@@ -645,6 +670,28 @@ flake @ {moduleWithSystem, ...}: {
             '';
           };
 
+          useClusterMonitoring = mkOption {
+            type = bool;
+            default = groupFlake.config.flake.cardano-parts.cluster.infra.monitoring.enable;
+            description = ''
+              Whether to default the alloy remote_write target to the
+              in-cluster monitoring node.
+
+              When true, the metrics and logs URLs are derived from
+              `flake.cardano-parts.cluster.infra.monitoring.subdomain` and
+              `flake.cardano-parts.cluster.infra.aws.domain`, and the matching
+              `grafana-alloy-metrics-url` / `grafana-alloy-loki-url` sops
+              secrets are not required.
+
+              The default tracks the cluster-level
+              `infra.monitoring.enable` so that enabling an in-cluster
+              monitoring node automatically retargets all alloy collectors.
+
+              Username and password basic-auth credentials are still required
+              regardless of this option.
+            '';
+          };
+
           useSopsSecrets = mkOption {
             type = bool;
             default = true;
@@ -657,9 +704,14 @@ flake @ {moduleWithSystem, ...}: {
               will need to be provided to the target machine either by
               additional module code or out of band:
 
-                /run/secrets/grafana-alloy-metrics-url
                 /run/secrets/grafana-alloy-metrics-username
                 /run/secrets/grafana-alloy-metrics-password
+
+              Additionally, when useClusterMonitoring is false, these files
+              are also required:
+
+                /run/secrets/grafana-alloy-metrics-url
+                /run/secrets/grafana-alloy-loki-url       (when enableLoki)
             '';
           };
         };
@@ -732,10 +784,14 @@ flake @ {moduleWithSystem, ...}: {
         };
 
         sops.secrets = mkIf cfg.useSopsSecrets (
-          mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
-          // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-username")
+          mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-username")
           // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-password")
-          // (optionalAttrs cfg.enableLoki (mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")))
+          // optionalAttrs (!cfg.useClusterMonitoring) (
+            mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
+          )
+          // optionalAttrs (cfg.enableLoki && !cfg.useClusterMonitoring) (
+            mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")
+          )
         );
       };
     });
