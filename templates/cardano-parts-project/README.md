@@ -144,6 +144,67 @@ Similarly, for monitoring resources:
     just tofu grafana plan
     just tofu grafana apply
 
+## Constitutional-committee state monitoring
+
+The `profile-cardano-committee-monitor` NixOS profile publishes Prometheus
+metrics about the on-chain constitutional-committee state (per-member term
+expiration, hot-key authorisation status, next-epoch-change signal). The
+metric series are prefixed `cardano_cc_*`. Alerts that consume them live in
+[./flake/opentofu/grafana/alerts/cardano-committee.nix-import](./flake/opentofu/grafana/alerts/cardano-committee.nix-import)
+and are deployed via `just tofu grafana apply` like the rest of the
+monitoring stack.
+
+### Enabling
+
+Import `profile-cardano-committee-monitor` on exactly **one** host per
+environment, alongside `profile-grafana-alloy` and
+`profile-cardano-node-group`:
+
+    {
+      imports = [
+        flake.config.flake.nixosModules.profile-cardano-node-group
+        flake.config.flake.nixosModules.profile-grafana-alloy
+        flake.config.flake.nixosModules.profile-cardano-committee-monitor
+      ];
+
+      services.alloy.textfileCollectorDirectory = "/var/lib/node-textfile";
+      services.cardano-node.shareNodeSocket = true;
+      services.cardano-committee-monitor.enable = true;
+    }
+
+The profile asserts both `services.alloy.textfileCollectorDirectory != null`
+and `services.cardano-node.shareNodeSocket = true`. `profile-cardano-node-group`
+is required but not asserted — without it, the unit's
+`inherit (config.environment.variables) CARDANO_NODE_*` throws a native
+Nix evaluation error before any assertion can fire.
+
+### One host per environment
+
+Importing the profile on more than one host per environment produces
+duplicate Prometheus series differing only by `instance`, and every alert
+fires once per duplicate host. The current implementation does not enforce
+single-host import; it is a documented expectation.
+
+### Tuning thresholds
+
+Alert thresholds are constants in
+[`cardano-committee.nix-import`](./flake/opentofu/grafana/alerts/cardano-committee.nix-import)
+(`warnDays`, `pageDays`). This file is part of the project template — your
+repo owns it after `init`, so edit it in place. For per-environment
+thresholds (e.g. mainnet 60d/14d while testnets stay at 30d/7d), duplicate
+the relevant rules and add an `environment=~"…"` selector on each;
+PromQL has no first-class way to express per-label thresholds.
+
+### Cadence is hardcoded
+
+The collector runs `OnCalendar=hourly` (with `RandomizedDelaySec=600`).
+The cadence is paired with the `cardano_cc_metrics_stale` threshold of
+5400 seconds in the alert file: any miss longer than ~90 minutes trips
+the alert. The two values live in separate Nix evaluations and cannot be
+cross-checked by assertion — if you change the cadence (e.g. via
+`lib.mkForce` on `systemd.timers.cardano-committee-monitor`), change the
+staleness threshold in the alert file in the same PR.
+
 ## SSH
 
 If your credentials are correct, and the cluster is already provisioned with
