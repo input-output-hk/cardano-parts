@@ -7,6 +7,7 @@
 #   config.services.alloy.enableLoki
 #   config.services.alloy.extraAlloyConfig
 #   config.services.alloy.extraJournalReceivers
+#   config.services.alloy.extraPrometheusRelabelNodeKeepRegex
 #   config.services.alloy.labels
 #   config.services.alloy.logLevel
 #   config.services.alloy.prometheusExporterUnixNodeSetCollectors
@@ -16,6 +17,7 @@
 #   config.services.alloy.systemdEnableTaskMetrics
 #   config.services.alloy.systemdUnitExclude
 #   config.services.alloy.systemdUnitInclude
+#   config.services.alloy.textfileCollectorDirectory
 #   config.services.alloy.useSopsSecrets
 #
 # Tips:
@@ -30,7 +32,7 @@ flake @ {moduleWithSystem, ...}: {
   }:
     with builtins;
     with lib; let
-      inherit (lib.types) attrsOf bool enum listOf str lines;
+      inherit (lib.types) attrsOf bool enum listOf nullOr str lines;
       inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
@@ -153,7 +155,10 @@ flake @ {moduleWithSystem, ...}: {
         exporter = ''
           // Default grafana alloy node exporter integration components, in lowest to highest dependency order
           prometheus.exporter.unix "integrations_node_exporter" {
-            set_collectors = [${concatMapStringsSep ", " (s: "\"${s}\"") cfg.prometheusExporterUnixNodeSetCollectors}]
+            set_collectors = [${concatMapStringsSep ", " (s: "\"${s}\"") (
+            cfg.prometheusExporterUnixNodeSetCollectors
+            ++ optional (cfg.textfileCollectorDirectory != null) "textfile"
+          )}]
 
             systemd {
               enable_restarts = ${boolToString cfg.systemdEnableRestartMetrics}
@@ -162,6 +167,11 @@ flake @ {moduleWithSystem, ...}: {
               unit_exclude = "${cfg.systemdUnitExclude}"
               unit_include = "${cfg.systemdUnitInclude}"
             }
+            ${optionalString (cfg.textfileCollectorDirectory != null) ''
+            textfile {
+              directory = "${cfg.textfileCollectorDirectory}"
+            }
+          ''}
           }
 
           discovery.relabel "integrations_node_exporter" {
@@ -199,7 +209,7 @@ flake @ {moduleWithSystem, ...}: {
 
             rule {
               source_labels = ["__name__"]
-              regex = "${cfg.prometheusRelabelNodeKeepRegex}"
+              regex = "${cfg.prometheusRelabelNodeKeepRegex}${optionalString (cfg.extraPrometheusRelabelNodeKeepRegex != []) "|${concatStringsSep "|" cfg.extraPrometheusRelabelNodeKeepRegex}"}"
               action = "keep"
             }
 
@@ -506,6 +516,18 @@ flake @ {moduleWithSystem, ...}: {
             '';
           };
 
+          extraPrometheusRelabelNodeKeepRegex = mkOption {
+            type = listOf str;
+            default = [];
+            description = ''
+              Additional alternation arms appended to prometheusRelabelNodeKeepRegex.
+
+              Used by sibling profiles (e.g. profile-cardano-committee-monitor) to
+              whitelist their textfile-collector metric series without a recursive
+              mkForce on the base option.
+            '';
+          };
+
           labels = mkOption {
             type = attrsOf str;
             default = {
@@ -599,6 +621,7 @@ flake @ {moduleWithSystem, ...}: {
                 "node_sockstat_(UDP|UDP6|UDPLITE|UDPLITE6)_inuse"
                 "node_softnet_(dropped|processed|times_squeezed)_total"
                 "node_systemd_.*"
+                "node_textfile_(mtime_seconds|scrape_error)"
                 "node_timex_(estimated_error|maxerror|offset)_seconds"
                 "node_timex_sync_status"
                 "node_time_zone_offset_seconds"
@@ -642,6 +665,21 @@ flake @ {moduleWithSystem, ...}: {
             description = ''
               Regexp of systemd units to include.
               Units must both match include and not match exclude to be collected.
+            '';
+          };
+
+          textfileCollectorDirectory = mkOption {
+            type = nullOr str;
+            default = null;
+            description = ''
+              Directory the node-exporter textfile collector scrapes. When set,
+              the alloy module creates the directory group-writable by the
+              `node-textfile` group and enables the node-exporter `textfile`
+              collector. Sibling profiles (e.g. profile-cardano-committee-monitor)
+              write their .prom files here.
+
+              When left at the default `null`, the textfile collector remains
+              unwired and no directory or group is created.
             '';
           };
 
@@ -729,7 +767,17 @@ flake @ {moduleWithSystem, ...}: {
             group = "grafana-alloy";
             isSystemUser = true;
           };
+
+          # Owned by the alloy module so multiple textfile-publishing profiles
+          # (e.g. profile-cardano-committee-monitor) can share a single setgid
+          # directory without fighting over StateDirectory.
+          groups.node-textfile = mkIf (cfg.textfileCollectorDirectory != null) {};
         };
+
+        systemd.tmpfiles.rules = mkIf (cfg.textfileCollectorDirectory != null) [
+          # mode 2775: setgid so files created here inherit the node-textfile group.
+          "d ${cfg.textfileCollectorDirectory} 2775 root node-textfile - -"
+        ];
 
         sops.secrets = mkIf cfg.useSopsSecrets (
           mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
