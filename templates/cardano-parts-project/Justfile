@@ -1036,7 +1036,7 @@ truncate-chain ENV SLOT:
 
   SYNTH_ARGS=(
     "--db" "$STATEDIR/db-{{ENV}}/node/"
-    "cardano"
+    "--in-mem"
     "--config" "$STATEDIR/config/{{ENV}}/config.json"
   )
 
