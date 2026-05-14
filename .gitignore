@@ -5,8 +5,6 @@ result*
 /.run-test/
 /treefmt.toml
 .ai/skills/sync-review/sync-config.local.json
-.ai/skills/sync-review/state.local.json
-.ai/skills/sync-review/memory.local.json
 
 # Claude Code (symlinks created by shellHook)
 .claude

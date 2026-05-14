@@ -1,6 +1,6 @@
 ---
 name: sync-help
-description: Prints a quick reference for the sync skill suite (sync-status, sync-review, sync-execute). Use when the user asks how to use the sync skills or needs a reminder of the workflow.
+description: Prints a quick reference for the sync skill suite (sync-status, sync-execute). Use when the user asks how to use the sync skills or needs a reminder of the workflow.
 ---
 
 # Sync Help
@@ -14,8 +14,13 @@ Output the following help text:
 ### Typical workflow
 
 1. `/sync-status` — See which downstream repos have diverged from templates.
-2. `/sync-review` — Classify each change as upstream, downstream-only, or needs-discussion.
-3. `/sync-execute` — Apply changes one at a time with suggested commit messages.
+2. `/sync-execute upstream` — Walk through each change, decide whether to
+   upstream it into templates. One file at a time, with commit pauses.
+3. `/pr-description` — Generate the PR description for the upstream changes.
+4. `/sync-execute downstream` — Walk through each template change, decide
+   whether to downstream it. One file at a time, with commit pauses.
+
+Always complete all upstreaming and the PR description before downstreaming.
 
 ### Setup
 
@@ -27,29 +32,36 @@ cp .ai/skills/sync-review/sync-config.example.json .ai/skills/sync-review/sync-c
 
 Paths can be relative (from repo root) or absolute. The config is gitignored.
 
-### Persistent memory
+### Responding to diffs
 
-During `/sync-review`, tell the AI to remember classification decisions permanently:
+During `/sync-execute`, the AI shows each diff and waits for your decision:
 
-- "never upstream that, remember it"
-- "scripts/playground/ is always downstream-only, record that"
-- "buildkite modules are always downstream-only"
+- **"yes"** — apply this change
+- **"no"** — skip it
+- **"no, exclude"** — skip and permanently exclude this file path
+- **"no, add rule"** — skip and add a classification rule for future cycles
+- **"show more context"** — see a wider diff
+- Or give any specific instruction
 
-Saved to `.ai/skills/sync-review/memory.local.json`, automatically applied in
-future sync cycles.
+### Excludes and rules
 
-### Local files (all gitignored, all in `.ai/skills/sync-review/`)
+Each repo in the config has two arrays for persistent decisions:
+
+- `"exclude"` — glob patterns for files to silently skip (e.g., `"mdbook/**"`)
+- `"rules"` — auto-classify specific files or hunks with a reason
+
+These are saved per-repo in `sync-config.local.json` and automatically applied
+in future sync cycles.
+
+### Config file (gitignored, in `.ai/skills/sync-review/`)
 
 | File | Purpose |
 |---|---|
-| `sync-config.local.json` | Your downstream repo paths |
-| `state.local.json` | Current sync cycle review/apply state |
-| `memory.local.json` | Persistent classification decisions across cycles |
+| `sync-config.local.json` | Repo paths, excludes, classification rules |
 
 ### Tips
 
-- `/sync-review <repo-name>` to review a single repo.
-- `/sync-execute upstream` or `/sync-execute downstream` to limit direction.
-- The AI pauses after each change during `/sync-execute` for you to review,
-  stage, and commit.
+- `/sync-execute` requires a direction: `upstream` or `downstream`.
+- The AI always waits for your response before proceeding to the next file.
 - `/sync-status` is read-only and safe to run anytime.
+- All skills only examine files that changed on the current branch in any repo.

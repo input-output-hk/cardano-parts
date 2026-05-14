@@ -2,11 +2,27 @@
   "downstream_repos": [
     {
       "name": "cardano-playground",
-      "path": "../cardano-playground"
+      "path": "../cardano-playground",
+      "exclude": [
+        "mdbook/**",
+        "scripts/playground/**"
+      ],
+      "rules": [
+        {
+          "file": "flake/colmena.nix",
+          "hunk_match": "machine definitions",
+          "classification": "downstream-only",
+          "reason": "instance definitions are always repo-specific",
+          "added": "2026-05-14"
+        }
+      ]
     },
     {
       "name": "ouroboros-network-ops",
-      "path": "../ouroboros-network-ops"
+      "path": "../ouroboros-network-ops",
+      "base_branch": "master",
+      "exclude": [],
+      "rules": []
     }
   ],
   "template_path": "templates/cardano-parts-project"

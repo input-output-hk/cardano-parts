@@ -1,5 +1,5 @@
 ---
-name: writing-pr-description
+name: pr-description
 description: Generate a PR title and description for cardano-parts releases by analyzing commit diffs on the current branch. Use when the user asks to write, draft, or generate a PR description, release notes, or changelog for this repo.
 ---
 
@@ -9,9 +9,10 @@ Generate a PR title and description following the established pattern used in th
 
 ## Workflow
 
-1. **Ask the user** two questions before starting:
+1. **Ask the user** three questions before starting:
    - Are there any breaking changes to document? (Usually none.)
    - Are there any known issues to document? (Usually none.)
+   - Are there any additional action items to include in the "Additionally" section (e.g. tofu commands, AMI rebuilds, manual interventions)? (Often none beyond deploying machines.)
    - Ask about anything else you're unsure about.
 
 2. **Identify the base branch** this PR targets (usually `main`). Run:
