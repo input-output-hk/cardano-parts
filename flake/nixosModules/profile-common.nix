@@ -36,11 +36,30 @@
       key = ./profile-common.nix;
 
       config = {
-        # Cardano-node >= 10.7.0 requires kernel >= 6.15 for LSM, without which
-        # large IOWAIT will be observed.
-        #
-        # Kernel 6.18 is the most recent kernel which is compatible with ZFS.
-        boot.kernelPackages = mkDefault pkgs.linuxPackages_6_18;
+        boot = {
+          # Cardano-node >= 10.7.0 requires kernel >= 6.15 for LSM, without which
+          # large IOWAIT will be observed.
+          #
+          # Kernel 6.18 is the most recent kernel which is compatible with ZFS.
+          kernelPackages = mkDefault pkgs.linuxPackages_6_18;
+
+          # Mitigate Copy.Fail (CVE-2026-31431) and Dirty Frag and Fragnesia (CVE-2026-43284, CVE-2026-43500, CVE-2026-46300).
+          # Safe to remove once kernel has the right patches, likely when cardano-parts updates to nixpkgs 26.05.
+          blacklistedKernelModules = ["algif_aead" "esp4" "esp6" "rxrpc"];
+          extraModprobeConfig = ''
+            install algif_aead ${coreutils}/bin/false
+            install esp4 ${coreutils}/bin/false
+            install esp6 ${coreutils}/bin/false
+            install rxrpc ${coreutils}/bin/false
+          '';
+        };
+        # Unload vulnerable modules immediately
+        system.activationScripts.cve-rmmod = ''
+          ${kmod}/bin/rmmod algif_aead 2>/dev/null || true
+          ${kmod}/bin/rmmod esp4 2>/dev/null || true
+          ${kmod}/bin/rmmod esp6 2>/dev/null || true
+          ${kmod}/bin/rmmod rxrpc 2>/dev/null || true
+        '';
 
         environment = {
           # Enable terminfo for common terminal types like `xterm-256color` and `tmux-256color`.
