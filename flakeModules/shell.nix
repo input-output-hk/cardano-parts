@@ -128,6 +128,7 @@ in
                   echo "  mv .claude/settings.local.json .ai/"
                   echo "  rm -rf .claude"
                 else
+                  mkdir -p .ai
                   ln -sfn .ai .claude
                 fi
                 if [ -f .ai/AGENTS.md ]; then
