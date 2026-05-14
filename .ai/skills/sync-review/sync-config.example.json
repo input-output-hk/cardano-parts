@@ -1,0 +1,13 @@
+{
+  "downstream_repos": [
+    {
+      "name": "cardano-playground",
+      "path": "../cardano-playground"
+    },
+    {
+      "name": "ouroboros-network-ops",
+      "path": "../ouroboros-network-ops"
+    }
+  ],
+  "template_path": "templates/cardano-parts-project"
+}
