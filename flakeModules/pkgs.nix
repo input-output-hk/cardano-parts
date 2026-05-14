@@ -468,11 +468,11 @@ in
           dbsync-release = "input-output-hk-cardano-db-sync-13-7-0-5-8c95bab";
           dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-5-8c95bab";
 
-          faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-6-762bb26";
+          faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
-          # faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-6-762bb26";
-          faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
+          faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
+          # faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           mithril-release = "input-output-hk-mithril-2617-0-2478748";
