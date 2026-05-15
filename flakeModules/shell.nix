@@ -120,6 +120,20 @@ in
                 if ${isPartsRepo} && [ -d .git/hooks ]; then
                   ln -sf ${getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
                 fi
+
+                # Link .ai directory for Claude Code auto-discovery
+                if [ -d .claude ] && [ ! -L .claude ]; then
+                  echo -e "\n\033[33mWARNING: .claude is a directory, not a symlink.\033[0m"
+                  echo "Migrate any local settings, remove it, and re-enter the devShell to let it be created as a symlink to .ai:"
+                  echo "  mv .claude/settings.local.json .ai/"
+                  echo "  rm -rf .claude"
+                else
+                  mkdir -p .ai
+                  ln -sfn .ai .claude
+                fi
+                if [ -f .ai/AGENTS.md ]; then
+                  ln -sf AGENTS.md .ai/CLAUDE.md
+                fi
               '';
             };
 

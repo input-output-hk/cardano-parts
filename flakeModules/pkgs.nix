@@ -465,13 +465,13 @@ in
           blockperf = caPkgs.blockperf-cardano-foundation-blockperf-main-626ad7b;
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
-          dbsync-release = "input-output-hk-cardano-db-sync-13-7-0-4-63dbf19";
-          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-4-63dbf19";
+          dbsync-release = "input-output-hk-cardano-db-sync-13-7-0-5-8c95bab";
+          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-5-8c95bab";
 
-          faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-6-762bb26";
+          faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
-          faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-10-6-762bb26";
+          faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
           # faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
           metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
@@ -480,10 +480,10 @@ in
           # mithril-pre-release = "input-output-hk-mithril-unstable-b31ce25";
           mithril-pre-release = "input-output-hk-mithril-unstable-0229ae2";
 
-          node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-7-1-045bc18";
+          node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-0-1-97036a6";
           # node-release = pkg: localFlake.inputs.cardano-node-10-6-3.packages.x86_64-linux.${pkg};
 
-          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-10-7-1-045bc18";
+          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-0-1-97036a6";
           # node-pre-release = pkg: localFlake.inputs.cardano-node-10-7-0.packages.x86_64-linux.${pkg};
         in
           submodule {
@@ -492,16 +492,16 @@ in
               (mkPkg "blockfrost-platform" caPkgs.default-blockfrost-blockfrost-platform-0-0-3-rc-3-e8da785)
               (mkPkg "blockperf" blockperf)
               (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-2-5c00d7b")
-              (mkPkg "cardano-cli" ((node-release "cardano-cli") // {version = "10.16.0.0";}))
-              (mkPkg "cardano-cli-ng" ((node-pre-release "cardano-cli") // {version = "10.16.0.0";}))
+              (mkPkg "cardano-cli" ((node-release "cardano-cli") // {version = "11.0.0.0";}))
+              (mkPkg "cardano-cli-ng" ((node-pre-release "cardano-cli") // {version = "11.0.0.0";}))
               (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-release}")
               (mkPkg "cardano-db-sync-ng" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-pre-release}")
               (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-${dbsync-release}")
               (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-${dbsync-pre-release}")
               (mkPkg "cardano-faucet" faucet)
               (mkPkg "cardano-faucet-ng" faucet-ng)
-              (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "10.7.1";}))
-              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "10.7.1";}))
+              (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "11.0.1";}))
+              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "11.0.1";}))
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-14-0-5752501)
               (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-34-0-4108dd3)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")

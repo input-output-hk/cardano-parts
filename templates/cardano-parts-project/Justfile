@@ -1014,7 +1014,7 @@ tofu *ARGS:
   tofu "${ARGS[@]:0:1}" ${VAR_FILE:+-var-file=<("${SOPS[@]}" "$VAR_FILE")} "${ARGS[@]:1}"
 
 # Truncate a select chain after slot
-truncate-chain ENV SLOT:
+truncate-chain ENV SLOT LEDGER_TYPE="in-mem":
   #!/usr/bin/env bash
   set -euo pipefail
   [ -n "${DEBUG:-}" ] && set -x
@@ -1034,15 +1034,24 @@ truncate-chain ENV SLOT:
   just stop-node "{{ENV}}"
   mkdir -p "$STATEDIR"
 
-  SYNTH_ARGS=(
+  DB=(
     "--db" "$STATEDIR/db-{{ENV}}/node/"
-    "cardano"
+  )
+
+  CFG=(
     "--config" "$STATEDIR/config/{{ENV}}/config.json"
   )
 
   TRUNC_ARGS=(
-    "${SYNTH_ARGS[@]}"
+    "${DB[@]}"
+    "${CFG[@]}"
     "--truncate-after-slot" "{{SLOT}}"
+  )
+
+  SYNTH_ARGS=(
+    "${DB[@]}"
+    "--{{LEDGER_TYPE}}"
+    "${CFG[@]}"
   )
 
   nix run .#job-gen-env-config &> /dev/null

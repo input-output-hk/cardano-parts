@@ -4,3 +4,9 @@ result*
 /.run/
 /.run-test/
 /treefmt.toml
+.ai/skills/sync-review/sync-config.local.json
+
+# Claude Code (symlinks created by shellHook)
+.claude
+.ai/CLAUDE.md
+.ai/settings.local.json
