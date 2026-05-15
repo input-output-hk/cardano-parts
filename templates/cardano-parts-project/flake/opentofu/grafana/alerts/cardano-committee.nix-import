@@ -109,7 +109,7 @@ in {
       # node_textfile_mtime_seconds; operators map it to environment in
       # Grafana templating.
       alert = "cardano_cc_metrics_stale";
-      expr = ''time() - max by (instance) (node_textfile_mtime_seconds{file="cardano-committee.prom"}) > 5400'';
+      expr = ''time() - max by (instance) (node_textfile_mtime_seconds{file=~".*/cardano-committee.prom"}) > 5400'';
       for = "10m";
       labels.severity = "page";
       annotations = {
@@ -122,7 +122,7 @@ in {
       # nowhere" (missed deploy, alloy misconfig, profile disabled).
       # No $labels.* in the summary — absent() returns no labels.
       alert = "cardano_cc_collector_absent";
-      expr = ''absent(node_textfile_mtime_seconds{file="cardano-committee.prom"})'';
+      expr = ''absent(node_textfile_mtime_seconds{file=~".*/cardano-committee.prom"})'';
       for = "10m";
       labels.severity = "page";
       annotations = {
