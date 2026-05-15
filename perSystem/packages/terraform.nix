@@ -75,6 +75,7 @@
           (providerFor "opentofu" "null")
           (providerFor "opentofu" "tls")
           (providerFor "loafoe" "ssh")
+          (providerFor "strongdm" "sdm")
         ]);
     };
 }
