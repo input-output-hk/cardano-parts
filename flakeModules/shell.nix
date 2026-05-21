@@ -96,7 +96,7 @@ in
                 programs.alejandra.enable = true;
                 settings.formatter.alejandra.includes = ["*.nix-import"];
                 settings.formatter.nufmt = {
-                  command = "${pkgs.nufmt}/bin/nufmt";
+                  command = "${localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt}/bin/nufmt";
                   options = ["-c" "${nufmtConfig}"];
                   includes = ["*.nu"];
                 };
@@ -338,8 +338,9 @@ in
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
                     just
                     moreutils
-                    nufmt
-                    # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a missing features failure
+                    # Add a localFlake pin for nufmt and nushell to avoid downstream repo nixpkgs pins
+                    # providing older versions that are incompatible with each other
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt
                     localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell
                     patch
                     ripgrep
