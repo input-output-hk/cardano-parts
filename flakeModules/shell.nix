@@ -61,6 +61,7 @@ in
         flakeCfg = flake.config.flake.cardano-parts;
 
         withLocal = withSystem system;
+        nufmtConfig = pkgs.writeText "nufmt.nuon" ''{indent: 2}'';
         treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
         isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
 
@@ -94,6 +95,11 @@ in
                 projectRootFile = "flake.nix";
                 programs.alejandra.enable = true;
                 settings.formatter.alejandra.includes = ["*.nix-import"];
+                settings.formatter.nufmt = {
+                  command = "${pkgs.nufmt}/bin/nufmt";
+                  options = ["-c" "${nufmtConfig}"];
+                  includes = ["*.nu"];
+                };
               };
             };
 
@@ -332,6 +338,7 @@ in
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
                     just
                     moreutils
+                    nufmt
                     # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a missing features failure
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell
                     patch
