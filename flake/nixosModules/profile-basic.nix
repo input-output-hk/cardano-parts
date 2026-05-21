@@ -113,7 +113,7 @@
             inputs.nixpkgs-unstable.legacyPackages.${system}.neovim
             ncdu
             # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 24.11 causing missing features error
-            inputs.nixpkgs.legacyPackages.${system}.nushell
+            inputs.nixpkgs-unstable.legacyPackages.${system}.nushell
             nvme-cli
             parted
             pciutils

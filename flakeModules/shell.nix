@@ -340,7 +340,7 @@ in
                     moreutils
                     nufmt
                     # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a missing features failure
-                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell
                     patch
                     ripgrep
                     statix
@@ -452,7 +452,7 @@ in
           "menu-${id}" = (pkgs.writeShellApplication
             {
               name = "menu-${id}";
-              runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell];
+              runtimeInputs = [localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell];
 
               text = let
                 minWidth =
