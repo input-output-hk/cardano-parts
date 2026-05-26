@@ -29,8 +29,9 @@ jobs:
       pr_number: ${{ steps.detect-pr.outputs.pr_number }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          persist-credentials: false
           # Checkout base branch to ensure detect-pr runs trusted action code.
           # The || github.sha fallback handles non-PR events (push, workflow_dispatch).
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
@@ -46,7 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Checkout and merge PR
         uses: ./.github/actions/checkout-merge
@@ -56,10 +59,10 @@ jobs:
           pr_number: ${{ needs.detect-pr.outputs.pr_number }}
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v27
+        uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
         with:
           extra_nix_config: |
-            accept-flake-config = true
+            allow-import-from-derivation = true
             experimental-features = fetch-closure flakes nix-command
             substituters = https://cache.iog.io https://cache.nixos.org/
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=

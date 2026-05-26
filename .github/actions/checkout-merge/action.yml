@@ -24,22 +24,27 @@ runs:
     - if: inputs.pr_number != ''
       env:
         GH_TOKEN: ${{ github.token }}
+        BASE_REF: ${{ inputs.base_ref }}
+        HEAD_REF: ${{ inputs.head_ref }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        REPO: ${{ github.repository }}
       run: |
         git config --local user.name "GitHub Actions"
         git config --local user.email "actions@github.com"
-        git fetch --no-tags --depth=10 origin ${{ inputs.base_ref }}
-        git fetch --no-tags --depth=10 origin pull/${{ inputs.pr_number }}/head:pr
+        git fetch --no-tags --depth=10 origin "$BASE_REF"
+        git fetch --no-tags --depth=10 origin "pull/$PR_NUMBER/head:pr"
 
         # Check if this is a fork PR
-        if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+        if [ "$HEAD_REPO" != "$REPO" ]; then
 
           echo "Detected forked PR -- adding fork remote."
-          PR_REMOTE=$(gh pr view ${{ inputs.pr_number }} --json headRepositoryOwner,headRepository \
+          PR_REMOTE=$(gh pr view "$PR_NUMBER" --json headRepositoryOwner,headRepository \
             --jq '"\(.headRepositoryOwner.login)/\(.headRepository.name)"')
 
           if [ -n "$PR_REMOTE" ]; then
             git remote add fork "https://github.com/$PR_REMOTE"
-            git fetch fork "${{ inputs.head_ref }}"
+            git fetch fork "$HEAD_REF"
             UPSTREAM="fork"
           else
             UPSTREAM="origin"
@@ -49,9 +54,9 @@ runs:
           UPSTREAM="origin"
         fi
 
-        git fetch --no-tags --depth=10 "$UPSTREAM" "refs/heads/${{ inputs.head_ref }}:refs/remotes/$UPSTREAM/${{ inputs.head_ref }}"
+        git fetch --no-tags --depth=10 "$UPSTREAM" "refs/heads/$HEAD_REF:refs/remotes/$UPSTREAM/$HEAD_REF"
 
-        git checkout -b ${{ inputs.head_ref }} FETCH_HEAD
+        git checkout -b "$HEAD_REF" FETCH_HEAD
         if git merge --no-ff --no-edit pr; then
           echo "Merge succeeded."
         else
@@ -70,8 +75,8 @@ runs:
         git rev-parse HEAD
         git log -1 --oneline
 
-        echo "Setting upstream branch to: $UPSTREAM/${{ inputs.head_ref }}"
-        git branch --set-upstream-to="$UPSTREAM/${{ inputs.head_ref }}" HEAD
+        echo "Setting upstream branch to: $UPSTREAM/$HEAD_REF"
+        git branch --set-upstream-to="$UPSTREAM/$HEAD_REF" HEAD
 
         echo "Confirmation of upstream:"
         git status -sb
