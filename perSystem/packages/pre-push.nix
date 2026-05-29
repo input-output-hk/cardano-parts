@@ -3,7 +3,6 @@
     lib,
     pkgs,
     system,
-    config,
     ...
   }:
     with lib; {
@@ -50,13 +49,8 @@
             fi
           fi
 
-          declare -a checks
-          for check in ${lib.escapeShellArgs (builtins.attrNames config.checks)}; do
-            checks+=(.#checks.${lib.escapeShellArg system}."$check")
-          done
-
           set -x
-          nix build "''${checks[@]}" --no-link
+          nix build .#checks.${lib.escapeShellArg system}.lint .#checks.${lib.escapeShellArg system}.treefmt --no-link
         '';
       };
     };

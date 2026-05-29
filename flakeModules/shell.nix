@@ -61,6 +61,7 @@ in
         flakeCfg = flake.config.flake.cardano-parts;
 
         withLocal = withSystem system;
+        nufmtConfig = pkgs.writeText "nufmt.nuon" ''{indent: 2}'';
         treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
         isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
 
@@ -94,6 +95,11 @@ in
                 projectRootFile = "flake.nix";
                 programs.alejandra.enable = true;
                 settings.formatter.alejandra.includes = ["*.nix-import"];
+                settings.formatter.nufmt = {
+                  command = "${localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt}/bin/nufmt";
+                  options = ["-c" "${nufmtConfig}"];
+                  includes = ["*.nu"];
+                };
               };
             };
 
@@ -117,22 +123,25 @@ in
               type = globalType isGlobal lines;
               description = mdDoc "The cardano-parts default git and shell hooks.";
               default = globalDefault isGlobal ''
-                if ${isPartsRepo} && [ -d .git/hooks ]; then
-                  ln -sf ${getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
-                fi
+                if ${isPartsRepo}; then
+                  if [ -d .git/hooks ]; then
+                    ln -sf ${getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
+                  fi
 
-                # Link .ai directory for Claude Code auto-discovery
-                if [ -d .claude ] && [ ! -L .claude ]; then
-                  echo -e "\n\033[33mWARNING: .claude is a directory, not a symlink.\033[0m"
-                  echo "Migrate any local settings, remove it, and re-enter the devShell to let it be created as a symlink to .ai:"
-                  echo "  mv .claude/settings.local.json .ai/"
-                  echo "  rm -rf .claude"
-                else
-                  mkdir -p .ai
-                  ln -sfn .ai .claude
-                fi
-                if [ -f .ai/AGENTS.md ]; then
-                  ln -sf AGENTS.md .ai/CLAUDE.md
+                  # Link .ai directory for Claude Code auto-discovery
+                  if [ -d .claude ] && [ ! -L .claude ]; then
+                    echo -e "\n\033[33mWARNING: .claude is a directory, not a symlink.\033[0m"
+                    echo "Migrate any local settings, remove it, and re-enter the devShell to let it be created as a symlink to .ai:"
+                    echo "  mv .claude/settings.local.json .ai/"
+                    echo "  rm -rf .claude"
+                  else
+                    mkdir -p .ai
+                    ln -sfn .ai .claude
+                  fi
+
+                  if [ -f .ai/AGENTS.md ]; then
+                    ln -sf AGENTS.md .ai/CLAUDE.md
+                  fi
                 fi
               '';
             };
@@ -171,16 +180,17 @@ in
             defaultZshCompFpathLoading = mkOption {
               description = mdDoc "The cardano-parts default zsh completion fpath loading hook.";
               default = globalDefault isGlobal (packages: ''
-                  # Direnv use prevents the dynamic loading of zsh completions,
-                  # requiring a zsh "reentry" upon arriving in the devShell.
-                  # (ie: `zsh` or `exec zsh -l`, etc.
-                  #
-                  # If using plain nix develop, zsh "reentry" is not required.
-                  export ZDOTDIR=$PWD/.direnv-zsh
-                  mkdir -p "$ZDOTDIR"
-                  rm -f "$ZDOTDIR/.zcompdump"*
+                  if ${isPartsRepo}; then
+                    # Direnv use prevents the dynamic loading of zsh completions,
+                    # requiring a zsh "reentry" upon arriving in the devShell.
+                    # (ie: `zsh` or `exec zsh -l`, etc.
+                    #
+                    # If using plain nix develop, zsh "reentry" is not required.
+                    export ZDOTDIR=$PWD/.direnv-zsh
+                    mkdir -p "$ZDOTDIR"
+                    rm -f "$ZDOTDIR/.zcompdump"*
 
-                  cat > "$ZDOTDIR/completions.zsh" <<'EOF'
+                    cat > "$ZDOTDIR/completions.zsh" <<'EOF'
                 for p in ${concatStringsSep " " (map (p: "${p}") packages)}; do
                   if [ -d "$p/share/zsh/site-functions" ]; then
                     fpath=("$p/share/zsh/site-functions" $fpath)
@@ -190,7 +200,7 @@ in
                 compinit
                 EOF
 
-                  cat > "$ZDOTDIR/.zshrc" <<'EOF'
+                    cat > "$ZDOTDIR/.zshrc" <<'EOF'
                 if [ -f "$HOME/.zshrc" ]; then
                   source "$HOME/.zshrc"
                 fi
@@ -207,6 +217,7 @@ in
                 echo "To re-enter the completions in this devShell with direnv, run \"zsh\" or similar."
                 echo
                 EOF
+                  fi
               '');
             };
 
@@ -327,8 +338,10 @@ in
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
                     just
                     moreutils
-                    # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a missing features failure
-                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell
+                    # Add a localFlake pin for nufmt and nushell to avoid downstream repo nixpkgs pins
+                    # providing older versions that are incompatible with each other
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell
                     patch
                     ripgrep
                     statix
@@ -440,7 +453,7 @@ in
           "menu-${id}" = (pkgs.writeShellApplication
             {
               name = "menu-${id}";
-              runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell];
+              runtimeInputs = [localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell];
 
               text = let
                 minWidth =

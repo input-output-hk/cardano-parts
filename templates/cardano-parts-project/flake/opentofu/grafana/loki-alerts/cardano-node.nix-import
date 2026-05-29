@@ -1,0 +1,19 @@
+{
+  namespace = "cardano";
+  name = "cardano-node-loki";
+  interval = "1m";
+  rule = [
+    {
+      alert = "cardano_node_mempool_hard_timeouts_detected_loki";
+      # Alert on any hard mempool timeout log entries over a 1-hour lookback window.
+      # This is a log-based equivalent of the metrics alert, as the metrics for hard mempool timeouts are currently broken.
+      expr = ''sum by (instance) (count_over_time({systemd_unit="cardano-node.service"} |= "ExnMempoolTimeout" [1h])) > 0'';
+      for = "1m";
+      labels = {severity = "page";};
+      annotations = {
+        summary = "{{$labels.instance}}: cardano-node mempool hard timeouts detected in logs.";
+        description = "{{$labels.instance}}: cardano-node logs contain {{ printf \"%.0f\" $value }} ExnMempoolTimeout entries in the past hour.";
+      };
+    }
+  ];
+}
