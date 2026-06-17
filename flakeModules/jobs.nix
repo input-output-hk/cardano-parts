@@ -100,6 +100,20 @@ in {
         # shellcheck disable=SC2034
         CARDANO_CLI=("''${CARDANO_CLI_NO_ERA[@]}" "''${ERA_CMD:+$ERA_CMD}")
 
+        # The dijkstra era is not yet wired through the cardano-cli
+        # `compatible` command group, but the top-level dijkstra era commands
+        # work directly.  Similarly, `latest` still aliases conway, so
+        # era-typed artifacts (certs, gov actions, votes, tx bodies) must be
+        # created with the dijkstra era commands to match the node era.
+        # shellcheck disable=SC2034
+        if [ "''${ERA_CMD:-}" = "dijkstra" ]; then
+          CARDANO_CLI_COMPAT=("''${CARDANO_CLI_NO_ERA[@]}" "dijkstra")
+          CARDANO_CLI_LATEST=("''${CARDANO_CLI_NO_ERA[@]}" "dijkstra")
+        else
+          CARDANO_CLI_COMPAT=("''${CARDANO_CLI_NO_ERA[@]}" "compatible" "''${ERA_CMD:-alonzo}")
+          CARDANO_CLI_LATEST=("''${CARDANO_CLI_NO_ERA[@]}" "latest")
+        fi
+
         # Use a cardano-cli breaking change marker to handle version specific breaking changes
         if [ "$(printf "%s\n10.11.0.0" "$("''${CARDANO_CLI_NO_ERA[@]}" --version)" | sort -V | head -n 1)" = "10.11.0.0" ]; then
           # shellcheck disable=SC2034
@@ -181,7 +195,7 @@ in {
           TARGET_EPOCH="$1"
 
           if [ "$CARDANO_CLI_BREAKING" = "true" ]; then
-            "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" governance action create-protocol-parameters-update \
+            "''${CARDANO_CLI_COMPAT[@]}" governance action create-protocol-parameters-update \
               --epoch "$TARGET_EPOCH" \
               "''${PROPOSAL_ARGS[@]}" \
               "''${PROPOSAL_KEY_ARGS[@]}" \
@@ -194,7 +208,7 @@ in {
               --out-file update.proposal
           fi
 
-          "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
+          "''${CARDANO_CLI_COMPAT[@]}" transaction signed-transaction \
             --tx-in "$TXIN" \
             --tx-out "$CHANGE_ADDRESS+$CHANGE" \
             --fee "$FEE" \
@@ -1113,7 +1127,7 @@ in {
               ERA_MOD="stake-"
             fi
 
-            "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
+            "''${CARDANO_CLI_COMPAT[@]}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
               --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
               --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
               --out-file "$POOL_NAME"-reward-delegation.cert
@@ -1148,8 +1162,8 @@ in {
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-reward-stake.skey")")
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-cold.skey")")
 
-            if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
-              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
+            if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
+              "''${CARDANO_CLI_COMPAT[@]}" transaction signed-transaction \
                 --tx-in "$TXIN" \
                 --tx-out "$CHANGE_ADDRESS+$CHANGE" \
                 --fee "$FEE" \
@@ -1280,20 +1294,20 @@ in {
               fi
 
               # Generate stake registration and delegation certificate
-              if [ "$ERA_CMD" = "conway" ]; then
+              if [ "$ERA_CMD" = "conway" ] || [ "$ERA_CMD" = "dijkstra" ]; then
                 eraArgs=("--key-reg-deposit-amt" "$STAKE_ADDRESS_DEPOSIT")
               else
                 eraArgs=()
               fi
 
-              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address registration-certificate \
+              "''${CARDANO_CLI_COMPAT[@]}" stake-address registration-certificate \
                 --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                 --out-file "$POOL_NAME"-owner-registration.cert \
                 "''${eraArgs[@]}"
 
               # Include the shared wallet pool rewards registration certificate only once
               if [ "$i" = "0" ]; then
-                "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address registration-certificate \
+                "''${CARDANO_CLI_COMPAT[@]}" stake-address registration-certificate \
                   --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                   --out-file "$POOL_NAME"-reward-registration.cert \
                   "''${eraArgs[@]}"
@@ -1306,13 +1320,13 @@ in {
                 ERA_MOD="stake-"
               fi
 
-              if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
-                "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
+              if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
+                "''${CARDANO_CLI_COMPAT[@]}" stake-address ''${ERA_MOD:+$ERA_MOD}delegation-certificate \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                   --stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --out-file "$POOL_NAME"-owner-delegation.cert
 
-                "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" stake-pool registration-certificate \
+                "''${CARDANO_CLI_COMPAT[@]}" stake-pool registration-certificate \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
                   --pool-cost 500000000 \
@@ -1410,8 +1424,8 @@ in {
               SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-owner-stake.skey")")
             done
 
-            if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
-              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
+            if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
+              "''${CARDANO_CLI_COMPAT[@]}" transaction signed-transaction \
                 --tx-in "$TXIN" \
                 --tx-out "$CHANGE_ADDRESS+$CHANGE" \
                 --fee "$FEE" \
@@ -1647,8 +1661,8 @@ in {
             )
             TXIN=$(echo "$BYRON_UTXO" | jq -r '.txin')
 
-            if [ "''${ERA_CMD:-alonzo}" != "conway" ]; then
-              "''${CARDANO_CLI_NO_ERA[@]}" compatible "''${ERA_CMD:-alonzo}" transaction signed-transaction \
+            if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
+              "''${CARDANO_CLI_COMPAT[@]}" transaction signed-transaction \
                 --tx-in "$TXIN" \
                 --tx-out "$PAYMENT_ADDRESS+$SUPPLY" \
                 --fee "$FEE" \
@@ -1914,7 +1928,7 @@ in {
               fi
             fi
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest governance action "$ACTION" \
+            "''${CARDANO_CLI_LATEST[@]}" governance action "$ACTION" \
               --testnet \
               "''${DEPOSIT_STAKE_KEY_ARGS[@]}" \
               --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
@@ -1958,7 +1972,7 @@ in {
             BUILD_TX_ARGS+=("--proposal-file" "$ACTION".action)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$STAKE_KEY".skey)")
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
+            "''${CARDANO_CLI_LATEST[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -1966,7 +1980,7 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-"$ACTION".txbody
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
+            "''${CARDANO_CLI_LATEST[@]}" transaction sign \
               --tx-body-file tx-"$ACTION".txbody \
               --out-file tx-"$ACTION".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
@@ -2036,7 +2050,7 @@ in {
                 --testnet-magic "$TESTNET_MAGIC"
             )
             # TODO: make work with other actions than constitution
-            "''${CARDANO_CLI_NO_ERA[@]}" latest governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
+            "''${CARDANO_CLI_LATEST[@]}" governance vote create "''${VOTE_ARGS[@]}" --out-file "$ROLE".vote
 
             # Generate transaction
             TXIN=$(
@@ -2050,7 +2064,7 @@ in {
             BUILD_TX_ARGS+=("--vote-file" "$ROLE".vote)
             SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$VOTE_KEY".skey)")
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
+            "''${CARDANO_CLI_LATEST[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -2058,7 +2072,7 @@ in {
               --testnet-magic "$TESTNET_MAGIC" \
               --out-file tx-vote-"$ROLE".txbody
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
+            "''${CARDANO_CLI_LATEST[@]}" transaction sign \
               --tx-body-file tx-vote-"$ROLE".txbody \
               --out-file tx-vote-"$ROLE".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
@@ -2142,23 +2156,23 @@ in {
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file "$DREP_DIR"/drep-"$INDEX".id
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address registration-certificate \
+            "''${CARDANO_CLI_LATEST[@]}" stake-address registration-certificate \
               --key-reg-deposit-amt "$STAKE_DEPOSIT" \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --out-file drep-"$INDEX"-stake.cert
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest governance drep registration-certificate \
+            "''${CARDANO_CLI_LATEST[@]}" governance drep registration-certificate \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --key-reg-deposit-amt "$DREP_DEPOSIT" \
               --out-file drep-"$INDEX"-drep.cert
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address vote-delegation-certificate \
+            "''${CARDANO_CLI_LATEST[@]}" stake-address vote-delegation-certificate \
               --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
               --drep-verification-key-file "$DREP_DIR"/drep-"$INDEX".vkey \
               --out-file drep-"$INDEX"-vote-delegation.cert
 
             if [ -n "''${POOL_DELEG_ID:-}" ]; then
-              "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address stake-delegation-certificate \
+              "''${CARDANO_CLI_LATEST[@]}" stake-address stake-delegation-certificate \
                 --stake-verification-key-file "$DREP_DIR"/stake-"$INDEX".vkey \
                 --stake-pool-id "$POOL_DELEG_ID" \
                 --out-file drep-"$INDEX"-stake-delegation.cert
@@ -2181,7 +2195,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
+            "''${CARDANO_CLI_LATEST[@]}" transaction build \
               --tx-in "$TXIN" \
               --tx-out "$DREP_ADDRESS"+"$VOTING_POWER" \
               --change-address "$CHANGE_ADDRESS" \
@@ -2193,7 +2207,7 @@ in {
               "''${BUILD_TX_ARGS[@]}" \
               --out-file tx-drep-"$INDEX".txbody
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
+            "''${CARDANO_CLI_LATEST[@]}" transaction sign \
               --tx-body-file tx-drep-"$INDEX".txbody \
               --out-file tx-drep-"$INDEX".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
@@ -2230,7 +2244,7 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest governance committee create-hot-key-authorization-certificate \
+            "''${CARDANO_CLI_LATEST[@]}" governance committee create-hot-key-authorization-certificate \
               --cold-verification-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-cold.vkey)" \
               --hot-verification-key-file "$(decrypt_check "$CC_DIR"/cc-"$INDEX"-hot.vkey)" \
               --out-file cc-"$INDEX"-reg.cert
@@ -2250,7 +2264,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
+            "''${CARDANO_CLI_LATEST[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -2258,7 +2272,7 @@ in {
               --certificate cc-"$INDEX"-reg.cert \
               --out-file tx-cc-"$INDEX".txbody
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
+            "''${CARDANO_CLI_LATEST[@]}" transaction sign \
               --tx-body-file tx-cc-"$INDEX".txbody \
               --out-file tx-cc-"$INDEX".txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
@@ -2323,7 +2337,7 @@ in {
             ${secretsFns}
             ${selectCardanoCli}
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest stake-address vote-delegation-certificate \
+            "''${CARDANO_CLI_LATEST[@]}" stake-address vote-delegation-certificate \
               --stake-verification-key-file "$(decrypt_check "$STAKE_KEY".vkey)" \
               --drep-verification-key-file "$(decrypt_check "$DREP_KEY".vkey)" \
               --out-file drep-delegation.cert
@@ -2343,7 +2357,7 @@ in {
               | jq -r '(to_entries | sort_by(.value.value.lovelace) | reverse)[0].key'
             )
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction build \
+            "''${CARDANO_CLI_LATEST[@]}" transaction build \
               --tx-in "$TXIN" \
               --change-address "$CHANGE_ADDRESS" \
               --witness-override "$WITNESSES" \
@@ -2351,7 +2365,7 @@ in {
               --certificate drep-delegation.cert \
               --out-file tx-drep-delegation.txbody
 
-            "''${CARDANO_CLI_NO_ERA[@]}" latest transaction sign \
+            "''${CARDANO_CLI_LATEST[@]}" transaction sign \
               --tx-body-file tx-drep-delegation.txbody \
               --out-file tx-drep-delegation.txsigned \
               --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
