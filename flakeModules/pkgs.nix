@@ -462,11 +462,11 @@ in
 
         pkgsSubmodule = let
           # inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
-          blockperf = caPkgs.blockperf-cardano-foundation-blockperf-main-626ad7b;
+          blockperf = caPkgs.blockperf-johnalotoski-blockperf-main-e77333d;
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
-          dbsync-release = "input-output-hk-cardano-db-sync-13-7-1-0-ef00c76";
-          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-1-0-ef00c76";
+          dbsync-release = "input-output-hk-cardano-db-sync-13-7-2-1-db8cdf6";
+          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-2-1-db8cdf6";
 
           faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
