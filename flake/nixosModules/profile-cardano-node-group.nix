@@ -91,9 +91,13 @@
         inherit (env) edgeNodes useLedgerAfterSlot;
       };
     in
-      if (elem cfgNode.useNewTopology [null true])
-      then p2pTopology
-      else legacyTopology;
+      if cfgNode ? useNewTopology
+        then
+          if (elem cfgNode.useNewTopology [null true])
+            then p2pTopology
+            else legacyTopology
+          else
+            p2pTopology;
 
     iRange = range 0 (cfgNode.instances - 1);
     isMithrilEnv = cfgMithril.enable && elem environmentName cfgMithril.allowedNetworks;
@@ -284,16 +288,6 @@
             else cardanoLib.environments.${environmentName}.nodeConfig
           );
 
-          # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
-          # As of cardano-node version 10.6.0, useNewTopology is deprecated and will be removed upon Dijkstra hard fork.
-          # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the null case.
-          # Once ouroboros-network >= 0.22.2 is merged into node with 10.6.0, useNewTopology should be set to null.
-          useNewTopology =
-            if optNode.useNewTopology.type.description == "boolean"
-            then mkDefault true
-            # When ouroboros-network >= 0.22.2 is in use:
-            else mkDefault null;
-
           useSystemdReload = mkDefault true;
 
           topology = mkDefault (
@@ -408,6 +402,16 @@
           ];
 
           systemdSocketActivation = false;
+        } // optionalAttrs (optNode ? useNewTopology) {
+          # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
+          # As of cardano-node version 10.6.0, useNewTopology is deprecated and will be removed upon Dijkstra hard fork.
+          # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the null case.
+          # Once ouroboros-network >= 0.22.2 is merged into node with 10.6.0, useNewTopology should be set to null.
+          useNewTopology =
+            if optNode.useNewTopology.type.description == "boolean"
+            then mkDefault true
+            # When ouroboros-network >= 0.22.2 is in use:
+            else mkDefault null;
         };
 
         cardano-tracer = mkIf (nixos.config.services ? cardano-tracer && !cfgNode.useLegacyTracing) {
