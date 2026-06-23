@@ -115,7 +115,10 @@
               --magic="$TESTNET_MAGIC" \
               --quiet \
               --json); then
-            CARDANO_NODE_PING_LATENCY=$(jq '.pongs[-1].sample * 1000' <<< "$CARDANO_NODE_PING_OUPUT")
+            # Check ping output for old json struct containing `pongs` and new json struct on node >= 11.1.0 w/o `pongs`
+            CARDANO_NODE_PING_LATENCY=$(
+              jq -s '[ .[] | (.pongs // [.])[] | select(has("sample")) ] | (.[-1].mean // empty) * 1000' <<< "$CARDANO_NODE_PING_OUTPUT"
+            )
           fi
 
           COREDUMPS=$(coredumpctl -S -1h --json=pretty 2>&1 || true)
