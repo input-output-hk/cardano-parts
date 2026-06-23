@@ -1043,11 +1043,11 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1780384547,
-        "narHash": "sha256-5fUuXlKpu4YbYXwVfy81bw666XBrEY6Osn9smFid1p8=",
+        "lastModified": 1782184444,
+        "narHash": "sha256-zzF4i5+v0jPYmMNp1FWqLKm333Ds3izXltuM7Sa2I0s=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "5afdcc187ab0ff49da63d4cade3a0c20d06f15cc",
+        "rev": "d815bd05b54f72e38297ab9a5b4b2d50c75cc262",
         "type": "github"
       },
       "original": {
@@ -1065,11 +1065,11 @@
         "sodium": "sodium_3"
       },
       "locked": {
-        "lastModified": 1780384547,
-        "narHash": "sha256-5fUuXlKpu4YbYXwVfy81bw666XBrEY6Osn9smFid1p8=",
+        "lastModified": 1782184444,
+        "narHash": "sha256-zzF4i5+v0jPYmMNp1FWqLKm333Ds3izXltuM7Sa2I0s=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "5afdcc187ab0ff49da63d4cade3a0c20d06f15cc",
+        "rev": "d815bd05b54f72e38297ab9a5b4b2d50c75cc262",
         "type": "github"
       },
       "original": {
