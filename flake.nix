@@ -63,6 +63,8 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/leios";
 
+    blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
+
     # For tmp local testing pins
     cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
 
