@@ -61,7 +61,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
 
     iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/leios";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/node-11.1";
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
@@ -101,7 +101,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
       flake = false;
     };
 
@@ -126,7 +126,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
       flake = false;
     };
 
@@ -136,7 +136,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
       flake = false;
     };
 
