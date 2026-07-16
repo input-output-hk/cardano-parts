@@ -1,3 +1,4 @@
+import? 'scripts/recipes/ai.just'
 import? 'scripts/recipes/aws.just'
 import? 'scripts/recipes/demo.just'
 import? 'scripts/recipes/custom.just'
