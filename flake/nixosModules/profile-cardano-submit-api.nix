@@ -11,7 +11,11 @@
 #   * It waits for the node socket on pre-start and bounds restarts so persistent failures alert
 #   * The upstream cardano-submit-api nixos service module should still be imported separately
 {moduleWithSystem, ...}: {
-  flake.nixosModules.profile-cardano-submit-api = moduleWithSystem (_: nixos @ {pkgs, lib, ...}: let
+  flake.nixosModules.profile-cardano-submit-api = moduleWithSystem (_: nixos @ {
+    pkgs,
+    lib,
+    ...
+  }: let
     inherit (groupCfg.meta) environmentName;
     inherit (perNodeCfg.pkgs) cardano-node-pkgs cardano-submit-api;
 

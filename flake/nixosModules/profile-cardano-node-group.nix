@@ -92,12 +92,11 @@
       };
     in
       if cfgNode ? useNewTopology
-        then
-          if (elem cfgNode.useNewTopology [null true])
-            then p2pTopology
-            else legacyTopology
-          else
-            p2pTopology;
+      then
+        if (elem cfgNode.useNewTopology [null true])
+        then p2pTopology
+        else legacyTopology
+      else p2pTopology;
 
     iRange = range 0 (cfgNode.instances - 1);
     isMithrilEnv = cfgMithril.enable && elem environmentName cfgMithril.allowedNetworks;
@@ -267,152 +266,154 @@
       # networking.firewall = {allowedTCPPorts = [cardanoNodePort];};
 
       services = {
-        cardano-node = {
-          enable = true;
-          environment = environmentName;
+        cardano-node =
+          {
+            enable = true;
+            environment = environmentName;
 
-          # Setting environments to the perNode cardanoLib default ensures
-          # that nodeConfig is obtained from perNode cardanoLib iohk-nix pin.
-          environments = mkDefault cardanoLib.environments;
+            # Setting environments to the perNode cardanoLib default ensures
+            # that nodeConfig is obtained from perNode cardanoLib iohk-nix pin.
+            environments = mkDefault cardanoLib.environments;
 
-          package = mkDefault cardano-node;
-          cardanoNodePackages = mkDefault cardano-node-pkgs;
-          nodeId = mkDefault nodeId;
+            package = mkDefault cardano-node;
+            cardanoNodePackages = mkDefault cardano-node-pkgs;
+            nodeId = mkDefault nodeId;
 
-          # Time to move to the new tracing system as default!
-          useLegacyTracing = mkDefault false;
+            # Time to move to the new tracing system as default!
+            useLegacyTracing = mkDefault false;
 
-          nodeConfig = mkForce (
-            if cfgNode.useLegacyTracing
-            then cardanoLib.environments.${environmentName}.nodeConfigLegacy
-            else cardanoLib.environments.${environmentName}.nodeConfig
-          );
+            nodeConfig = mkForce (
+              if cfgNode.useLegacyTracing
+              then cardanoLib.environments.${environmentName}.nodeConfigLegacy
+              else cardanoLib.environments.${environmentName}.nodeConfig
+            );
 
-          useSystemdReload = mkDefault true;
+            useSystemdReload = mkDefault true;
 
-          topology = mkDefault (
-            if
-              (cfgNode.producers == [])
-              && cfgNode.publicProducers == []
-              && cfgNode.bootstrapPeers == null
-              && (flatten (map cfgNode.instanceProducers iRange)) == []
-              && (flatten (map cfgNode.instancePublicProducers iRange)) == []
-            then mkTopology cardanoLib.environments.${environmentName}
-            else null
-          );
+            topology = mkDefault (
+              if
+                (cfgNode.producers == [])
+                && cfgNode.publicProducers == []
+                && cfgNode.bootstrapPeers == null
+                && (flatten (map cfgNode.instanceProducers iRange)) == []
+                && (flatten (map cfgNode.instancePublicProducers iRange)) == []
+              then mkTopology cardanoLib.environments.${environmentName}
+              else null
+            );
 
-          # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the acceptAt case.
-          tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) (
-            if cfgTracer ? acceptAt
-            then mkDefault cfgTracer.acceptAt
-            else mkDefault cfgTracer.acceptingSocket
-          );
+            # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the acceptAt case.
+            tracerSocketPathConnect = mkIf (!cfgNode.useLegacyTracing) (
+              if cfgTracer ? acceptAt
+              then mkDefault cfgTracer.acceptAt
+              else mkDefault cfgTracer.acceptingSocket
+            );
 
-          hostAddr = mkDefault hostAddr;
+            hostAddr = mkDefault hostAddr;
 
-          # Node will start on ipv4 only machines with a binding to ::/0, but it
-          # will also then consume resources unnecessarily by trying to bind to
-          # other ipv6 peers.
-          ipv6HostAddr = mkIf ((nixos.config.ips.publicIpv6 or "") != "") hostAddrIpv6;
+            # Node will start on ipv4 only machines with a binding to ::/0, but it
+            # will also then consume resources unnecessarily by trying to bind to
+            # other ipv6 peers.
+            ipv6HostAddr = mkIf ((nixos.config.ips.publicIpv6 or "") != "") hostAddrIpv6;
 
-          port = mkDefault cardanoNodePort;
-          producers = mkDefault [];
-          publicProducers = mkDefault [];
+            port = mkDefault cardanoNodePort;
+            producers = mkDefault [];
+            publicProducers = mkDefault [];
 
-          extraNodeConfig =
-            {
-              # The maximum number of used peers when fetching newly forged blocks
-              MaxConcurrencyDeadline = 4;
-            }
-            // optionalAttrs cfgNode.useLegacyTracing {
-              UseTraceDispatcher = false;
+            extraNodeConfig =
+              {
+                # The maximum number of used peers when fetching newly forged blocks
+                MaxConcurrencyDeadline = 4;
+              }
+              // optionalAttrs cfgNode.useLegacyTracing {
+                UseTraceDispatcher = false;
 
-              hasPrometheus = [cfgNode.hostAddr cardanoNodePrometheusExporterPort];
+                hasPrometheus = [cfgNode.hostAddr cardanoNodePrometheusExporterPort];
 
-              # Use Journald output
-              setupScribes = [
-                {
-                  scKind = "JournalSK";
-                  scName = "cardano";
-                  scFormat = "ScText";
-                }
-              ];
+                # Use Journald output
+                setupScribes = [
+                  {
+                    scKind = "JournalSK";
+                    scName = "cardano";
+                    scFormat = "ScText";
+                  }
+                ];
 
-              defaultScribes = [["JournalSK" "cardano"]];
-            }
-            # Remove this optionalAttrs block once 10.6.0 is the latest full release
-            // optionalAttrs (
-              !(versionAtLeast cfgNode.nodeConfig.MinNodeVersion "10.6.0") && (isString cfgNode.operationalCertificate)
-            ) {
-              PeerSharing = false;
-              TargetNumberOfKnownPeers = 100;
-              TargetNumberOfRootPeers = 100;
+                defaultScribes = [["JournalSK" "cardano"]];
+              }
+              # Remove this optionalAttrs block once 10.6.0 is the latest full release
+              // optionalAttrs (
+                !(versionAtLeast cfgNode.nodeConfig.MinNodeVersion "10.6.0") && (isString cfgNode.operationalCertificate)
+              ) {
+                PeerSharing = false;
+                TargetNumberOfKnownPeers = 100;
+                TargetNumberOfRootPeers = 100;
+              };
+
+            extraNodeInstanceConfig = i:
+              optionalAttrs (!cfgNode.useLegacyTracing) {
+                TraceOptionNodeName =
+                  if (i == 0)
+                  then name
+                  else "${name}-${toString i}";
+              };
+
+            extraServiceConfig = _: {
+              # Allow up to 10 failures with 30 second restarts in a 15 minute window
+              # before entering failure state and alerting
+              startLimitBurst = 10;
+              startLimitIntervalSec = 900;
+
+              serviceConfig = {
+                # The ~2.3% difference between M and MiB units is already included in the scaling factor
+                MemoryMax = "${toString (1.15 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M";
+                LimitNOFILE = "65535";
+
+                # Ensure quick restarts on any condition
+                Restart = "always";
+                RestartSec = 30;
+
+                # Node uses SIGINT rather than the systemd default of SIGTERM for clean shutdown
+                KillSignal = "SIGINT";
+              };
             };
 
-          extraNodeInstanceConfig = i:
-            optionalAttrs (!cfgNode.useLegacyTracing) {
-              TraceOptionNodeName =
-                if (i == 0)
-                then name
-                else "${name}-${toString i}";
-            };
+            # These RTS changes from nixos upstream defaults: `-N2`
+            # improving chainsync speed when -N >= 4 and minimize blockperf measured
+            # late delta_headers >= 10 seconds.  The primary factors in the late
+            # delta_header reduction were observed to be:
+            #   * -N >= 4 with a sufficiently sized machine
+            #   * -M is sufficiently high. ex: ~13 -> 24 GiB on mainnet lowered late blocks significantly
+            #
+            # -qg1 -qb1 is adopted as recommended for newer GHC compiler usage:
+            #
+            #
+            # Refs:
+            #   https://github.com/IntersectMBO/cardano-node/pull/6222
+            #   https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
+            rtsArgs = [
+              # See the defn of cores above -- this will be constrained between 2 and 8, inclusive
+              "-N${toString cores}"
+              "-I0"
+              "-A16m"
+              "-qg1"
+              "-qb1"
+              "--disable-delayed-os-memory-return"
+              "-M${toString (1.024 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M"
+            ];
 
-          extraServiceConfig = _: {
-            # Allow up to 10 failures with 30 second restarts in a 15 minute window
-            # before entering failure state and alerting
-            startLimitBurst = 10;
-            startLimitIntervalSec = 900;
-
-            serviceConfig = {
-              # The ~2.3% difference between M and MiB units is already included in the scaling factor
-              MemoryMax = "${toString (1.15 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M";
-              LimitNOFILE = "65535";
-
-              # Ensure quick restarts on any condition
-              Restart = "always";
-              RestartSec = 30;
-
-              # Node uses SIGINT rather than the systemd default of SIGTERM for clean shutdown
-              KillSignal = "SIGINT";
-            };
+            systemdSocketActivation = false;
+          }
+          // optionalAttrs (optNode ? useNewTopology) {
+            # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
+            # As of cardano-node version 10.6.0, useNewTopology is deprecated and will be removed upon Dijkstra hard fork.
+            # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the null case.
+            # Once ouroboros-network >= 0.22.2 is merged into node with 10.6.0, useNewTopology should be set to null.
+            useNewTopology =
+              if optNode.useNewTopology.type.description == "boolean"
+              then mkDefault true
+              # When ouroboros-network >= 0.22.2 is in use:
+              else mkDefault null;
           };
-
-          # These RTS changes from nixos upstream defaults: `-N2`
-          # improving chainsync speed when -N >= 4 and minimize blockperf measured
-          # late delta_headers >= 10 seconds.  The primary factors in the late
-          # delta_header reduction were observed to be:
-          #   * -N >= 4 with a sufficiently sized machine
-          #   * -M is sufficiently high. ex: ~13 -> 24 GiB on mainnet lowered late blocks significantly
-          #
-          # -qg1 -qb1 is adopted as recommended for newer GHC compiler usage:
-          #
-          #
-          # Refs:
-          #   https://github.com/IntersectMBO/cardano-node/pull/6222
-          #   https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/runtime_control.html
-          rtsArgs = [
-            # See the defn of cores above -- this will be constrained between 2 and 8, inclusive
-            "-N${toString cores}"
-            "-I0"
-            "-A16m"
-            "-qg1"
-            "-qb1"
-            "--disable-delayed-os-memory-return"
-            "-M${toString (1.024 * cfgNode.totalMaxHeapSizeMiB / cfgNode.instances)}M"
-          ];
-
-          systemdSocketActivation = false;
-        } // optionalAttrs (optNode ? useNewTopology) {
-          # Fall back to the iohk-nix environment base topology definition if no custom producers are defined.
-          # As of cardano-node version 10.6.0, useNewTopology is deprecated and will be removed upon Dijkstra hard fork.
-          # Once 10.6.0 becomes a full release and not only a pre-release, the if statement here can be simplified to only set the null case.
-          # Once ouroboros-network >= 0.22.2 is merged into node with 10.6.0, useNewTopology should be set to null.
-          useNewTopology =
-            if optNode.useNewTopology.type.description == "boolean"
-            then mkDefault true
-            # When ouroboros-network >= 0.22.2 is in use:
-            else mkDefault null;
-        };
 
         cardano-tracer = mkIf (nixos.config.services ? cardano-tracer && !cfgNode.useLegacyTracing) {
           enable = mkDefault true;
