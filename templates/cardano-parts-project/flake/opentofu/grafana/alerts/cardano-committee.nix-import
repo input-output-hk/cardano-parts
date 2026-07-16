@@ -39,7 +39,8 @@ in {
       # Both auth states page because both mean "this member cannot
       # vote right now"; annotations differentiate the runbook.
       alert = "cardano_cc_hot_key_unauthorized";
-      expr = ''cardano_cc_member_hot_cred_status{status="MemberNotAuthorized"} == 1'';
+      # Preprod permanently expired members with not authorized hot key: 2f4a6c6f|6095e643|94f51c79
+      expr = ''cardano_cc_member_hot_cred_status{status="MemberNotAuthorized",cold_credential!~"scriptHash-(2f4a6c6f|6095e643|94f51c79).*"} == 1'';
       labels.severity = "page";
       annotations = {
         summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} has no authorized hot key.";
@@ -48,7 +49,8 @@ in {
     }
     {
       alert = "cardano_cc_hot_key_resigned";
-      expr = ''cardano_cc_member_hot_cred_status{status="MemberResigned"} == 1'';
+      # Mainnet Cardano Atlantic Council resignation: https://cardanoscan.io/ccmember/cc_cold1zv6fu40c86d0yjqnum9ndr0k4qxn39gm9ge5mlxly6q42kqmjmzyj, scriptHash-349e55f8.*
+      expr = ''cardano_cc_member_hot_cred_status{status="MemberResigned",cold_credential!~"scriptHash-(349e55f8).*"} == 1'';
       labels.severity = "page";
       annotations = {
         summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} has resigned.";
@@ -57,7 +59,9 @@ in {
     }
     {
       alert = "cardano_cc_member_expired";
-      expr = ''cardano_cc_member_state{state="Expired"} == 1'';
+      # Preview permanently expired but unremoved members are: 01a3c5b09|267261f1|60a7328a|a0790327|ff9babf2
+      # Preprod permanently expired but unremoved members are: 2f4a6c6f|3061a5d9|5098dfd0|5a71f17f|6095e643|70d20c66|78299eea|94c0de47|94f51c79|a6a5e006|ca2abaad
+      expr = ''cardano_cc_member_state{state="Expired",cold_credential!~"scriptHash-(01a3c5b09|267261f1|60a7328a|a0790327|ff9babf2|2f4a6c6f|3061a5d9|5098dfd0|5a71f17f|6095e643|70d20c66|78299eea|94c0de47|94f51c79|a6a5e006|ca2abaad).*"} == 1'';
       labels.severity = "page";
       annotations = {
         summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} term has expired.";
