@@ -984,6 +984,10 @@ template-patch FILE:
   patch "{{FILE}}" < <(echo "$PATCH_FILE")
   git add -p "{{FILE}}"
 
+# Batch pull upstream template changes: curate a file list, then copy new files and pairwise-diff the rest
+upstream-diff-all UPSTREAM=templatePath *ARGS:
+  nu scripts/upstream-diff-all.nu "{{UPSTREAM}}" {{ARGS}}
+
 # Run tofu for bootstrap, cluster or grafana workspace
 tofu *ARGS:
   #!/usr/bin/env bash
