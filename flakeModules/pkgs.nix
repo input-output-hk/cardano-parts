@@ -474,7 +474,9 @@ in
           # faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
           faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
-          metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
+          # metadata-pkg = pkg: caPkgs."${pkg}-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
+          metadata-pkg = pkg: localFlake.inputs.cardano-metadata-service.packages.${system}.${pkg};
+
           mithril-release = "input-output-hk-mithril-2617-0-2478748";
           # The current mithril unstable tag has broken nix builds, so set to the current release until fixed
           # mithril-pre-release = "input-output-hk-mithril-unstable-b31ce25";
@@ -523,10 +525,10 @@ in
               (mkPkg "db-truncater-ng" (node-pre-release "db-truncater"))
               (mkPkg "isd" caPkgs.isd-isd-project-isd-v0-6-1-a4a5099)
               (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v1-90-0-50c81a8)
-              (mkPkg "metadata-server" caPkgs."metadata-server-${metadata-server-release}")
-              (mkPkg "metadata-sync" caPkgs."metadata-sync-${metadata-server-release}")
-              (mkPkg "metadata-validator-github" caPkgs."metadata-validator-github-${metadata-server-release}")
-              (mkPkg "metadata-webhook" caPkgs."metadata-webhook-${metadata-server-release}")
+              (mkPkg "metadata-server" (metadata-pkg "metadata-server"))
+              (mkPkg "metadata-sync" (metadata-pkg "metadata-sync"))
+              (mkPkg "metadata-validator-github" (metadata-pkg "metadata-validator-github"))
+              (mkPkg "metadata-webhook" (metadata-pkg "metadata-webhook"))
               (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs."mithril-client-cli-${mithril-release}" {meta.mainProgram = "mithril-client";}))
               (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs."mithril-client-cli-${mithril-pre-release}" {meta.mainProgram = "mithril-client";}))
               (mkPkg "mithril-signer" (recursiveUpdate caPkgs."mithril-signer-${mithril-release}" {meta.mainProgram = "mithril-signer";}))
@@ -534,7 +536,7 @@ in
               (mkPkg "orchestrator-cli" caPkgs."orchestrator-cli-${credential-manager-release}")
               (mkPkg "snapshot-converter" (node-release "snapshot-converter"))
               (mkPkg "snapshot-converter-ng" (node-pre-release "snapshot-converter"))
-              (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs."token-metadata-creator-${metadata-server-release}" {meta.mainProgram = "token-metadata-creator";}))
+              (mkPkg "token-metadata-creator" (recursiveUpdate (metadata-pkg "token-metadata-creator") {meta.mainProgram = "token-metadata-creator";}))
               (mkPkg "tx-bundle" caPkgs."tx-bundle-${credential-manager-release}")
             ];
           };
