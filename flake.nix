@@ -105,9 +105,16 @@
       flake = false;
     };
 
+    # TEMP OVERRIDE (see the metadata-pkg helper in flakeModules/pkgs.nix):
+    # build the metadata NixOS module *and* packages from the webhook-hardening
+    # PR until it ships in capkgs.
+    # Revert once capkgs has the new release: restore the two commented lines
+    # (tag + flake = false) here, and flip metadata-pkg back to its caPkgs line
+    # in pkgs.nix (bumping the release tag).
     cardano-metadata-service = {
-      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
-      flake = false;
+      url = "github:input-output-hk/offchain-metadata-tools/erikd/more-fixes";
+      # url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
+      # flake = false;
     };
 
     cardano-ogmios-service = {
