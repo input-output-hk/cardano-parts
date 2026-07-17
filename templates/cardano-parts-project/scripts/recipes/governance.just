@@ -622,7 +622,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
         .[2] // {}
           | to_entries as \$entries
           | if (\$entries | length) > 0
-            then []
+            then \$entries[]
               | \"Adding $GREEN\(.key)-\(.value)\"
               | split(\"-\")
               | \"\(.[0])$OFF ► $BLUE\(.[1])$OFF (max term epoch \(.[2]))\"
@@ -839,6 +839,29 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   esac
 
   echo -e "Full approval of the proposal: $TOTAL_ACCEPT_ICON"
+
+# Sign a CC rationale doc, upload it to IPFS and print the anchor; see scripts/playground/rationale.nu
+rationale *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  exec scripts/playground/rationale.nu {{ARGS}}
+
+# Unified interactive voting across CC, DRep and SPO roles; see scripts/playground/vote.nu --help
+vote ENV ACTION_ID ACTION_IDX *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{checkEnvWithoutOverride}}
+
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^leios$|^demo$|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, leios, demo and sanchonet are supported"
+    exit 1
+  fi
+
+  # Export the node socket + testnet magic the voting tool expects.
+  source <(just set-default-cardano-env "{{ENV}}")
+  echo
+
+  exec scripts/playground/vote.nu "{{ENV}}" "{{ACTION_ID}}" "{{ACTION_IDX}}" {{ARGS}}
 
 # Generate and submit an SPO vote on a gov action
 vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
