@@ -840,13 +840,13 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
   echo -e "Full approval of the proposal: $TOTAL_ACCEPT_ICON"
 
-# Sign a CC rationale doc, upload it to IPFS and print the anchor; see scripts/playground/rationale.nu
+# Sign a CC rationale doc, upload it to IPFS and print the anchor; see scripts/gov/rationale.nu
 rationale *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
-  exec scripts/playground/rationale.nu {{ARGS}}
+  exec scripts/gov/rationale.nu {{ARGS}}
 
-# Unified interactive voting across CC, DRep and SPO roles; see scripts/playground/vote.nu --help
+# Unified interactive voting across CC, DRep and SPO roles; see scripts/gov/vote.nu --help
 vote ENV ACTION_ID ACTION_IDX *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -861,7 +861,7 @@ vote ENV ACTION_ID ACTION_IDX *ARGS:
   source <(just set-default-cardano-env "{{ENV}}")
   echo
 
-  exec scripts/playground/vote.nu "{{ENV}}" "{{ACTION_ID}}" "{{ACTION_IDX}}" {{ARGS}}
+  exec scripts/gov/vote.nu "{{ENV}}" "{{ACTION_ID}}" "{{ACTION_IDX}}" {{ARGS}}
 
 # Generate and submit an SPO vote on a gov action
 vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
