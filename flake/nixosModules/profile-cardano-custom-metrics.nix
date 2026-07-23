@@ -108,7 +108,7 @@
             return 0
           }
 
-          if CARDANO_NODE_PING_OUPUT=$(cardano-cli ping \
+          if CARDANO_NODE_PING_OUTPUT=$(cardano-cli ping \
               --count=1 \
               --host=${hostAddr} \
               --port=${toString cardanoNodePort} \
