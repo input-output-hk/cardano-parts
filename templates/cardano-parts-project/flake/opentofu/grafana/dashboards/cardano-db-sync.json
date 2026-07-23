@@ -732,7 +732,7 @@
       "1d"
     ]
   },
-  "timezone": "",
+  "timezone": "utc",
   "title": "Cardano Db Sync: Application metrics",
   "uid": "91001fdb302749c1a7aea0024854cb7f",
   "version": 1,
