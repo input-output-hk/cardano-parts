@@ -3,7 +3,10 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
+#   perSystem.cardano-parts.shell.global.defaultPrePushPkg
 #   perSystem.cardano-parts.shell.global.defaultShell
+#   perSystem.cardano-parts.shell.global.prePushExcludedChecks
+#   perSystem.cardano-parts.shell.global.prePushExtraScript
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultFormatterCfg
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultFormatterCheck
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultFormatterHook
@@ -20,6 +23,9 @@
 #   perSystem.cardano-parts.shell.<global|<id>>.extraPkgs
 #   perSystem.cardano-parts.shell.<global|<id>>.pkgs
 #
+# Attributes configured on flakeModule import:
+#   perSystem.packages.<menu-<id>|pre-push>
+#
 # Attributes optionally configured on flakeModule import depending on above config:
 #   perSystem.checks.<lint|treefmt>
 #   perSystem.devShells.<[default]|<id>>
@@ -32,11 +38,9 @@
 #   * Devshell declared hooks, formatter and env var options, if defined, will override the corresponding globally defined options
 #   * Importers may use perSystem scope config.cardano-parts.shell.<global|<id>>.<pkgs|extraPkgs> defns for mkShell composition
 #   * Nix flake checks and formatter are configured only through the global options (ex: lint and treefmt)
+#   * The pre-push package discovers the flake checks of the repo it runs in at runtime; customize with the global prePush* options
 #   * perSystem attrs are simply accessed through [config.]<...> from within system module context
-{
-  localFlake,
-  withSystem,
-}: flake @ {
+{localFlake}: flake @ {
   self,
   flake-parts-lib,
   lib,
@@ -60,10 +64,91 @@ in
         cfgPkgs = cfg.pkgs;
         flakeCfg = flake.config.flake.cardano-parts;
 
-        withLocal = withSystem system;
         nufmtConfig = pkgs.writeText "nufmt.nuon" ''{indent: 2}'';
         treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
         isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
+
+        # The default pre-push git hook package. Check names are not baked in
+        # at eval time; the script discovers the flake checks of whichever
+        # repo it runs in at runtime, so upstream-internal cardano-parts
+        # checks never leak into downstream repos' hooks.
+        mkPrePush = let
+          checksRef = ".#checks.${escapeShellArg system}";
+        in
+          pkgs.writeShellApplication {
+            name = "pre-push";
+            runtimeInputs = with pkgs; [coreutils gitMinimal gnugrep];
+            meta.description = "A pre-push repo check for required secrets encryption, linting and formatting";
+            text =
+              ''
+                IPURPLE='\e[1;95m'
+                IWHITE='\e[1;97m'
+                IREDBK='\e[0;101m'
+                NC='\e[0m'
+                echo -e >&2 "''${IPURPLE}To skip, run git push with --no-verify.''${NC}"
+
+                WARN() {
+                  echo -e "''${IWHITE}''${IREDBK}   *** WARNING: ***   ''${NC}"
+                }
+                TOP=$(git rev-parse --show-toplevel)
+                IPS_FN="ips-DONT-COMMIT.nix"
+                IP_SECRETS="''${TOP}/flake/nixosModules/$IPS_FN"
+
+                if [ "$(git log -m --follow --full-history "$IP_SECRETS" 2> /dev/null | wc -c)" != "0" ]; then
+                  echo
+                  WARN
+                  echo
+                  echo "For the current repo directory of $TOP:"
+                  echo "    The flake/nixosModules/$IPS_FN file has been committed, but it should not be."
+                  echo "    Remove this file from the commit history and try again."
+                  echo
+                  echo "Commit history containing this file:"
+                  git log -m --follow --full-history "$IP_SECRETS"
+                  exit 1
+                fi
+
+                SECRETS_DIR="''${TOP}/secrets"
+                if [ -d "$SECRETS_DIR" ]; then
+                  if [ "$(grep -rL '"data": "ENC' "$SECRETS_DIR" | wc -l)" != "0" ]; then
+                    echo
+                    WARN
+                    echo
+                    echo "The following secrets/ files appear to be un-encrypted or not binary encrypted:"
+                    grep -rL '"data": "ENC' "$SECRETS_DIR"
+                    exit 1
+                  fi
+                fi
+
+                declare -A excluded=(${concatMapStringsSep " " (c: "[${escapeShellArg c}]=1") cfgShell.global.prePushExcludedChecks})
+
+                if ! discovered=$(nix eval ${checksRef} --raw --apply 'checks: builtins.concatStringsSep "\n" (builtins.attrNames checks)'); then
+                  echo
+                  WARN
+                  echo
+                  echo "Unable to evaluate the flake checks of $TOP; fix the flake eval error above and try again."
+                  exit 1
+                fi
+
+                declare -a checks=()
+                while IFS= read -r check; do
+                  [ -z "$check" ] && continue
+                  if [ -n "''${excluded[$check]:-}" ]; then
+                    echo "Skipping excluded flake check: $check"
+                    continue
+                  fi
+                  checks+=(${checksRef}."$check")
+                done <<< "$discovered"
+
+                if [ "''${#checks[@]}" = "0" ]; then
+                  echo "No flake checks found to run."
+                else
+                  set -x
+                  nix build "''${checks[@]}" --no-link
+                  { set +x; } 2> /dev/null
+                fi
+              ''
+              + cfgShell.global.prePushExtraScript;
+          };
 
         globalDefault = isGlobal: default:
           if isGlobal
@@ -125,7 +210,7 @@ in
               default = globalDefault isGlobal ''
                 if ${isPartsRepo}; then
                   if [ -d .git/hooks ]; then
-                    ln -sf ${getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
+                    ln -sf ${getExe cfgShell.global.defaultPrePushPkg} .git/hooks/
                   fi
 
                   # Link .ai directory for Claude Code auto-discovery
@@ -298,10 +383,28 @@ in
               id = "global";
               description = mdDoc "The cardano-parts devShell global configuration options.";
               extraCfg = {
+                defaultPrePushPkg = mkOption {
+                  type = package;
+                  description = mdDoc "The cardano-parts default pre-push git hook package.";
+                  default = mkPrePush;
+                };
+
                 defaultShell = mkOption {
                   type = nullOr (enum definedIds);
                   description = mdDoc "The cardano-parts devShell to set as default, if desired.";
                   default = null;
+                };
+
+                prePushExcludedChecks = mkOption {
+                  type = listOf str;
+                  description = mdDoc "Flake check names the default pre-push package skips during its runtime check discovery.";
+                  default = [];
+                };
+
+                prePushExtraScript = mkOption {
+                  type = lines;
+                  description = mdDoc "Extra script the default pre-push package runs after the flake checks build.";
+                  default = "";
                 };
 
                 pkgs = mkOption {
@@ -536,8 +639,10 @@ in
           # Add optional formatter
           formatter = optionalAttrs cfgShell.global.enableFormatter cfgShell.global.defaultFormatterPkg;
 
-          # Make devshell menu packages menu-<id>
-          packages = foldl' (acc: id: recursiveUpdate acc (mkMenu id)) {} definedIds;
+          # Make devshell menu packages menu-<id> and the pre-push git hook package
+          packages =
+            foldl' (acc: id: recursiveUpdate acc (mkMenu id)) {} definedIds
+            // {pre-push = cfgShell.global.defaultPrePushPkg;};
         };
       });
     };

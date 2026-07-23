@@ -159,7 +159,6 @@
     inputs.flake-parts.lib.mkFlake {inherit inputs;} ({
       flake-parts-lib,
       self,
-      withSystem,
       ...
     }: let
       inherit (flake-parts-lib) importApply;
@@ -177,7 +176,7 @@
       fmLib = ./flakeModules/lib.nix;
       fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
       fmProcessCompose = passLocalFlake ./flakeModules/process-compose.nix {};
-      fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
+      fmShell = passLocalFlake ./flakeModules/shell.nix {};
     in {
       imports =
         recursiveImports [./flake ./perSystem]
