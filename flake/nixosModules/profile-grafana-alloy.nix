@@ -313,28 +313,6 @@ flake @ {moduleWithSystem, ...}: {
 
         '';
 
-        cardanoCustomMetrics = optional (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) ''
-          // Cardano custom metrics integration component
-          prometheus.scrape "integrations_cardano_custom_metrics" {
-            targets = [{
-              __address__ = "${cfgSvc.cardano-custom-metrics.address}:${toString cfgSvc.cardano-custom-metrics.port}",
-              ${concatStringsSep ", \n" (mapAttrsToList (n: v: "${n} = \"${v}\"") cfg.labels)},
-            }]
-            forward_to = [prometheus.remote_write.integrations.receiver]
-            job_name = "integrations/cardano-custom-metrics"
-            params = {
-              format = ["prometheus"],
-              // Filtering here won't work as grafana-alloy encodes the
-              // pattern match. Filtering can be configured from the
-              // profile-cardano-custom-metrics nixosModule with the
-              // `enableFilter` and `filter` options.
-              // filter = ["statsd_cardano*"]
-            }
-            metrics_path = "/api/v1/allmetrics"
-          }
-
-        '';
-
         cardanoDbSync = optional (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) ''
           // Cardano-db-sync integration component
           prometheus.scrape "integrations_cardano_db_sync" {
@@ -723,7 +701,6 @@ flake @ {moduleWithSystem, ...}: {
               #
               + concatStringsSep "\n" (
                 cardanoPartsComponentCfg.blockperf
-                ++ cardanoPartsComponentCfg.cardanoCustomMetrics
                 ++ cardanoPartsComponentCfg.cardanoDbSync
                 ++ cardanoPartsComponentCfg.cardanoFaucet
                 ++ cardanoPartsComponentCfg.cardanoNode

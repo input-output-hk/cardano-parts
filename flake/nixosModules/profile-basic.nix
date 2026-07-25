@@ -153,7 +153,13 @@
 
           cron.enable = true;
           fail2ban.enable = true;
-          netdata.enable = true;
+
+          # Local standby ops collector: netdata keeps recent high-resolution
+          # host metrics queryable on the machine itself (default web UI on
+          # localhost:19999) when the primary alloy to prometheus pipeline is
+          # down or missing. It is intentionally not scraped by alloy.
+          netdata.enable = mkDefault true;
+
           openssh = {
             enable = true;
             settings = {

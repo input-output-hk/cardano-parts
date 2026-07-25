@@ -6,143 +6,169 @@
 #
 # Tips:
 #   * This is a cardano-node add-on to the upstream cardano-node nixos service module
-#   * This module will acquire additional cardano relevant metrics and push them to a statsd server if available
+#   * This module will acquire additional cardano relevant metrics and publish
+#     them as a .prom file into the alloy node-exporter textfile-collector
+#     directory
+#   * Requires profile-grafana-alloy (auto-sets textfileCollectorDirectory
+#     to "/var/lib/node-textfile" via mkDefault when the consumer doesn't
+#     override it)
 #   * The upstream cardano-node nixos service module should still be imported separately
 #   * The cardano-parts profile-cardano-node-group nixosModule should still be imported separately
+#   * Metrics published: cardano_node_metrics_custom_ping_latency_ms
+#   * Coredump detection, previously collected here via coredumpctl and pushed
+#     as a netdata statsd gauge, is now covered by the Loki log alert on
+#     systemd-coredump/kernel journal lines
+#     (templates/cardano-parts-project/flake/opentofu/grafana/alerts-loki/cardano-parts.nix-import);
+#     netdata itself is enabled by profile-basic as a local standby collector
 {
   flake.nixosModules.profile-cardano-custom-metrics = {
     config,
     pkgs,
     lib,
+    options,
     ...
   }: let
-    inherit (lib) mkIf mkOption;
-    inherit (lib.types) bool port str;
+    inherit (lib) mkDefault mkMerge optional;
     inherit (perNodeCfg.meta) cardanoNodePort hostAddr;
     inherit (perNodeCfg.pkgs) cardano-cli;
+    inherit (groupCfg) groupName;
+    inherit (groupCfg.meta) environmentName;
 
+    groupCfg = config.cardano-parts.cluster.group;
     perNodeCfg = config.cardano-parts.perNode;
-    cfg = config.services.cardano-custom-metrics;
+
+    # Detect whether profile-grafana-alloy is co-imported by probing
+    # for an option it declares.  Using `options` (declarations) rather
+    # than `config` (values) avoids circular-evaluation surprises.
+    alloyImported = options ? services && options.services ? alloy;
+
+    # Read the effective textfile directory.  Our mkDefault below
+    # provides "/var/lib/node-textfile" when the consumer doesn't
+    # override it; when alloy isn't imported the dummy value is never
+    # reached because the assertion halts the build first.
+    textfileDirectory =
+      if alloyImported
+      then let
+        val = config.services.alloy.textfileCollectorDirectory;
+      in
+        if val == null
+        then
+          throw ''
+            profile-cardano-custom-metrics requires
+            services.alloy.textfileCollectorDirectory to be non-null.
+            The profile defaults it to "/var/lib/node-textfile" via
+            mkDefault; if you override it to null, pick a real path.
+          ''
+        else val
+      else "/var/lib/node-textfile"; # dummy; assertion fires first
+
+    collect = pkgs.writeShellApplication {
+      name = "cardano-custom-metrics-collect";
+      runtimeInputs = [cardano-cli pkgs.coreutils pkgs.jq];
+      text = ''
+        set -euo pipefail
+        : "''${OUT:?OUT (output .prom path) must be set}"
+        TMP="$OUT.tmp"
+
+        CARDANO_NODE_PING_LATENCY=""
+        if CARDANO_NODE_PING_OUTPUT=$(cardano-cli ping \
+            --count=1 \
+            --host=${hostAddr} \
+            --port=${toString cardanoNodePort} \
+            --magic="$TESTNET_MAGIC" \
+            --quiet \
+            --json); then
+          # Check ping output for old json struct containing `pongs` and new json struct on node >= 11.1.0 w/o `pongs`
+          CARDANO_NODE_PING_LATENCY=$(
+            jq -s '[ .[] | (.pongs // [.])[] | select(has("sample")) ] | (.[-1].mean // empty) * 1000' <<< "$CARDANO_NODE_PING_OUTPUT"
+          )
+        fi
+
+        # `environment` and `group` are baked in here because alloy's
+        # node-exporter relabel chain sets only `instance` and `job` for
+        # textfile-collector samples — there is no scraper-side label source.
+        #
+        # On ping failure the sample is omitted rather than zeroed or left
+        # stale: the series goes absent, and the file mtime still advances so
+        # node_textfile_mtime_seconds staleness is not tripped.
+        {
+          echo "# HELP cardano_node_metrics_custom_ping_latency_ms Mean cardano-cli ping latency in milliseconds against this node's public address and port."
+          echo "# TYPE cardano_node_metrics_custom_ping_latency_ms gauge"
+          if [ -n "$CARDANO_NODE_PING_LATENCY" ]; then
+            echo "cardano_node_metrics_custom_ping_latency_ms{environment=\"${environmentName}\",group=\"${groupName}\"} $CARDANO_NODE_PING_LATENCY"
+          fi
+        } > "$TMP"
+
+        # Atomic publish via rename(2) on the same filesystem.
+        mv "$TMP" "$OUT"
+      '';
+    };
   in {
     key = ./profile-cardano-custom-metrics.nix;
 
-    options.services.cardano-custom-metrics = {
-      address = mkOption {
-        type = str;
-        default = "localhost";
-        description = "The default netdata statsd listening binding for udp and tcp.";
-      };
+    config = mkMerge ([
+        {
+          assertions = [
+            {
+              assertion = alloyImported;
+              message = ''
+                profile-cardano-custom-metrics requires
+                profile-grafana-alloy to be imported on this host.
+                Import profile-grafana-alloy (optionally override
+                services.alloy.textfileCollectorDirectory, which
+                defaults to "/var/lib/node-textfile").
+              '';
+            }
+          ];
 
-      enableFilter = mkOption {
-        type = bool;
-        default = true;
-        description = "Whether to filter netdata metrics exported to prometheus.";
-      };
+          systemd.services.cardano-custom-metrics = {
+            description = "Collect custom cardano metrics for the node-exporter textfile collector";
 
-      filter = mkOption {
-        type = str;
-        default = "statsd_cardano*";
-        description = "The default netdata prometheus metrics exporter filter.";
-      };
+            # Soft Wants= (not Requires=) so the timer still fires if
+            # cardano-node is wedged; the ping sample then goes absent
+            # rather than the runs being silently skipped.
+            after = ["cardano-node.service"];
+            wants = ["cardano-node.service"];
 
-      port = mkOption {
-        type = port;
-        default = 19999;
-        description = "The default netdata listening port.";
-      };
+            environment = {
+              OUT = "${textfileDirectory}/cardano-custom-metrics.prom";
+              inherit
+                (config.environment.variables)
+                TESTNET_MAGIC
+                ;
+            };
 
-      statsdPort = mkOption {
-        type = port;
-        default = 8125;
-        description = "The default netdata statsd listening port.";
-      };
-    };
-
-    config = {
-      services.netdata = {
-        enable = true;
-
-        config = {
-          web."default port" = cfg.port;
-
-          statsd = {
-            "bind to" = "udp:${cfg.address} tcp:${cfg.address}";
-            "default port" = cfg.statsdPort;
+            serviceConfig = {
+              Type = "oneshot";
+              ExecStart = "${collect}/bin/cardano-custom-metrics-collect";
+              DynamicUser = true;
+              SupplementaryGroups = ["node-textfile"];
+              ReadWritePaths = [textfileDirectory];
+              ProtectSystem = "strict";
+              NoNewPrivileges = true;
+              PrivateTmp = true;
+              # Cap well below repeated timer firings so a hung ping doesn't
+              # stack; systemd skips a trigger while the unit is still active.
+              TimeoutStartSec = "45s";
+            };
           };
-        };
 
-        configDir = mkIf cfg.enableFilter {
-          "exporting.conf" = pkgs.writeText "exporting.conf" ''
-            [prometheus:exporter]
-              send charts matching = ${cfg.filter}
-          '';
-        };
-      };
-
-      systemd.services.cardano-custom-metrics = {
-        path = with pkgs; [cardano-cli coreutils jq nmap];
-        environment = {
-          inherit
-            (config.environment.variables)
-            CARDANO_NODE_NETWORK_ID
-            CARDANO_NODE_SOCKET_PATH
-            TESTNET_MAGIC
-            ;
-        };
-        script = ''
-          statsd() {
-            local UDP="-u" ALL="''${*}"
-
-            # If the string length of all parameters given is above 1000, use TCP
-            if [ "''${#ALL}" -gt 1000 ]; then
-              UDP=
-            fi
-
-            echo "Pushing statsd metrics to port: ${toString cfg.statsdPort}; udp=$UDP"
-
-            while [ -n "''${1}" ]; do
-              printf "%s\n" "''${1}"
-              shift
-            done | ncat "''${UDP}" --send-only ${cfg.address} ${toString cfg.statsdPort} || return 1
-
-            return 0
-          }
-
-          if CARDANO_NODE_PING_OUTPUT=$(cardano-cli ping \
-              --count=1 \
-              --host=${hostAddr} \
-              --port=${toString cardanoNodePort} \
-              --magic="$TESTNET_MAGIC" \
-              --quiet \
-              --json); then
-            # Check ping output for old json struct containing `pongs` and new json struct on node >= 11.1.0 w/o `pongs`
-            CARDANO_NODE_PING_LATENCY=$(
-              jq -s '[ .[] | (.pongs // [.])[] | select(has("sample")) ] | (.[-1].mean // empty) * 1000' <<< "$CARDANO_NODE_PING_OUTPUT"
-            )
-          fi
-
-          COREDUMPS=$(coredumpctl -S -1h --json=pretty 2>&1 || true)
-          if [ "$COREDUMPS" = "No coredumps found." ]; then
-            COREDUMPS_LAST_HOUR="0"
-          else
-            COREDUMPS_LAST_HOUR=$(jq -re '. | length' <<< "$COREDUMPS")
-          fi
-
-          echo "cardano.coredumps_last_hour:''${COREDUMPS_LAST_HOUR}|g"
-          echo "cardano.node_ping_latency_ms:''${CARDANO_NODE_PING_LATENCY}|g"
-          statsd \
-            "cardano.coredumps_last_hour:''${COREDUMPS_LAST_HOUR}|g" \
-            "cardano.node_ping_latency_ms:''${CARDANO_NODE_PING_LATENCY}|g" \
-        '';
-      };
-
-      systemd.timers.cardano-custom-metrics = {
-        timerConfig = {
-          Unit = "cardano-custom-metrics.service";
-          OnCalendar = "minutely";
-        };
-        wantedBy = ["timers.target"];
-      };
-    };
+          systemd.timers.cardano-custom-metrics = {
+            wantedBy = ["timers.target"];
+            timerConfig = {
+              Unit = "cardano-custom-metrics.service";
+              OnCalendar = "minutely";
+            };
+          };
+        }
+      ]
+      # Only set alloy options when the module is present; when absent
+      # these option paths don't exist and including them (even under
+      # mkIf false) would be an eval error.  `optional false …` yields
+      # [], so the attrset never enters mkMerge.
+      ++ optional alloyImported {
+        services.alloy.textfileCollectorDirectory = mkDefault "/var/lib/node-textfile";
+        services.alloy.extraPrometheusRelabelNodeKeepRegex = ["^cardano_node_metrics_custom_ping_latency_ms$"];
+      });
   };
 }
