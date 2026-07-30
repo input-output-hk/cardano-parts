@@ -3,11 +3,15 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.alloy.enableJournalWatchdog
 #   config.services.alloy.enableLiveDebugging
 #   config.services.alloy.enableLoki
 #   config.services.alloy.extraAlloyConfig
 #   config.services.alloy.extraJournalReceivers
 #   config.services.alloy.extraPrometheusRelabelNodeKeepRegex
+#   config.services.alloy.journalWatchdogInterval
+#   config.services.alloy.journalWatchdogMinUptime
+#   config.services.alloy.journalWatchdogPattern
 #   config.services.alloy.labels
 #   config.services.alloy.logLevel
 #   config.services.alloy.prometheusExporterUnixNodeSetCollectors
@@ -32,7 +36,7 @@ flake @ {moduleWithSystem, ...}: {
   }:
     with builtins;
     with lib; let
-      inherit (lib.types) attrsOf bool enum listOf nullOr str lines;
+      inherit (lib.types) attrsOf bool enum ints listOf nullOr str lines;
       inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
@@ -466,6 +470,37 @@ flake @ {moduleWithSystem, ...}: {
 
       options = {
         services.alloy = {
+          enableJournalWatchdog = mkOption {
+            type = bool;
+            default = true;
+            description = ''
+              Whether to run a systemd timer that detects and recovers a wedged
+              grafana-alloy `loki.source.journal` reader.
+
+              Alloy (via the shared Loki/promtail journal target) can stop
+              shipping logs when systemd-journald returns a "bad message"
+              (EBADMSG) for a corrupt journal entry: the read cursor is not
+              advanced past the entry, so the reader makes no further progress
+              and the only recovery is a service restart. The symptom in the
+              alloy logs is:
+
+                level=error msg="unable to follow journal" \
+                  component_id=loki.source.journal.default \
+                  err="failed to iterate journal: bad message"
+
+              Ref: https://github.com/grafana/loki/issues/4053
+
+              When enabled, a timer periodically scans the running alloy
+              instance's own logs for this signature and restarts alloy.service
+              when found. Restarts are observable two ways: as the metric
+              node_systemd_service_restart_total{name="alloy.service"} (the
+              metrics pipeline keeps working during a logs wedge, and
+              alloy.service is in systemdUnitInclude by default), and as a log
+              line from the alloy-journal-watchdog unit that ships to Loki once
+              alloy recovers.
+            '';
+          };
+
           enableLiveDebugging = mkOption {
             type = bool;
             default = true;
@@ -503,6 +538,38 @@ flake @ {moduleWithSystem, ...}: {
               Used by sibling profiles (e.g. profile-cardano-committee-monitor) to
               whitelist their textfile-collector metric series without a recursive
               mkForce on the base option.
+            '';
+          };
+
+          journalWatchdogInterval = mkOption {
+            type = str;
+            default = "1m";
+            description = ''
+              How often the alloy journal watchdog checks for the wedge
+              signature, as a systemd time span. Only used when
+              enableJournalWatchdog is true.
+            '';
+          };
+
+          journalWatchdogMinUptime = mkOption {
+            type = ints.unsigned;
+            default = 120;
+            description = ''
+              Minimum number of seconds the current alloy instance must have
+              been running before the watchdog is allowed to restart it. Guards
+              against a restart storm in the case where journal corruption
+              persists across restarts. Only used when enableJournalWatchdog is
+              true.
+            '';
+          };
+
+          journalWatchdogPattern = mkOption {
+            type = str;
+            default = "unable to follow journal|failed to iterate journal";
+            description = ''
+              Extended regular expression (grep -E) matched against the running
+              alloy instance's log messages to detect a wedged journal reader.
+              Only used when enableJournalWatchdog is true.
             '';
           };
 
@@ -639,7 +706,7 @@ flake @ {moduleWithSystem, ...}: {
 
           systemdUnitInclude = mkOption {
             type = str;
-            default = "(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
+            default = "(^alloy.service$)|(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
             description = ''
               Regexp of systemd units to include.
               Units must both match include and not match exclude to be collected.
@@ -681,7 +748,8 @@ flake @ {moduleWithSystem, ...}: {
         };
       };
 
-      config = {
+      config = mkMerge [
+        {
         environment.etc."alloy/config.alloy".source = let
           alloyCfg' =
             toFile "alloy-unformatted.config"
@@ -762,6 +830,66 @@ flake @ {moduleWithSystem, ...}: {
           // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-password")
           // (optionalAttrs cfg.enableLoki (mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")))
         );
-      };
+        }
+
+        # Watchdog: recover a wedged loki.source.journal reader (grafana/loki#4053).
+        # Alloy does not self-heal from a journald "bad message" (EBADMSG); it
+        # stops shipping logs until the service is restarted. This detects the
+        # failure signature in the running instance's own logs and restarts it.
+        (mkIf (cfg.enableJournalWatchdog && cfg.enableLoki) {
+          systemd.services.alloy-journal-watchdog = {
+            description = "Detect and recover a wedged grafana-alloy journal reader (loki.source.journal 'bad message')";
+            documentation = ["https://github.com/grafana/loki/issues/4053"];
+            after = ["alloy.service"];
+            path = [pkgs.systemd pkgs.gawk pkgs.gnugrep pkgs.coreutils];
+
+            serviceConfig = {
+              Type = "oneshot";
+              # Runs as root: needs to read the journal and restart alloy.service.
+            };
+
+            script = ''
+              set -eu
+
+              # Only act on a currently-active alloy instance; skip while it is
+              # (re)starting, stopped, or being deployed.
+              systemctl is-active --quiet alloy.service || exit 0
+
+              invocation="$(systemctl show -p InvocationID --value alloy.service)"
+              [ -n "$invocation" ] || exit 0
+
+              # Require a minimum uptime for the running instance before acting,
+              # so persistent corruption cannot drive a tight restart loop. Both
+              # /proc/uptime and ActiveEnterTimestampMonotonic use CLOCK_MONOTONIC.
+              activeEnter="$(systemctl show -p ActiveEnterTimestampMonotonic --value alloy.service)"
+              if [ -n "$activeEnter" ] && [ "$activeEnter" != "0" ]; then
+                uptimeUs="$(awk '{printf "%d", $1 * 1000000}' /proc/uptime)"
+                ageSec=$(( (uptimeUs - activeEnter) / 1000000 ))
+                [ "$ageSec" -ge ${toString cfg.journalWatchdogMinUptime} ] || exit 0
+              fi
+
+              # Scan only the current alloy instance's logs for the wedge
+              # signature. grep -q short-circuits on the first match, so a
+              # hot-looping instance is not fully dumped.
+              if journalctl _SYSTEMD_INVOCATION_ID="$invocation" --output=cat --no-pager 2>/dev/null \
+                  | grep -Eq -- "${cfg.journalWatchdogPattern}"; then
+                echo "alloy-journal-watchdog: wedge signature found in alloy invocation $invocation; restarting alloy.service"
+                systemctl restart alloy.service
+              fi
+            '';
+          };
+
+          systemd.timers.alloy-journal-watchdog = {
+            description = "Periodically check for a wedged grafana-alloy journal reader";
+            wantedBy = ["timers.target"];
+
+            timerConfig = {
+              OnBootSec = cfg.journalWatchdogInterval;
+              OnUnitActiveSec = cfg.journalWatchdogInterval;
+              AccuracySec = "10s";
+            };
+          };
+        })
+      ];
     });
 }
