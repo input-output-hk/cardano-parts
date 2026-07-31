@@ -60,13 +60,16 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
+    # The release pin works with leios prototype version <= w27
     iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
+
+    # The pre-release pin works with leios prototype version > w27
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/node-11.1";
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
     # For tmp local testing pins
-    cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
+    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
