@@ -421,6 +421,14 @@
           package = mkDefault cardano-tracer;
           cardanoNodePackages = mkDefault cardano-node-pkgs;
           resourceFreq = mkDefault (60 * 1000);
+
+          # Default the tracer to rotating files under logRoot instead of the
+          # upstream JournalMode. cardano-node already logs to journald via its
+          # default Stdout backend, so tracer JournalMode is mostly duplication -
+          # and at high trace volume it rotates the journal every few minutes,
+          # wedging journal followers like alloy's loki.source.journal
+          # (grafana/loki#4053).
+          logging = mkDefault [{logFormat = "ForMachine"; logMode = "FileMode";}];
         };
       };
 
