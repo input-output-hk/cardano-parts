@@ -750,86 +750,86 @@ flake @ {moduleWithSystem, ...}: {
 
       config = mkMerge [
         {
-        environment.etc."alloy/config.alloy".source = let
-          alloyCfg' =
-            toFile "alloy-unformatted.config"
-            (
-              #
-              # Base component configuration snippets
-              #
-              alloyComponentCfg.logging
-              + alloyComponentCfg.livedebugging
-              + alloyComponentCfg.secrets
-              + alloyComponentCfg.remoteWrite
-              + alloyComponentCfg.alloy
-              + alloyComponentCfg.exporter
-              + optionalString cfg.enableLoki alloyComponentCfg.loki
-              #
-              # Cardano-parts optional component configuration snippets
-              #
-              + concatStringsSep "\n" (
-                cardanoPartsComponentCfg.blockperf
-                ++ cardanoPartsComponentCfg.cardanoDbSync
-                ++ cardanoPartsComponentCfg.cardanoFaucet
-                ++ cardanoPartsComponentCfg.cardanoNode
-                ++ cardanoPartsComponentCfg.cardanoSmash
-                ++ cardanoPartsComponentCfg.mithrilSigner
-                ++ cardanoPartsComponentCfg.nginxVts
-                ++ cardanoPartsComponentCfg.varnishCache
-              )
-              + cfg.extraAlloyConfig
-            );
-        in
-          (pkgs.runCommandLocal "alloy.config" {} ''
-            ${getExe cfg.package} fmt ${alloyCfg'} > $out
-          '')
+          environment.etc."alloy/config.alloy".source = let
+            alloyCfg' =
+              toFile "alloy-unformatted.config"
+              (
+                #
+                # Base component configuration snippets
+                #
+                alloyComponentCfg.logging
+                + alloyComponentCfg.livedebugging
+                + alloyComponentCfg.secrets
+                + alloyComponentCfg.remoteWrite
+                + alloyComponentCfg.alloy
+                + alloyComponentCfg.exporter
+                + optionalString cfg.enableLoki alloyComponentCfg.loki
+                #
+                # Cardano-parts optional component configuration snippets
+                #
+                + concatStringsSep "\n" (
+                  cardanoPartsComponentCfg.blockperf
+                  ++ cardanoPartsComponentCfg.cardanoDbSync
+                  ++ cardanoPartsComponentCfg.cardanoFaucet
+                  ++ cardanoPartsComponentCfg.cardanoNode
+                  ++ cardanoPartsComponentCfg.cardanoSmash
+                  ++ cardanoPartsComponentCfg.mithrilSigner
+                  ++ cardanoPartsComponentCfg.nginxVts
+                  ++ cardanoPartsComponentCfg.varnishCache
+                )
+                + cfg.extraAlloyConfig
+              );
+          in
+            (pkgs.runCommandLocal "alloy.config" {} ''
+              ${getExe cfg.package} fmt ${alloyCfg'} > $out
+            '')
           .out;
 
-        services.alloy = {
-          enable = true;
+          services.alloy = {
+            enable = true;
 
-          extraFlags = [
-            "--disable-reporting"
-            "--stability.level=experimental"
+            extraFlags = [
+              "--disable-reporting"
+              "--stability.level=experimental"
+            ];
+
+            package = inputs'.nixpkgs-unstable.legacyPackages.grafana-alloy;
+          };
+
+          systemd.services.alloy = {
+            # The alloy collector may error when collecting systemd metrics with a dynamic user.
+            # Also, this allows for using non-root systemd process with non-root secrets files.
+            serviceConfig = {
+              User = "grafana-alloy";
+              Group = "grafana-alloy";
+              DynamicUser = mkForce false;
+            };
+          };
+
+          users = {
+            groups.grafana-alloy = {};
+            users.grafana-alloy = {
+              group = "grafana-alloy";
+              isSystemUser = true;
+            };
+
+            # Owned by the alloy module so multiple textfile-publishing profiles
+            # (e.g. profile-cardano-committee-monitor) can share a single setgid
+            # directory without fighting over StateDirectory.
+            groups.node-textfile = mkIf (cfg.textfileCollectorDirectory != null) {};
+          };
+
+          systemd.tmpfiles.rules = mkIf (cfg.textfileCollectorDirectory != null) [
+            # mode 2775: setgid so files created here inherit the node-textfile group.
+            "d ${cfg.textfileCollectorDirectory} 2775 root node-textfile - -"
           ];
 
-          package = inputs'.nixpkgs-unstable.legacyPackages.grafana-alloy;
-        };
-
-        systemd.services.alloy = {
-          # The alloy collector may error when collecting systemd metrics with a dynamic user.
-          # Also, this allows for using non-root systemd process with non-root secrets files.
-          serviceConfig = {
-            User = "grafana-alloy";
-            Group = "grafana-alloy";
-            DynamicUser = mkForce false;
-          };
-        };
-
-        users = {
-          groups.grafana-alloy = {};
-          users.grafana-alloy = {
-            group = "grafana-alloy";
-            isSystemUser = true;
-          };
-
-          # Owned by the alloy module so multiple textfile-publishing profiles
-          # (e.g. profile-cardano-committee-monitor) can share a single setgid
-          # directory without fighting over StateDirectory.
-          groups.node-textfile = mkIf (cfg.textfileCollectorDirectory != null) {};
-        };
-
-        systemd.tmpfiles.rules = mkIf (cfg.textfileCollectorDirectory != null) [
-          # mode 2775: setgid so files created here inherit the node-textfile group.
-          "d ${cfg.textfileCollectorDirectory} 2775 root node-textfile - -"
-        ];
-
-        sops.secrets = mkIf cfg.useSopsSecrets (
-          mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
-          // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-username")
-          // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-password")
-          // (optionalAttrs cfg.enableLoki (mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")))
-        );
+          sops.secrets = mkIf cfg.useSopsSecrets (
+            mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
+            // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-username")
+            // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-password")
+            // (optionalAttrs cfg.enableLoki (mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")))
+          );
         }
 
         # Watchdog: recover a wedged loki.source.journal reader (grafana/loki#4053).

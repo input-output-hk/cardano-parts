@@ -428,7 +428,12 @@
           # and at high trace volume it rotates the journal every few minutes,
           # wedging journal followers like alloy's loki.source.journal
           # (grafana/loki#4053).
-          logging = mkDefault [{logFormat = "ForMachine"; logMode = "FileMode";}];
+          logging = mkDefault [
+            {
+              logFormat = "ForMachine";
+              logMode = "FileMode";
+            }
+          ];
         };
       };
 
