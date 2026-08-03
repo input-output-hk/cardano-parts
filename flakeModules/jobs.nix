@@ -943,6 +943,7 @@ in {
             #   $STAKE_POOL_DIR
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
+            #   [$USE_BLS]
             #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
 
@@ -956,6 +957,14 @@ in {
               exit 1
             elif [ -n "''${POOL_NAMES:-}" ]; then
               read -r -a POOLS <<< "$POOL_NAMES"
+            fi
+
+            # BLS keys are a Leios (dijkstra era) feature and opt-in via USE_BLS,
+            # so pre-Leios networks are unaffected. Fail early on a mismatch
+            # rather than midway through per-pool key generation.
+            if [ "''${USE_BLS:-false}" = "true" ] && [ "''${ERA_CMD:-}" != "dijkstra" ]; then
+              echo "USE_BLS=true requires ERA_CMD=dijkstra (node key-gen-BLS is a dijkstra-era command)"
+              exit 1
             fi
 
             NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"
@@ -1026,6 +1035,17 @@ in {
               "''${CARDANO_CLI_NO_ERA[@]}" latest node key-gen-KES \
                 --signing-key-file "$DEPLOY_FILE"-kes.skey \
                 --verification-key-file "$DEPLOY_FILE"-kes.vkey
+
+              # Optionally generate a BLS key pair (Leios). Deploy key like
+              # vrf/kes: the block producer signs Leios votes with the BLS
+              # secret at runtime, and it is also consumed at pool registration
+              # (--bls-signing-key-file). CARDANO_CLI_LATEST resolves to the
+              # dijkstra era command here.
+              if [ "''${USE_BLS:-false}" = "true" ]; then
+                "''${CARDANO_CLI_LATEST[@]}" node key-gen-BLS \
+                  --signing-key-file "$DEPLOY_FILE"-bls.skey \
+                  --verification-key-file "$DEPLOY_FILE"-bls.vkey
+              fi
 
               # Generate stake id
               "''${CARDANO_CLI_NO_ERA[@]}" latest stake-pool id \
@@ -1215,6 +1235,7 @@ in {
             #   [$STAKE_POOL_DIR]
             #   [$SUBMIT_TX]
             #   [$UNSTABLE]
+            #   [$USE_BLS]
             #   [$USE_DECRYPTION]
             #   [$USE_ENCRYPTION]
             #   [$USE_SHELL_BINS]
@@ -1244,6 +1265,13 @@ in {
               exit 1
             elif [ -n "''${POOL_NAMES:-}" ]; then
               read -r -a POOLS <<< "$POOL_NAMES"
+            fi
+
+            # BLS pool registration (--bls-signing-key-file) is a dijkstra-era
+            # feature; opt-in via USE_BLS. Fail early rather than mid-loop.
+            if [ "''${USE_BLS:-false}" = "true" ] && [ "''${ERA_CMD:-}" != "dijkstra" ]; then
+              echo "USE_BLS=true requires ERA_CMD=dijkstra for BLS pool registration"
+              exit 1
             fi
 
             if [ -z "''${POOL_PLEDGE:-}" ]; then
@@ -1291,6 +1319,15 @@ in {
 
               if [ -n "''${POOL_RELAY_PORT:-}" ]; then
                 POOL_ARGS+=(--pool-relay-port "$POOL_RELAY_PORT")
+              fi
+
+              # Optionally bind this pool's BLS key into its registration cert
+              # (Leios/dijkstra). Empty unless USE_BLS=true, so it is a no-op for
+              # every other network. The dijkstra registration-certificate below
+              # is the only cert command that receives it.
+              BLS_ARGS=()
+              if [ "''${USE_BLS:-false}" = "true" ]; then
+                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE"-bls.skey)")
               fi
 
               # Generate stake registration and delegation certificate
@@ -1354,6 +1391,7 @@ in {
                   "''${POOL_ARGS[@]}" \
                   --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
                   --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
+                  "''${BLS_ARGS[@]}" \
                   "''${METADATA_ARGS[@]}" \
                   --out-file "$POOL_NAME"-registration.cert
               fi
