@@ -83,7 +83,7 @@
           Type = "oneshot";
           ExecStart = getExe (pkgs.writeShellApplication {
             name = "zfs-snapshots";
-            runtimeInputs = with pkgs; [config.boot.zfs.package coreutils gnugrep];
+            runtimeInputs = with pkgs; [config.boot.zfs.package coreutils];
             text = ''
               dataset=${escapeShellArg cfg.dataset}
               prefix=${escapeShellArg cfg.prefix}
@@ -99,18 +99,28 @@
               zfs snapshot "$dataset@$prefix-$stamp"
               echo "zfs-snapshots: created $dataset@$prefix-$stamp"
 
-              # Prune: keep the newest $keep snapshots with our prefix, destroy older.
-              # `-s creation` lists oldest-first; drop the trailing $keep from deletion.
-              # Only snapshots with our prefix are considered (other snapshots, incl.
-              # any `@blank`/manual baselines, are never touched).
-              mapfile -t toPrune < <(
-                zfs list -H -t snapshot -o name -s creation \
-                  | { grep -F "$dataset@$prefix-" || true; } \
-                  | head -n "-$keep"
-              )
-              for snap in "''${toPrune[@]}"; do
-                echo "zfs-snapshots: pruning $snap"
-                zfs destroy "$snap"
+              # Prune old auto snapshots, keeping the newest $keep.
+              #
+              # A prune candidate must be one this module itself generates --
+              # exactly "$dataset@$prefix-<UTC stamp>" on $dataset (`-d 1`
+              # excludes child datasets) -- AND carry no zfs hold (userrefs 0).
+              # A hold is the operator's explicit "preserve this for a special
+              # event" marker, and `zfs destroy` refuses a held snapshot; without
+              # this skip a single held auto snapshot fails the run every cycle.
+              # Held snapshots sit outside the rolling window until released.
+              # `-s creation` lists oldest-first.
+              toPrune=()
+              while IFS=$'\t' read -r name userrefs; do
+                stamp=''${name#"$dataset@$prefix-"}
+                [ "$stamp" = "$name" ] && continue                # missing <dataset>@<prefix>- prefix
+                [[ $stamp =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || continue  # not our exact UTC stamp
+                [ "$userrefs" = 0 ] && toPrune+=("$name")         # skip held (special-event) snapshots
+              done < <(zfs list -H -t snapshot -o name,userrefs -s creation -d 1 "$dataset" 2>/dev/null || true)
+
+              prune=$(( ''${#toPrune[@]} - keep ))
+              for ((i = 0; i < prune; i++)); do
+                echo "zfs-snapshots: pruning ''${toPrune[i]}"
+                zfs destroy "''${toPrune[i]}"
               done
             '';
           });
