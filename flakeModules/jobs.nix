@@ -1081,6 +1081,67 @@ in {
           '';
         };
 
+        job-create-stake-pool-bls-keys = writeShellApplication {
+          name = "job-create-stake-pool-bls-keys";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Add a BLS key pair to already-created pools that lack one (e.g.
+            # pools made before BLS support). Only the BLS keys are generated;
+            # cold/vrf/kes and every other pool key are left untouched, so pool
+            # identity and deployed credentials are unchanged. Existing BLS keys
+            # are never overwritten. Pair with job-reregister-stake-pools to put
+            # the BLS key on chain.
+            #
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ERA_CMD]
+            #   $POOL_NAMES
+            #   $STAKE_POOL_DIR
+            #   [$UNSTABLE]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            fi
+            read -r -a POOLS <<< "$POOL_NAMES"
+
+            # node key-gen-BLS is a dijkstra-era command.
+            if [ "''${ERA_CMD:-}" != "dijkstra" ]; then
+              echo "This job requires ERA_CMD=dijkstra (node key-gen-BLS is a dijkstra-era command)"
+              exit 1
+            fi
+
+            export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
+            mkdir -p "$STAKE_POOL_DIR"/deploy
+
+            for POOL_NAME in "''${POOLS[@]}"; do
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+
+              # Never clobber an existing (possibly already-registered) BLS key.
+              if [ -e "$DEPLOY_FILE"-bls.skey ]; then
+                echo "job-create-stake-pool-bls-keys: $DEPLOY_FILE-bls.skey exists, skipping $POOL_NAME"
+                continue
+              fi
+
+              "''${CARDANO_CLI_LATEST[@]}" node key-gen-BLS \
+                --signing-key-file "$DEPLOY_FILE"-bls.skey \
+                --verification-key-file "$DEPLOY_FILE"-bls.vkey
+
+              chmod 0600 "$DEPLOY_FILE"-bls.skey "$DEPLOY_FILE"-bls.vkey
+              encrypt_check "$DEPLOY_FILE"-bls.skey
+              encrypt_check "$DEPLOY_FILE"-bls.vkey
+              echo "job-create-stake-pool-bls-keys: created BLS key for $POOL_NAME"
+            done
+          '';
+        };
+
         job-delegate-rewards-stake-key = writeShellApplication {
           name = "job-delegate-rewards-stake-key";
           runtimeInputs = stdPkgs;
@@ -1488,6 +1549,232 @@ in {
 
             if [ "''${SUBMIT_TX:-true}" = "true" ]; then
               "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "''${POOLS[0]}"-tx-pool-reg.txsigned
+            fi
+          '';
+        };
+
+        job-reregister-stake-pools = writeShellApplication {
+          name = "job-reregister-stake-pools";
+          runtimeInputs = stdPkgs ++ [pkgs.curl];
+          text = ''
+            # Re-register already-registered pools, reusing their existing
+            # cold/vrf/owner/reward keys, to update on-chain pool parameters --
+            # in particular to add a BLS key (USE_BLS=true) to pools created
+            # before BLS support (generate the keys first with
+            # job-create-stake-pool-bls-keys).
+            #
+            # A pool registration certificate is ABSOLUTE, not a delta: every
+            # parameter below must match the pool's current on-chain registration
+            # or it will silently change at the next epoch boundary. The defaults
+            # mirror job-register-stake-pools (pool-cost 500000000, margin, pledge,
+            # relays, metadata), so a faithful re-registration passes the same
+            # POOL_* inputs the pool was first registered with.
+            #
+            # Unlike job-register-stake-pools this does NOT register stake
+            # addresses, delegate, create pledge outputs, or pay a deposit
+            # (re-registration reuses the existing pool deposit): the transaction
+            # carries only the pool registration cert(s) and pays the tx fee.
+            #
+            # Inputs:
+            #   [$DEBUG]
+            #   [$ERA_CMD]
+            #   [$FEE]
+            #   [$NO_DEPLOY_DIR]
+            #   $PAYMENT_KEY
+            #   [$POOL_MARGIN]
+            #   [$POOL_METADATA_BASE_URL]
+            #   [$POOL_METADATA_URL]
+            #   $POOL_NAMES
+            #   [$POOL_PLEDGE]
+            #   [$POOL_RELAY]
+            #   [$POOL_RELAY_PORT]
+            #   [$STAKE_POOL_DIR]
+            #   [$SUBMIT_TX]
+            #   $TESTNET_MAGIC
+            #   [$UNSTABLE]
+            #   [$USE_BLS]
+            #   [$USE_DECRYPTION]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+            #   [$UTXO]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
+
+            ${secretsFns}
+            ${selectCardanoCli}
+
+            if [ -z "''${FEE:-}" ]; then
+              echo "Fee for stake pool re-registration tx is defaulting to 300000 lovelace"
+              FEE="300000"
+            fi
+
+            if [ -z "''${POOL_MARGIN:-}" ]; then
+              echo "Pool margin is defaulting to 1"
+              POOL_MARGIN="1"
+            fi
+
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            fi
+            read -r -a POOLS <<< "$POOL_NAMES"
+
+            # BLS pool registration (--bls-signing-key-file) is a dijkstra-era
+            # feature; opt-in via USE_BLS. Fail early rather than mid-loop.
+            if [ "''${USE_BLS:-false}" = "true" ] && [ "''${ERA_CMD:-}" != "dijkstra" ]; then
+              echo "USE_BLS=true requires ERA_CMD=dijkstra for BLS pool registration"
+              exit 1
+            fi
+
+            if [ -z "''${POOL_PLEDGE:-}" ]; then
+              echo "Pool pledge is defaulting to 10 million ADA"
+              POOL_PLEDGE="10000000000000"
+            fi
+
+            NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"
+            mkdir -p "$STAKE_POOL_DIR"/deploy "$NO_DEPLOY_DIR"
+
+            NUM_POOLS=$((''${#POOLS[@]}))
+            CHANGE_ADDRESS=$(
+              "''${CARDANO_CLI_NO_ERA[@]}" latest address build \
+                --payment-verification-key-file "$(decrypt_check "$PAYMENT_KEY".vkey)" \
+                --testnet-magic "$TESTNET_MAGIC"
+            )
+
+            # Build one re-registration certificate per pool, reusing existing keys.
+            for ((i=0; i < NUM_POOLS; i++)); do
+              POOL_NAME="''${POOLS[$i]}"
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+              NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
+
+              # Reset per pool so relays/metadata match each pool's own registration.
+              METADATA_ARGS=()
+              POOL_ARGS=()
+
+              if [ -n "''${POOL_METADATA_BASE_URL:-}" ]; then
+                # Pool metadata is one file per group, named <group>.json, where
+                # the group is the pool name's first dash-delimited token, e.g.
+                # leios1-bp-a-1 -> leios1.json. Pools are (re-)registered one
+                # group at a time with their own STAKE_POOL_DIR=secrets/groups/
+                # <group> (see docs/explain/new-pool.md -- batching would share
+                # owner/reward secrets), so this maps the run's pool to its file.
+                POOL_METADATA_URL="$POOL_METADATA_BASE_URL/''${POOL_NAME%%-*}.json"
+                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI_NO_ERA[@]}" latest stake-pool metadata-hash --pool-metadata-file /dev/stdin)
+                METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
+              elif [ -n "''${POOL_METADATA_URL:-}" ]; then
+                POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI_NO_ERA[@]}" latest stake-pool metadata-hash --pool-metadata-file /dev/stdin)
+                METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
+              fi
+
+              if [ -n "''${POOL_RELAY:-}" ]; then
+                POOL_ARGS+=(--single-host-pool-relay "$POOL_RELAY")
+              fi
+
+              if [ -n "''${POOL_RELAY_PORT:-}" ]; then
+                POOL_ARGS+=(--pool-relay-port "$POOL_RELAY_PORT")
+              fi
+
+              # Optionally add this pool's BLS key (Leios/dijkstra). Empty unless
+              # USE_BLS=true; only the dijkstra cert command below receives it.
+              BLS_ARGS=()
+              if [ "''${USE_BLS:-false}" = "true" ]; then
+                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE"-bls.skey)")
+              fi
+
+              if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
+                "''${CARDANO_CLI_COMPAT[@]}" stake-pool registration-certificate \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
+                  --pool-cost 500000000 \
+                  --pool-margin "$POOL_MARGIN" \
+                  --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
+                  --pool-pledge "$POOL_PLEDGE" \
+                  "''${POOL_ARGS[@]}" \
+                  --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+                  --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
+                  "''${METADATA_ARGS[@]}" \
+                  --out-file "$POOL_NAME"-reregistration.cert
+              else
+                "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                  --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
+                  --pool-cost 500000000 \
+                  --pool-margin "$POOL_MARGIN" \
+                  --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
+                  --pool-pledge "$POOL_PLEDGE" \
+                  "''${POOL_ARGS[@]}" \
+                  --pool-reward-account-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-reward-stake.vkey)" \
+                  --vrf-verification-key-file "$(decrypt_check "$DEPLOY_FILE"-vrf.vkey)" \
+                  "''${BLS_ARGS[@]}" \
+                  "''${METADATA_ARGS[@]}" \
+                  --out-file "$POOL_NAME"-reregistration.cert
+              fi
+            done
+
+            # Generate transaction: fee only, no deposits and no pledge outputs.
+            if [ -z "''${UTXO:-}" ]; then
+              UTXO=$(
+                "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
+                  --address "$CHANGE_ADDRESS" \
+                  --testnet-magic "$TESTNET_MAGIC" \
+                | jq -r --arg fee "$FEE" 'to_entries
+                  |
+                    [
+                      sort_by(.value.value.lovelace)[]
+                        | select(.value.value > ($fee | tonumber))
+                        | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
+                    ]
+                  [0]'
+              )
+            fi
+
+            TXIN=$(jq -r '.txin' <<< "$UTXO")
+            TXVAL=$(jq -r '.amount' <<< "$UTXO")
+            CHANGE=$((TXVAL - FEE))
+
+            BUILD_TX_ARGS=()
+            SIGN_TX_ARGS=()
+
+            for ((i=0; i < NUM_POOLS; i++)); do
+              POOL_NAME="''${POOLS[$i]}"
+              NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
+
+              BUILD_TX_ARGS+=("--certificate-file" "$POOL_NAME-reregistration.cert")
+              # A pool registration cert must be witnessed by the operator (cold)
+              # and by every declared owner (owner stake). No reward-stake or
+              # stake-address witness: those are already registered.
+              SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-cold.skey")")
+              SIGN_TX_ARGS+=("--signing-key-file" "$(decrypt_check "$NO_DEPLOY_FILE-owner-stake.skey")")
+            done
+
+            if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
+              "''${CARDANO_CLI_COMPAT[@]}" transaction signed-transaction \
+                --tx-in "$TXIN" \
+                --tx-out "$CHANGE_ADDRESS+$CHANGE" \
+                --fee "$FEE" \
+                --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
+                "''${BUILD_TX_ARGS[@]}" \
+                "''${SIGN_TX_ARGS[@]}" \
+                --out-file "''${POOLS[0]}"-tx-pool-rereg.txsigned
+            else
+              "''${CARDANO_CLI[@]}" transaction build-raw \
+                --tx-in "$TXIN" \
+                --tx-out "$CHANGE_ADDRESS+$CHANGE" \
+                --fee "$FEE" \
+                "''${BUILD_TX_ARGS[@]}" \
+                --out-file "''${POOLS[0]}"-tx-pool-rereg.txbody
+
+              "''${CARDANO_CLI[@]}" transaction sign \
+                --tx-body-file "''${POOLS[0]}"-tx-pool-rereg.txbody \
+                --out-file "''${POOLS[0]}"-tx-pool-rereg.txsigned \
+                --signing-key-file "$(decrypt_check "$PAYMENT_KEY".skey)" \
+                "''${SIGN_TX_ARGS[@]}"
+            fi
+
+            if [ "''${SUBMIT_TX:-true}" = "true" ]; then
+              "''${CARDANO_CLI_NO_ERA[@]}" latest transaction submit --testnet-magic "$TESTNET_MAGIC" --tx-file "''${POOLS[0]}"-tx-pool-rereg.txsigned
             fi
           '';
         };
