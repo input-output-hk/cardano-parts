@@ -1124,9 +1124,13 @@ in {
             for POOL_NAME in "''${POOLS[@]}"; do
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
 
-              # Never clobber an existing (possibly already-registered) BLS key.
+              # Never clobber an existing (possibly already-registered) BLS key,
+              # but still run encrypt_check so a key a prior run left plaintext
+              # gets encrypted now (encrypt_check no-ops if already encrypted).
               if [ -e "$DEPLOY_FILE"-bls.skey ]; then
-                echo "job-create-stake-pool-bls-keys: $DEPLOY_FILE-bls.skey exists, skipping $POOL_NAME"
+                echo "job-create-stake-pool-bls-keys: $DEPLOY_FILE-bls.skey exists, skipping key-gen for $POOL_NAME"
+                encrypt_check "$DEPLOY_FILE"-bls.skey
+                [ -e "$DEPLOY_FILE"-bls.vkey ] && encrypt_check "$DEPLOY_FILE"-bls.vkey
                 continue
               fi
 
