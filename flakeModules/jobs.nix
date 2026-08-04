@@ -1288,6 +1288,7 @@ in {
             #   [$FEE]
             #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
+            #   [$POOL_COST]
             #   [$POOL_MARGIN]
             #   [$POOL_METADATA_BASE_URL]
             #   [$POOL_METADATA_URL]
@@ -1342,6 +1343,11 @@ in {
             if [ -z "''${POOL_PLEDGE:-}" ]; then
               echo "Pool pledge is defaulting to 10 million ADA"
               POOL_PLEDGE="10000000000000"
+            fi
+
+            if [ -z "''${POOL_COST:-}" ]; then
+              echo "Pool cost is defaulting to 500000000 lovelace"
+              POOL_COST="500000000"
             fi
 
             if [ -z "''${STAKE_ADDRESS_DEPOSIT:-}" ]; then
@@ -1431,7 +1437,7 @@ in {
                 "''${CARDANO_CLI_COMPAT[@]}" stake-pool registration-certificate \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
-                  --pool-cost 500000000 \
+                  --pool-cost "$POOL_COST" \
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
@@ -1449,7 +1455,7 @@ in {
                 "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
-                  --pool-cost 500000000 \
+                  --pool-cost "$POOL_COST" \
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
@@ -1570,7 +1576,7 @@ in {
             # A pool registration certificate is ABSOLUTE, not a delta: every
             # parameter below must match the pool's current on-chain registration
             # or it will silently change at the next epoch boundary. The defaults
-            # mirror job-register-stake-pools (pool-cost 500000000, margin, pledge,
+            # mirror job-register-stake-pools (POOL_COST 500000000, margin, pledge,
             # relays, metadata), so a faithful re-registration passes the same
             # POOL_* inputs the pool was first registered with.
             #
@@ -1585,6 +1591,7 @@ in {
             #   [$FEE]
             #   [$NO_DEPLOY_DIR]
             #   $PAYMENT_KEY
+            #   [$POOL_COST]
             #   [$POOL_MARGIN]
             #   [$POOL_METADATA_BASE_URL]
             #   [$POOL_METADATA_URL]
@@ -1635,6 +1642,11 @@ in {
             if [ -z "''${POOL_PLEDGE:-}" ]; then
               echo "Pool pledge is defaulting to 10 million ADA"
               POOL_PLEDGE="10000000000000"
+            fi
+
+            if [ -z "''${POOL_COST:-}" ]; then
+              echo "Pool cost is defaulting to 500000000 lovelace"
+              POOL_COST="500000000"
             fi
 
             NO_DEPLOY_DIR="''${NO_DEPLOY_DIR:-$STAKE_POOL_DIR/no-deploy}"
@@ -1691,7 +1703,7 @@ in {
                 "''${CARDANO_CLI_COMPAT[@]}" stake-pool registration-certificate \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
-                  --pool-cost 500000000 \
+                  --pool-cost "$POOL_COST" \
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
@@ -1704,7 +1716,7 @@ in {
                 "''${CARDANO_CLI[@]}" stake-pool registration-certificate \
                   --testnet-magic "$TESTNET_MAGIC" \
                   --cold-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-cold.vkey)" \
-                  --pool-cost 500000000 \
+                  --pool-cost "$POOL_COST" \
                   --pool-margin "$POOL_MARGIN" \
                   --pool-owner-stake-verification-key-file "$(decrypt_check "$NO_DEPLOY_FILE"-owner-stake.vkey)" \
                   --pool-pledge "$POOL_PLEDGE" \
