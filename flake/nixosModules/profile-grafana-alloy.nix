@@ -393,6 +393,23 @@ flake @ {moduleWithSystem, ...}: {
 
         '';
 
+        # Submit-api's metrics server always binds all interfaces, so scrape it
+        # on loopback.  It also probes upwards from metricsPort when that port
+        # is already bound, in which case this target goes stale.
+        cardanoSubmitApi = optional (cfgSvc ? cardano-submit-api && cfgSvc.cardano-submit-api.enable) ''
+          // Cardano-submit-api integration component
+          prometheus.scrape "integrations_cardano_submit_api" {
+            targets = [{
+              __address__ = "127.0.0.1:${toString cfgSvc.cardano-submit-api.metricsPort}",
+              ${concatStringsSep ", \n" (mapAttrsToList (n: v: "${n} = \"${v}\"") cfg.labels)},
+            }]
+            forward_to = [prometheus.remote_write.integrations.receiver]
+            job_name = "integrations/cardano-submit-api"
+            metrics_path = "/"
+          }
+
+        '';
+
         mithrilSigner = optional (cfgSvc ? mithril-signer && cfgSvc.mithril-signer.enable && cfgSvc.mithril-signer.enableMetrics) ''
           // Mithril-signer integration component
           prometheus.scrape "integrations_mithril_signer" {
@@ -773,6 +790,7 @@ flake @ {moduleWithSystem, ...}: {
                   ++ cardanoPartsComponentCfg.cardanoFaucet
                   ++ cardanoPartsComponentCfg.cardanoNode
                   ++ cardanoPartsComponentCfg.cardanoSmash
+                  ++ cardanoPartsComponentCfg.cardanoSubmitApi
                   ++ cardanoPartsComponentCfg.mithrilSigner
                   ++ cardanoPartsComponentCfg.nginxVts
                   ++ cardanoPartsComponentCfg.varnishCache
