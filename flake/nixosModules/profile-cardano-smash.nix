@@ -286,6 +286,16 @@ flake: {
             script = ''
               set -uo pipefail
 
+              # Cardano-cli 11.1 replaced -h and -p with a positional host:port
+              # and renamed -m to --network-magic.  Probe once so both release
+              # and pre-release cli are supported.
+              PING_HELP=$(cardano-cli ping --help 2>&1 || true)
+              if grep -q -- --host <<< "$PING_HELP"; then
+                PING_LEGACY_ARGS=true
+              else
+                PING_LEGACY_ARGS=false
+              fi
+
               pingAddr() {
                 index=$1
                 addr=$2
@@ -299,7 +309,11 @@ flake: {
 
                 while IFS= read -r ip; do
                   set +e
-                  PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $CARDANO_NODE_NETWORK_ID -c 1 -q --json)"
+                  if $PING_LEGACY_ARGS; then
+                    PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $CARDANO_NODE_NETWORK_ID -c 1 -q --json)"
+                  else
+                    PING="$(timeout 7s cardano-cli ping --network-magic $CARDANO_NODE_NETWORK_ID -c 1 -q --json "$ip:$port")"
+                  fi
                   res=$?
                   if [ $res -eq 0 ]; then
                     echo $PING | jq -c > /dev/null 2>&1

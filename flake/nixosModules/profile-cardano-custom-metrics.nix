@@ -70,14 +70,22 @@
         : "''${OUT:?OUT (output .prom path) must be set}"
         TMP="$OUT.tmp"
 
+        # Cardano-cli 11.1 replaced --host and --port with a positional
+        # host:port and renamed --magic to --network-magic, so the target args
+        # are selected from help output to support release and pre-release cli.
+        PING_HELP=$(cardano-cli ping --help 2>&1 || true)
+        if grep -q -- --host <<< "$PING_HELP"; then
+          PING_ARGS=(--host=${hostAddr} --port=${toString cardanoNodePort} --magic="$TESTNET_MAGIC")
+        else
+          PING_ARGS=(--network-magic="$TESTNET_MAGIC" ${hostAddr}:${toString cardanoNodePort})
+        fi
+
         CARDANO_NODE_PING_LATENCY=""
         if CARDANO_NODE_PING_OUTPUT=$(cardano-cli ping \
             --count=1 \
-            --host=${hostAddr} \
-            --port=${toString cardanoNodePort} \
-            --magic="$TESTNET_MAGIC" \
             --quiet \
-            --json); then
+            --json \
+            "''${PING_ARGS[@]}"); then
           # Check ping output for old json struct containing `pongs` and new json struct on node >= 11.1.0 w/o `pongs`
           CARDANO_NODE_PING_LATENCY=$(
             jq -s '[ .[] | (.pongs // [.])[] | select(has("sample")) ] | (.[-1].mean // empty) * 1000' <<< "$CARDANO_NODE_PING_OUTPUT"
