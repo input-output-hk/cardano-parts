@@ -471,16 +471,14 @@ in
           faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
-          # faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-leios-prototype-w30-ea2fa54";
-          faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
+          faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-leios-prototype-w32-1dba45c";
+          # faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
           # metadata-pkg = pkg: caPkgs."${pkg}-input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
           metadata-pkg = pkg: localFlake.inputs.cardano-metadata-service.packages.${system}.${pkg};
 
           mithril-release = "input-output-hk-mithril-2617-0-2478748";
-          # The current mithril unstable tag has broken nix builds, so set to the current release until fixed
-          # mithril-pre-release = "input-output-hk-mithril-unstable-b31ce25";
-          mithril-pre-release = "input-output-hk-mithril-unstable-0229ae2";
+          mithril-pre-release = "input-output-hk-mithril-unstable-58b575a";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-0-1-97036a6";
           # node-release = pkg: localFlake.inputs.cardano-node-10-6-3.packages.x86_64-linux.${pkg};
