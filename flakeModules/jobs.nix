@@ -1390,7 +1390,13 @@ in {
               NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
 
               if [ -n "''${POOL_METADATA_BASE_URL:-}" ]; then
-                POOL_METADATA_URL="$POOL_METADATA_BASE_URL/$POOL_NAME.json"
+                # Pool metadata is one file per group, named <group>.json, where
+                # the group is the pool name's first dash-delimited token, e.g.
+                # leios1-bp-a-1 -> leios1.json. Pools are registered one
+                # group at a time with their own STAKE_POOL_DIR=secrets/groups/
+                # <group> (see docs/explain/new-pool.md -- batching would share
+                # owner/reward secrets), so this maps the run's pool to its file.
+                POOL_METADATA_URL="$POOL_METADATA_BASE_URL/''${POOL_NAME%%-*}.json"
                 POOL_METADATA_HASH=$(curl --silent "$POOL_METADATA_URL"|"''${CARDANO_CLI_NO_ERA[@]}" latest stake-pool metadata-hash --pool-metadata-file /dev/stdin)
                 METADATA_ARGS+=("--metadata-url" "$POOL_METADATA_URL" "--metadata-hash" "$POOL_METADATA_HASH")
               elif [ -n "''${POOL_METADATA_URL:-}" ]; then
