@@ -132,11 +132,12 @@
           systemd.services.cardano-custom-metrics = {
             description = "Collect custom cardano metrics for the node-exporter textfile collector";
 
-            # Soft Wants= (not Requires=) so the timer still fires if
-            # cardano-node is wedged; the ping sample then goes absent
-            # rather than the runs being silently skipped.
+            # Ordering only via after; do not add wants or requires here. The
+            # timer fires this collector on its own schedule regardless of node
+            # state, and a wants would start or restart cardano-node every tick,
+            # fighting an operator stop. With the node down the ping sample just
+            # goes absent.
             after = ["cardano-node.service"];
-            wants = ["cardano-node.service"];
 
             environment = {
               OUT = "${textfileDirectory}/cardano-custom-metrics.prom";
