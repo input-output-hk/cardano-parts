@@ -105,7 +105,8 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
+      # For optional BLS key support
+      url = "github:IntersectMBO/cardano-node/jl/11.1.0-sre2";
       flake = false;
     };
 
