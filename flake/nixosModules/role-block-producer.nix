@@ -55,6 +55,10 @@ flake: {
       operationalCertificate = "${name}.opcert";
       bulkCredentials = "${name}-bulk.creds";
 
+      # Optional Leios BLS signing key; wired only if present for this pool.
+      blsKey = "${name}-bls.skey";
+      blsKeyExists = pathExists (pathPrefix + blsKey);
+
       mkSopsSecretParams = secretName: keyName: {
         inherit groupOutPath groupName name secretName keyName pathPrefix;
         fileOwner = "cardano-node";
@@ -82,7 +86,12 @@ flake: {
             operationalCertificate = "/run/secrets/cardano-node-operational-cert";
           };
 
-        Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
+        # BLS is Leios-only and reachable only under the Cardano hard-fork
+        # protocol, so wire it here and only when the pool has a BLS key.
+        Cardano =
+          TPraos
+          // optionalAttrs byronKeysExist RealPBFT
+          // optionalAttrs blsKeyExists {blsKey = "/run/secrets/cardano-node-bls-signing";};
       };
 
       keysCfg = rec {
@@ -101,7 +110,10 @@ flake: {
             // (mkSopsSecret (mkSopsSecretParams "cardano-node-cold-verification" coldVerification))
             // (mkSopsSecret (mkSopsSecretParams "cardano-node-operational-cert" operationalCertificate));
 
-        Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
+        Cardano =
+          TPraos
+          // optionalAttrs byronKeysExist RealPBFT
+          // optionalAttrs blsKeyExists (mkSopsSecret (mkSopsSecretParams "cardano-node-bls-signing" blsKey));
       };
 
       sopsPath = name: config.sops.secrets.${name}.path;
@@ -122,6 +134,7 @@ flake: {
               machine when applicable either by additional module code or out of
               band:
 
+                /run/secrets/cardano-node-bls-signing
                 /run/secrets/cardano-node-bulk-credentials
                 /run/secrets/cardano-node-cold-verification
                 /run/secrets/cardano-node-delegation-cert
