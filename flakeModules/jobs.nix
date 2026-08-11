@@ -752,8 +752,22 @@ in {
               chmod 0600 bulk.creds.bootstrap.json
             popd &> /dev/null
 
-            # Set the initial funds explicitly declared for the rich key
-            jq ".initialFunds[.initialFunds | to_entries | sort_by(.value)[-1].key] |= $INITIAL_FUNDS" \
+            # Set the initial funds explicitly declared for the rich key. cli
+            # 11.1.0 moved funds to extraConfig.initialFunds.data, which the
+            # ledger prefers over the legacy top-level initialFunds. Edit
+            # whichever is populated so both cli versions work.
+            jq "
+              if ((.extraConfig.initialFunds.data // {}) | length) > 0
+              then
+                .extraConfig.initialFunds.data[
+                  .extraConfig.initialFunds.data | to_entries | sort_by(.value)[-1].key
+                ] |= $INITIAL_FUNDS
+              else
+                .initialFunds[
+                  .initialFunds | to_entries | sort_by(.value)[-1].key
+                ] |= $INITIAL_FUNDS
+              end
+            " \
               < "$GENESIS_DIR/shelley-genesis.json" \
               | sponge "$GENESIS_DIR/shelley-genesis.json"
 
