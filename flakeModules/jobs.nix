@@ -1107,6 +1107,7 @@ in {
             # the BLS key on chain.
             #
             # Inputs:
+            #   [$BLS_SLOT]
             #   [$DEBUG]
             #   [$ERA_CMD]
             #   $POOL_NAMES
@@ -1132,30 +1133,99 @@ in {
               exit 1
             fi
 
+            # BLS_SLOT selects which key this job generates:
+            #   unset/"" for the active key (...-bls.skey)
+            #   "next" for the rotation key (...-bls-next.skey)
+            # Only "" and "next" are valid.
+            case "''${BLS_SLOT:-}" in
+              "" | next) ;;
+              *) echo "BLS_SLOT must be unset (active) or 'next', got: ''${BLS_SLOT:-}"; exit 1 ;;
+            esac
+            BLS_SUFFIX="''${BLS_SLOT:+-$BLS_SLOT}"
+
+            export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
+            mkdir -p "$STAKE_POOL_DIR"/deploy
+
+            for POOL_NAME in "''${POOLS[@]}"; do
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+              BLS_BASE="$DEPLOY_FILE-bls$BLS_SUFFIX"
+
+              # Never clobber an existing (possibly already-registered) BLS key,
+              # but still run encrypt_check so a key a prior run left plaintext
+              # gets encrypted now (encrypt_check no-ops if already encrypted).
+              if [ -e "$BLS_BASE".skey ]; then
+                echo "job-create-stake-pool-bls-keys: $BLS_BASE.skey exists, skipping key-gen for $POOL_NAME"
+                encrypt_check "$BLS_BASE".skey
+                [ -e "$BLS_BASE".vkey ] && encrypt_check "$BLS_BASE".vkey
+                continue
+              fi
+
+              "''${CARDANO_CLI_LATEST[@]}" node key-gen-BLS \
+                --signing-key-file "$BLS_BASE".skey \
+                --verification-key-file "$BLS_BASE".vkey
+
+              chmod 0600 "$BLS_BASE".skey "$BLS_BASE".vkey
+              encrypt_check "$BLS_BASE".skey
+              encrypt_check "$BLS_BASE".vkey
+              echo "job-create-stake-pool-bls-keys: created BLS ''${BLS_SLOT:-active} key for $POOL_NAME"
+            done
+          '';
+        };
+
+        job-rotate-stake-pool-bls-keys = writeShellApplication {
+          name = "job-rotate-stake-pool-bls-keys";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Promote each pool's rotation BLS key into the active slot: the
+            # "-next" key becomes the active "-bls" key and the old active key is
+            # replaced. Run this AFTER the new key has activated on chain; the
+            # node already switched to it on its own, so there is no deadline and
+            # a late promote only means carrying a harmless extra deployed key.
+            #
+            # Rotation flow:
+            #   BLS_SLOT=next job-create-stake-pool-bls-keys
+            #   BLS_SLOT=next job-reregister-stake-pools
+            #   deploy,
+            #   after next BLS activation, run job to return the pool to single BLS key state.
+            #
+            # Inputs:
+            #   [$DEBUG]
+            #   $POOL_NAMES
+            #   $STAKE_POOL_DIR
+            #   [$UNSTABLE]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            ${secretsFns}
+
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            fi
+            read -r -a POOLS <<< "$POOL_NAMES"
+
             export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
             mkdir -p "$STAKE_POOL_DIR"/deploy
 
             for POOL_NAME in "''${POOLS[@]}"; do
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
 
-              # Never clobber an existing (possibly already-registered) BLS key,
-              # but still run encrypt_check so a key a prior run left plaintext
-              # gets encrypted now (encrypt_check no-ops if already encrypted).
-              if [ -e "$DEPLOY_FILE"-bls.skey ]; then
-                echo "job-create-stake-pool-bls-keys: $DEPLOY_FILE-bls.skey exists, skipping key-gen for $POOL_NAME"
-                encrypt_check "$DEPLOY_FILE"-bls.skey
-                [ -e "$DEPLOY_FILE"-bls.vkey ] && encrypt_check "$DEPLOY_FILE"-bls.vkey
+              if [ ! -e "$DEPLOY_FILE"-bls-next.skey ]; then
+                echo "job-rotate-stake-pool-bls-keys: no $DEPLOY_FILE-bls-next.skey, nothing to promote for $POOL_NAME"
                 continue
               fi
 
-              "''${CARDANO_CLI_LATEST[@]}" node key-gen-BLS \
-                --signing-key-file "$DEPLOY_FILE"-bls.skey \
-                --verification-key-file "$DEPLOY_FILE"-bls.vkey
+              # Keys are stored encrypted in place, so moving the stored file just
+              # renames the ciphertext; encrypt_check afterwards covers a -next key
+              # that a prior run happened to leave plaintext.
+              mv -f "$DEPLOY_FILE"-bls-next.skey "$DEPLOY_FILE"-bls.skey
+              [ -e "$DEPLOY_FILE"-bls-next.vkey ] && mv -f "$DEPLOY_FILE"-bls-next.vkey "$DEPLOY_FILE"-bls.vkey
 
-              chmod 0600 "$DEPLOY_FILE"-bls.skey "$DEPLOY_FILE"-bls.vkey
               encrypt_check "$DEPLOY_FILE"-bls.skey
-              encrypt_check "$DEPLOY_FILE"-bls.vkey
-              echo "job-create-stake-pool-bls-keys: created BLS key for $POOL_NAME"
+              [ -e "$DEPLOY_FILE"-bls.vkey ] && encrypt_check "$DEPLOY_FILE"-bls.vkey
+              echo "job-rotate-stake-pool-bls-keys: promoted -next BLS key to active for $POOL_NAME"
             done
           '';
         };
@@ -1312,6 +1382,7 @@ in {
             #   [$POOL_RELAY_PORT]
             #   [$STAKE_ADDRESS_DEPOSIT]
             #   [$STAKE_POOL_DEPOSIT]
+            #   [$BLS_SLOT]
             #   [$STAKE_POOL_DIR]
             #   [$SUBMIT_TX]
             #   [$UNSTABLE]
@@ -1416,9 +1487,18 @@ in {
               # (Leios/dijkstra). Empty unless USE_BLS=true, so it is a no-op for
               # every other network. The dijkstra registration-certificate below
               # is the only cert command that receives it.
+              #
+              # BLS_SLOT selects which key goes on chain:
+              #   unset/"" for the active key (...-bls.skey)
+              #   "next" for the rotation key (...-bls-next.skey)
               BLS_ARGS=()
               if [ "''${USE_BLS:-false}" = "true" ]; then
-                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE"-bls.skey)")
+                case "''${BLS_SLOT:-}" in
+                  "" | next) ;;
+                  *) echo "BLS_SLOT must be unset (active) or 'next', got: ''${BLS_SLOT:-}"; exit 1 ;;
+                esac
+                BLS_SUFFIX="''${BLS_SLOT:+-$BLS_SLOT}"
+                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
               fi
 
               # Generate stake registration and delegation certificate
@@ -1621,6 +1701,7 @@ in {
             #   [$POOL_RELAY_PORT]
             #   [$STAKE_POOL_DIR]
             #   [$SUBMIT_TX]
+            #   [$BLS_SLOT]
             #   $TESTNET_MAGIC
             #   [$UNSTABLE]
             #   [$USE_BLS]
@@ -1714,9 +1795,21 @@ in {
 
               # Optionally add this pool's BLS key (Leios/dijkstra). Empty unless
               # USE_BLS=true; only the dijkstra cert command below receives it.
+              #
+              # BLS_SLOT selects which key goes on chain:
+              #   unset/"" for the active key (...-bls.skey)
+              #   "next" for the rotation key (...-bls-next.skey)
+              #
+              # Registering a rotation uses BLS_SLOT=next here; pair with
+              # job-rotate-stake-pool-bls-keys to promote it after activation.
               BLS_ARGS=()
               if [ "''${USE_BLS:-false}" = "true" ]; then
-                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE"-bls.skey)")
+                case "''${BLS_SLOT:-}" in
+                  "" | next) ;;
+                  *) echo "BLS_SLOT must be unset (active) or 'next', got: ''${BLS_SLOT:-}"; exit 1 ;;
+                esac
+                BLS_SUFFIX="''${BLS_SLOT:+-$BLS_SLOT}"
+                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
               fi
 
               if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
