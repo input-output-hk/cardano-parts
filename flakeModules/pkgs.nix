@@ -477,7 +477,7 @@ in
           metadata-pkg = pkg: caPkgs."${pkg}-input-output-hk-offchain-metadata-tools-v0-5-0-0-91eba72";
           # metadata-pkg = pkg: localFlake.inputs.cardano-metadata-service.packages.${system}.${pkg};
 
-          mithril-release = "input-output-hk-mithril-2617-0-2478748";
+          mithril-release = "input-output-hk-mithril-2630-0-23e124d";
           mithril-pre-release = "input-output-hk-mithril-unstable-58b575a";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-0-1-97036a6";
