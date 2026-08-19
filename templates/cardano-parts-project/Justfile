@@ -855,10 +855,10 @@ start-node ENV:
   mkdir -p "$STATEDIR"
 
   if [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
-    UNSTABLE=false
-    UNSTABLE_LIB=false
-    UNSTABLE_MITHRIL=false
-    USE_NODE_CONFIG_BP=false
+    UNSTABLE="${UNSTABLE:-false}"
+    UNSTABLE_LIB="${UNSTABLE_LIB:-false}"
+    UNSTABLE_MITHRIL="${UNSTABLE_MITHRIL:-false}"
+    USE_NODE_CONFIG_BP="${USE_NODE_CONFIG_BP:-false}"
   elif [[ "{{ENV}}" == leios ]]; then
     # Resolve the leios node. Two modes, auto-selected:
     #
@@ -887,15 +887,15 @@ start-node ENV:
     fi
     export CARDANO_NODE_SHELL_BIN="$(nix build -Lv "$NODE_REF" --no-link --print-out-paths)/bin/cardano-node"
     export USE_SHELL_BINS=true
-    UNSTABLE=false
-    UNSTABLE_LIB=true
-    UNSTABLE_MITHRIL=false
-    USE_NODE_CONFIG_BP=false
+    UNSTABLE="${UNSTABLE:-false}"
+    UNSTABLE_LIB="${UNSTABLE_LIB:-true}"
+    UNSTABLE_MITHRIL="${UNSTABLE_MITHRIL:-false}"
+    USE_NODE_CONFIG_BP="${USE_NODE_CONFIG_BP:-false}"
   else
-    UNSTABLE=true
-    UNSTABLE_LIB=true
-    UNSTABLE_MITHRIL=true
-    USE_NODE_CONFIG_BP=false
+    UNSTABLE="${UNSTABLE:-true}"
+    UNSTABLE_LIB="${UNSTABLE_LIB:-true}"
+    UNSTABLE_MITHRIL="${UNSTABLE_MITHRIL:-true}"
+    USE_NODE_CONFIG_BP="${USE_NODE_CONFIG_BP:-false}"
   fi
 
   # Set required entrypoint vars and run node in a new nohup background session
