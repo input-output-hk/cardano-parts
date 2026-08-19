@@ -163,7 +163,7 @@ in {
               |
                 [
                   sort_by(.value.value.lovelace)[]
-                    | select(.value.value > ($fee | tonumber))
+                    | select(.value.value.lovelace > ($fee | tonumber))
                     | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
                 ]
               [0]'
@@ -1311,7 +1311,7 @@ in {
                   |
                     [
                       sort_by(.value.value.lovelace)[]
-                        | select(.value.value > ($fee | tonumber))
+                        | select(.value.value.lovelace > ($fee | tonumber))
                         | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
                     ]
                   [0]'
@@ -1577,26 +1577,40 @@ in {
             chmod 0600 "$NO_DEPLOY_FILE"-reward-payment-stake.addr
             encrypt_check "$NO_DEPLOY_FILE"-reward-payment-stake.addr
 
+            # Total lovelace this tx must draw from a single input:
+            #   * per pool: the pledge output plus the pool registration deposit
+            #   * stake address deposits: one per pool owner plus the shared reward account
+            #   * the tx fee
+            REQUIRED=$((NUM_POOLS * (POOL_PLEDGE + STAKE_POOL_DEPOSIT) + (NUM_POOLS + 1) * STAKE_ADDRESS_DEPOSIT + FEE))
+
             # Generate transaction
             if [ -z "''${UTXO:-}" ]; then
+              # Pick the smallest single UTxO that still fully covers REQUIRED
               UTXO=$(
                 "''${CARDANO_CLI_NO_ERA[@]}" latest query utxo \
                   --address "$CHANGE_ADDRESS" \
                   --testnet-magic "$TESTNET_MAGIC" \
-                | jq -r --arg fee "$FEE" 'to_entries
+                | jq -r --arg required "$REQUIRED" 'to_entries
                   |
                     [
                       sort_by(.value.value.lovelace)[]
-                        | select(.value.value > ($fee | tonumber))
+                        | select(.value.value.lovelace > ($required | tonumber))
                         | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
                     ]
                   [0]'
               )
             fi
 
+            if [ -z "''${UTXO:-}" ] || [ "$UTXO" = "null" ]; then
+              echo "No single UTxO at $CHANGE_ADDRESS covers the required $REQUIRED lovelace for pool registration:"
+              echo "  pools=$NUM_POOLS pledge=$POOL_PLEDGE pool_deposit=$STAKE_POOL_DEPOSIT stake_deposit=$STAKE_ADDRESS_DEPOSIT fee=$FEE"
+              echo "Fund the payment address with a large enough UTxO, or set the UTXO env var to a specific input."
+              exit 1
+            fi
+
             TXIN=$(jq -r '.txin' <<< "$UTXO")
             TXVAL=$(jq -r '.amount' <<< "$UTXO")
-            CHANGE=$((TXVAL - (NUM_POOLS * (POOL_PLEDGE + STAKE_POOL_DEPOSIT)) - ((NUM_POOLS + 1) * STAKE_ADDRESS_DEPOSIT) - FEE))
+            CHANGE=$((TXVAL - REQUIRED))
 
             # Generate arrays needed for build/sign commands
             BUILD_TX_ARGS=()
@@ -1852,7 +1866,7 @@ in {
                   |
                     [
                       sort_by(.value.value.lovelace)[]
-                        | select(.value.value > ($fee | tonumber))
+                        | select(.value.value.lovelace > ($fee | tonumber))
                         | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}
                     ]
                   [0]'
@@ -1953,8 +1967,8 @@ in {
                 "''${CARDANO_CLI[@]}" query utxo \
                   --address "$(eval cat "$(decrypt_check "$BOOTSTRAP_POOL_PAYMENT_KEY.addr")")" \
                   --testnet-magic "$TESTNET_MAGIC" \
-                | jq -r 'to_entries[]
-                  | [{"txin": .key, "address": .value.address, "amount": .value.value.lovelace}][0]'
+                | jq -r '[to_entries[]
+                  | {"txin": .key, "address": .value.address, "amount": .value.value.lovelace}][0]'
               )
             fi
             TXIN=$(jq -r '.txin' <<< "$UTXO")
