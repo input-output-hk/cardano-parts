@@ -24,6 +24,4 @@ __pycache__
 /*.txsigned
 /*.vkey
 /workbench/
-.ai/CLAUDE.md
 .ai/settings.local.json
-/.claude
