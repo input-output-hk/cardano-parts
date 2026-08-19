@@ -423,8 +423,10 @@ dedelegate-pools ENV *IDXS=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ ^preprod$|^preview$ ]]; then
+  elif [[ "$ENV" =~ ^preprod$|^preview$|^leios$ ]]; then
     CARDANO_CLI="cardano-cli"
+  elif [[ "$ENV" =~ ^dijkstra$|^sanchonet$ ]]; then
+    CARDANO_CLI="cardano-cli-ng"
   fi
 
   echo
@@ -1031,7 +1033,7 @@ tofu *ARGS:
   SOPS=("sops" "--input-type" "binary" "--output-type" "binary" "--decrypt")
 
   read -r -a ARGS <<< "{{ARGS}}"
-  if [[ ${ARGS[0]} =~ bootstrap|cluster|grafana ]]; then
+  if [[ ${ARGS[0]:-} =~ bootstrap|cluster|grafana ]]; then
     WORKSPACE="${ARGS[0]}"
     ARGS=("${ARGS[@]:1}")
   else

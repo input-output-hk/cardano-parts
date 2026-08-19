@@ -432,6 +432,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       POOL_STAKE_THRESHOLD="n/a"
       POOL_THRESHOLD_TOTAL="n/a"
       COMMITTEE_THRESHOLD="n/a"
+      COMMITTEE_THRESHOLD_TOTAL="n/a"
 
       DREP_ACCEPT_ICON="$GREEN_NA"
       POOL_ACCEPT_ICON="$GREEN_NA"
@@ -514,7 +515,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
           ;;&
 
         # Economic group
-        *"txFeePerByte"*|*"txFeeFixed"*|*"stakeAddressDeposit"*|*"stakePoolDeposit"*|*"monetaryExpansion"*|*"treasuryCut"*|*"minPoolCost"*|*"utxoCostPerByte"*|*"executionUnitPrices"*)
+        *"txFeePerByte"*|*"txFeeFixed"*|*"stakeAddressDeposit"*|*"stakePoolDeposit"*|*"monetaryExpansion"*|*"treasuryCut"*|*"minPoolCost"*|*"utxoCostPerByte"*|*"executionUnitPrices"*|*"minFeeRefScriptCostPerByte"*)
           DREP_STAKE_THRESHOLD=$(jq -re "[ $DREP_STAKE_THRESHOLD, .dRepVotingThresholds.ppEconomicGroup // 0 ] | max" <<< "$PPARAMS" 2> /dev/null)
           echo -e "Parameter changes are included from the ${GREEN}ECONOMIC$OFF group"
           ;;&
@@ -762,6 +763,12 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   LOVELACE_TO_READABLE() {
     local LOVELACE="$1"
     local READABLE=""
+
+    # Pass non-numeric values (e.g. "n/a" for InfoAction) through unchanged
+    if ! [[ "$LOVELACE" =~ ^[0-9]+$ ]]; then
+      echo -n "$LOVELACE"
+      return
+    fi
 
     DIGITS="${#LOVELACE}"
     if [ "$DIGITS" -gt "15" ]; then
