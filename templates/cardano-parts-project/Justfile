@@ -1163,16 +1163,18 @@ update-ips:
       all = {
     "]
     {|machine, acc|
-      let maybe_field = {|name|
-        if $in != null {
-          $'($name) = "($in)";'
-        }
+      # Always emit the attr, empty when aws assigned no ip of that type.
+      # Consumers which read the raw ips attrset rather than the ip-module
+      # options otherwise fail on the absent attr for unrelated machines.
+      let field = {|name|
+        let v = $in | default ""
+        $'($name) = "($v)";'
       }
       $acc | append $"
         ($machine.name) = {
-          ($machine.private_ipv4 | do $maybe_field privateIpv4)
-          ($machine.public_ipv4 | do $maybe_field publicIpv4)
-          ($machine.public_ipv6 | do $maybe_field publicIpv6)
+          ($machine.private_ipv4 | do $field privateIpv4)
+          ($machine.public_ipv4 | do $field publicIpv4)
+          ($machine.public_ipv6 | do $field publicIpv6)
         };
       "
     }
