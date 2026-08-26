@@ -101,7 +101,7 @@ return-utxo() (
 
   PROMPT() {
     echo
-    read -p "Does this look correct [yY]? " -n 1 -r
+    read -p "Does this look correct? [y/N] " -n 1 -r
     echo
     if ! [[ $REPLY =~ ^[Yy]$ ]]; then
       echo "Aborting the fund transfer."

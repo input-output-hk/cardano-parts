@@ -928,7 +928,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   echo
   echo "$ACTION_BEFORE"
   echo
-  read -p "Do you wish pool \"{{POOL}}\" in environment \"{{ENV}}\" to vote \"{{VOTE}}\" on this governance action [yY]? " -n 1 -r
+  read -p "Do you wish pool \"{{POOL}}\" in environment \"{{ENV}}\" to vote \"{{VOTE}}\" on this governance action? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
@@ -958,7 +958,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
     --vote-file "$FILE.vote"
   echo
   echo
-  read -p "Do you wish to proceed with this vote [yY]? " -n 1 -r
+  read -p "Do you wish to proceed with this vote? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
@@ -1007,7 +1007,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
 
   echo
   echo
-  read -p "Do you wish to submit this vote to the {{ENV}} network [yY]? " -n 1 -r
+  read -p "Do you wish to submit this vote to the {{ENV}} network? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
