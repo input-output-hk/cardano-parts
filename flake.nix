@@ -70,7 +70,7 @@
 
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
-    # cardano-node-11-1-0.url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
+    cardano-node-11-1-1.url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1.1";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
@@ -105,7 +105,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
+      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1.1";
       flake = false;
     };
 
@@ -130,7 +130,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
+      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1.1";
       flake = false;
     };
 
@@ -140,7 +140,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1";
+      url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1.1";
       flake = false;
     };
 
