@@ -29,6 +29,10 @@ downstream-diff FILE *ARGS:
 
   eval "icdiff -L \"{{templatePath}}/{{FILE}}\" -L \"$DWN_NAME\" {{ARGS}} $FILE $DWN_FILE"
 
+# Batch port downstream changes: curate a file list, then copy new files and pairwise-diff the rest
+downstream-diff-all DOWNSTREAM=downstreamPath *ARGS:
+  nu scripts/downstream-diff-all.nu "{{DOWNSTREAM}}" {{ARGS}}
+
 # Patch a downstream file into a cardano-parts template file
 downstream-patch FILE:
   #!/usr/bin/env bash

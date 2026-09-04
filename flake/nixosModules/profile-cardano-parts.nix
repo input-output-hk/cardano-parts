@@ -407,8 +407,10 @@ flake @ {moduleWithSystem, ...}: {
 
         genHostsType = type: suffix:
           pipe allIps [
-            # Filter empty values
-            (filterAttrs (_: v: v.${type} != ""))
+            # Filter empty and absent values.  A machine with no ip of this
+            # type, such as an aws region which assigned no ipv6, has the attr
+            # omitted rather than empty, and must not break other machines.
+            (filterAttrs (_: v: (v.${type} or "") != ""))
 
             # Filter by hosts
             (filterAttrs (n: _: elem n hostsList))

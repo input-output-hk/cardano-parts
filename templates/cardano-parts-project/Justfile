@@ -1,3 +1,4 @@
+import? 'scripts/recipes/ai.just'
 import? 'scripts/recipes/aws.just'
 import? 'scripts/recipes/demo.just'
 import? 'scripts/recipes/custom.just'
@@ -16,6 +17,15 @@ statePrefix := "~/.local/share"
 # Machines provisioned directly by tofu, not managed by colmena/NixOS
 # The list structure should be like: ["machine-a", "machine-b"] with optional comma delimiter
 nonNixosMachines := '[]'
+
+# Leios prototype pin. The ouroboros-leios repo publishes authoritative
+# `prototype-2026wNN` release tags that each expose a buildable
+# `#cardano-node-leios` attribute. `start-node leios` builds directly from this
+# tag so no ouroboros-leios flake input (and its heavy source closure) has to be
+# imposed on downstreams that don't do heavier leios work. Bump this (or set
+# LEIOS_TAG) to advance the pin; keep it in sync with any deployed
+# cardano-node-leios input.
+leiosTag := env_var_or_default("LEIOS_TAG", "prototype-2026w29")
 
 # Environment variables can be used to change the default template diff and path comparison sources.
 # If TEMPLATE_PATH is set, it will have precedence, otherwise git url will be used for source templates.
@@ -413,8 +423,10 @@ dedelegate-pools ENV *IDXS=null:
     CARDANO_CLI="cardano-cli"
   elif [ "${UNSTABLE:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli-ng"
-  elif [[ "$ENV" =~ ^preprod$|^preview$ ]]; then
+  elif [[ "$ENV" =~ ^preprod$|^preview$|^leios$ ]]; then
     CARDANO_CLI="cardano-cli"
+  elif [[ "$ENV" =~ ^dijkstra$|^sanchonet$ ]]; then
+    CARDANO_CLI="cardano-cli-ng"
   fi
 
   echo
@@ -843,23 +855,47 @@ start-node ENV:
   mkdir -p "$STATEDIR"
 
   if [[ "{{ENV}}" =~ ^mainnet$|^preprod$|^preview$ ]]; then
-    UNSTABLE=false
-    UNSTABLE_LIB=false
-    UNSTABLE_MITHRIL=false
-    USE_NODE_CONFIG_BP=false
+    UNSTABLE="${UNSTABLE:-false}"
+    UNSTABLE_LIB="${UNSTABLE_LIB:-false}"
+    UNSTABLE_MITHRIL="${UNSTABLE_MITHRIL:-false}"
+    USE_NODE_CONFIG_BP="${USE_NODE_CONFIG_BP:-false}"
   elif [[ "{{ENV}}" == leios ]]; then
-    export CARDANO_NODE_SHELL_BIN="$(nix build -Lv github:IntersectMBO/cardano-node/leios-prototype#cardano-node --no-link --print-out-paths)/bin/cardano-node"
+    # Resolve the leios node. Two modes, auto-selected:
+    #
+    #   1. If this repo declares a `cardano-node-leios` flake input
+    #      resolve the exact rev of the *inner*
+    #      cardano-node it pins and build `#cardano-node` from it.
+    #
+    #   2. Otherwise build the authoritative `{{leiosTag}}` tag's own
+    #      `#cardano-node-leios` attribute directly. No input required.
+    LEIOS_PIN=""
+    if [ -f flake.lock ]; then
+      LEIOS_PIN=$(jq -r '
+        .nodes["cardano-node-leios"] as $top
+        | if ($top == null) then empty
+          else (.nodes[$top.inputs["cardano-node-leios"]].locked) as $l
+               | if ($l == null) then empty else "github:\($l.owner)/\($l.repo)/\($l.rev)" end
+          end' flake.lock 2>/dev/null || true)
+    fi
+
+    if [ -n "$LEIOS_PIN" ]; then
+      echo "Building leios cardano-node from pinned input: $LEIOS_PIN#cardano-node"
+      NODE_REF="$LEIOS_PIN#cardano-node"
+    else
+      echo "No cardano-node-leios input; building ouroboros-leios {{leiosTag}}#cardano-node-leios"
+      NODE_REF="github:input-output-hk/ouroboros-leios/{{leiosTag}}#cardano-node-leios"
+    fi
+    export CARDANO_NODE_SHELL_BIN="$(nix build -Lv "$NODE_REF" --no-link --print-out-paths)/bin/cardano-node"
     export USE_SHELL_BINS=true
-    export LEIOS_DB_PATH="$STATEDIR/db-leios/node/leios.db"
-    UNSTABLE=false
-    UNSTABLE_LIB=true
-    UNSTABLE_MITHRIL=false
-    USE_NODE_CONFIG_BP=false
+    UNSTABLE="${UNSTABLE:-false}"
+    UNSTABLE_LIB="${UNSTABLE_LIB:-true}"
+    UNSTABLE_MITHRIL="${UNSTABLE_MITHRIL:-false}"
+    USE_NODE_CONFIG_BP="${USE_NODE_CONFIG_BP:-false}"
   else
-    UNSTABLE=true
-    UNSTABLE_LIB=true
-    UNSTABLE_MITHRIL=true
-    USE_NODE_CONFIG_BP=false
+    UNSTABLE="${UNSTABLE:-true}"
+    UNSTABLE_LIB="${UNSTABLE_LIB:-true}"
+    UNSTABLE_MITHRIL="${UNSTABLE_MITHRIL:-true}"
+    USE_NODE_CONFIG_BP="${USE_NODE_CONFIG_BP:-false}"
   fi
 
   # Set required entrypoint vars and run node in a new nohup background session
@@ -983,6 +1019,10 @@ template-patch FILE:
   patch "{{FILE}}" < <(echo "$PATCH_FILE")
   git add -p "{{FILE}}"
 
+# Batch pull upstream template changes: curate a file list, then copy new files and pairwise-diff the rest
+upstream-diff-all UPSTREAM=templatePath *ARGS:
+  nu scripts/upstream-diff-all.nu "{{UPSTREAM}}" {{ARGS}}
+
 # Run tofu for bootstrap, cluster or grafana workspace
 tofu *ARGS:
   #!/usr/bin/env bash
@@ -993,7 +1033,7 @@ tofu *ARGS:
   SOPS=("sops" "--input-type" "binary" "--output-type" "binary" "--decrypt")
 
   read -r -a ARGS <<< "{{ARGS}}"
-  if [[ ${ARGS[0]} =~ bootstrap|cluster|grafana ]]; then
+  if [[ ${ARGS[0]:-} =~ bootstrap|cluster|grafana ]]; then
     WORKSPACE="${ARGS[0]}"
     ARGS=("${ARGS[@]:1}")
   else
@@ -1123,16 +1163,18 @@ update-ips:
       all = {
     "]
     {|machine, acc|
-      let maybe_field = {|name|
-        if $in != null {
-          $'($name) = "($in)";'
-        }
+      # Always emit the attr, empty when aws assigned no ip of that type.
+      # Consumers which read the raw ips attrset rather than the ip-module
+      # options otherwise fail on the absent attr for unrelated machines.
+      let field = {|name|
+        let v = $in | default ""
+        $'($name) = "($v)";'
       }
       $acc | append $"
         ($machine.name) = {
-          ($machine.private_ipv4 | do $maybe_field privateIpv4)
-          ($machine.public_ipv4 | do $maybe_field publicIpv4)
-          ($machine.public_ipv6 | do $maybe_field publicIpv6)
+          ($machine.private_ipv4 | do $field privateIpv4)
+          ($machine.public_ipv4 | do $field publicIpv4)
+          ($machine.public_ipv6 | do $field publicIpv6)
         };
       "
     }

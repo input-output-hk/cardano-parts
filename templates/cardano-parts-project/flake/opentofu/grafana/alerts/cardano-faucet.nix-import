@@ -15,13 +15,53 @@
     }
     {
       alert = "faucet_utxo_empty";
-      expr = ''faucet_utxo{is_valid="1"} == 0'';
+      # When a bucket fully drains its series disappears, so anchor on
+      # faucet_delegation_available, which is always exported while the faucet is up.
+      expr = ''
+        (
+          sum by (environment, group, instance) (faucet_utxo{is_valid="1"})
+          or
+          sum by (environment, group, instance) (faucet_delegation_available * 0)
+        ) == 0'';
       for = "5m";
       labels.severity = "page";
       annotations = {
         summary = "Faucet UTxO is empty in environment {{$labels.environment}}.";
         description = ''
           Faucet has no available UTxO in environment {{$labels.environment}} on instance {{$labels.instance}}.'';
+      };
+    }
+    {
+      alert = "faucet_delegation_utxo_low";
+      expr = ''faucet_utxo{for_delegation="1"} < 50'';
+      for = "15m";
+      labels = {severity = "warning";};
+      annotations = {
+        summary = "Faucet delegation UTxO is low in environment {{$labels.environment}}.";
+        description = ''
+          Faucet has less than 50 delegation-sized UTxO remaining in environment {{$labels.environment}} on instance {{$labels.instance}}.
+          Pool delegation requests will fail with "UTxO not found" once these are exhausted.
+          Refill with delegation_utxo_size UTxO per the faucet setup docs.'';
+      };
+    }
+    {
+      alert = "faucet_delegation_utxo_empty";
+      # When the delegation bucket fully drains its series disappears, so anchor on
+      # faucet_delegation_available, which is always exported while the faucet is up.
+      expr = ''
+        (
+          sum by (environment, group, instance) (faucet_utxo{for_delegation="1"})
+          or
+          sum by (environment, group, instance) (faucet_delegation_available * 0)
+        ) == 0'';
+      for = "5m";
+      labels.severity = "page";
+      annotations = {
+        summary = "Faucet delegation UTxO is empty in environment {{$labels.environment}}.";
+        description = ''
+          Faucet has no delegation-sized UTxO remaining in environment {{$labels.environment}} on instance {{$labels.instance}}.
+          All pool delegation requests are failing with "UTxO not found".
+          Refill with delegation_utxo_size UTxO per the faucet setup docs.'';
       };
     }
   ];

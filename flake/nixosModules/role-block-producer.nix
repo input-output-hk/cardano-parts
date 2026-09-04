@@ -55,13 +55,34 @@ flake: {
       operationalCertificate = "${name}.opcert";
       bulkCredentials = "${name}-bulk.creds";
 
+      # Optional Leios BLS signing keys; wired only when present for this pool.
+      # Steady state is just the active key ("${name}-bls.skey"). During a BLS
+      # rotation the incoming key ("${name}-bls-next.skey") is added alongside it
+      # and the node uses whichever is active per the on-chain schedule, so the
+      # operator does not have to time a second deploy when BLS registration
+      # becomes active.
+      blsKeys =
+        optionals (pathExists (pathPrefix + "${name}-bls.skey")) [
+          {
+            src = "${name}-bls.skey";
+            secret = "cardano-node-bls-signing";
+          }
+        ]
+        ++ optionals (pathExists (pathPrefix + "${name}-bls-next.skey")) [
+          {
+            src = "${name}-bls-next.skey";
+            secret = "cardano-node-bls-signing-next";
+          }
+        ];
+      blsKeysExist = blsKeys != [];
+
       mkSopsSecretParams = secretName: keyName: {
         inherit groupOutPath groupName name secretName keyName pathPrefix;
         fileOwner = "cardano-node";
         fileGroup = "cardano-node";
-        reloadUnits = optionals (nodeCfg.useSystemdReload && (elem nodeCfg.useNewTopology [null true])) ["cardano-node.service"];
+        reloadUnits = optionals (nodeCfg.useSystemdReload && (nodeCfg ? useNewTopology && (elem nodeCfg.useNewTopology [null true]))) ["cardano-node.service"];
         restartUnits =
-          optionals (!nodeCfg.useSystemdReload || !(elem nodeCfg.useNewTopology [null true])) ["cardano-node.service"]
+          optionals (!nodeCfg.useSystemdReload || !(nodeCfg ? useNewTopology && (elem nodeCfg.useNewTopology [null true]))) ["cardano-node.service"]
           ++ optionals mithrilCfg.enable ["mithril-signer.service"];
       };
 
@@ -82,7 +103,12 @@ flake: {
             operationalCertificate = "/run/secrets/cardano-node-operational-cert";
           };
 
-        Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
+        # BLS is Leios-only and reachable only under the Cardano hard-fork
+        # protocol, so wire it here and only when the pool has BLS key(s).
+        Cardano =
+          TPraos
+          // optionalAttrs byronKeysExist RealPBFT
+          // optionalAttrs blsKeysExist {blsKeys = map (k: "/run/secrets/${k.secret}") blsKeys;};
       };
 
       keysCfg = rec {
@@ -101,7 +127,10 @@ flake: {
             // (mkSopsSecret (mkSopsSecretParams "cardano-node-cold-verification" coldVerification))
             // (mkSopsSecret (mkSopsSecretParams "cardano-node-operational-cert" operationalCertificate));
 
-        Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
+        Cardano =
+          TPraos
+          // optionalAttrs byronKeysExist RealPBFT
+          // optionalAttrs blsKeysExist (foldl' (acc: k: acc // mkSopsSecret (mkSopsSecretParams k.secret k.src)) {} blsKeys);
       };
 
       sopsPath = name: config.sops.secrets.${name}.path;
@@ -122,6 +151,8 @@ flake: {
               machine when applicable either by additional module code or out of
               band:
 
+                /run/secrets/cardano-node-bls-signing
+                /run/secrets/cardano-node-bls-signing-next
                 /run/secrets/cardano-node-bulk-credentials
                 /run/secrets/cardano-node-cold-verification
                 /run/secrets/cardano-node-delegation-cert

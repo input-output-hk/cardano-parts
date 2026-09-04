@@ -3,10 +3,15 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on nixos module import:
+#   config.services.alloy.enableJournalWatchdog
 #   config.services.alloy.enableLiveDebugging
 #   config.services.alloy.enableLoki
 #   config.services.alloy.extraAlloyConfig
 #   config.services.alloy.extraJournalReceivers
+#   config.services.alloy.extraPrometheusRelabelNodeKeepRegex
+#   config.services.alloy.journalWatchdogInterval
+#   config.services.alloy.journalWatchdogMinUptime
+#   config.services.alloy.journalWatchdogPattern
 #   config.services.alloy.labels
 #   config.services.alloy.logLevel
 #   config.services.alloy.prometheusExporterUnixNodeSetCollectors
@@ -16,6 +21,7 @@
 #   config.services.alloy.systemdEnableTaskMetrics
 #   config.services.alloy.systemdUnitExclude
 #   config.services.alloy.systemdUnitInclude
+#   config.services.alloy.textfileCollectorDirectory
 #   config.services.alloy.useSopsSecrets
 #
 # Tips:
@@ -30,7 +36,7 @@ flake @ {moduleWithSystem, ...}: {
   }:
     with builtins;
     with lib; let
-      inherit (lib.types) attrsOf bool enum listOf str lines;
+      inherit (lib.types) attrsOf bool enum ints listOf nullOr str lines;
       inherit (config.cardano-parts.perNode.meta) cardanoDbSyncPrometheusExporterPort cardanoNodePrometheusExporterPort hostAddr;
       inherit (groupCfg) groupName groupFlake;
       inherit (groupCfg.meta) environmentName;
@@ -153,7 +159,10 @@ flake @ {moduleWithSystem, ...}: {
         exporter = ''
           // Default grafana alloy node exporter integration components, in lowest to highest dependency order
           prometheus.exporter.unix "integrations_node_exporter" {
-            set_collectors = [${concatMapStringsSep ", " (s: "\"${s}\"") cfg.prometheusExporterUnixNodeSetCollectors}]
+            set_collectors = [${concatMapStringsSep ", " (s: "\"${s}\"") (
+            cfg.prometheusExporterUnixNodeSetCollectors
+            ++ optional (cfg.textfileCollectorDirectory != null) "textfile"
+          )}]
 
             systemd {
               enable_restarts = ${boolToString cfg.systemdEnableRestartMetrics}
@@ -162,6 +171,11 @@ flake @ {moduleWithSystem, ...}: {
               unit_exclude = "${cfg.systemdUnitExclude}"
               unit_include = "${cfg.systemdUnitInclude}"
             }
+            ${optionalString (cfg.textfileCollectorDirectory != null) ''
+            textfile {
+              directory = "${cfg.textfileCollectorDirectory}"
+            }
+          ''}
           }
 
           discovery.relabel "integrations_node_exporter" {
@@ -199,7 +213,7 @@ flake @ {moduleWithSystem, ...}: {
 
             rule {
               source_labels = ["__name__"]
-              regex = "${cfg.prometheusRelabelNodeKeepRegex}"
+              regex = "${cfg.prometheusRelabelNodeKeepRegex}${optionalString (cfg.extraPrometheusRelabelNodeKeepRegex != []) "|${concatStringsSep "|" cfg.extraPrometheusRelabelNodeKeepRegex}"}"
               action = "keep"
             }
 
@@ -303,28 +317,6 @@ flake @ {moduleWithSystem, ...}: {
 
         '';
 
-        cardanoCustomMetrics = optional (cfgSvc ? cardano-custom-metrics && cfgSvc.netdata.enable) ''
-          // Cardano custom metrics integration component
-          prometheus.scrape "integrations_cardano_custom_metrics" {
-            targets = [{
-              __address__ = "${cfgSvc.cardano-custom-metrics.address}:${toString cfgSvc.cardano-custom-metrics.port}",
-              ${concatStringsSep ", \n" (mapAttrsToList (n: v: "${n} = \"${v}\"") cfg.labels)},
-            }]
-            forward_to = [prometheus.remote_write.integrations.receiver]
-            job_name = "integrations/cardano-custom-metrics"
-            params = {
-              format = ["prometheus"],
-              // Filtering here won't work as grafana-alloy encodes the
-              // pattern match. Filtering can be configured from the
-              // profile-cardano-custom-metrics nixosModule with the
-              // `enableFilter` and `filter` options.
-              // filter = ["statsd_cardano*"]
-            }
-            metrics_path = "/api/v1/allmetrics"
-          }
-
-        '';
-
         cardanoDbSync = optional (cfgSvc ? cardano-db-sync && cfgSvc.cardano-db-sync.enable) ''
           // Cardano-db-sync integration component
           prometheus.scrape "integrations_cardano_db_sync" {
@@ -396,6 +388,23 @@ flake @ {moduleWithSystem, ...}: {
             }]
             forward_to = [prometheus.remote_write.integrations.receiver]
             job_name = "integrations/cardano-smash"
+            metrics_path = "/"
+          }
+
+        '';
+
+        # Submit-api's metrics server always binds all interfaces, so scrape it
+        # on loopback.  It also probes upwards from metricsPort when that port
+        # is already bound, in which case this target goes stale.
+        cardanoSubmitApi = optional (cfgSvc ? cardano-submit-api && cfgSvc.cardano-submit-api.enable) ''
+          // Cardano-submit-api integration component
+          prometheus.scrape "integrations_cardano_submit_api" {
+            targets = [{
+              __address__ = "127.0.0.1:${toString cfgSvc.cardano-submit-api.metricsPort}",
+              ${concatStringsSep ", \n" (mapAttrsToList (n: v: "${n} = \"${v}\"") cfg.labels)},
+            }]
+            forward_to = [prometheus.remote_write.integrations.receiver]
+            job_name = "integrations/cardano-submit-api"
             metrics_path = "/"
           }
 
@@ -478,6 +487,37 @@ flake @ {moduleWithSystem, ...}: {
 
       options = {
         services.alloy = {
+          enableJournalWatchdog = mkOption {
+            type = bool;
+            default = true;
+            description = ''
+              Whether to run a systemd timer that detects and recovers a wedged
+              grafana-alloy `loki.source.journal` reader.
+
+              Alloy (via the shared Loki/promtail journal target) can stop
+              shipping logs when systemd-journald returns a "bad message"
+              (EBADMSG) for a corrupt journal entry: the read cursor is not
+              advanced past the entry, so the reader makes no further progress
+              and the only recovery is a service restart. The symptom in the
+              alloy logs is:
+
+                level=error msg="unable to follow journal" \
+                  component_id=loki.source.journal.default \
+                  err="failed to iterate journal: bad message"
+
+              Ref: https://github.com/grafana/loki/issues/4053
+
+              When enabled, a timer periodically scans the running alloy
+              instance's own logs for this signature and restarts alloy.service
+              when found. Restarts are observable two ways: as the metric
+              node_systemd_service_restart_total{name="alloy.service"} (the
+              metrics pipeline keeps working during a logs wedge, and
+              alloy.service is in systemdUnitInclude by default), and as a log
+              line from the alloy-journal-watchdog unit that ships to Loki once
+              alloy recovers.
+            '';
+          };
+
           enableLiveDebugging = mkOption {
             type = bool;
             default = true;
@@ -503,6 +543,50 @@ flake @ {moduleWithSystem, ...}: {
             default = [];
             description = ''
               Extra alloy receivers for loki journald log data.
+            '';
+          };
+
+          extraPrometheusRelabelNodeKeepRegex = mkOption {
+            type = listOf str;
+            default = [];
+            description = ''
+              Additional alternation arms appended to prometheusRelabelNodeKeepRegex.
+
+              Used by sibling profiles (e.g. profile-cardano-committee-monitor) to
+              whitelist their textfile-collector metric series without a recursive
+              mkForce on the base option.
+            '';
+          };
+
+          journalWatchdogInterval = mkOption {
+            type = str;
+            default = "1m";
+            description = ''
+              How often the alloy journal watchdog checks for the wedge
+              signature, as a systemd time span. Only used when
+              enableJournalWatchdog is true.
+            '';
+          };
+
+          journalWatchdogMinUptime = mkOption {
+            type = ints.unsigned;
+            default = 120;
+            description = ''
+              Minimum number of seconds the current alloy instance must have
+              been running before the watchdog is allowed to restart it. Guards
+              against a restart storm in the case where journal corruption
+              persists across restarts. Only used when enableJournalWatchdog is
+              true.
+            '';
+          };
+
+          journalWatchdogPattern = mkOption {
+            type = str;
+            default = "unable to follow journal|failed to iterate journal";
+            description = ''
+              Extended regular expression (grep -E) matched against the running
+              alloy instance's log messages to detect a wedged journal reader.
+              Only used when enableJournalWatchdog is true.
             '';
           };
 
@@ -599,6 +683,7 @@ flake @ {moduleWithSystem, ...}: {
                 "node_sockstat_(UDP|UDP6|UDPLITE|UDPLITE6)_inuse"
                 "node_softnet_(dropped|processed|times_squeezed)_total"
                 "node_systemd_.*"
+                "node_textfile_(mtime_seconds|scrape_error)"
                 "node_timex_(estimated_error|maxerror|offset)_seconds"
                 "node_timex_sync_status"
                 "node_time_zone_offset_seconds"
@@ -638,10 +723,25 @@ flake @ {moduleWithSystem, ...}: {
 
           systemdUnitInclude = mkOption {
             type = str;
-            default = "(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
+            default = "(^alloy.service$)|(^cardano.*)|(^metadata.*)|(^nginx.*)|(^smash.*)|(^varnish.*)";
             description = ''
               Regexp of systemd units to include.
               Units must both match include and not match exclude to be collected.
+            '';
+          };
+
+          textfileCollectorDirectory = mkOption {
+            type = nullOr str;
+            default = null;
+            description = ''
+              Directory the node-exporter textfile collector scrapes. When set,
+              the alloy module creates the directory group-writable by the
+              `node-textfile` group and enables the node-exporter `textfile`
+              collector. Sibling profiles (e.g. profile-cardano-committee-monitor)
+              write their .prom files here.
+
+              When left at the default `null`, the textfile collector remains
+              unwired and no directory or group is created.
             '';
           };
 
@@ -665,78 +765,149 @@ flake @ {moduleWithSystem, ...}: {
         };
       };
 
-      config = {
-        environment.etc."alloy/config.alloy".source = let
-          alloyCfg' =
-            toFile "alloy-unformatted.config"
-            (
-              #
-              # Base component configuration snippets
-              #
-              alloyComponentCfg.logging
-              + alloyComponentCfg.livedebugging
-              + alloyComponentCfg.secrets
-              + alloyComponentCfg.remoteWrite
-              + alloyComponentCfg.alloy
-              + alloyComponentCfg.exporter
-              + optionalString cfg.enableLoki alloyComponentCfg.loki
-              #
-              # Cardano-parts optional component configuration snippets
-              #
-              + concatStringsSep "\n" (
-                cardanoPartsComponentCfg.blockperf
-                ++ cardanoPartsComponentCfg.cardanoCustomMetrics
-                ++ cardanoPartsComponentCfg.cardanoDbSync
-                ++ cardanoPartsComponentCfg.cardanoFaucet
-                ++ cardanoPartsComponentCfg.cardanoNode
-                ++ cardanoPartsComponentCfg.cardanoSmash
-                ++ cardanoPartsComponentCfg.mithrilSigner
-                ++ cardanoPartsComponentCfg.nginxVts
-                ++ cardanoPartsComponentCfg.varnishCache
-              )
-              + cfg.extraAlloyConfig
-            );
-        in
-          (pkgs.runCommandLocal "alloy.config" {} ''
-            ${getExe cfg.package} fmt ${alloyCfg'} > $out
-          '')
+      config = mkMerge [
+        {
+          environment.etc."alloy/config.alloy".source = let
+            alloyCfg' =
+              toFile "alloy-unformatted.config"
+              (
+                #
+                # Base component configuration snippets
+                #
+                alloyComponentCfg.logging
+                + alloyComponentCfg.livedebugging
+                + alloyComponentCfg.secrets
+                + alloyComponentCfg.remoteWrite
+                + alloyComponentCfg.alloy
+                + alloyComponentCfg.exporter
+                + optionalString cfg.enableLoki alloyComponentCfg.loki
+                #
+                # Cardano-parts optional component configuration snippets
+                #
+                + concatStringsSep "\n" (
+                  cardanoPartsComponentCfg.blockperf
+                  ++ cardanoPartsComponentCfg.cardanoDbSync
+                  ++ cardanoPartsComponentCfg.cardanoFaucet
+                  ++ cardanoPartsComponentCfg.cardanoNode
+                  ++ cardanoPartsComponentCfg.cardanoSmash
+                  ++ cardanoPartsComponentCfg.cardanoSubmitApi
+                  ++ cardanoPartsComponentCfg.mithrilSigner
+                  ++ cardanoPartsComponentCfg.nginxVts
+                  ++ cardanoPartsComponentCfg.varnishCache
+                )
+                + cfg.extraAlloyConfig
+              );
+          in
+            (pkgs.runCommandLocal "alloy.config" {} ''
+              ${getExe cfg.package} fmt ${alloyCfg'} > $out
+            '')
           .out;
 
-        services.alloy = {
-          enable = true;
+          services.alloy = {
+            enable = true;
 
-          extraFlags = [
-            "--disable-reporting"
-            "--stability.level=experimental"
+            extraFlags = [
+              "--disable-reporting"
+              "--stability.level=experimental"
+            ];
+
+            package = inputs'.nixpkgs-unstable.legacyPackages.grafana-alloy;
+          };
+
+          systemd.services.alloy = {
+            # The alloy collector may error when collecting systemd metrics with a dynamic user.
+            # Also, this allows for using non-root systemd process with non-root secrets files.
+            serviceConfig = {
+              User = "grafana-alloy";
+              Group = "grafana-alloy";
+              DynamicUser = mkForce false;
+            };
+          };
+
+          users = {
+            groups.grafana-alloy = {};
+            users.grafana-alloy = {
+              group = "grafana-alloy";
+              isSystemUser = true;
+            };
+
+            # Owned by the alloy module so multiple textfile-publishing profiles
+            # (e.g. profile-cardano-committee-monitor) can share a single setgid
+            # directory without fighting over StateDirectory.
+            groups.node-textfile = mkIf (cfg.textfileCollectorDirectory != null) {};
+          };
+
+          systemd.tmpfiles.rules = mkIf (cfg.textfileCollectorDirectory != null) [
+            # mode 2775: setgid so files created here inherit the node-textfile group.
+            "d ${cfg.textfileCollectorDirectory} 2775 root node-textfile - -"
           ];
 
-          package = inputs'.nixpkgs-unstable.legacyPackages.grafana-alloy;
-        };
+          sops.secrets = mkIf cfg.useSopsSecrets (
+            mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
+            // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-username")
+            // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-password")
+            // (optionalAttrs cfg.enableLoki (mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")))
+          );
+        }
 
-        systemd.services.alloy = {
-          # The alloy collector may error when collecting systemd metrics with a dynamic user.
-          # Also, this allows for using non-root systemd process with non-root secrets files.
-          serviceConfig = {
-            User = "grafana-alloy";
-            Group = "grafana-alloy";
-            DynamicUser = mkForce false;
+        # Watchdog: recover a wedged loki.source.journal reader (grafana/loki#4053).
+        # Alloy does not self-heal from a journald "bad message" (EBADMSG); it
+        # stops shipping logs until the service is restarted. This detects the
+        # failure signature in the running instance's own logs and restarts it.
+        (mkIf (cfg.enableJournalWatchdog && cfg.enableLoki) {
+          systemd.services.alloy-journal-watchdog = {
+            description = "Detect and recover a wedged grafana-alloy journal reader (loki.source.journal 'bad message')";
+            documentation = ["https://github.com/grafana/loki/issues/4053"];
+            after = ["alloy.service"];
+            path = [pkgs.systemd pkgs.gawk pkgs.gnugrep pkgs.coreutils];
+
+            serviceConfig = {
+              Type = "oneshot";
+              # Runs as root: needs to read the journal and restart alloy.service.
+            };
+
+            script = ''
+              set -eu
+
+              # Only act on a currently-active alloy instance; skip while it is
+              # (re)starting, stopped, or being deployed.
+              systemctl is-active --quiet alloy.service || exit 0
+
+              invocation="$(systemctl show -p InvocationID --value alloy.service)"
+              [ -n "$invocation" ] || exit 0
+
+              # Require a minimum uptime for the running instance before acting,
+              # so persistent corruption cannot drive a tight restart loop. Both
+              # /proc/uptime and ActiveEnterTimestampMonotonic use CLOCK_MONOTONIC.
+              activeEnter="$(systemctl show -p ActiveEnterTimestampMonotonic --value alloy.service)"
+              if [ -n "$activeEnter" ] && [ "$activeEnter" != "0" ]; then
+                uptimeUs="$(awk '{printf "%d", $1 * 1000000}' /proc/uptime)"
+                ageSec=$(( (uptimeUs - activeEnter) / 1000000 ))
+                [ "$ageSec" -ge ${toString cfg.journalWatchdogMinUptime} ] || exit 0
+              fi
+
+              # Scan only the current alloy instance's logs for the wedge
+              # signature. grep -q short-circuits on the first match, so a
+              # hot-looping instance is not fully dumped.
+              if journalctl _SYSTEMD_INVOCATION_ID="$invocation" --output=cat --no-pager 2>/dev/null \
+                  | grep -Eq -- "${cfg.journalWatchdogPattern}"; then
+                echo "alloy-journal-watchdog: wedge signature found in alloy invocation $invocation; restarting alloy.service"
+                systemctl restart alloy.service
+              fi
+            '';
           };
-        };
 
-        users = {
-          groups.grafana-alloy = {};
-          users.grafana-alloy = {
-            group = "grafana-alloy";
-            isSystemUser = true;
+          systemd.timers.alloy-journal-watchdog = {
+            description = "Periodically check for a wedged grafana-alloy journal reader";
+            wantedBy = ["timers.target"];
+
+            timerConfig = {
+              OnBootSec = cfg.journalWatchdogInterval;
+              OnUnitActiveSec = cfg.journalWatchdogInterval;
+              AccuracySec = "10s";
+            };
           };
-        };
-
-        sops.secrets = mkIf cfg.useSopsSecrets (
-          mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-url")
-          // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-username")
-          // mkSopsSecret (mkSopsSecretParams "grafana-alloy-metrics-password")
-          // (optionalAttrs cfg.enableLoki (mkSopsSecret (mkSopsSecretParams "grafana-alloy-loki-url")))
-        );
-      };
+        })
+      ];
     });
 }

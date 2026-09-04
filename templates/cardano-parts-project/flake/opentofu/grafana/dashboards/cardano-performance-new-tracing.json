@@ -1207,7 +1207,7 @@
     }
   ],
   "preload": false,
-  "refresh": "",
+  "refresh": "1m",
   "schemaVersion": 41,
   "tags": [],
   "templating": {
@@ -1241,7 +1241,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "utc",
   "title": "Cardano Node: Performance (New Tracing)",
   "uid": "Ee0EeiEefa",
   "version": 10

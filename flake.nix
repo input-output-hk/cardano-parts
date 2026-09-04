@@ -60,22 +60,28 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
+    # The release pin works with leios prototype version <= w27
     iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/leios";
+
+    # Works with leios prototype version >= w32 respin
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+
+    blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
     # For tmp local testing pins
-    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/feature/upgrade-node-11.0";
+    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
+    # cardano-node-11-1-1.url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1.1";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
     # definitions found in flakeModule/pkgs.nix.
     cardano-db-sync-schema = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.5";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.2.1";
       flake = false;
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.5";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.2.1";
       flake = false;
     };
 
@@ -84,12 +90,12 @@
     # flakeModule options and do not necessarily reflect the software
     # versions running on those nixos services.
     cardano-db-sync-service = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.5";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.2.1";
       flake = false;
     };
 
     cardano-db-sync-service-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.0.5";
+      url = "github:IntersectMBO/cardano-db-sync/13.7.2.1";
       flake = false;
     };
 
@@ -99,12 +105,12 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/11.1.1";
       flake = false;
     };
 
     cardano-metadata-service = {
-      url = "github:input-output-hk/offchain-metadata-tools/ops-1-0-0";
+      url = "github:input-output-hk/offchain-metadata-tools?ref=refs/tags/v0.5.0.0";
       flake = false;
     };
 
@@ -124,7 +130,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/11.1.1";
       flake = false;
     };
 
@@ -134,7 +140,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/11.1.1";
       flake = false;
     };
 
@@ -150,7 +156,6 @@
     inputs.flake-parts.lib.mkFlake {inherit inputs;} ({
       flake-parts-lib,
       self,
-      withSystem,
       ...
     }: let
       inherit (flake-parts-lib) importApply;
@@ -168,7 +173,7 @@
       fmLib = ./flakeModules/lib.nix;
       fmPkgs = passLocalFlake ./flakeModules/pkgs.nix {};
       fmProcessCompose = passLocalFlake ./flakeModules/process-compose.nix {};
-      fmShell = passLocalFlake ./flakeModules/shell.nix {inherit withSystem;};
+      fmShell = passLocalFlake ./flakeModules/shell.nix {};
     in {
       imports =
         recursiveImports [./flake ./perSystem]

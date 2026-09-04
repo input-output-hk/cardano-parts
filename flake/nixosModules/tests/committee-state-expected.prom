@@ -1,0 +1,50 @@
+# HELP cardano_cc_member_epochs_until_expiration Epochs remaining before this committee member term expires.
+# TYPE cardano_cc_member_epochs_until_expiration gauge
+cardano_cc_member_epochs_until_expiration{environment="preview",cold_credential="keyHash-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"} 100
+cardano_cc_member_epochs_until_expiration{environment="preview",cold_credential="scriptHash-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"} 200
+cardano_cc_member_epochs_until_expiration{environment="preview",cold_credential="keyHash-cccccccccccccccccccccccccccccccccccccccccccccccccccc"} -100
+cardano_cc_member_epochs_until_expiration{environment="preview",cold_credential="scriptHash-dddddddddddddddddddddddddddddddddddddddddddddddddddd"} 10
+cardano_cc_member_epochs_until_expiration{environment="preview",cold_credential="scriptHash-ffffffffffffffffffffffffffffffffffffffffffffffffffff"} 5
+# HELP cardano_cc_member_seconds_until_expiration Seconds remaining before this committee member term expires (epochs delta times cardano_cc_seconds_per_epoch).
+# TYPE cardano_cc_member_seconds_until_expiration gauge
+cardano_cc_member_seconds_until_expiration{environment="preview",cold_credential="keyHash-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"} 8640000
+cardano_cc_member_seconds_until_expiration{environment="preview",cold_credential="scriptHash-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"} 17280000
+cardano_cc_member_seconds_until_expiration{environment="preview",cold_credential="keyHash-cccccccccccccccccccccccccccccccccccccccccccccccccccc"} -8640000
+cardano_cc_member_seconds_until_expiration{environment="preview",cold_credential="scriptHash-dddddddddddddddddddddddddddddddddddddddddddddddddddd"} 864000
+cardano_cc_member_seconds_until_expiration{environment="preview",cold_credential="scriptHash-ffffffffffffffffffffffffffffffffffffffffffffffffffff"} 432000
+# HELP cardano_cc_member_hot_cred_status Info gauge (value 1) carrying the current hotCredsAuthStatus.tag in the status label.
+# TYPE cardano_cc_member_hot_cred_status gauge
+cardano_cc_member_hot_cred_status{environment="preview",cold_credential="keyHash-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",status="MemberAuthorized"} 1
+cardano_cc_member_hot_cred_status{environment="preview",cold_credential="scriptHash-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",status="MemberResigned"} 1
+cardano_cc_member_hot_cred_status{environment="preview",cold_credential="keyHash-cccccccccccccccccccccccccccccccccccccccccccccccccccc",status="MemberAuthorized"} 1
+cardano_cc_member_hot_cred_status{environment="preview",cold_credential="scriptHash-dddddddddddddddddddddddddddddddddddddddddddddddddddd",status="MemberNotAuthorized"} 1
+cardano_cc_member_hot_cred_status{environment="preview",cold_credential="keyHash-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",status="MemberAuthorized"} 1
+cardano_cc_member_hot_cred_status{environment="preview",cold_credential="scriptHash-ffffffffffffffffffffffffffffffffffffffffffffffffffff",status="MemberAuthorized"} 1
+cardano_cc_member_hot_cred_status{environment="preview",cold_credential="keyHash-11111111111111111111111111111111111111111111111111aa",status="MemberAuthorized"} 1
+# HELP cardano_cc_member_state Info gauge (value 1) carrying the current committee-member status in the state label.
+# TYPE cardano_cc_member_state gauge
+cardano_cc_member_state{environment="preview",cold_credential="keyHash-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",state="Active"} 1
+cardano_cc_member_state{environment="preview",cold_credential="scriptHash-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",state="Active"} 1
+cardano_cc_member_state{environment="preview",cold_credential="keyHash-cccccccccccccccccccccccccccccccccccccccccccccccccccc",state="Expired"} 1
+cardano_cc_member_state{environment="preview",cold_credential="scriptHash-dddddddddddddddddddddddddddddddddddddddddddddddddddd",state="Active"} 1
+cardano_cc_member_state{environment="preview",cold_credential="keyHash-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",state="Unrecognized"} 1
+cardano_cc_member_state{environment="preview",cold_credential="scriptHash-ffffffffffffffffffffffffffffffffffffffffffffffffffff",state="Active"} 1
+cardano_cc_member_state{environment="preview",cold_credential="keyHash-11111111111111111111111111111111111111111111111111aa",state="Active"} 1
+# HELP cardano_cc_member_next_epoch_change Info gauge (value 1) carrying nextEpochChange in the change label.
+# TYPE cardano_cc_member_next_epoch_change gauge
+cardano_cc_member_next_epoch_change{environment="preview",cold_credential="keyHash-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",change="NoChangeExpected"} 1
+cardano_cc_member_next_epoch_change{environment="preview",cold_credential="scriptHash-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",change="NoChangeExpected"} 1
+cardano_cc_member_next_epoch_change{environment="preview",cold_credential="keyHash-cccccccccccccccccccccccccccccccccccccccccccccccccccc",change="ToBeRemoved"} 1
+cardano_cc_member_next_epoch_change{environment="preview",cold_credential="scriptHash-dddddddddddddddddddddddddddddddddddddddddddddddddddd",change="ToBeExpired"} 1
+cardano_cc_member_next_epoch_change{environment="preview",cold_credential="keyHash-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",change="NoChangeExpected"} 1
+cardano_cc_member_next_epoch_change{environment="preview",cold_credential="scriptHash-ffffffffffffffffffffffffffffffffffffffffffffffffffff",change="TermAdjusted"} 1
+cardano_cc_member_next_epoch_change{environment="preview",cold_credential="keyHash-11111111111111111111111111111111111111111111111111aa",change="ToBeEnacted"} 1
+# HELP cardano_cc_current_epoch Current epoch on this environment.
+# TYPE cardano_cc_current_epoch gauge
+cardano_cc_current_epoch{environment="preview"} 1300
+# HELP cardano_cc_member_count Total committee members on this environment.
+# TYPE cardano_cc_member_count gauge
+cardano_cc_member_count{environment="preview"} 7
+# HELP cardano_cc_seconds_per_epoch Environment constant: epochLength times slotLength from shelley genesis.
+# TYPE cardano_cc_seconds_per_epoch gauge
+cardano_cc_seconds_per_epoch{environment="preview"} 86400

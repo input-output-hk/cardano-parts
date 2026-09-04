@@ -461,30 +461,30 @@ in
         };
 
         pkgsSubmodule = let
-          # inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
-          blockperf = caPkgs.blockperf-cardano-foundation-blockperf-main-626ad7b;
+          inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
+          # blockperf = caPkgs.blockperf-johnalotoski-blockperf-main-e77333d;
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
-          dbsync-release = "input-output-hk-cardano-db-sync-13-7-0-5-8c95bab";
-          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-0-5-8c95bab";
+          dbsync-release = "input-output-hk-cardano-db-sync-13-7-2-1-db8cdf6";
+          dbsync-pre-release = "input-output-hk-cardano-db-sync-13-7-2-1-db8cdf6";
 
-          faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
+          faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0a-829b8de";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
-          faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0-631bb64";
+          faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-leios-prototype-w35-d4636dc";
           # faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
-          metadata-server-release = "input-output-hk-offchain-metadata-tools-ops-1-0-0-f406c6d";
-          mithril-release = "input-output-hk-mithril-2617-0-2478748";
-          # The current mithril unstable tag has broken nix builds, so set to the current release until fixed
-          # mithril-pre-release = "input-output-hk-mithril-unstable-b31ce25";
-          mithril-pre-release = "input-output-hk-mithril-unstable-0229ae2";
+          metadata-pkg = pkg: caPkgs."${pkg}-input-output-hk-offchain-metadata-tools-v0-5-0-0-91eba72";
+          # metadata-pkg = pkg: localFlake.inputs.cardano-metadata-service.packages.${system}.${pkg};
+
+          mithril-release = "input-output-hk-mithril-2630-0-23e124d";
+          mithril-pre-release = "input-output-hk-mithril-unstable-58b575a";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-0-1-97036a6";
           # node-release = pkg: localFlake.inputs.cardano-node-10-6-3.packages.x86_64-linux.${pkg};
 
-          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-0-1-97036a6";
-          # node-pre-release = pkg: localFlake.inputs.cardano-node-10-7-0.packages.x86_64-linux.${pkg};
+          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-1-c2ebdc8";
+          # node-pre-release = pkg: localFlake.inputs.cardano-node-11-1-1.packages.x86_64-linux.${pkg};
         in
           submodule {
             options = foldl' recursiveUpdate {} [
@@ -493,7 +493,7 @@ in
               (mkPkg "blockperf" blockperf)
               (mkPkg "cardano-address" caPkgs."\"cardano-addresses:exe:cardano-address\"-IntersectMBO-cardano-addresses-4-0-2-5c00d7b")
               (mkPkg "cardano-cli" ((node-release "cardano-cli") // {version = "11.0.0.0";}))
-              (mkPkg "cardano-cli-ng" ((node-pre-release "cardano-cli") // {version = "11.0.0.0";}))
+              (mkPkg "cardano-cli-ng" ((node-pre-release "cardano-cli") // {version = "11.2.2.0";}))
               (mkPkg "cardano-db-sync" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-release}")
               (mkPkg "cardano-db-sync-ng" caPkgs."\"cardano-db-sync:exe:cardano-db-sync\"-${dbsync-pre-release}")
               (mkPkg "cardano-db-tool" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-${dbsync-release}")
@@ -501,7 +501,7 @@ in
               (mkPkg "cardano-faucet" faucet)
               (mkPkg "cardano-faucet-ng" faucet-ng)
               (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "11.0.1";}))
-              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "11.0.1";}))
+              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "11.1.1";}))
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-14-0-5752501)
               (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-34-0-4108dd3)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")
@@ -523,10 +523,10 @@ in
               (mkPkg "db-truncater-ng" (node-pre-release "db-truncater"))
               (mkPkg "isd" caPkgs.isd-isd-project-isd-v0-6-1-a4a5099)
               (mkPkg "process-compose" caPkgs.process-compose-F1bonacc1-process-compose-v1-90-0-50c81a8)
-              (mkPkg "metadata-server" caPkgs."metadata-server-${metadata-server-release}")
-              (mkPkg "metadata-sync" caPkgs."metadata-sync-${metadata-server-release}")
-              (mkPkg "metadata-validator-github" caPkgs."metadata-validator-github-${metadata-server-release}")
-              (mkPkg "metadata-webhook" caPkgs."metadata-webhook-${metadata-server-release}")
+              (mkPkg "metadata-server" (metadata-pkg "metadata-server"))
+              (mkPkg "metadata-sync" (metadata-pkg "metadata-sync"))
+              (mkPkg "metadata-validator-github" (metadata-pkg "metadata-validator-github"))
+              (mkPkg "metadata-webhook" (metadata-pkg "metadata-webhook"))
               (mkPkg "mithril-client-cli" (recursiveUpdate caPkgs."mithril-client-cli-${mithril-release}" {meta.mainProgram = "mithril-client";}))
               (mkPkg "mithril-client-cli-ng" (recursiveUpdate caPkgs."mithril-client-cli-${mithril-pre-release}" {meta.mainProgram = "mithril-client";}))
               (mkPkg "mithril-signer" (recursiveUpdate caPkgs."mithril-signer-${mithril-release}" {meta.mainProgram = "mithril-signer";}))
@@ -534,7 +534,7 @@ in
               (mkPkg "orchestrator-cli" caPkgs."orchestrator-cli-${credential-manager-release}")
               (mkPkg "snapshot-converter" (node-release "snapshot-converter"))
               (mkPkg "snapshot-converter-ng" (node-pre-release "snapshot-converter"))
-              (mkPkg "token-metadata-creator" (recursiveUpdate caPkgs."token-metadata-creator-${metadata-server-release}" {meta.mainProgram = "token-metadata-creator";}))
+              (mkPkg "token-metadata-creator" (recursiveUpdate (metadata-pkg "token-metadata-creator") {meta.mainProgram = "token-metadata-creator";}))
               (mkPkg "tx-bundle" caPkgs."tx-bundle-${credential-manager-release}")
             ];
           };

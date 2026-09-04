@@ -12,6 +12,7 @@ with lib; let
 
   alertFileList = parseDir ./grafana/alerts ".nix-import";
   dashboardFileList = parseDir ./grafana/dashboards ".json";
+  lokiAlertFileList = parseDir ./grafana/loki-alerts ".nix-import";
   recordingRulesFileList = parseDir ./grafana/recording-rules ".nix-import";
 
   extractFileName = file:
@@ -44,6 +45,7 @@ in {
         terraform = {
           required_providers = {
             grafana.source = "grafana/grafana";
+            loki.source = "fgouteroux/loki";
             mimir.source = "fgouteroux/mimir";
           };
 
@@ -71,6 +73,9 @@ in {
           mimir_prometheus_ruler_uri = sensitiveString;
           mimir_prometheus_alertmanager_uri = sensitiveString;
           mimir_prometheus_username = sensitiveString;
+
+          loki_uri = sensitiveString;
+          loki_username = sensitiveString;
         };
 
         provider = {
@@ -100,6 +105,13 @@ in {
               password = "\${var.mimir_api_key}";
             }
           ];
+
+          loki = {
+            uri = "\${var.loki_uri}";
+            org_id = "1";
+            username = "\${var.loki_username}";
+            password = "\${var.mimir_api_key}";
+          };
         };
 
         resource = {
@@ -171,6 +183,19 @@ in {
                 // {provider = "mimir.prometheus";};
             }) {}
           alertFileList;
+
+          # Loki alerts
+          loki_rule_group_alerting = foldl' (acc: f:
+            recursiveUpdate acc {
+              ${extractFileName f} =
+                (
+                  if isFunction (import f)
+                  then (import f) self
+                  else (import f)
+                )
+                // {provider = "loki";};
+            }) {}
+          lokiAlertFileList;
 
           # Recording rules
           mimir_rule_group_recording = foldl' (acc: f:

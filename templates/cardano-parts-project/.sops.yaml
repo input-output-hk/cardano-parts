@@ -1,8 +1,9 @@
 # Example:
 keys:
   - &sre $SOPS_AGE_PUBKEY1
-  - &group1-bp-a-1 $SOPS_AGE_PUBKEY2
-  - &group1-faucet-a-1 $SOPS_AGE_PUBKEY3
+  - &ai $SOPS_AGE_PUBKEY2
+  - &group1-bp-a-1 $SOPS_AGE_PUBKEY3
+  - &group1-faucet-a-1 $SOPS_AGE_PUBKEY4
 creation_rules:
   # -------------------------------------------------------
   # General environment secrets are admin only
@@ -17,6 +18,14 @@ creation_rules:
     key_groups:
     - age:
       - *sre
+
+  # -------------------------------------------------------
+  # AI secrets
+  - path_regex: secrets/ai/.*$
+    key_groups:
+    - age:
+      - *sre
+      - *ai
 
   # -------------------------------------------------------
   # Group producer and other secrets
