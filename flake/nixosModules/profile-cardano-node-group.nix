@@ -250,7 +250,10 @@
 
         variables =
           {
-            CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+            CARDANO_NODE_NETWORK_ID =
+              if (environmentName == "mainnet")
+              then "mainnet"
+              else toString protocolMagic;
             CARDANO_NODE_SNAPSHOT_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz";
             CARDANO_NODE_SNAPSHOT_SHA256_URL = mkIf (environmentName == "mainnet") "https://update-cardano-mainnet.iohk.io/cardano-node-state/db-mainnet.tar.gz.sha256sum";
             CARDANO_NODE_SOCKET_PATH = cfgNode.socketPath 0;
