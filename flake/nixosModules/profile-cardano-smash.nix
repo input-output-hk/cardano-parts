@@ -310,9 +310,9 @@ flake: {
                 while IFS= read -r ip; do
                   set +e
                   if $PING_LEGACY_ARGS; then
-                    PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $CARDANO_NODE_NETWORK_ID -c 1 -q --json)"
+                    PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $TESTNET_MAGIC -c 1 -q --json)"
                   else
-                    PING="$(timeout 7s cardano-cli ping --network-magic $CARDANO_NODE_NETWORK_ID -c 1 -q --json "$ip:$port")"
+                    PING="$(timeout 7s cardano-cli ping --network-magic $TESTNET_MAGIC -c 1 -q --json "$ip:$port")"
                   fi
                   res=$?
                   if [ $res -eq 0 ]; then
@@ -360,7 +360,7 @@ flake: {
               }
 
               run() {
-                epoch=$(cardano-cli latest query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
+                epoch=$(cardano-cli latest query tip | jq .epoch)
                 db_sync_epoch=$(psql -X -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
 
                 if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then

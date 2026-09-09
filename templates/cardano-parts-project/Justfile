@@ -661,7 +661,11 @@ set-default-cardano-env ENV TESTNET_MAGIC=null:
   >&2 echo "  source <(just set-default-cardano-env \"{{ENV}}\")"
 
   echo "export CARDANO_NODE_SOCKET_PATH=\"$(pwd)/node.socket\""
-  echo "export CARDANO_NODE_NETWORK_ID=\"$MAGIC\""
+  if [ "$ENV" = "mainnet" ]; then
+    echo "export CARDANO_NODE_NETWORK_ID=\"mainnet\""
+  else
+    echo "export CARDANO_NODE_NETWORK_ID=\"$MAGIC\""
+  fi
   echo "export TESTNET_MAGIC=\"$MAGIC\""
 
 # Show nix flake details

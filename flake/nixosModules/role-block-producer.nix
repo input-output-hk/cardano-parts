@@ -305,7 +305,10 @@ flake: {
             environment = with nodeCfg.environments.${environmentName}.mithrilSignerConfig; {
               AGGREGATOR_ENDPOINT = aggregator_endpoint;
               CARDANO_NODE_SOCKET_PATH = nodeCfg.socketPath 0;
-              CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+              CARDANO_NODE_NETWORK_ID =
+                if environmentName == "mainnet"
+                then "mainnet"
+                else toString protocolMagic;
               RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
             };
 
