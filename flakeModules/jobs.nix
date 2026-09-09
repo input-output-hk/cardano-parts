@@ -124,6 +124,68 @@ in {
         fi
       '';
 
+      # cardano-api has shipped the BLS TextEnvelope type under two spellings,
+      # `...BLS-Signature-Minimal-Signature-Size` and the misspelt
+      # `...BLS-Signature-Mininimal-Signature-Size`, and which one a cli writes
+      # varies by build rather than by version. A key generated under one
+      # spelling is rejected by the other at pool registration with:
+      #
+      #   TextEnvelope type error: Expected: BlsSigningKey_...Minimal...
+      #                            Actual:   BlsSigningKey_...Mininimal...
+      #
+      # so BLS keys silently stop working across a cli bump. Probe the cli in
+      # use once, then relabel the key to match. Only the type string changes,
+      # the key material is untouched, so no redeploy of the secret is needed.
+      blsFns = ''
+        BLS_TYPE_SUFFIX=""
+
+        function bls_envelope_fixup {
+          # Inputs:
+          #   $1 (BLS skey or vkey path)
+          #   $CARDANO_CLI_LATEST
+          local FILE="$1" PROBE HAVE WANT PREFIX
+
+          [ -f "$FILE" ] || return 0
+
+          # An encrypted key is read through a decrypt process substitution, so
+          # it cannot be relabelled in place here.
+          if jq -e 'has("sops")' &> /dev/null < "$FILE"; then
+            echo "warning: \"$FILE\" is encrypted, skipping BLS envelope check" >&2
+            return 0
+          fi
+
+          HAVE=$(jq -r '.type // ""' "$FILE" 2> /dev/null || echo "")
+          case "$HAVE" in
+            BlsSigningKey_*) PREFIX="BlsSigningKey_" ;;
+            BlsVerificationKey_*) PREFIX="BlsVerificationKey_" ;;
+            *) return 0 ;;
+          esac
+
+          # Probe once per job run: generate a throwaway pair and read back the
+          # spelling this cli emits.
+          if [ -z "$BLS_TYPE_SUFFIX" ]; then
+            PROBE=$(mktemp -d)
+            if "''${CARDANO_CLI_LATEST[@]}" node key-gen-BLS \
+              --signing-key-file "$PROBE/probe.skey" \
+              --verification-key-file "$PROBE/probe.vkey" &> /dev/null; then
+              BLS_TYPE_SUFFIX=$(jq -r '.type' "$PROBE/probe.skey" 2> /dev/null | sed 's/^BlsSigningKey_//' || echo "")
+            fi
+            rm -rf "$PROBE"
+          fi
+
+          # Cli cannot generate BLS keys, nothing to normalize against.
+          [ -n "$BLS_TYPE_SUFFIX" ] || return 0
+
+          WANT="$PREFIX$BLS_TYPE_SUFFIX"
+          if [ "$HAVE" != "$WANT" ]; then
+            echo "Relabelling BLS envelope type in \"$FILE\""
+            echo "  from: $HAVE"
+            echo "  to:   $WANT"
+            jq --arg t "$WANT" '.type = $t' "$FILE" | sponge "$FILE"
+          fi
+        }
+      '';
+
       updateProposalTemplate = ''
         # Inputs:
         #   [$DEBUG]
@@ -1400,6 +1462,7 @@ in {
 
             ${secretsFns}
             ${selectCardanoCli}
+            ${blsFns}
 
             if [ -z "''${FEE:-}" ]; then
               echo "Fee for stake pool registration tx is defaulting to 300000 lovelace"
@@ -1498,6 +1561,8 @@ in {
                   *) echo "BLS_SLOT must be unset (active) or 'next', got: ''${BLS_SLOT:-}"; exit 1 ;;
                 esac
                 BLS_SUFFIX="''${BLS_SLOT:+-$BLS_SLOT}"
+                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.skey"
+                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.vkey"
                 BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
               fi
 
@@ -1730,6 +1795,7 @@ in {
 
             ${secretsFns}
             ${selectCardanoCli}
+            ${blsFns}
 
             if [ -z "''${FEE:-}" ]; then
               echo "Fee for stake pool re-registration tx is defaulting to 300000 lovelace"
@@ -1823,6 +1889,8 @@ in {
                   *) echo "BLS_SLOT must be unset (active) or 'next', got: ''${BLS_SLOT:-}"; exit 1 ;;
                 esac
                 BLS_SUFFIX="''${BLS_SLOT:+-$BLS_SLOT}"
+                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.skey"
+                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.vkey"
                 BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
               fi
 
