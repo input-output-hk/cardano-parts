@@ -12,6 +12,8 @@
 #   config.services.cardano-metadata.metadataServerPort
 #   config.services.cardano-metadata.metadataSyncGitMetadataFolder
 #   config.services.cardano-metadata.metadataSyncGitUrl
+#   config.services.cardano-metadata.metadataWebhookGithubOwner
+#   config.services.cardano-metadata.metadataWebhookGithubRepo
 #   config.services.cardano-metadata.metadataWebhookPort
 #   config.services.cardano-metadata.openFirewallNginx
 #   config.services.cardano-metadata.postgresRamAvailableMiB
@@ -141,6 +143,38 @@ flake: {
 
               Typically for testnets, this would be:
                 https://github.com/input-output-hk/metadata-registry-testnet.git
+            '';
+          };
+
+          metadataWebhookGithubOwner = mkOption {
+            type = str;
+            default =
+              if cfg.enableProduction
+              then "cardano-foundation"
+              else "input-output-hk";
+            description = ''
+              Owner of the sole GitHub repository the metadata webhook fetches
+              file contents from. The GitHub API URL is built from this and
+              metadataWebhookGithubRepo; push events for any other repository
+              are ignored. Should match the metadata-sync repository.
+
+              Typically for production, this would be: "cardano-foundation".
+              Typically for testnets, this would be: "input-output-hk".
+            '';
+          };
+
+          metadataWebhookGithubRepo = mkOption {
+            type = str;
+            default =
+              if cfg.enableProduction
+              then "cardano-token-registry"
+              else "metadata-registry-testnet";
+            description = ''
+              Name of the sole GitHub repository the metadata webhook fetches
+              file contents from (see metadataWebhookGithubOwner).
+
+              Typically for production, this would be: "cardano-token-registry".
+              Typically for testnets, this would be: "metadata-registry-testnet".
             '';
           };
 
@@ -303,6 +337,8 @@ flake: {
             package = metadata-webhook;
             user = "metadata-webhook";
             port = cfg.metadataWebhookPort;
+            githubOwner = cfg.metadataWebhookGithubOwner;
+            githubRepo = cfg.metadataWebhookGithubRepo;
             environmentFile = "/run/secrets/cardano-metadata-webhook";
             postgres = {inherit (cfgSrv.postgres) socketdir port database table user numConnections;};
           };

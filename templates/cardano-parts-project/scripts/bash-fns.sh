@@ -101,7 +101,7 @@ return-utxo() (
 
   PROMPT() {
     echo
-    read -p "Does this look correct [yY]? " -n 1 -r
+    read -p "Does this look correct? [y/N] " -n 1 -r
     echo
     if ! [[ $REPLY =~ ^[Yy]$ ]]; then
       echo "Aborting the fund transfer."
@@ -229,6 +229,7 @@ faucet() (
 )
 
 run-node-faketime() (
+  set -x
   if [ "${USE_SHELL_BINS:-}" = "true" ]; then
     CMD=$(alias cardano-node | cut -d"'" -f2)
   elif [ "${UNSTABLE:-}" = "true" ]; then
@@ -246,7 +247,25 @@ run-node-faketime() (
     fi
   fi
 
+  # If the spec carries a libfaketime rate suffix (' xN'), add '-f' so
+  # faketime skips its 'date -d' pre-validation pass. date doesn't
+  # understand the rate token and fails the whole spec; '-f' hands the
+  # string verbatim to libfaketime's native parser, which does.
+  # Also force TZ=UTC for that invocation: libfaketime's strptime path
+  # would otherwise interpret bare 'YYYY-MM-DD HH:MM:SS' as local time,
+  # silently shifting the start anchor on non-UTC hosts. Harmless for
+  # the '+0 xN' relative case so we gate both on the same condition.
+  FAKETIME_PRE_ARGS=()
+  FAKETIME_ENV_PREFIX=()
+  case "$1" in
+    *" x"*)
+      FAKETIME_PRE_ARGS+=("-f")
+      FAKETIME_ENV_PREFIX+=("env" "TZ=UTC")
+      ;;
+  esac
+
   ARGS=(
+    "${FAKETIME_PRE_ARGS[@]}"
     "$1" "$CMD" "run"
     "--config" "$DATA_DIR/node-config.json"
     "--database-path" "$DATA_DIR/db"
@@ -264,14 +283,68 @@ run-node-faketime() (
   # export FAKETIME_FLAKE="github:nixos/nixpkgs/nixos-23.05"
   #
   if [ -n "${FAKETIME_FLAKE:-}" ]; then
-    nix run "$FAKETIME_FLAKE"#libfaketime -- \
+    "${FAKETIME_ENV_PREFIX[@]}" nix run "$FAKETIME_FLAKE"#libfaketime -- \
       "${ARGS[@]}" \
     | tee -a "$DATA_DIR"/node.log
   else
-    faketime \
+    "${FAKETIME_ENV_PREFIX[@]}" faketime \
       "${ARGS[@]}" \
     | tee -a "$DATA_DIR"/node.log
   fi
+)
+
+# Run cardano-node under an accelerated wallclock. Thin wrapper around
+# run-node-faketime that takes a numeric multiplier rather than a raw
+# libfaketime spec, so callers don't have to remember the '+0 xN' form.
+#
+# Usage: faketime-fast RATE
+#   RATE -- wallclock multiplier (e.g. 10 for 10x faster, 0.5 for half speed)
+#
+# Example: faketime-fast 10
+#   cardano-node sees wallclock advance 10x real time; useful for replay
+#   when catching up a truncated chainDB.
+faketime-fast() (
+  if [ "$#" -ne 1 ]; then
+    echo "Usage: faketime-fast RATE" >&2
+    echo "  RATE -- wallclock multiplier (e.g. 10 for 10x faster, 0.5 for half)" >&2
+    exit 1
+  fi
+
+  run-node-faketime "+0 x$1"
+)
+
+# Run cardano-node under an accelerated wallclock, starting from an absolute
+# timestamp. Wrapper around run-node-faketime that converts the timestamp
+# to the space-separated form ('@YYYY-MM-DD HH:MM:SS xRATE'). The leading
+# '@' marks the value as absolute for libfaketime's parse_ft_string when
+# combined with a rate; without it the parser rejects the spec. The
+# upstream run-node-faketime detects the ' x' rate token and adds the
+# '-f' flag (skipping faketime's 'date -d' pre-validation) plus
+# 'env TZ=UTC' (so the space-separated datetime is interpreted as UTC).
+#
+# Usage: faketime-fast-at ISO_TIMESTAMP RATE
+#   ISO_TIMESTAMP -- anything 'date -u -d' accepts (e.g. 2026-04-15T16:00:00Z)
+#   RATE          -- wallclock multiplier (e.g. 100 for 100x faster)
+#
+# Example:
+#   faketime-fast-at \
+#     "$(date -u -d "$START_TIME + 277195 seconds" "+%Y-%m-%dT%H:%M:%SZ")" \
+#     100
+faketime-fast-at() (
+  if [ "$#" -ne 2 ]; then
+    echo "Usage: faketime-fast-at ISO_TIMESTAMP RATE" >&2
+    echo "  ISO_TIMESTAMP -- anything 'date -u -d' accepts (e.g. 2026-04-15T16:00:00Z)" >&2
+    echo "  RATE          -- wallclock multiplier (e.g. 100 for 100x faster)" >&2
+    exit 1
+  fi
+
+  local fts
+  if ! fts=$(date -u -d "$1" "+%Y-%m-%d %H:%M:%S" 2>/dev/null); then
+    echo "ERROR: could not parse '$1' as a date" >&2
+    exit 1
+  fi
+
+  run-node-faketime "@$fts x$2"
 )
 
 synth-prep() (

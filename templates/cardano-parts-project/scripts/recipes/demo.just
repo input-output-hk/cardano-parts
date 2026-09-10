@@ -48,7 +48,7 @@ start-demo:
     ERA_CMD="conway" \
       nix run .#job-gen-custom-node-config-data
   else
-    for i in "$(seq 1 "$NUM_CC_KEYS")"; do
+    for i in $(seq 1 "$NUM_CC_KEYS"); do
       INDEX="$i" \
         nix run .#job-gen-keys-cc
     done
@@ -160,7 +160,6 @@ start-demo:
   ACTION="create-protocol-parameters-update" \
     STAKE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f1 -d' ' <<< "$POOL_NAMES")-owner-stake" \
     nix run .#job-submit-gov-action -- "${PROPOSAL_ARGS[@]}"
-  echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   echo "Sleeping until cost model can be voted on, epoch 5"
   WAIT_FOR_TIP "epoch" "5"
   echo

@@ -113,7 +113,7 @@
             inputs.nixpkgs-unstable.legacyPackages.${system}.neovim
             ncdu
             # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 24.11 causing missing features error
-            inputs.nixpkgs.legacyPackages.${system}.nushell
+            inputs.nixpkgs-unstable.legacyPackages.${system}.nushell
             nvme-cli
             parted
             pciutils
@@ -153,7 +153,26 @@
 
           cron.enable = true;
           fail2ban.enable = true;
-          netdata.enable = true;
+
+          # Journald sizing. The default per-file cap (~80 MiB in practice)
+          # rotates every few minutes under a very hot writer (e.g. cardano-tracer
+          # in JournalMode). Journal followers such as alloy's loki.source.journal
+          # can wedge on a transient "bad message" at a rotation boundary
+          # (grafana/loki#4053), only recovering on restart. Larger files mean far
+          # fewer rotation boundaries, hence far fewer such wedges. Kept moderate
+          # to avoid slow journalctl seeks; SystemKeepFree (15% default) still
+          # guards the filesystem, so SystemMaxUse acts only as a ceiling.
+          journald.extraConfig = mkDefault ''
+            SystemMaxUse=4G
+            SystemMaxFileSize=512M
+          '';
+
+          # Local standby ops collector: netdata keeps recent high-resolution
+          # host metrics queryable on the machine itself (default web UI on
+          # localhost:19999) when the primary alloy to prometheus pipeline is
+          # down or missing. It is intentionally not scraped by alloy.
+          netdata.enable = mkDefault true;
+
           openssh = {
             enable = true;
             settings = {

@@ -1553,7 +1553,7 @@
       "type": "logs"
     }
   ],
-  "refresh": "30s",
+  "refresh": "1m",
   "schemaVersion": 39,
   "tags": [
     "varnish-cache-integration"
@@ -1681,7 +1681,7 @@
       "30d"
     ]
   },
-  "timezone": "default",
+  "timezone": "utc",
   "title": "Varnish overview",
   "uid": "varnish-overview",
   "version": 1,
