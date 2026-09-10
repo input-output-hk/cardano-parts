@@ -133,36 +133,34 @@ in {
       #   TextEnvelope type error: Expected: BlsSigningKey_...Minimal...
       #                            Actual:   BlsSigningKey_...Mininimal...
       #
-      # so BLS keys silently stop working across a cli bump. Probe the cli in
-      # use once, then relabel the key to match. Only the type string changes,
-      # the key material is untouched, so no redeploy of the secret is needed.
+      # so BLS keys silently stop working across a cli bump. The cli in use is
+      # probed once for the spelling it writes, then two functions apply it:
+      #
+      #   bls_envelope_normalize  rewrites the type in the key file itself, so
+      #                           every later consumer agrees. A sops key is
+      #                           piped decrypt -> jq -> encrypt and stays
+      #                           encrypted throughout, no plaintext copy lands
+      #                           on disk.
+      #   bls_key_arg             hands the cert command a corrected view of the
+      #                           key through a process substitution, without
+      #                           touching the file. A fallback for when the
+      #                           rewrite cannot run, for example with no sops
+      #                           key to re-encrypt with.
+      #
+      # Only the type string ever changes, the key material is untouched, so
+      # nothing has to be regenerated. The target spelling follows the cli in
+      # use rather than a fixed value, since cardano-api still ships both, so
+      # switching cli flips the file back on the next run.
       blsFns = ''
         BLS_TYPE_SUFFIX=""
 
-        function bls_envelope_fixup {
+        function bls_type_suffix {
           # Inputs:
-          #   $1 (BLS skey or vkey path)
           #   $CARDANO_CLI_LATEST
-          local FILE="$1" PROBE HAVE WANT PREFIX
+          # Echo the envelope suffix this cli writes, empty if it cannot
+          # generate BLS keys at all. Probed once per job run.
+          local PROBE
 
-          [ -f "$FILE" ] || return 0
-
-          # An encrypted key is read through a decrypt process substitution, so
-          # it cannot be relabelled in place here.
-          if jq -e 'has("sops")' &> /dev/null < "$FILE"; then
-            echo "warning: \"$FILE\" is encrypted, skipping BLS envelope check" >&2
-            return 0
-          fi
-
-          HAVE=$(jq -r '.type // ""' "$FILE" 2> /dev/null || echo "")
-          case "$HAVE" in
-            BlsSigningKey_*) PREFIX="BlsSigningKey_" ;;
-            BlsVerificationKey_*) PREFIX="BlsVerificationKey_" ;;
-            *) return 0 ;;
-          esac
-
-          # Probe once per job run: generate a throwaway pair and read back the
-          # spelling this cli emits.
           if [ -z "$BLS_TYPE_SUFFIX" ]; then
             PROBE=$(mktemp -d)
             if "''${CARDANO_CLI_LATEST[@]}" node key-gen-BLS \
@@ -173,14 +171,86 @@ in {
             rm -rf "$PROBE"
           fi
 
-          # Cli cannot generate BLS keys, nothing to normalize against.
-          [ -n "$BLS_TYPE_SUFFIX" ] || return 0
+          echo -n "$BLS_TYPE_SUFFIX"
+        }
 
-          WANT="$PREFIX$BLS_TYPE_SUFFIX"
-          if [ "$HAVE" != "$WANT" ]; then
-            echo "Relabelling BLS envelope type in \"$FILE\""
-            echo "  from: $HAVE"
-            echo "  to:   $WANT"
+        function bls_key_arg {
+          # Inputs:
+          #   $1 (BLS skey or vkey path)
+          #   $CARDANO_CLI_LATEST
+          #   [$USE_DECRYPTION]
+          # Echo a path, or a process substitution, that the cli can read with
+          # the envelope type spelled the way this cli expects. Use in place of
+          # decrypt_check for BLS keys. Falls back to decrypt_check untouched if
+          # the cli cannot be probed.
+          local FILE="$1" SRC SUFFIX PREFIX
+
+          SRC=$(decrypt_check "$FILE")
+          SUFFIX=$(bls_type_suffix)
+
+          if [ -z "$SUFFIX" ]; then
+            echo -n "$SRC"
+            return 0
+          fi
+
+          case "$FILE" in
+            *.vkey) PREFIX="BlsVerificationKey_" ;;
+            *) PREFIX="BlsSigningKey_" ;;
+          esac
+
+          # $SRC is left unquoted on purpose: it may itself be a `<(sops ...)`
+          # substitution, which has to stay unquoted to be expanded by the eval.
+          echo -n "<(jq --arg t \"$PREFIX$SUFFIX\" '.type = \$t' $SRC)"
+        }
+
+        function bls_envelope_normalize {
+          # Inputs:
+          #   $1 (BLS skey or vkey path)
+          #   $CARDANO_CLI_LATEST
+          # Rewrite the envelope type in the key file itself, so consumers other
+          # than the cert command below see the same spelling. A sops key is
+          # piped decrypt -> jq -> encrypt and stays encrypted throughout, so no
+          # plaintext copy lands on disk. Only .type changes, cborHex and
+          # description are carried through untouched.
+          #
+          # The deployed skey is read by the block producer at runtime and was
+          # not tested against a mismatched spelling, so whether the node is as
+          # strict as the cli here is unconfirmed.
+          local FILE="$1" SUFFIX PREFIX WANT HAVE CFG ENCRYPTED
+
+          [ -f "$FILE" ] || return 0
+          SUFFIX=$(bls_type_suffix)
+          [ -n "$SUFFIX" ] || return 0
+
+          if jq -e 'has("sops")' &> /dev/null < "$FILE"; then
+            ENCRYPTED=true
+            CFG=$(sops_config "$FILE")
+            HAVE=$(sops --config "$CFG" --input-type binary --output-type binary --decrypt "$FILE" 2> /dev/null \
+                   | jq -r '.type // ""' 2> /dev/null || echo "")
+          else
+            ENCRYPTED=false
+            HAVE=$(jq -r '.type // ""' "$FILE" 2> /dev/null || echo "")
+          fi
+
+          case "$HAVE" in
+            BlsSigningKey_*) PREFIX="BlsSigningKey_" ;;
+            BlsVerificationKey_*) PREFIX="BlsVerificationKey_" ;;
+            *) return 0 ;;
+          esac
+
+          WANT="$PREFIX$SUFFIX"
+          [ "$HAVE" != "$WANT" ] || return 0
+
+          echo "Relabelling BLS envelope type in \"$FILE\""
+          echo "  from: $HAVE"
+          echo "  to:   $WANT"
+
+          if [ "$ENCRYPTED" = "true" ]; then
+            sops --config "$CFG" --input-type binary --output-type binary --decrypt "$FILE" \
+              | jq --arg t "$WANT" '.type = $t' \
+              | sops --config "$CFG" --input-type binary --output-type binary --filename-override "$FILE" --encrypt /dev/stdin \
+              | sponge "$FILE"
+          else
             jq --arg t "$WANT" '.type = $t' "$FILE" | sponge "$FILE"
           fi
         }
@@ -1561,9 +1631,9 @@ in {
                   *) echo "BLS_SLOT must be unset (active) or 'next', got: ''${BLS_SLOT:-}"; exit 1 ;;
                 esac
                 BLS_SUFFIX="''${BLS_SLOT:+-$BLS_SLOT}"
-                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.skey"
-                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.vkey"
-                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
+                bls_envelope_normalize "$DEPLOY_FILE-bls$BLS_SUFFIX.skey"
+                bls_envelope_normalize "$DEPLOY_FILE-bls$BLS_SUFFIX.vkey"
+                BLS_ARGS+=(--bls-signing-key-file "$(bls_key_arg "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
               fi
 
               # Generate stake registration and delegation certificate
@@ -1889,9 +1959,9 @@ in {
                   *) echo "BLS_SLOT must be unset (active) or 'next', got: ''${BLS_SLOT:-}"; exit 1 ;;
                 esac
                 BLS_SUFFIX="''${BLS_SLOT:+-$BLS_SLOT}"
-                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.skey"
-                bls_envelope_fixup "$DEPLOY_FILE-bls$BLS_SUFFIX.vkey"
-                BLS_ARGS+=(--bls-signing-key-file "$(decrypt_check "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
+                bls_envelope_normalize "$DEPLOY_FILE-bls$BLS_SUFFIX.skey"
+                bls_envelope_normalize "$DEPLOY_FILE-bls$BLS_SUFFIX.vkey"
+                BLS_ARGS+=(--bls-signing-key-file "$(bls_key_arg "$DEPLOY_FILE-bls$BLS_SUFFIX.skey")")
               fi
 
               if [ "''${ERA_CMD:-alonzo}" != "conway" ] && [ "''${ERA_CMD:-alonzo}" != "dijkstra" ]; then
