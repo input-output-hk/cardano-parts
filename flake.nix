@@ -64,12 +64,12 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
 
     # Works with leios prototype version >= w32 respin
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/leios-w36";
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
     # For tmp local testing pins
-    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
+    cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
     # cardano-node-11-1-1.url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1.1";
 
     # Cardano-db-sync schema input pins, which must match the
