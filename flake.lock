@@ -1140,16 +1140,16 @@
         "sodium": "sodium_3"
       },
       "locked": {
-        "lastModified": 1789025770,
-        "narHash": "sha256-R6DvKu4s0T3uuF72JJ5JrTh16i/svCaF4QhpPPdpH7k=",
+        "lastModified": 1789498229,
+        "narHash": "sha256-CNRdu5rgFPNSiLgtT2BRJPaNzfiJeeyU5FwiC4+PH1E=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "34f1aeea91128dce356d4a0bb9477ac03942ecf3",
+        "rev": "41a584eefcdb25631321e76783a8e168531b4331",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "jl/leios-w36",
+        "ref": "jl/leios-logs",
         "repo": "iohk-nix",
         "type": "github"
       }

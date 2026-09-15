@@ -64,7 +64,7 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
 
     # Works with leios prototype version >= w32 respin
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/leios-w36";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/leios-logs";
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
