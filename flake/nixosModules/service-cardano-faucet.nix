@@ -31,7 +31,11 @@
     with builtins;
     with lib; let
       inherit (types) bool listOf package port str;
-      inherit (groupCfg.meta) domain;
+      inherit (groupCfg.meta) domain environmentName;
+      inherit (perNodeCfg.lib) cardanoLib;
+      inherit (perNodeCfg.pkgs) cardano-cli;
+      inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
+      inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
 
       groupCfg = nixos.config.cardano-parts.cluster.group;
       perNodeCfg = nixos.config.cardano-parts.perNode;
@@ -147,15 +151,48 @@
           startLimitBurst = 10;
           startLimitIntervalSec = 900;
 
+          # Ordering only. Deliberately not bindsTo or partOf: those propagate
+          # the node's stop to this unit, and a unit stopped by a dependency is
+          # not brought back by Restart=, so a node restart would leave the
+          # faucet down until someone noticed. Crash plus Restart=always plus
+          # the preStart gate below already recovers, and does so after the node
+          # is usable rather than merely running.
+          after = ["cardano-node.service"];
+          wants = ["cardano-node.service"];
+
+          path = [cardano-cli pkgs.jq];
+
           environment = {
             CONFIG_FILE = cfg.configFile;
             CARDANO_NODE_SOCKET_PATH = cfg.socketPath;
+            CARDANO_NODE_NETWORK_ID =
+              if environmentName == "mainnet"
+              then "mainnet"
+              else toString protocolMagic;
             PORT = toString cfg.faucetPort;
           };
 
           preStart = ''
+            set -uo pipefail
+
             while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
               echo "Waiting 10 seconds for cardano node socket to become available at path: $CARDANO_NODE_SOCKET_PATH"
+              sleep 10
+            done
+
+            # The socket appears early in node startup, long before the ledger
+            # has replayed. Starting here means the faucet's first chain query
+            # sees whatever era replay has reached, and it exits on the era
+            # mismatch. Wait for the node to reach tip, not merely to listen.
+            while true; do
+              SYNC=$(cardano-cli latest query tip 2> /dev/null | jq -r '.syncProgress // empty' 2> /dev/null) || SYNC=""
+
+              if [ "$SYNC" = "100.00" ]; then
+                echo "Node is synced, starting cardano-faucet"
+                break
+              fi
+
+              echo "Waiting 10 seconds for cardano node sync, currently at ''${SYNC:-unknown}%"
               sleep 10
             done
           '';
