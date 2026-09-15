@@ -60,11 +60,11 @@
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
-    # The release pin works with leios prototype version <= w27
-    iohk-nix.url = "github:input-output-hk/iohk-nix/leios";
+    # Works with leios prototype version w36 respin w/ reduced logs
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
 
-    # Works with leios prototype version >= w32 respin
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/leios-logs";
+    # Works with leios prototype version w36 respin w/ reduced logs
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
@@ -100,7 +100,7 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/11.1.1";
       flake = false;
     };
 
@@ -125,7 +125,7 @@
     };
 
     cardano-submit-api-service = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/11.1.1";
       flake = false;
     };
 
@@ -135,7 +135,7 @@
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/11.0.1";
+      url = "github:IntersectMBO/cardano-node/11.1.1";
       flake = false;
     };
 
