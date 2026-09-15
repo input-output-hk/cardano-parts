@@ -30,7 +30,11 @@ flake: {
       inherit (groupCfg.meta) environmentName;
       inherit (perNodeCfg.lib) cardanoLib;
       inherit (perNodeCfg.pkgs) cardano-cli mithril-signer;
-      inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile Protocol ShelleyGenesisFile;
+      inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
+      # The nodeConfig Protocol key is dropped from iohk-nix as of the node 11.2
+      # config series. consensusProtocol carries the same value and exists on
+      # older pins too, where it is derived from that key.
+      inherit (cardanoLib.environments.${environmentName}) consensusProtocol;
       inherit (opsLib) mkSopsSecret;
       inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
 
@@ -221,7 +225,7 @@ flake: {
 
       config = {
         services.cardano-node =
-          serviceCfg.${Protocol}
+          serviceCfg.${consensusProtocol}
           // {
             # These are also set from the profile-cardano-node-topology nixos module when role == "bp"
             publicProducers = mkForce [];
@@ -377,7 +381,7 @@ flake: {
           };
         };
 
-        sops.secrets = mkIf config.services.cardano-node.useSopsSecrets keysCfg.${Protocol};
+        sops.secrets = mkIf config.services.cardano-node.useSopsSecrets keysCfg.${consensusProtocol};
 
         environment.shellAliases = {
           cardano-show-kes-period-info = ''
