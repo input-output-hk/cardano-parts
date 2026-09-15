@@ -244,6 +244,12 @@ flake: {
           in {
             wantedBy = ["multi-user.target"];
 
+            # Ordering only. Deliberately not bindsTo or partOf: a unit stopped
+            # by a dependency is not brought back by Restart=, so propagating
+            # the node's stop would leave smash down after a node restart.
+            after = ["cardano-node.service"];
+            wants = ["cardano-node.service"];
+
             path = with pkgs; [
               config.services.postgresql.package
               cardano-cli
@@ -279,6 +285,21 @@ flake: {
               while true; do
                 [ "$(find "$SOCKET" -type s -perm -g+w)" = "$SOCKET" ] && sleep 10 && break
                 echo "Waiting for cardano node socket group write permission at $SOCKET for 10 seconds..."
+                sleep 10
+              done
+
+              # The socket is listening well before the ledger has replayed, so
+              # a query here returns whatever era replay has reached rather than
+              # the chain tip era. Wait for the node to actually be at tip.
+              while true; do
+                SYNC=$(cardano-cli latest query tip 2> /dev/null | jq -r '.syncProgress // empty' 2> /dev/null) || SYNC=""
+
+                if [ "$SYNC" = "100.00" ]; then
+                  echo "Node is synced, starting cardano-smash"
+                  break
+                fi
+
+                echo "Waiting for cardano node sync for 10 seconds, currently at ''${SYNC:-unknown}%"
                 sleep 10
               done
             '';
