@@ -70,7 +70,7 @@
 
     # For tmp local testing pins
     cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
-    # cardano-node-11-1-1.url = "github:IntersectMBO/cardano-node/f-f/prepare-11.1.1";
+    # cardano-node-11-1-2.url = "github:IntersectMBO/cardano-node/release/11.1.x";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
