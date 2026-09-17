@@ -687,7 +687,7 @@ in {
                 User root
                 UserKnownHostsFile /dev/null
                 StrictHostKeyChecking no
-                ServerAliveCountMax 2
+                ServerAliveCountMax 10
                 ServerAliveInterval 60
             '';
           };

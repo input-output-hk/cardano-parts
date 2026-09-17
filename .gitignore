@@ -6,7 +6,5 @@ result*
 /treefmt.toml
 .ai/skills/sync-review/sync-config.local.json
 
-# Claude Code (symlinks created by shellHook)
-.claude
-.ai/CLAUDE.md
+# Claude Code (.claude and .ai/CLAUDE.md are committed symlinks; settings stay local)
 .ai/settings.local.json

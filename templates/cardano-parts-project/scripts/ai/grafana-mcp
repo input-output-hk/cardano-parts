@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Launcher for the Grafana MCP server (grafana/mcp-grafana), wired to the
+# cardano-playground monitoring Grafana. Registered with Claude Code via:
+#
+#   claude mcp add --scope user grafana -- <abs path to this script>
+#
+# The Grafana service-account token (Viewer) is decrypted from sops at launch,
+# so no secret is stored in the MCP config — mirrors the `monitoring-query`
+# skill. Portable: paths derive from this script's location and standard env
+# conventions; override SOPS_AGE_KEY_FILE / GRAFANA_URL / MONITORING_SA_SECRET
+# if your environment differs.
+set -euo pipefail
+
+# Repo root = two levels up from scripts/ai/.
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+GRAFANA_URL="${GRAFANA_URL:-https://playground.monitoring.aws.iohkdev.io}"
+SECRET="${MONITORING_SA_SECRET:-$REPO/secrets/ai/monitoring-service-account}"
+: "${SOPS_AGE_KEY_FILE:=$HOME/.age-ai/credentials}"
+export SOPS_AGE_KEY_FILE
+
+TOKEN="$(nix shell nixpkgs#sops -c sops -d "$SECRET")"
+if [ -z "$TOKEN" ]; then
+  echo "grafana-mcp: failed to decrypt $SECRET (check SOPS_AGE_KEY_FILE=$SOPS_AGE_KEY_FILE)" >&2
+  exit 1
+fi
+
+export GRAFANA_URL
+export GRAFANA_API_KEY="$TOKEN"             # mcp-grafana reads the SA token here
+export GRAFANA_SERVICE_ACCOUNT_TOKEN="$TOKEN"  # alias used by newer versions
+
+# stdio transport (Claude Code default); pass through any extra args.
+exec nix run nixpkgs#mcp-grafana -- "$@"

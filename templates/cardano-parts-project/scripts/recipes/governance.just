@@ -432,6 +432,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       POOL_STAKE_THRESHOLD="n/a"
       POOL_THRESHOLD_TOTAL="n/a"
       COMMITTEE_THRESHOLD="n/a"
+      COMMITTEE_THRESHOLD_TOTAL="n/a"
 
       DREP_ACCEPT_ICON="$GREEN_NA"
       POOL_ACCEPT_ICON="$GREEN_NA"
@@ -514,7 +515,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
           ;;&
 
         # Economic group
-        *"txFeePerByte"*|*"txFeeFixed"*|*"stakeAddressDeposit"*|*"stakePoolDeposit"*|*"monetaryExpansion"*|*"treasuryCut"*|*"minPoolCost"*|*"utxoCostPerByte"*|*"executionUnitPrices"*)
+        *"txFeePerByte"*|*"txFeeFixed"*|*"stakeAddressDeposit"*|*"stakePoolDeposit"*|*"monetaryExpansion"*|*"treasuryCut"*|*"minPoolCost"*|*"utxoCostPerByte"*|*"executionUnitPrices"*|*"minFeeRefScriptCostPerByte"*)
           DREP_STAKE_THRESHOLD=$(jq -re "[ $DREP_STAKE_THRESHOLD, .dRepVotingThresholds.ppEconomicGroup // 0 ] | max" <<< "$PPARAMS" 2> /dev/null)
           echo -e "Parameter changes are included from the ${GREEN}ECONOMIC$OFF group"
           ;;&
@@ -622,7 +623,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
         .[2] // {}
           | to_entries as \$entries
           | if (\$entries | length) > 0
-            then []
+            then \$entries[]
               | \"Adding $GREEN\(.key)-\(.value)\"
               | split(\"-\")
               | \"\(.[0])$OFF ► $BLUE\(.[1])$OFF (max term epoch \(.[2]))\"
@@ -763,6 +764,12 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     local LOVELACE="$1"
     local READABLE=""
 
+    # Pass non-numeric values (e.g. "n/a" for InfoAction) through unchanged
+    if ! [[ "$LOVELACE" =~ ^[0-9]+$ ]]; then
+      echo -n "$LOVELACE"
+      return
+    fi
+
     DIGITS="${#LOVELACE}"
     if [ "$DIGITS" -gt "15" ]; then
       READABLE="$(bc <<< "scale=3; $LOVELACE / 10^15") B₳"
@@ -840,6 +847,29 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
   echo -e "Full approval of the proposal: $TOTAL_ACCEPT_ICON"
 
+# Sign a CC rationale doc, upload it to IPFS and print the anchor; see scripts/gov/rationale.nu
+rationale *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  exec scripts/gov/rationale.nu {{ARGS}}
+
+# Unified interactive voting across CC, DRep and SPO roles; see scripts/gov/vote.nu --help
+vote ENV ACTION_ID ACTION_IDX *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{checkEnvWithoutOverride}}
+
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^leios$|^demo$|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, leios, demo and sanchonet are supported"
+    exit 1
+  fi
+
+  # Export the node socket + testnet magic the voting tool expects.
+  source <(just set-default-cardano-env "{{ENV}}")
+  echo
+
+  exec scripts/gov/vote.nu "{{ENV}}" "{{ACTION_ID}}" "{{ACTION_IDX}}" {{ARGS}}
+
 # Generate and submit an SPO vote on a gov action
 vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   #!/usr/bin/env bash
@@ -898,7 +928,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   echo
   echo "$ACTION_BEFORE"
   echo
-  read -p "Do you wish pool \"{{POOL}}\" in environment \"{{ENV}}\" to vote \"{{VOTE}}\" on this governance action [yY]? " -n 1 -r
+  read -p "Do you wish pool \"{{POOL}}\" in environment \"{{ENV}}\" to vote \"{{VOTE}}\" on this governance action? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
@@ -928,7 +958,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
     --vote-file "$FILE.vote"
   echo
   echo
-  read -p "Do you wish to proceed with this vote [yY]? " -n 1 -r
+  read -p "Do you wish to proceed with this vote? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
@@ -977,7 +1007,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
 
   echo
   echo
-  read -p "Do you wish to submit this vote to the {{ENV}} network [yY]? " -n 1 -r
+  read -p "Do you wish to submit this vote to the {{ENV}} network? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."

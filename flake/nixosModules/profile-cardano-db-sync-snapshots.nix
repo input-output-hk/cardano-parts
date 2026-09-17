@@ -227,7 +227,10 @@ flake: {
               wantedBy = ["multi-user.target"];
 
               environment = {
-                CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+                CARDANO_NODE_NETWORK_ID =
+                  if environmentName == "mainnet"
+                  then "mainnet"
+                  else toString protocolMagic;
                 CARDANO_NODE_SOCKET_PATH = cfgNode.socketPath 0;
               };
 
