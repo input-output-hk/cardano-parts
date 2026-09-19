@@ -222,11 +222,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1789788891,
-        "narHash": "sha256-E/EewULDruxrjidRr5LRVQK0xWPZ6TCF/oc6yDaHzxE=",
+        "lastModified": 1790037203,
+        "narHash": "sha256-O/ajRCVi1Ko8MB6doGDldUxa88ZtwPfk0BUYhPaXsMY=",
         "owner": "input-output-hk",
         "repo": "cardano-census",
-        "rev": "a4653b09d9006018f7b5d4e87382a02fe9fcde37",
+        "rev": "14b41f455acb2f3326800549f9b532a9308d7c2e",
         "type": "github"
       },
       "original": {
