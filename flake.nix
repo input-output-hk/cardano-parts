@@ -68,6 +68,11 @@
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
+    # Reachability census of the big ledger peers; move to main once merged.
+    # Not made to follow nixpkgs: the package is a static musl binary built
+    # with the toolchain that flake pins and tests.
+    cardano-census.url = "github:input-output-hk/cardano-census/jl/getting-started";
+
     # For tmp local testing pins
     cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
     # cardano-node-11-1-2.url = "github:IntersectMBO/cardano-node/release/11.1.x";
