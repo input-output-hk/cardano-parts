@@ -64,7 +64,7 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix";
 
     # Works with leios prototype version w36 respin w/ reduced logs
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/leios-w38a";
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
@@ -110,7 +110,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.1.1";
+      url = "github:IntersectMBO/cardano-node/jl/sre-11.2.0";
       flake = false;
     };
 
