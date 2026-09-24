@@ -480,11 +480,11 @@ in
           mithril-release = "input-output-hk-mithril-2630-0-23e124d";
           mithril-pre-release = "input-output-hk-mithril-unstable-621a9bd";
 
-          node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-2-fef83fe";
-          # node-release = pkg: localFlake.inputs.cardano-node-11-1-2.packages.x86_64-linux.${pkg};
+          # node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-2-fef83fe";
+          node-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
 
-          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-2-fef83fe";
-          # node-pre-release = pkg: localFlake.inputs.cardano-node-11-1-2.packages.x86_64-linux.${pkg};
+          # node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-2-fef83fe";
+          node-pre-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
         in
           submodule {
             options = foldl' recursiveUpdate {} [
