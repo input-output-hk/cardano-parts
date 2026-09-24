@@ -62,6 +62,10 @@
         else val
       else "/var/lib/node-textfile"; # dummy; assertion fires first
 
+    # pingTimeoutSec must stay below startTimeoutSec.
+    pingTimeoutSec = 30;
+    startTimeoutSec = 45;
+
     collect = pkgs.writeShellApplication {
       name = "cardano-custom-metrics-collect";
       runtimeInputs = [cardano-cli pkgs.coreutils pkgs.jq];
@@ -80,8 +84,13 @@
           PING_ARGS=(--network-magic="$TESTNET_MAGIC" ${hostAddr}:${toString cardanoNodePort})
         fi
 
+        # `cardano-cli ping` can hang instead of erroring. Bound it below
+        # TimeoutStartSec so a hang exits non-zero here and takes the
+        # omit-the-sample path, rather than being SIGTERM'd mid-run and
+        # leaving the previous .prom to be re-served as a stale sample.
         CARDANO_NODE_PING_LATENCY=""
-        if CARDANO_NODE_PING_OUTPUT=$(cardano-cli ping \
+        if CARDANO_NODE_PING_OUTPUT=$(timeout --signal=TERM --kill-after=5s ${toString pingTimeoutSec}s \
+            cardano-cli ping \
             --count=1 \
             --quiet \
             --json \
@@ -158,7 +167,8 @@
               PrivateTmp = true;
               # Cap well below repeated timer firings so a hung ping doesn't
               # stack; systemd skips a trigger while the unit is still active.
-              TimeoutStartSec = "45s";
+              # Backstop only: the collector bounds its own ping below this.
+              TimeoutStartSec = "${toString startTimeoutSec}s";
             };
           };
 
