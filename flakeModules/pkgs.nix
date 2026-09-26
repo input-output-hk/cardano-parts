@@ -477,14 +477,14 @@ in
           metadata-pkg = pkg: caPkgs."${pkg}-input-output-hk-offchain-metadata-tools-v0-5-0-0-91eba72";
           # metadata-pkg = pkg: localFlake.inputs.cardano-metadata-service.packages.${system}.${pkg};
 
-          mithril-release = "input-output-hk-mithril-2630-0-23e124d";
-          mithril-pre-release = "input-output-hk-mithril-unstable-621a9bd";
+          mithril-release = "input-output-hk-mithril-2630-1-hotfix-3f6cb73";
+          mithril-pre-release = "input-output-hk-mithril-unstable-cf1bb36";
 
-          # node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-2-fef83fe";
-          node-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
+          node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-3-938cba9";
+          # node-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
 
-          # node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-2-fef83fe";
-          node-pre-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
+          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-3-938cba9";
+          # node-pre-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
         in
           submodule {
             options = foldl' recursiveUpdate {} [
@@ -500,8 +500,8 @@ in
               (mkPkg "cardano-db-tool-ng" caPkgs."\"cardano-db-tool:exe:cardano-db-tool\"-${dbsync-pre-release}")
               (mkPkg "cardano-faucet" faucet)
               (mkPkg "cardano-faucet-ng" faucet-ng)
-              (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "11.1.2";}))
-              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "11.1.2";}))
+              (mkPkg "cardano-node" ((node-release "cardano-node") // {version = "11.1.3";}))
+              (mkPkg "cardano-node-ng" ((node-pre-release "cardano-node") // {version = "11.1.3";}))
               (mkPkg "cardano-ogmios" caPkgs.ogmios-input-output-hk-cardano-ogmios-v6-14-0-5752501)
               (mkPkg "cardano-signer" caPkgs.cardano-signer-johnalotoski-cardano-signer-v1-34-0-4108dd3)
               (mkPkg "cardano-smash" caPkgs."cardano-smash-server-no-basic-auth-${dbsync-release}")

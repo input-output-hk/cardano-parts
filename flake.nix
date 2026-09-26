@@ -64,7 +64,7 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix";
 
     # Works with leios prototype version w36 respin w/ reduced logs
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/leios-w38a";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     blockperf.url = "github:johnalotoski/blockperf/addnl-networks";
 
@@ -75,7 +75,7 @@
 
     # For tmp local testing pins
     cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
-    cardano-node-11-1-3.url = "github:IntersectMBO/cardano-node/release/11.1.x";
+    # cardano-node-11-1-3.url = "github:IntersectMBO/cardano-node/release/11.1.x";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
@@ -105,7 +105,7 @@
     };
 
     cardano-node-service = {
-      url = "github:IntersectMBO/cardano-node/11.1.1";
+      url = "github:IntersectMBO/cardano-node/11.1.3";
       flake = false;
     };
 
@@ -130,22 +130,22 @@
     };
 
     cardano-submit-api-service = {
-      url = "github:IntersectMBO/cardano-node/11.1.1";
+      url = "github:IntersectMBO/cardano-node/11.1.3";
       flake = false;
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.1.1";
+      url = "github:IntersectMBO/cardano-node/11.1.3";
       flake = false;
     };
 
     cardano-tracer-service = {
-      url = "github:IntersectMBO/cardano-node/11.1.1";
+      url = "github:IntersectMBO/cardano-node/11.1.3";
       flake = false;
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.1.1";
+      url = "github:IntersectMBO/cardano-node/11.1.3";
       flake = false;
     };
 
