@@ -20,7 +20,7 @@ flake: {
     pkgs,
     ...
   }: let
-    inherit (lib) mkIf mkOption;
+    inherit (lib) mkIf mkOption optionalAttrs;
     inherit (lib.types) bool;
 
     inherit (groupCfg) groupName groupFlake;
@@ -48,7 +48,11 @@ flake: {
           to the target machine either by additional module code or out of
           band:
 
-            /run/secrets/cardano-faucet
+            /run/secrets/cardano-faucet.json
+
+          and, with services.cardano-faucet.nginxPolicy.enable, also:
+
+            /run/secrets/cardano-faucet-nginx-policy.conf
         '';
       };
     };
@@ -63,14 +67,28 @@ flake: {
         nginx-vhost-exporter.enable = true;
       };
 
-      sops.secrets = mkIf cfg.useSopsSecrets (mkSopsSecret {
-        secretName = "cardano-faucet.json";
-        keyName = "${name}-faucet.json";
-        inherit groupOutPath groupName name;
-        fileOwner = "cardano-faucet";
-        fileGroup = "cardano-faucet";
-        restartUnits = ["cardano-faucet.service"];
-      });
+      sops.secrets = mkIf cfg.useSopsSecrets (
+        mkSopsSecret {
+          secretName = "cardano-faucet.json";
+          keyName = "${name}-faucet.json";
+          inherit groupOutPath groupName name;
+          fileOwner = "cardano-faucet";
+          fileGroup = "cardano-faucet";
+          restartUnits = ["cardano-faucet.service"];
+        }
+        # The nginx policy snippet. Owned by the nginx user because NixOS runs the
+        # whole nginx unit unprivileged, and its config test opens the include as
+        # that user. A change reloads nginx rather than restarting it.
+        // optionalAttrs cfg.nginxPolicy.enable (mkSopsSecret {
+          secretName = cfg.nginxPolicy.secretName;
+          keyName = "${name}-faucet-nginx-policy.conf";
+          inherit groupOutPath groupName name;
+          fileOwner = "nginx";
+          fileGroup = "nginx";
+          reloadUnits = ["nginx.service"];
+          extraCfg = {format = "binary";};
+        })
+      );
     };
   };
 }
