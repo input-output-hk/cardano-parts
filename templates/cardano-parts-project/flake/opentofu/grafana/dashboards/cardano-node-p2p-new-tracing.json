@@ -1626,7 +1626,7 @@
     }
   ],
   "preload": false,
-  "refresh": "",
+  "refresh": "1m",
   "schemaVersion": 41,
   "tags": [],
   "templating": {
@@ -1681,7 +1681,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "utc",
   "title": "Cardano Node: P2P Metrics (New Tracing)",
   "uid": "EcsJoV6Ma",
   "version": 10

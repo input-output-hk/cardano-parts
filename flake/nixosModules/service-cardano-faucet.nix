@@ -10,6 +10,13 @@
 #   config.services.cardano-faucet.enableAcme
 #   config.services.cardano-faucet.faucetPort
 #   config.services.cardano-faucet.group
+#   config.services.cardano-faucet.nginxPolicy.enable
+#   config.services.cardano-faucet.nginxPolicy.locations
+#   config.services.cardano-faucet.nginxPolicy.mapHashBucketSize
+#   config.services.cardano-faucet.nginxPolicy.policyFile
+#   config.services.cardano-faucet.nginxPolicy.secretName
+#   config.services.cardano-faucet.nginxPolicy.status
+#   config.services.cardano-faucet.nginxPolicy.variable
 #   config.services.cardano-faucet.openFirewallFaucet
 #   config.services.cardano-faucet.openFirewallNginx
 #   config.services.cardano-faucet.package
@@ -30,8 +37,12 @@
   }:
     with builtins;
     with lib; let
-      inherit (types) bool listOf package port str;
-      inherit (groupCfg.meta) domain;
+      inherit (types) bool int listOf nullOr package port str;
+      inherit (groupCfg.meta) domain environmentName;
+      inherit (perNodeCfg.lib) cardanoLib;
+      inherit (perNodeCfg.pkgs) cardano-cli;
+      inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile;
+      inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
 
       groupCfg = nixos.config.cardano-parts.cluster.group;
       perNodeCfg = nixos.config.cardano-parts.perNode;
@@ -82,6 +93,68 @@
             type = str;
             default = "cardano-faucet";
             description = "The cardano-faucet daemon group to use.";
+          };
+
+          nginxPolicy = {
+            enable = mkOption {
+              type = bool;
+              default = false;
+              description = ''
+                Whether to include an operator supplied nginx http-context snippet,
+                deployed as a secret, and to have each location in `locations`
+                return `status` whenever the variable named by `variable` is
+                set.
+
+                The snippet is typically a set of `map` blocks. It must set the
+                variable to 0 for a request to proceed and to any other value for
+                the location to return `status` instead.
+
+                With `useSopsSecrets` the snippet is the sops secret `secretName`,
+                stored in the group deploy secrets as
+                `<node>-faucet-nginx-policy.conf` in binary format, and nginx
+                reloads when it changes. Otherwise provide it at `policyFile`.
+              '';
+            };
+
+            locations = mkOption {
+              type = listOf str;
+              default = ["/send-money"];
+              description = "The faucet vhost locations subject to the policy.";
+            };
+
+            mapHashBucketSize = mkOption {
+              type = nullOr int;
+              default = 128;
+              description = ''
+                The nginx map_hash_bucket_size while the policy is enabled. A map
+                key longer than the cache line, 64 bytes on most hosts, needs this
+                raised or nginx fails to start. Null keeps the nginx default.
+              '';
+            };
+
+            policyFile = mkOption {
+              type = str;
+              default = "/run/secrets/${cfg.nginxPolicy.secretName}";
+              description = "The path of the policy snippet included into the nginx http context.";
+            };
+
+            secretName = mkOption {
+              type = str;
+              default = "cardano-faucet-nginx-policy.conf";
+              description = "The sops secret name of the policy snippet when useSopsSecrets is true.";
+            };
+
+            status = mkOption {
+              type = int;
+              default = 429;
+              description = "The HTTP status a listed location returns when the variable is set.";
+            };
+
+            variable = mkOption {
+              type = str;
+              default = "faucetPolicy";
+              description = "The nginx variable, without the `$`, set by the policy snippet. 0 lets a request proceed, anything else returns `status`.";
+            };
           };
 
           openFirewallFaucet = mkOption {
@@ -147,15 +220,48 @@
           startLimitBurst = 10;
           startLimitIntervalSec = 900;
 
+          # Ordering only. Deliberately not bindsTo or partOf: those propagate
+          # the node's stop to this unit, and a unit stopped by a dependency is
+          # not brought back by Restart=, so a node restart would leave the
+          # faucet down until someone noticed. Crash plus Restart=always plus
+          # the preStart gate below already recovers, and does so after the node
+          # is usable rather than merely running.
+          after = ["cardano-node.service"];
+          wants = ["cardano-node.service"];
+
+          path = [cardano-cli pkgs.jq];
+
           environment = {
             CONFIG_FILE = cfg.configFile;
             CARDANO_NODE_SOCKET_PATH = cfg.socketPath;
+            CARDANO_NODE_NETWORK_ID =
+              if environmentName == "mainnet"
+              then "mainnet"
+              else toString protocolMagic;
             PORT = toString cfg.faucetPort;
           };
 
           preStart = ''
+            set -uo pipefail
+
             while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
               echo "Waiting 10 seconds for cardano node socket to become available at path: $CARDANO_NODE_SOCKET_PATH"
+              sleep 10
+            done
+
+            # The socket appears early in node startup, long before the ledger
+            # has replayed. Starting here means the faucet's first chain query
+            # sees whatever era replay has reached, and it exits on the era
+            # mismatch. Wait for the node to reach tip, not merely to listen.
+            while true; do
+              SYNC=$(cardano-cli latest query tip 2> /dev/null | jq -r '.syncProgress // empty' 2> /dev/null) || SYNC=""
+
+              if [ "$SYNC" = "100.00" ]; then
+                echo "Node is synced, starting cardano-faucet"
+                break
+              fi
+
+              echo "Waiting 10 seconds for cardano node sync, currently at ''${SYNC:-unknown}%"
               sleep 10
             done
           '';
@@ -202,15 +308,20 @@
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
           recommendedProxySettings = true;
-          commonHttpConfig = ''
-            log_format x-fwd '$remote_addr - $remote_user [$time_local] '
-                             '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
-                             '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+          mapHashBucketSize = mkIf (cfg.nginxPolicy.enable && cfg.nginxPolicy.mapHashBucketSize != null) cfg.nginxPolicy.mapHashBucketSize;
+          commonHttpConfig =
+            ''
+              log_format x-fwd '$remote_addr - $remote_user [$time_local] '
+                               '"$scheme://$host" "$request" "$http_accept_language" $status $body_bytes_sent '
+                               '"$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
 
-            access_log syslog:server=unix:/dev/log x-fwd;
-            limit_req_zone $binary_remote_addr zone=apiPerIP:100m rate=1r/s;
-            limit_req_status 429;
-          '';
+              access_log syslog:server=unix:/dev/log x-fwd;
+              limit_req_zone $binary_remote_addr zone=apiPerIP:100m rate=1r/s;
+              limit_req_status 429;
+            ''
+            + optionalString cfg.nginxPolicy.enable ''
+              include ${cfg.nginxPolicy.policyFile};
+            '';
 
           virtualHosts = {
             faucet = {
@@ -226,11 +337,14 @@
                   "/get-site-key"
                   "/send-money"
                 ];
+                # Merged into the listed locations so each keeps its proxyPass.
+                policy = "if (\$${cfg.nginxPolicy.variable}) { return ${toString cfg.nginxPolicy.status}; }";
               in
-                {
-                  "/".root = pkgs.runCommand "nginx-root-dir" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';
-                }
-                // genAttrs publicPrefixes (_: {proxyPass = "http://127.0.0.1:${toString cfg.faucetPort}";});
+                mkMerge [
+                  {"/".root = pkgs.runCommand "nginx-root-dir" {} ''mkdir $out; echo -n "Ready" > $out/index.html'';}
+                  (genAttrs publicPrefixes (_: {proxyPass = "http://127.0.0.1:${toString cfg.faucetPort}";}))
+                  (mkIf cfg.nginxPolicy.enable (genAttrs cfg.nginxPolicy.locations (_: {extraConfig = policy;})))
+                ];
             };
           };
         };

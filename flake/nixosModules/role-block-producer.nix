@@ -30,7 +30,11 @@ flake: {
       inherit (groupCfg.meta) environmentName;
       inherit (perNodeCfg.lib) cardanoLib;
       inherit (perNodeCfg.pkgs) cardano-cli mithril-signer;
-      inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile Protocol ShelleyGenesisFile;
+      inherit (cardanoLib.environments.${environmentName}.nodeConfig) ByronGenesisFile ShelleyGenesisFile;
+      # The nodeConfig Protocol key is dropped from iohk-nix as of the node 11.2
+      # config series. consensusProtocol carries the same value and exists on
+      # older pins too, where it is derived from that key.
+      inherit (cardanoLib.environments.${environmentName}) consensusProtocol;
       inherit (opsLib) mkSopsSecret;
       inherit ((fromJSON (readFile ByronGenesisFile)).protocolConsts) protocolMagic;
 
@@ -55,13 +59,34 @@ flake: {
       operationalCertificate = "${name}.opcert";
       bulkCredentials = "${name}-bulk.creds";
 
+      # Optional Leios BLS signing keys; wired only when present for this pool.
+      # Steady state is just the active key ("${name}-bls.skey"). During a BLS
+      # rotation the incoming key ("${name}-bls-next.skey") is added alongside it
+      # and the node uses whichever is active per the on-chain schedule, so the
+      # operator does not have to time a second deploy when BLS registration
+      # becomes active.
+      blsKeys =
+        optionals (pathExists (pathPrefix + "${name}-bls.skey")) [
+          {
+            src = "${name}-bls.skey";
+            secret = "cardano-node-bls-signing";
+          }
+        ]
+        ++ optionals (pathExists (pathPrefix + "${name}-bls-next.skey")) [
+          {
+            src = "${name}-bls-next.skey";
+            secret = "cardano-node-bls-signing-next";
+          }
+        ];
+      blsKeysExist = blsKeys != [];
+
       mkSopsSecretParams = secretName: keyName: {
         inherit groupOutPath groupName name secretName keyName pathPrefix;
         fileOwner = "cardano-node";
         fileGroup = "cardano-node";
-        reloadUnits = optionals (nodeCfg.useSystemdReload && (elem nodeCfg.useNewTopology [null true])) ["cardano-node.service"];
+        reloadUnits = optionals (nodeCfg.useSystemdReload && (nodeCfg ? useNewTopology && (elem nodeCfg.useNewTopology [null true]))) ["cardano-node.service"];
         restartUnits =
-          optionals (!nodeCfg.useSystemdReload || !(elem nodeCfg.useNewTopology [null true])) ["cardano-node.service"]
+          optionals (!nodeCfg.useSystemdReload || !(nodeCfg ? useNewTopology && (elem nodeCfg.useNewTopology [null true]))) ["cardano-node.service"]
           ++ optionals mithrilCfg.enable ["mithril-signer.service"];
       };
 
@@ -82,7 +107,12 @@ flake: {
             operationalCertificate = "/run/secrets/cardano-node-operational-cert";
           };
 
-        Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
+        # BLS is Leios-only and reachable only under the Cardano hard-fork
+        # protocol, so wire it here and only when the pool has BLS key(s).
+        Cardano =
+          TPraos
+          // optionalAttrs byronKeysExist RealPBFT
+          // optionalAttrs blsKeysExist {blsKeys = map (k: "/run/secrets/${k.secret}") blsKeys;};
       };
 
       keysCfg = rec {
@@ -101,7 +131,10 @@ flake: {
             // (mkSopsSecret (mkSopsSecretParams "cardano-node-cold-verification" coldVerification))
             // (mkSopsSecret (mkSopsSecretParams "cardano-node-operational-cert" operationalCertificate));
 
-        Cardano = TPraos // optionalAttrs byronKeysExist RealPBFT;
+        Cardano =
+          TPraos
+          // optionalAttrs byronKeysExist RealPBFT
+          // optionalAttrs blsKeysExist (foldl' (acc: k: acc // mkSopsSecret (mkSopsSecretParams k.secret k.src)) {} blsKeys);
       };
 
       sopsPath = name: config.sops.secrets.${name}.path;
@@ -122,6 +155,8 @@ flake: {
               machine when applicable either by additional module code or out of
               band:
 
+                /run/secrets/cardano-node-bls-signing
+                /run/secrets/cardano-node-bls-signing-next
                 /run/secrets/cardano-node-bulk-credentials
                 /run/secrets/cardano-node-cold-verification
                 /run/secrets/cardano-node-delegation-cert
@@ -190,7 +225,7 @@ flake: {
 
       config = {
         services.cardano-node =
-          serviceCfg.${Protocol}
+          serviceCfg.${consensusProtocol}
           // {
             # These are also set from the profile-cardano-node-topology nixos module when role == "bp"
             publicProducers = mkForce [];
@@ -274,7 +309,10 @@ flake: {
             environment = with nodeCfg.environments.${environmentName}.mithrilSignerConfig; {
               AGGREGATOR_ENDPOINT = aggregator_endpoint;
               CARDANO_NODE_SOCKET_PATH = nodeCfg.socketPath 0;
-              CARDANO_NODE_NETWORK_ID = toString protocolMagic;
+              CARDANO_NODE_NETWORK_ID =
+                if environmentName == "mainnet"
+                then "mainnet"
+                else toString protocolMagic;
               RELAY_ENDPOINT = mkIf mithrilCfg.useRelay "${mithrilCfg.relayEndpoint}:${toString mithrilCfg.relayPort}";
             };
 
@@ -343,7 +381,7 @@ flake: {
           };
         };
 
-        sops.secrets = mkIf config.services.cardano-node.useSopsSecrets keysCfg.${Protocol};
+        sops.secrets = mkIf config.services.cardano-node.useSopsSecrets keysCfg.${consensusProtocol};
 
         environment.shellAliases = {
           cardano-show-kes-period-info = ''

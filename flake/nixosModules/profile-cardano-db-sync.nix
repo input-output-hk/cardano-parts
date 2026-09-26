@@ -4,6 +4,7 @@
 #
 # Attributes available on nixos module import:
 #   config.services.cardano-db-sync.additionalDbUsers
+#   config.services.cardano-db-sync.insertOptions
 #   config.services.cardano-db-sync.nodeRamAvailableMiB
 #   config.services.cardano-db-sync.postgresRamAvailableMiB
 #
@@ -20,7 +21,7 @@
   }:
     with builtins;
     with lib; let
-      inherit (types) float ints listOf oneOf str;
+      inherit (types) attrs float ints listOf nullOr oneOf str;
       inherit (nodeResources) memMiB;
 
       inherit (groupCfg.meta) environmentName;
@@ -44,6 +45,25 @@
             description = "Additional database users for cexplorer database";
             type = listOf str;
             default = [];
+          };
+
+          # Since db-sync 13.7.0.1 offchain_pool_data and offchain_vote_data
+          # default to disable, which leaves off_chain_pool_data and
+          # off_chain_vote_data empty and stops smash serving fresh metadata.
+          # A preset sets the base and explicit keys override it, per
+          # parseOverrides in Cardano.DbSync.Config.Types.  Set null to omit
+          # the section and take db-sync's own defaults.
+          insertOptions = mkOption {
+            description = "The insert_options section of the db-sync config.";
+            type = nullOr attrs;
+            default = {
+              preset = "full";
+              offchain_pool_data = "enable";
+              offchain_vote_data = "enable";
+              # Redundant, full already enables it, but stated so the
+              # pool_stat table is not a surprise from the preset alone.
+              pool_stat = "enable";
+            };
           };
 
           # While dbsync can also be heap and mem constrained with RTS
@@ -103,7 +123,10 @@
             cluster = environmentName;
             environment = environmentConfig;
             socketPath = nodeCfg.socketPath 0;
-            explorerConfig = environmentConfig.dbSyncConfig // {PrometheusPort = cardanoDbSyncPrometheusExporterPort;};
+            explorerConfig =
+              environmentConfig.dbSyncConfig
+              // {PrometheusPort = cardanoDbSyncPrometheusExporterPort;}
+              // optionalAttrs (cfg.insertOptions != null) {insert_options = cfg.insertOptions;};
             logConfig = {};
             postgres.database = "cexplorer";
           };

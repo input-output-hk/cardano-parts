@@ -37,3 +37,10 @@ grafana_token = "UPDATE_ME"
 
 # The base monitoring URL
 grafana_url = "https://${BASE_MONITORING_FQDN}"
+
+# The loki rules endpoint
+loki_uri = "https://${BASE_MONITORING_FQDN}/loki"
+
+# The loki admin username
+loki_username = "UPDATE_ME"
+
