@@ -80,7 +80,7 @@ flake: {
         # whole nginx unit unprivileged, and its config test opens the include as
         # that user. A change reloads nginx rather than restarting it.
         // optionalAttrs cfg.nginxPolicy.enable (mkSopsSecret {
-          secretName = cfg.nginxPolicy.secretName;
+          inherit (cfg.nginxPolicy) secretName;
           keyName = "${name}-faucet-nginx-policy.conf";
           inherit groupOutPath groupName name;
           fileOwner = "nginx";
