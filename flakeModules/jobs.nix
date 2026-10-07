@@ -1317,6 +1317,7 @@ in {
             # Rotation flow:
             #   BLS_SLOT=next job-create-stake-pool-bls-keys
             #   BLS_SLOT=next job-reregister-stake-pools
+            #   job-stage-stake-pool-bls-rotation
             #   deploy,
             #   after next BLS activation, run job to return the pool to single BLS key state.
             #
@@ -1358,6 +1359,89 @@ in {
               encrypt_check "$DEPLOY_FILE"-bls.skey
               [ -e "$DEPLOY_FILE"-bls.vkey ] && encrypt_check "$DEPLOY_FILE"-bls.vkey
               echo "job-rotate-stake-pool-bls-keys: promoted -next BLS key to active for $POOL_NAME"
+            done
+          '';
+        };
+
+        job-stage-stake-pool-bls-rotation = writeShellApplication {
+          name = "job-stage-stake-pool-bls-rotation";
+          runtimeInputs = stdPkgs;
+          text = ''
+            # Rewrite each pool's deployed BLS key file as a JSON array holding
+            # the active key and then the "-next" key, so a deploy during a
+            # rotation carries both.
+            #
+            # --shelley-bls-key is not repeatable and takes one file, either a
+            # single text envelope or a JSON array of them, and the node votes
+            # with every key in it that holds a committee seat. Deploying the
+            # active key alone would take the pool dark on the seat its new key
+            # holds from the activation boundary, so both travel in the one file.
+            #
+            # Run after the "-next" key is registered on chain and before the
+            # deploy; job-rotate-stake-pool-bls-keys collapses the file back to
+            # a single key afterwards. Nothing is lost here: the active key is
+            # the array's first element and that job overwrites the file with
+            # the "-next" key outright.
+            #
+            # Idempotent, so a re-run after a partial failure finishes the rest:
+            # a pool whose deployed file already carries the next key is left
+            # alone. An already-array file is appended to rather than wrapped,
+            # which also covers a deployed bundle of several pools' keys.
+            #
+            # Inputs:
+            #   [$DEBUG]
+            #   $POOL_NAMES
+            #   $STAKE_POOL_DIR
+            #   [$UNSTABLE]
+            #   [$USE_DECRYPTION]
+            #   [$USE_ENCRYPTION]
+            #   [$USE_SHELL_BINS]
+
+            [ -n "''${DEBUG:-}" ] && set -x
+
+            ${secretsFns}
+
+            if [ -z "''${POOL_NAMES:-}" ]; then
+              echo "Pool names must be provided as a space delimited string via POOL_NAMES env var"
+              exit 1
+            fi
+            read -r -a POOLS <<< "$POOL_NAMES"
+
+            export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
+
+            for POOL_NAME in "''${POOLS[@]}"; do
+              DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
+              ACTIVE="$DEPLOY_FILE-bls.skey"
+              NEXT="$DEPLOY_FILE-bls-next.skey"
+
+              if [ ! -e "$NEXT" ]; then
+                echo "job-stage-stake-pool-bls-rotation: no $NEXT, nothing to stage for $POOL_NAME"
+                continue
+              fi
+
+              if [ ! -e "$ACTIVE" ]; then
+                echo "job-stage-stake-pool-bls-rotation: no $ACTIVE for $POOL_NAME, skipping" >&2
+                continue
+              fi
+
+              ACTIVE_JSON=$(eval cat "$(decrypt_check "$ACTIVE")")
+              NEXT_JSON=$(eval cat "$(decrypt_check "$NEXT")")
+
+              if jq -e --argjson n "$NEXT_JSON" \
+                  'type == "array" and any(.[]; .cborHex == $n.cborHex)' \
+                  <<< "$ACTIVE_JSON" &> /dev/null; then
+                echo "job-stage-stake-pool-bls-rotation: $POOL_NAME already carries its next key, skipping"
+                continue
+              fi
+
+              # Active first so the file reads as current then incoming. Order
+              # does not affect voting, every key is tried against every seat.
+              jq -n --argjson a "$ACTIVE_JSON" --argjson n "$NEXT_JSON" \
+                'if ($a | type) == "array" then $a + [$n] else [$a, $n] end' \
+                > "$ACTIVE".tmp
+              mv -f "$ACTIVE".tmp "$ACTIVE"
+              encrypt_check "$ACTIVE"
+              echo "job-stage-stake-pool-bls-rotation: staged rotation pair for $POOL_NAME"
             done
           '';
         };
