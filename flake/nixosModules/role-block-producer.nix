@@ -59,26 +59,14 @@ flake: {
       operationalCertificate = "${name}.opcert";
       bulkCredentials = "${name}-bulk.creds";
 
-      # Optional Leios BLS signing keys; wired only when present for this pool.
-      # Steady state is just the active key ("${name}-bls.skey"). During a BLS
-      # rotation the incoming key ("${name}-bls-next.skey") is added alongside it
-      # and the node uses whichever is active per the on-chain schedule, so the
-      # operator does not have to time a second deploy when BLS registration
-      # becomes active.
-      blsKeys =
-        optionals (pathExists (pathPrefix + "${name}-bls.skey")) [
-          {
-            src = "${name}-bls.skey";
-            secret = "cardano-node-bls-signing";
-          }
-        ]
-        ++ optionals (pathExists (pathPrefix + "${name}-bls-next.skey")) [
-          {
-            src = "${name}-bls-next.skey";
-            secret = "cardano-node-bls-signing-next";
-          }
-        ];
-      blsKeysExist = blsKeys != [];
+      # Optional Leios BLS signing key; wired only when present for this pool.
+      # `--shelley-bls-key` is not repeatable and takes one file, which holds
+      # either a single text envelope or a JSON array of them, and the node
+      # votes with every key in it that holds a committee seat. So a rotation
+      # pair is two entries in this one file rather than a second file, and the
+      # key file is the whole of a pool's voting identity.
+      blsKey = "${name}-bls.skey";
+      blsKeyExists = pathExists (pathPrefix + blsKey);
 
       mkSopsSecretParams = secretName: keyName: {
         inherit groupOutPath groupName name secretName keyName pathPrefix;
@@ -112,7 +100,7 @@ flake: {
         Cardano =
           TPraos
           // optionalAttrs byronKeysExist RealPBFT
-          // optionalAttrs blsKeysExist {blsKeys = map (k: "/run/secrets/${k.secret}") blsKeys;};
+          // optionalAttrs blsKeyExists {blsKey = "/run/secrets/cardano-node-bls-signing";};
       };
 
       keysCfg = rec {
@@ -134,7 +122,7 @@ flake: {
         Cardano =
           TPraos
           // optionalAttrs byronKeysExist RealPBFT
-          // optionalAttrs blsKeysExist (foldl' (acc: k: acc // mkSopsSecret (mkSopsSecretParams k.secret k.src)) {} blsKeys);
+          // optionalAttrs blsKeyExists (mkSopsSecret (mkSopsSecretParams "cardano-node-bls-signing" blsKey));
       };
 
       sopsPath = name: config.sops.secrets.${name}.path;
@@ -156,7 +144,6 @@ flake: {
               band:
 
                 /run/secrets/cardano-node-bls-signing
-                /run/secrets/cardano-node-bls-signing-next
                 /run/secrets/cardano-node-bulk-credentials
                 /run/secrets/cardano-node-cold-verification
                 /run/secrets/cardano-node-delegation-cert
