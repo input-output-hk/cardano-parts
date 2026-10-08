@@ -1611,8 +1611,6 @@ in {
             [ -n "''${DEBUG:-}" ] && set -x
 
             export STAKE_POOL_DIR=''${STAKE_POOL_DIR:-stake-pools}
-            METADATA_ARGS=()
-            POOL_ARGS=()
 
             ${secretsFns}
             ${selectCardanoCli}
@@ -1676,6 +1674,9 @@ in {
               POOL_NAME="''${POOLS[$i]}"
               DEPLOY_FILE="$STAKE_POOL_DIR/deploy/$POOL_NAME"
               NO_DEPLOY_FILE="$NO_DEPLOY_DIR/$POOL_NAME"
+
+              METADATA_ARGS=()
+              POOL_ARGS=()
 
               if [ -n "''${POOL_METADATA_BASE_URL:-}" ]; then
                 # Pool metadata is one file per group, named <group>.json, where
