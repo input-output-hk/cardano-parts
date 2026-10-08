@@ -1852,7 +1852,9 @@ in {
               chmod 0600 "$NO_DEPLOY_FILE"-owner-payment-stake.addr
               encrypt_check "$NO_DEPLOY_FILE"-owner-payment-stake.addr
 
-              BUILD_TX_ARGS+=("--tx-out" "$STAKE_POOL_ADDR+$POOL_PLEDGE")
+              if [ "$POOL_PLEDGE" -gt 0 ]; then
+                BUILD_TX_ARGS+=("--tx-out" "$STAKE_POOL_ADDR+$POOL_PLEDGE")
+              fi
 
               # Include the shared wallet pool rewards registration certificate only once
               if [ "$i" = "0" ]; then
