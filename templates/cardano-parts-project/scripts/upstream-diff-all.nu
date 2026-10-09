@@ -146,6 +146,9 @@ def pairwise-diff [curated_files: list<string>, template_dir: path] {
   if ($summary | where result in ["copied", "modified"] | length) > 0 {
     print "Review the local changes with: git diff   \(then git add -p)"
   }
+  if ($summary | where result == "aborted" | length) > 0 {
+    error make --unspanned {msg: "Aborted: editor exited with an error."}
+  }
 }
 def main [
   upstream: string = "no-path-given"  # path to the upstream cardano-parts repo (or its template dir)
@@ -260,8 +263,7 @@ def main [
   })
   $list_legend | append $list_body | str join "\n" | $"($in)\n" | save -f $list_file
   if not (edit-file $list_file) {
-    print "Aborted: editor exited with an error."
-    return
+    error make --unspanned {msg: "Aborted: editor exited with an error."}
   }
   let curated_files = (
     open --raw $list_file | lines | each {|line| $line | str trim} | where {|line| $line != "" and not ($line | str starts-with "#")} | each {|line|
