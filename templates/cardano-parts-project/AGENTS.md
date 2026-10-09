@@ -26,7 +26,8 @@ Run `just` for the full recipe menu. Common recipes:
 - **db-sync**: `just dbsync-prep`, `just dbsync-psql`, `just dbsync-pool-analyze`.
 - **Faucet/pools**: `just dedelegate-pools <env> <idxs>`.
 
-`just lint` runs `deadnix -f` and `statix check`; run it before pushing.
+`just lint` and `nix fmt` before pushing; treefmt runs alejandra on `*.nix` and
+`*.nix-import`, so match that rather than another nix formatter.
 
 Use `workbench/` for scratch state; it is gitignored.
 
@@ -72,5 +73,6 @@ back into the template. Both annotate a candidate list for you to curate in `$ED
 before anything is copied, and both honour a `.upstream-diff-all.excludes` /
 `.downstream-diff-all.excludes` file in the downstream repo if present.
 
-Do not pull `.claude` or its contents by either route: the curl fetch returns a symlink's
-target as text, replacing the link with a file containing its path.
+`.claude` holds only symlinks to `AGENTS.md` and `.ai/skills`; sync those targets directly.
+The batch differ skips symlinks automatically; don't `template-clone` `.claude/*` (curl would
+replace the link with a text file).
