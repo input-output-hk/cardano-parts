@@ -498,7 +498,7 @@ start-demo-ng:
 
   echo "Submitting an intra-era PV11 hard fork action..."
   PREV_GOV_ACTION=$(cardano-cli latest query gov-state --testnet-magic "$TESTNET_MAGIC" | jq -r '.nextRatifyState.nextEnactState.prevGovActionIds.HardFork')
-  PREV_GOV_ACTION_TX_ID=$(jq '.txId' <<< "$PREV_GOV_ACTION")
+  PREV_GOV_ACTION_TX_ID=$(jq -r '.txId' <<< "$PREV_GOV_ACTION")
   PREV_GOV_ACTION_INDEX=$(jq '.govActionIx' <<< "$PREV_GOV_ACTION")
   PROPOSAL_ARGS=(
     "--prev-governance-action-tx-id" "$PREV_GOV_ACTION_TX_ID"
