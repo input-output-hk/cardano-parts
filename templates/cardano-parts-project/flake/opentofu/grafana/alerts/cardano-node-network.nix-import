@@ -7,7 +7,7 @@ in {
     # This latency alert requires the cardano-parts profile-cardano-custom-metrics nixosModule
     {
       alert = "high_cardano_ping_latency";
-      expr = "avg_over_time(netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average[5m]) > 500";
+      expr = "avg_over_time(cardano_node_metrics_custom_ping_latency_ms[5m]) > 500";
       for = "60m";
       labels.severity = "page";
       annotations = {

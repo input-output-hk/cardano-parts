@@ -27,7 +27,8 @@
     }
     {
       alert = "cardano_node_mempool_high";
-      expr = "cardano_node_metrics_txsInMempool_int > 200";
+      # Leios is expected to have elevated mempool, so exclude it from the alert
+      expr = ''cardano_node_metrics_txsInMempool_int{environment!~"leios"} > 200'';
       for = "10m";
       labels.severity = "page";
       annotations = {
