@@ -34,7 +34,10 @@
 # Blockfrost garbage-collects unpinned files, so uploads are pinned by default.
 #
 # DEPLOYMENT CONFIG (optional): $env.CC_RATIONALE_AUTHOR sets the CIP-100 author
-# name (default "CC member"), e.g. exported from custom.just.
+# name, e.g. exported from custom.just. If it is not in the environment (script
+# run directly instead of via `just rationale`), it is resolved with
+# `just --evaluate`; failing that, a warning is printed and the generic
+# "CC member" default is used.
 #
 # DEPENDENCIES: just (sops-decrypt-binary), cardano-signer, cardano-cli, curl.
 # Blockfrost IPFS API base URL; override for a self-hosted Blockfrost gateway.
@@ -91,7 +94,20 @@ def 'main sign' [
     # (nu's `default` only fills null, not ""), so a blank never yields a
     # dangling " for <Env>".
     let author = ($env.CC_RATIONALE_AUTHOR? | default "" | str trim)
+    # Absent from the environment usually means the script was run directly
+    # rather than via `just rationale`, which inherits the deployment config
+    # exports; ask just for the value before falling back to the default.
+    let author = (if ($author | is-empty) {
+      let res = (do { ^just --evaluate CC_RATIONALE_AUTHOR } | complete)
+      if $res.exit_code == 0 {
+        $res.stdout | str trim
+      } else { "" }
+    } else { $author })
+    if ($author | is-empty) {
+      print -e $"(ansi yellow)Warning: CC_RATIONALE_AUTHOR is not set \(and not resolvable via `just --evaluate`\); signing with the generic author \"CC member\". Export CC_RATIONALE_AUTHOR or run via `just rationale`.(ansi reset)"
+    }
     let author = (if ($author | is-empty) { "CC member" } else { $author })
+    print -e $"Signing author: ($author) for ($node_env | str capitalize)"
     # `| ignore` keeps cardano-signer's stdout from polluting `prepare`'s JSON
     # output; the signed doc is written to --out-file regardless.
     (^cardano-signer sign --cip100 --data-file $file --secret-key $skey_file --author-name $"($author) for ($node_env | str capitalize)" --replace --out-file $signed) | ignore

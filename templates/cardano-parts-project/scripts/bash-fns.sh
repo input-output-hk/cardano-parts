@@ -2,16 +2,30 @@
 #
 # Various bash helper fns which aren't used enough to move to just recipes.
 
+# The cli era command group for era typed work: tx bodies and signatures.
+# These have to match the node era and `latest` still aliases conway, so
+# export ERA_CMD to the node era where it is newer. Same variable the
+# cardano-parts nix jobs take. Queries stay on latest, they take no era typed
+# input and the prototype cli era groups are only partially populated.
+era-cmd() {
+  if [ "${ERA_CMD:-}" = "dijkstra" ]; then
+    echo "dijkstra"
+  else
+    echo "latest"
+  fi
+}
+
 # A handy transaction submission function with mempool monitoring.
 # CARDANO_NODE_{NETWORK_ID,SOCKET_PATH}, TESTNET_MAGIC should already be exported.
 submit() (
   set -euo pipefail
   TX_SIGNED="$1"
+  ERA=$(era-cmd)
 
-  TXID=$(cardano-cli latest transaction txid --tx-file "$TX_SIGNED" | jq -re .txhash)
+  TXID=$(cardano-cli "$ERA" transaction txid --tx-file "$TX_SIGNED" | jq -re .txhash)
 
   echo "Submitting $TX_SIGNED with txid $TXID..."
-  cardano-cli latest transaction submit --tx-file "$TX_SIGNED"
+  cardano-cli "$ERA" transaction submit --tx-file "$TX_SIGNED"
 
   EXISTS="true"
   while [ "$EXISTS" = "true" ]; do
@@ -73,6 +87,7 @@ return-utxo() (
 
   [ -n "${DEBUG:-}" ] && set -x
   SIGNING_TX_ARGS=()
+  ERA=$(era-cmd)
 
   if [ "$#" -ne 4 ] && [ "$#" -ne 5 ]; then
     # shellcheck disable=SC2016
@@ -174,14 +189,14 @@ return-utxo() (
   echo "  Funding UTxO value: $TXIN_VALUE lovelace"
   PROMPT
 
-  cardano-cli latest transaction build-raw \
+  cardano-cli "$ERA" transaction build-raw \
     --tx-in "$TXIN" \
     --tx-out "$SEND_ADDR+$((TXIN_VALUE - 200000))" \
     --fee 200000 \
     --out-file "$BASENAME.raw"
 
   # shellcheck disable=2116
-  SIGNING_CMD=$(echo "cardano-cli latest transaction sign \
+  SIGNING_CMD=$(echo "cardano-cli $ERA transaction sign \
     --tx-body-file \"\$BASENAME.raw\" \
     --signing-key-file <(echo -n \"\$PAYMENT_SKEY\") \
     ${SIGNING_TX_ARGS[*]} \
@@ -207,19 +222,20 @@ faucet() (
   RICH_ADDR="$2"
   RICH_SKEY_PATH="$3"
   LOVELACE="$4"
+  ERA=$(era-cmd)
 
   UTXOS=$(cardano-cli query utxo --address "$RICH_ADDR")
   UTXO=$(jq -r 'to_entries | max_by(.value.value.lovelace) | { (.key): .value }' <<< "$UTXOS")
   UTXO_TX=$(jq -r 'keys[0]' <<< "$UTXO")
 
-  cardano-cli latest transaction build \
+  cardano-cli "$ERA" transaction build \
     --tx-in "$UTXO_TX" \
     --tx-out "$SEND_ADDR+$LOVELACE" \
     --change-address "$RICH_ADDR" \
     --testnet-magic "$TESTNET_MAGIC" \
     --out-file faucet.txbody
 
-  cardano-cli latest transaction sign \
+  cardano-cli "$ERA" transaction sign \
     --tx-body-file faucet.txbody \
     --signing-key-file "$RICH_SKEY_PATH" \
     --testnet-magic "$TESTNET_MAGIC" \

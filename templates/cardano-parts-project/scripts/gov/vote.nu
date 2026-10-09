@@ -41,6 +41,10 @@
 # resulting anchor automatically. When --anchor-hash is omitted, the hash is fetched from
 # the anchor URL via $env.IPFS_GATEWAY_URI (defaults to https://ipfs.io).
 #
+# Whatever is passed via --anchor-url / --rationale-file is type-checked up
+# front: a CIP-108 PROPOSAL rationale doc aborts the run (votes need a CIP-136
+# vote rationale); an unclassifiable/unfetchable doc only warns.
+#
 # Submission is opt-in: by default the tool builds + signs and writes the signed
 # tx(s) to the working dir WITHOUT submitting. Pass --submit to submit (still
 # prompts per tx unless --yes is also given). --dry-run discovers + prompts +
@@ -100,6 +104,21 @@ def select-cli [nenv: string, override: string] {
   } else {
     "cardano-cli-ng"
   }
+}
+# The era command group must match the node's era. `latest` is an alias for the
+# newest stable era, so against a Dijkstra node it sends a Conway query and the
+# node replies with an era mismatch. `query tip` takes no era group, so it is
+# safe to probe with.
+def detect-era [cli: string, magic: string]: nothing -> string {
+  let era = (
+    ^$cli query tip --testnet-magic $magic | from json | get era | str downcase
+  )
+  if (^$cli $era --help | complete | get exit_code) != 0 {
+    error make --unspanned {
+      msg: $"($cli) has no '($era)' era command group, but the node is in the ($era) era. Pin a cardano-cli that knows it."
+    }
+  }
+  $era
 }
 # Decrypt a sops-encrypted secret to a 0600 file inside the run's temp dir and
 # return its path. Cached by relative path so repeated lookups only decrypt
@@ -193,7 +212,7 @@ def discover-pools [nenv: string]: nothing -> table {
 # authorized AND active on the constitutional committee, per committee-state.
 def active-hot-hashes [run: record] {
   let cli = $run.cli
-  let cs = (^$cli latest query committee-state --testnet-magic $run.magic | from json)
+  let cs = (^$cli $run.era query committee-state --testnet-magic $run.magic | from json)
   $cs.committee | values | where {|m| ($m.hotCredsAuthStatus?.tag? == "MemberAuthorized") and ($m.status? == "Active") } | each {|m| ($m.hotCredsAuthStatus.contents.keyHash? | default ($m.hotCredsAuthStatus.contents.scriptHash?)) } | compact
 }
 # The on-chain hot-credential hash for a CC member. For orchestrator members
@@ -204,7 +223,7 @@ def cc-hot-hash [run: record, mode: string, name: string] {
     secret-str $"secrets/envs/($run.env)/cc-keys/($name)/init-hot/credential.plutus.hash"
   } else {
     let cli = $run.cli
-    (^$cli latest governance committee key-hash --verification-key-file (secret-file $run $"secrets/envs/($run.env)/cc-keys/($name)-hot.vkey")) | into string | str trim
+    (^$cli $run.era governance committee key-hash --verification-key-file (secret-file $run $"secrets/envs/($run.env)/cc-keys/($name)-hot.vkey")) | into string | str trim
   }
 }
 # Drop CC members whose hot credential is not currently active on-chain (so
@@ -259,12 +278,12 @@ def require-node-env [nenv: string, expected_magic: string]: nothing -> string {
 }
 def gov-action-state [run: record]: nothing -> any {
   let cli = $run.cli
-  let state = (^$cli latest query gov-state --testnet-magic $run.magic | from json)
+  let state = (^$cli $run.era query gov-state --testnet-magic $run.magic | from json)
   $state.proposals | where {|p| $p.actionId.txId == $run.action_id and $p.actionId.govActionIx == $run.action_idx } | get -o 0
 }
 def require-synced [run: record]: nothing -> nothing {
   let cli = $run.cli
-  let tip = (^$cli latest query tip --testnet-magic $run.magic | from json)
+  let tip = (^$cli $run.era query tip --testnet-magic $run.magic | from json)
   if ($tip.syncProgress? | default "0") != "100.00" {
     error make --unspanned {
       msg: $"Environment ($run.env) is not fully synced \(syncProgress=($tip.syncProgress?)\). Wait for 100.00 before voting."
@@ -274,13 +293,13 @@ def require-synced [run: record]: nothing -> nothing {
 # Submit a signed tx file and wait until it clears the mempool.
 def submit-and-watch [run: record, signed: string]: nothing -> nothing {
   let cli = $run.cli
-  let txid = (^$cli latest transaction txid --tx-file $signed | from json | get txhash)
+  let txid = (^$cli $run.era transaction txid --tx-file $signed | from json | get txhash)
   print $"Submitting (ansi green)($signed)(ansi reset) with txid ($txid)..."
-  ^$cli latest transaction submit --testnet-magic $run.magic --tx-file $signed
+  ^$cli $run.era transaction submit --testnet-magic $run.magic --tx-file $signed
   mut exists = true
   while $exists {
     let r = (try {
-      ^$cli latest query tx-mempool tx-exists $txid --testnet-magic $run.magic | from json | get exists
+      ^$cli $run.era query tx-mempool tx-exists $txid --testnet-magic $run.magic | from json | get exists
     } catch { false })
     $exists = $r
     if $exists {
@@ -320,7 +339,7 @@ def review-and-submit [run: record, label: string, signed: string]: nothing -> n
     cp $signed $dest
     print $"(ansi yellow)Built and signed; not submitting \(pass --submit to submit\).(ansi reset)"
     print $"  Signed tx: (ansi green)($dest)(ansi reset)"
-    print $"  Submit later with: ($cli) latest transaction submit --testnet-magic ($run.magic) --tx-file ($dest)"
+    print $"  Submit later with: ($cli) ($run.era) transaction submit --testnet-magic ($run.magic) --tx-file ($dest)"
     return
   }
   if not (ask-yn $"Submit ($label) to the ($run.env) network?" true $run.yes) {
@@ -397,12 +416,90 @@ def collect-selections [
   }
   $sel
 }
+# ─── anchor document type check ───────────────────────────────────────────────
+# Keys of a record value, or [] when the value is not a record.
+def record-keys [val]: nothing -> list<any> {
+  if ($val | describe | str starts-with "record") {
+    $val | columns
+  } else { [] }
+}
+# Classify a governance metadata document: "vote" (CIP-136 CC vote rationale),
+# "proposal" (CIP-108 proposal rationale) or "unknown". The JSON-LD @context
+# keys are authoritative; body field names are the fallback for docs with a
+# stripped/nonstandard context.
+def classify-anchor-doc [doc]: nothing -> string {
+  if not ($doc | describe | str starts-with "record") { return "unknown" }
+  let ctx_keys = (record-keys ($doc | get -o "@context"))
+  if "CIP136" in $ctx_keys { return "vote" }
+  if "CIP108" in $ctx_keys { return "proposal" }
+  let body_keys = (record-keys ($doc | get -o body))
+  if ($body_keys | any {|k| $k in [summary rationaleStatement precedentDiscussion counterargumentDiscussion conclusion internalVote] }) {
+    "vote"
+  } else if ($body_keys | any {|k| $k in [title abstract motivation] }) {
+    "proposal"
+  } else {
+    "unknown"
+  }
+}
+# Fetch and JSON-parse an anchor URL (ipfs:// resolved via $env.IPFS_GATEWAY_URI,
+# which main defaults before this runs). Returns null when the content cannot
+# be fetched or parsed.
+def fetch-anchor-doc [url: string]: nothing -> any {
+  let http_url = (if ($url | str starts-with "ipfs://") {
+    $"($env.IPFS_GATEWAY_URI)/ipfs/($url | str replace 'ipfs://' '')"
+  } else { $url })
+  try {
+    http get --raw --max-time 30sec $http_url | from json
+  } catch { null }
+}
+# Shared verdict handling for the anchor type check: a definite proposal doc
+# aborts; a confirmed vote doc is announced; anything else only warns.
+def check-anchor-kind [kind: string, what: string]: nothing -> nothing {
+  if $kind == "proposal" {
+    error make --unspanned {
+      msg: $"($what) is a CIP-108 PROPOSAL rationale document, not a CIP-136 CC vote rationale. Pass the vote rationale doc instead \(see scripts/gov/template-rationale-vote-cc-cip-136.json\)."
+    }
+  } else if $kind == "vote" {
+    print $"(ansi green)Verified ($what) is a CIP-136 vote rationale document.(ansi reset)"
+  } else {
+    print $"(ansi yellow)Warning: could not classify ($what) as CIP-136 vote or CIP-108 proposal; make sure it is a vote rationale before submitting.(ansi reset)"
+  }
+}
+# Fail fast when --rationale-file / --anchor-url points at a CIP-108 proposal
+# document instead of a CIP-136 CC vote rationale (an easy mix-up: both live as
+# sibling JSON-LD docs). Runs before any prompting so a wrong doc costs nothing.
+def verify-anchor-doc-types [run: record]: nothing -> nothing {
+  if ($run.rationale_file | is-not-empty) {
+    if not ($run.rationale_file | path exists) {
+      error make --unspanned {
+        msg: $"Rationale file not found: ($run.rationale_file)"
+      }
+    }
+    let doc = (try {
+      open --raw $run.rationale_file | from json
+    } catch { null })
+    if ($doc | is-empty) {
+      error make --unspanned {
+        msg: $"Rationale file ($run.rationale_file) is not valid JSON."
+      }
+    }
+    check-anchor-kind (classify-anchor-doc $doc) $"--rationale-file ($run.rationale_file)"
+  }
+  if ($run.anchor_url | is-not-empty) {
+    let doc = (fetch-anchor-doc $run.anchor_url)
+    if ($doc | is-empty) {
+      print $"(ansi yellow)Warning: could not fetch/parse --anchor-url ($run.anchor_url) to verify its document type \(gateway lag?\); make sure it is a CIP-136 vote rationale, not a CIP-108 proposal doc.(ansi reset)"
+    } else {
+      check-anchor-kind (classify-anchor-doc $doc) $"--anchor-url ($run.anchor_url)"
+    }
+  }
+}
 # ─── transaction assembly ─────────────────────────────────────────────────────
 # Select the smallest pure-lovelace UTxO > 5 ADA at an address (matches the
 # selection used by the existing pool/drep voting script).
 def pick-funding-utxo [run: record, addr: string]: nothing -> string {
   let cli = $run.cli
-  let utxos = (^$cli latest query utxo --address $addr --testnet-magic $run.magic --output-json | from json)
+  let utxos = (^$cli $run.era query utxo --address $addr --testnet-magic $run.magic --output-json | from json)
   let chosen = (
     $utxos | transpose key value | where {|r| ($r.value.value | columns | length) == 1 and ($r.value.value.lovelace? | default 0) > 5000000 } | sort-by {|r| $r.value.value.lovelace } | get -o 0
   )
@@ -427,7 +524,7 @@ def assemble-combined [run: record, sel: record]: nothing -> any {
   # Create each vote file.
   let vote_files = ($votes | each {|v|
     let out = ($run.tmp | path join $"($v.role).vote")
-    (^$cli latest governance vote create
+    (^$cli $run.era governance vote create
       (decision-flag $v.decision)
       --governance-action-tx-id $run.action_id
       --governance-action-index $run.action_idx
@@ -444,7 +541,7 @@ def assemble-combined [run: record, sel: record]: nothing -> any {
   let witnesses = (($votes | length) + 1)
   let body = ($run.tmp | path join "combined-vote.txbody")
   let build_args = ($vote_files | each {|f| [--vote-file $f] } | flatten)
-  (^$cli latest transaction build --tx-in $txin --change-address $rich_addr --testnet-magic $run.magic --witness-override $witnesses ...$build_args --out-file $body)
+  (^$cli $run.era transaction build --tx-in $txin --change-address $rich_addr --testnet-magic $run.magic --witness-override $witnesses ...$build_args --out-file $body)
   let signed = ($run.tmp | path join "combined-vote.txsigned")
   let sign_args = ([
     [
@@ -453,7 +550,7 @@ def assemble-combined [run: record, sel: record]: nothing -> any {
     ]
     ($votes | each {|v| [--signing-key-file (secret-file $run $v.skey)] } | flatten)
   ] | flatten)
-  (^$cli latest transaction sign --tx-body-file $body --testnet-magic $run.magic ...$sign_args --out-file $signed)
+  (^$cli $run.era transaction sign --tx-body-file $body --testnet-magic $run.magic ...$sign_args --out-file $signed)
   $signed
 }
 # Resolve the anchor (and optional precomputed hash) for orchestrator-CC votes.
@@ -510,7 +607,7 @@ def assemble-orch-cc [
   print $"\n(ansi blue)Assembling orchestrator-CC tx for ($cc) \(decision: ($decision)\)(ansi reset)"
   # Report the orchestrator payment address balance. This address pays the fee
   # for every vote of this member and must be refilled before it runs dry.
-  let orch_utxos = (^$cli latest query utxo --address $orch_addr --testnet-magic $run.magic --output-json | from json)
+  let orch_utxos = (^$cli $run.era query utxo --address $orch_addr --testnet-magic $run.magic --output-json | from json)
   let orch_lovelace = ($orch_utxos | values | reduce --fold 0 {|u, acc| $acc + ($u.value.lovelace? | default 0) })
   let orch_ada = ($orch_lovelace / 1000000 | math round --precision 3)
   let warn_lovelace = ($run.orch_warn_ada * 1000000)
@@ -543,7 +640,7 @@ def assemble-orch-cc [
   let policy = (secret-str $"($inithot)/minting.plutus.hash")
   let token = (secret-str $"($inithot)/nft-token-name")
   let nft_utxo_file = ($workdir | path join "hot-nft.utxo")
-  let utxos = (^$cli latest query utxo --address $nft_addr --testnet-magic $run.magic --output-json | from json)
+  let utxos = (^$cli $run.era query utxo --address $nft_addr --testnet-magic $run.magic --output-json | from json)
   let nft_entries = ($utxos | transpose k v | where {|r| ($r.v.value | get -o $policy | get -o $token | is-not-empty) })
   if ($nft_entries | is-empty) {
     error make --unspanned {
@@ -565,11 +662,11 @@ def assemble-orch-cc [
     }
   }
   let body = ($workdir | path join "body.json")
-  (^$cli latest transaction build --tx-in $orch_txin --tx-in-collateral $orch_txin --tx-in $nft_txin --tx-in-script-file (secret-file $run $"($inithot)/nft.plutus") --tx-in-inline-datum-present --tx-in-redeemer-file ($votedir | path join "redeemer.json") --tx-out (open --raw ($votedir | path join "value") | into string | str trim) --tx-out-inline-datum-file ($votedir | path join "datum.json") --required-signer-hash (^orchestrator-cli extract-pub-key-hash (secret-file $run $"($signer)/voter-1.crt")) --required-signer-hash (^orchestrator-cli extract-pub-key-hash (secret-file $run $"($signer)/voter-2.crt")) --required-signer-hash (^orchestrator-cli extract-pub-key-hash (secret-file $run $"($signer)/voter-3.crt")) --vote-file ($votedir | path join "vote") --vote-script-file (secret-file $run $"($inithot)/credential.plutus") --vote-redeemer-value "{}" --change-address $orch_addr --testnet-magic $run.magic --out-file $body)
+  (^$cli $run.era transaction build --tx-in $orch_txin --tx-in-collateral $orch_txin --tx-in $nft_txin --tx-in-script-file (secret-file $run $"($inithot)/nft.plutus") --tx-in-inline-datum-present --tx-in-redeemer-file ($votedir | path join "redeemer.json") --tx-out (open --raw ($votedir | path join "value") | into string | str trim) --tx-out-inline-datum-file ($votedir | path join "datum.json") --required-signer-hash (^orchestrator-cli extract-pub-key-hash (secret-file $run $"($signer)/voter-1.crt")) --required-signer-hash (^orchestrator-cli extract-pub-key-hash (secret-file $run $"($signer)/voter-2.crt")) --required-signer-hash (^orchestrator-cli extract-pub-key-hash (secret-file $run $"($signer)/voter-3.crt")) --vote-file ($votedir | path join "vote") --vote-script-file (secret-file $run $"($inithot)/credential.plutus") --vote-redeemer-value "{}" --change-address $orch_addr --testnet-magic $run.magic --out-file $body)
   # Witness with the 3 voters + orchestrator, then assemble.
   let witnesses = (["voter-1", "voter-2", "voter-3"] | each {|v|
     let w = ($workdir | path join $"($v).witness")
-    (^$cli latest transaction witness
+    (^$cli $run.era transaction witness
       --tx-body-file $body
       --signing-key-file (secret-file $run $"($signer)/($v).skey")
       --testnet-magic $run.magic
@@ -577,12 +674,12 @@ def assemble-orch-cc [
     $w
   })
   let orch_witness = ($workdir | path join "orchestrator.witness")
-  (^$cli latest transaction witness --tx-body-file $body --signing-key-file (secret-file $run $"($orch_dir)/orchestrator.skey") --testnet-magic $run.magic --out-file $orch_witness)
+  (^$cli $run.era transaction witness --tx-body-file $body --signing-key-file (secret-file $run $"($orch_dir)/orchestrator.skey") --testnet-magic $run.magic --out-file $orch_witness)
   let signed = ($workdir | path join "vote-tx.signed")
   let wit_args = (
     [$witnesses, $orch_witness] | flatten | each {|w| [--witness-file $w] } | flatten
   )
-  (^$cli latest transaction assemble --tx-body-file $body ...$wit_args --out-file $signed)
+  (^$cli $run.era transaction assemble --tx-body-file $body ...$wit_args --out-file $signed)
   $signed
 }
 # Remove the temp dir holding decrypted secrets + tx artifacts.
@@ -626,6 +723,7 @@ def main [
   $env.IPFS_GATEWAY_URI = ($env.IPFS_GATEWAY_URI? | default "https://ipfs.io")
   let expected_magic = (env-magic | get $node_env)
   let magic = (require-node-env $node_env $expected_magic)
+  let cli_bin = (select-cli $node_env $cli)
   let run = {
     env: $node_env
     action_id: $action_id
@@ -637,7 +735,8 @@ def main [
     blockfrost_project_id: (if ($blockfrost_project_id | is-empty) {
       $env.BLOCKFROST_IPFS_PROJECT_ID? | default ""
     } else { $blockfrost_project_id })
-    cli: (select-cli $node_env $cli)
+    cli: $cli_bin
+    era: (detect-era $cli_bin $magic)
     orch_warn_ada: $orch_warn_ada
     include_inactive_cc: $include_inactive_cc
     magic: $magic
@@ -649,6 +748,7 @@ def main [
   chmod 0700 $run.tmp
   try {
     print $"(ansi attr_bold)Voting tool(ansi reset) — env ($run.env), cli ($run.cli), action ($run.action_id)#($run.action_idx)"
+    verify-anchor-doc-types $run
     require-synced $run
     let action = (gov-action-state $run)
     if ($action | is-empty) {

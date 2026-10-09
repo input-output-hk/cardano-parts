@@ -72,7 +72,7 @@ checkEnvWithoutOverride := '''
 
 checkSshConfig := '''
   if not (".ssh_config" | path exists) {
-    print $"(ansi "bg_light_red")Please run:(ansi reset) `just save-ssh-config` first to create the .ssh_config file"
+    print -e $"(ansi "bg_light_red")Please run:(ansi reset) `just save-ssh-config` first to create the .ssh_config file"
     exit 1
   }
 
@@ -113,7 +113,7 @@ checkSshConfig := '''
   }
 
   if $runCheck {
-    print "Checking nixosCfg, sshCfg, and ipModuleCfg for consistency..."
+    print -e "Checking nixosCfg, sshCfg, and ipModuleCfg for consistency..."
 
     let nonNixosMachines = ''' + nonNixosMachines + '''
 
@@ -202,11 +202,11 @@ checkSshConfig := '''
     )
 
     $inconsistent | each {|comp|
-      print $"(ansi "bg_light_red")WARNING:(ansi reset) ($comp.label)"
-      print $"         You may need to run `($comp.hint)`"
-      print "         Differences found are:"
-      print $comp.result
-      print ""
+      print -e $"(ansi "bg_light_red")WARNING:(ansi reset) ($comp.label)"
+      print -e $"         You may need to run `($comp.hint)`"
+      print -e "         Differences found are:"
+      print -e $comp.result
+      print -e ""
     }
 
     if ($inconsistent | is-empty) {
@@ -661,11 +661,7 @@ set-default-cardano-env ENV TESTNET_MAGIC=null:
   >&2 echo "  source <(just set-default-cardano-env \"{{ENV}}\")"
 
   echo "export CARDANO_NODE_SOCKET_PATH=\"$(pwd)/node.socket\""
-  if [ "$ENV" = "mainnet" ]; then
-    echo "export CARDANO_NODE_NETWORK_ID=\"mainnet\""
-  else
-    echo "export CARDANO_NODE_NETWORK_ID=\"$MAGIC\""
-  fi
+  echo "export CARDANO_NODE_NETWORK_ID=\"$MAGIC\""
   echo "export TESTNET_MAGIC=\"$MAGIC\""
 
 # Show nix flake details
