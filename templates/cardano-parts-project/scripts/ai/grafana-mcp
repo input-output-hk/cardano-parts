@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# Launcher for the Grafana MCP server (grafana/mcp-grafana), wired to the
-# cardano-playground monitoring Grafana. Registered with Claude Code via:
+# Launcher for the Grafana MCP server (grafana/mcp-grafana), wired to this
+# cluster's monitoring Grafana. Registered with Claude Code via:
 #
 #   claude mcp add --scope user grafana -- <abs path to this script>
 #
 # The Grafana service-account token (Viewer) is decrypted from sops at launch,
 # so no secret is stored in the MCP config — mirrors the `monitoring-query`
 # skill. Portable: paths derive from this script's location and standard env
-# conventions; override SOPS_AGE_KEY_FILE / GRAFANA_URL / MONITORING_SA_SECRET
-# if your environment differs.
+# conventions. GRAFANA_URL must be set to this deployment's monitoring Grafana
+# so the token never goes to another cluster's host; override SOPS_AGE_KEY_FILE
+# / MONITORING_SA_SECRET if your environment differs.
 set -euo pipefail
 
 # Repo root = two levels up from scripts/ai/.
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-GRAFANA_URL="${GRAFANA_URL:-https://playground.monitoring.aws.iohkdev.io}"
+GRAFANA_URL="${GRAFANA_URL:?set GRAFANA_URL to the monitoring Grafana for this deployment, e.g. https://<stack>.monitoring.aws.iohkdev.io}"
 SECRET="${MONITORING_SA_SECRET:-$REPO/secrets/ai/monitoring-service-account}"
 : "${SOPS_AGE_KEY_FILE:=$HOME/.age-ai/credentials}"
 export SOPS_AGE_KEY_FILE
