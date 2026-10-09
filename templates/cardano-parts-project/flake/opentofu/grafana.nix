@@ -27,9 +27,12 @@ with lib; let
     ];
 
   parseDir = dirPath: suffix:
-    mapAttrsToList (
-      n: _: "${dirPath}/${n}"
-    ) (filterAttrs (n: v: hasSuffix suffix n && v == "regular") (readDir dirPath));
+    if pathExists dirPath
+    then
+      mapAttrsToList (
+        n: _: "${dirPath}/${n}"
+      ) (filterAttrs (n: v: hasSuffix suffix n && v == "regular") (readDir dirPath))
+    else [];
 
   withGrafanaStack = attrs: attrs // {provider = "grafana.${stackName}";};
 
