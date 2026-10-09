@@ -48,8 +48,7 @@ in {
     }
     {
       alert = "cardano_cc_hot_key_resigned";
-      # Mainnet Cardano Atlantic Council resignation: https://cardanoscan.io/ccmember/cc_cold1zv6fu40c86d0yjqnum9ndr0k4qxn39gm9ge5mlxly6q42kqmjmzyj, scriptHash-349e55f8.*
-      expr = ''cardano_cc_member_hot_cred_status{status="MemberResigned",cold_credential!~"scriptHash-(349e55f8).*"} == 1'';
+      expr = ''cardano_cc_member_hot_cred_status{status="MemberResigned"} == 1'';
       labels.severity = "page";
       annotations = {
         summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} has resigned.";
