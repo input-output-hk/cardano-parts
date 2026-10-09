@@ -507,6 +507,38 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Time to expiry (epochs)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "custom.filterable",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Expires in epoch"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "custom.filterable",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "State"
             },
             "properties": [
@@ -679,6 +711,22 @@
         },
         {
           "editorMode": "code",
+          "expr": "max without (instance, job) (cardano_cc_member_epochs_until_expiration{environment=~\"$environment\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "EPOCHS"
+        },
+        {
+          "editorMode": "code",
+          "expr": "max without (instance, job) (cardano_cc_member_epochs_until_expiration{environment=~\"$environment\"}) + on (environment) group_left () max without (instance, job) (cardano_cc_current_epoch{environment=~\"$environment\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "EXPEPOCH"
+        },
+        {
+          "editorMode": "code",
           "expr": "max without (instance, job) (cardano_cc_member_state{environment=~\"$environment\"}) == 1",
           "format": "table",
           "instant": true,
@@ -715,7 +763,7 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "pattern": "^cold_credential$|^state$|^status$|^change$|^Value #EXPIRY$"
+              "pattern": "^cold_credential$|^state$|^status$|^change$|^Value #EXPIRY$|^Value #EPOCHS$|^Value #EXPEPOCH$"
             }
           }
         },
@@ -724,6 +772,8 @@
           "options": {
             "excludeByName": {},
             "indexByName": {
+              "Value #EPOCHS": 5,
+              "Value #EXPEPOCH": 6,
               "Value #EXPIRY": 4,
               "change": 3,
               "cold_credential": 0,
@@ -731,6 +781,8 @@
               "status": 2
             },
             "renameByName": {
+              "Value #EPOCHS": "Time to expiry (epochs)",
+              "Value #EXPEPOCH": "Expires in epoch",
               "Value #EXPIRY": "Time to expiry",
               "change": "Next epoch change",
               "cold_credential": "CC cold credential",
