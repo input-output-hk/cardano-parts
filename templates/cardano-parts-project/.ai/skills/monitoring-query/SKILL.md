@@ -11,10 +11,28 @@ values are the Grafana URL and the service-account secret path — both are **di
 repo**, not hard-coded here (see Access). Everything else (query shapes, label schema, cardano-node
 metric/trace names, parsing) is common across cardano-parts deployments.
 
+## Secret-handling rules (non-negotiable)
+
+- **Never print, echo, log, or display** the service-account token or any part of it.
+- **Never read secrets into context**: do not `cat`, Read, or otherwise open
+  `~/.age-ai/credentials` or files under `secrets/ai/`. Do not run a bare
+  `sops -d` whose stdout would appear in the transcript.
+- Decrypt **only inline**, into a shell variable consumed within the same
+  command invocation (e.g. `TOKEN=$(sops -d ...) && curl -H "Authorization: Bearer $TOKEN" ...`).
+  The plaintext must never appear in conversation output or be written to disk.
+- The AI age key decrypts only `secrets/ai/*`. Never attempt to decrypt
+  anything else in the repo.
+- **Logs should not contain sensitive values, however mistakes can happen.** If
+  a log line appears to contain a real secret, do not quote it — **warn the user
+  immediately**, identifying the emitting host/unit and timestamp so they can
+  locate it, rotate the credential, and fix the app. Leaked-to-logs means leaked;
+  treat it as an incident, not noise.
+
 ## Access
 
-Two per-deployment values; resolve them once at the start of a session, then reuse `$GRAFANA_URL`
-and `$TOKEN` in every example below.
+Two per-deployment values used in every example below as `$GRAFANA_URL` and `$TOKEN`.
+Shell state does not persist between command invocations — resolve them **inline in each
+command** (prefix the query with the assignments, joined by `&&`).
 
 - **Grafana base URL** — per deployment. The source of truth is this repo's MCP launcher
   `scripts/ai/grafana-mcp` (its `GRAFANA_URL` default). Resolve it, honoring an env override:
@@ -28,11 +46,13 @@ and `$TOKEN` in every example below.
 - **Auth** — a Grafana service-account token (Viewer role), sent as `Authorization: Bearer <token>`.
   By cardano-parts convention it is sops-age encrypted in this repo under `secrets/ai/`
   (default `secrets/ai/monitoring-service-account`, overridable via `MONITORING_SA_SECRET`).
-  Decrypt with the agent age identity — **never print the token**:
+  Decrypt with the agent age identity, inline and combined with the command that consumes it,
+  per the secret-handling rules above:
 
   ```sh
   SECRET="${MONITORING_SA_SECRET:-secrets/ai/monitoring-service-account}"
-  TOKEN=$(SOPS_AGE_KEY_FILE=~/.age-ai/credentials nix shell nixpkgs#sops -c sops -d "$SECRET")
+  TOKEN=$(SOPS_AGE_KEY_FILE=~/.age-ai/credentials nix shell nixpkgs#sops -c sops -d "$SECRET") \
+    && curl -sfG -H "Authorization: Bearer $TOKEN" ...
   ```
 
   Other agent secrets live in the same `secrets/ai/` directory.
