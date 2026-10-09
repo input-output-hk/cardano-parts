@@ -37,7 +37,13 @@ def classify [file: string, downstream: path] {
   let downstream_file = ($downstream | path join $file)
   let template_file_exists = ($template_file | path exists)
   let downstream_file_exists = ($downstream_file | path exists)
-  let status = if not $downstream_file_exists {
+  # Symlinks (e.g. .claude/skills -> ../.ai/skills) can't be diffed as files and
+  # point at content synced via its own path; skip so the differ never hashes or
+  # opens a symlink whose target is a directory (which crashes it).
+  let is_symlink = (($template_file | path type) == "symlink") or (($downstream_file | path type) == "symlink")
+  let status = if $is_symlink {
+    "L"
+  } else if not $downstream_file_exists {
     if $template_file_exists { "D" } else { "X" }
   } else if not $template_file_exists {
     "N"
@@ -171,6 +177,7 @@ def main [
   let classified_files = ($changed_files | each {|file| classify $file $downstream})
   let identical_count = ($classified_files | where status == "I" | length)
   let noop_count = ($classified_files | where status == "X" | length)
+  let symlink_count = ($classified_files | where status == "L" | length)
   let status_sort_order = {M: 0, N: 1, D: 2}
   let list_entries = (
     $classified_files | where status in ["M", "N", "D"] | sort-by {|entry| $status_sort_order | get $entry.status} | each {|entry| $entry | insert commit (last-commit $entry.file $downstream $ref)}
@@ -194,6 +201,9 @@ def main [
     })
     (if $noop_count > 0 {
       $"#   ($noop_count) in neither the downstream worktree nor the template - nothing to do"
+    })
+    (if $symlink_count > 0 {
+      $"#   ($symlink_count) symlinks skipped - sync the link's target directly, not the link"
     })
   ] | where {|note| $note != null})
   mut list_legend = [
