@@ -25,7 +25,7 @@ nonNixosMachines := '[]'
 # imposed on downstreams that don't do heavier leios work. Bump this (or set
 # LEIOS_TAG) to advance the pin; keep it in sync with any deployed
 # cardano-node-leios input.
-leiosTag := env_var_or_default("LEIOS_TAG", "prototype-2026w29")
+leiosTag := env_var_or_default("LEIOS_TAG", "prototype-2026w40a")
 
 # Environment variables can be used to change the default template diff and path comparison sources.
 # If TEMPLATE_PATH is set, it will have precedence, otherwise git url will be used for source templates.
