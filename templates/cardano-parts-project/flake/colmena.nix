@@ -48,18 +48,13 @@ in
       # Cardano-node modules for group deployment
       node = {
         imports = [
-          # Base cardano-node service and cardano-tracer service
-          # Cardano-tracer service must be imported along with cardano-node service due to new tracing system integration.
+          # Base cardano-node and tracer service
           config.flake.cardano-parts.cluster.groups.default.meta.cardano-node-service
           config.flake.cardano-parts.cluster.groups.default.meta.cardano-tracer-service
 
           # Config for cardano-node group deployments
           inputs.cardano-parts.nixosModules.profile-cardano-node-group
           inputs.cardano-parts.nixosModules.profile-cardano-custom-metrics
-
-          # To continue using legacy tracing, this option will be available for a few
-          # more cardano-node and cardano-parts releases.
-          # {services.cardano-node.useLegacyTracing = true;}
         ];
       };
 
@@ -123,7 +118,6 @@ in
             # The `1795sec` arg will not be accepted in a route change
             # statement so must be filtered.
             DEFAULT_ROUTE=$(ip -6 route list default | sed 's/ expires [0-9]\+sec//')
-
             if [ "$DEFAULT_ROUTE" = "" ]; then
               echo "The -6 default route is not set, skipping."
             else
