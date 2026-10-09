@@ -1,0 +1,81 @@
+self:
+with builtins;
+with self.lib; let
+  # Setting enableAlertCount to false will exclude a machine from being added to machine log alerts.
+  # This can be useful if a machine exists, but is mostly kept in a stopped state.
+  enabledMachineNames = attrNames (filterAttrs (_: v: v.config.cardano-parts.perNode.meta.enableAlertCount) self.nixosConfigurations);
+  enabledMachineCount = toString (length enabledMachineNames);
+
+  logCount = range: ''sum by (instance) (count_over_time({job="systemd-journal"}${range}))'';
+in {
+  namespace = "cardano-parts-integrations";
+  name = "cardano-parts";
+  interval = "1m";
+  rule = [
+    # Generic host-level process crash alert, unifying two previously
+    # overlapping detectors:
+    #   * systemd-coredump "dumped core" journal lines: any core-dumping
+    #     signal (SEGV, ABRT, BUS, ILL, FPE, ...), from any process.
+    #   * kernel "segfault" lines: SEGVs including those which never produce
+    #     a coredump (systemd-coredump rate-limiting, storage caps, ulimits).
+    #
+    # A single core-dumping segfault emits both line types, so the value
+    # counts crash-related log lines, not distinct crashes.
+    {
+      alert = "coredump_or_segfault_detected";
+      expr = ''sum by (instance) (count_over_time({syslog_identifier=~"kernel|systemd-coredump"} |~ "segfault|dumped core" [15m])) > 0'';
+      for = "1m";
+      labels = {severity = "page";};
+      annotations = {
+        summary = "{{$labels.instance}}: process crash detected (coredump or kernel segfault).";
+        description = "{{$labels.instance}}: {{ printf \"%.0f\" $value }} crash-related log line(s) (systemd-coredump `dumped core` or kernel `segfault`) in the past 15 minutes; check `coredumpctl list` and `journalctl -k` on the host for the faulting process.";
+      };
+    }
+    # Alert per-instance if journal log flow to Loki stops, ie: alloy wedged or
+    # its loki.write pipeline failing while metrics may still look healthy.
+    #
+    # This is the log-based sibling of machine_metrics_absent
+    # (alerts/cardano-parts.nix-import): one rule whose expected set comes from
+    # each instance's own log history at several offsets, rather than a
+    # generated rule per machine.
+    # - LogQL count_over_time returns an empty vector, not zero, for a dead
+    #   stream, so a plain `< 1` threshold can never fire; `offset ... unless`
+    #   turns "had logs then, none now" into a per-instance result instead.
+    # - Every host emits journal lines at least minutely, so 15m of absence is
+    #   a real outage, not a quiet host. With for = 15m at a 1m interval,
+    #   notification lands ~30m after the last log line; the 15m pending
+    #   period also rides out Loki's occasional intermittent empty query
+    #   results, which would false-fire a single eval.
+    # - Alert stays firing for up to ~6h after log flow stops, then
+    #   auto-resolves; machines dark longer than 6h are covered by
+    #   unexpected_missing_machine_logs below.
+    {
+      alert = "loki_log_flow_stopped";
+      expr = ''(${logCount "[15m] offset 6h"} unless ${logCount "[15m]"}) or (${logCount "[15m] offset 4h"} unless ${logCount "[15m]"}) or (${logCount "[15m] offset 90m"} unless ${logCount "[15m]"}) or (${logCount "[15m] offset 20m"} unless ${logCount "[15m]"})'';
+      for = "15m";
+      labels = {severity = "page";};
+      annotations = {
+        summary = "{{$labels.instance}}: no logs received by Loki for 30+ minutes.";
+        description = "{{$labels.instance}} has not delivered any journal log lines to Loki in the past 30 minutes, although it may still be delivering metrics. Check `systemctl status alloy` and `journalctl -u alloy` on the host.";
+      };
+    }
+    # Count-based sanity check for machines missing from log flow, the
+    # log-based sibling of unexpected_missing_machine
+    # (alerts/cardano-parts.nix-import). Catches machines silent longer than
+    # the 6h offset horizon of loki_log_flow_stopped (which self-resolves),
+    # without naming them; compare the expr's instance label values against
+    # colmena.nix to find which.
+    # Still need `just tofu grafana apply` when creating/destroying machines
+    # or adding/removing disableAlertCount.
+    {
+      alert = "unexpected_missing_machine_logs";
+      expr = ''count(${logCount "[15m]"}) < ${enabledMachineCount}'';
+      for = "15m";
+      labels = {severity = "page";};
+      annotations = {
+        summary = "Machines are missing from Loki log flow.";
+        description = "${enabledMachineCount} machines are expected to be delivering logs to Loki, but only {{ $value }} are. Check loki_log_flow_stopped alerts for recently silent machines, or diff the instance label values of `sum by (instance) (count_over_time({job=\"systemd-journal\"}[15m]))` against colmena.nix for machines silent beyond the 6h lookback.";
+      };
+    }
+  ];
+}

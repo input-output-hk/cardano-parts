@@ -8,6 +8,9 @@
 # Obtainable from deadmanssnitch.com
 deadmanssnitch_api_url = "UPDATE_ME"
 
+# Obtainable from deadmanssnitch.com
+deadmanssnitch_loki_api_url = "UPDATE_ME"
+
 # An admin permissions mimir API key
 mimir_api_key = "UPDATE_ME"
 

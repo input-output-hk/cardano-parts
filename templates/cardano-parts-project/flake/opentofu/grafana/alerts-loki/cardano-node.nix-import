@@ -1,6 +1,6 @@
 {
   namespace = "cardano";
-  name = "cardano-node-loki";
+  name = "cardano-node-generic";
   interval = "1m";
   rule = [
     {
