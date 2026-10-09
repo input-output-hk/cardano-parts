@@ -32,10 +32,25 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   fi
 
   if [[ "$ENV" == "leios" ]]; then
-    # leios uses the cardano-cli bundled with the leios prototype shell;
-    # never the -ng variant.
-    LEIOS_PIN=$(jq -r '.nodes[.nodes."cardano-node-leios".inputs."cardano-node-leios"].locked | "github:\(.owner)/\(.repo)/\(.rev)"' flake.lock)
-    CARDANO_CLI="$(nix build -Lv "$LEIOS_PIN#cardano-cli" --no-link --print-out-paths)/bin/cardano-cli"
+    # leios uses the cardano-cli from the leios prototype, never the -ng
+    # variant. Resolve it the way start-node resolves the node: the pinned
+    # cardano-node-leios input if this repo declares one, else the {{leiosTag}}
+    # tag, which needs no input.
+    LEIOS_PIN=""
+    if [ -f flake.lock ]; then
+      LEIOS_PIN=$(jq -r '
+        .nodes["cardano-node-leios"] as $top
+        | if ($top == null) then empty
+          else (.nodes[$top.inputs["cardano-node-leios"]].locked) as $l
+               | if ($l == null) then empty else "github:\($l.owner)/\($l.repo)/\($l.rev)" end
+          end' flake.lock 2>/dev/null || true)
+    fi
+    if [ -n "$LEIOS_PIN" ]; then
+      CLI_REF="$LEIOS_PIN#cardano-cli"
+    else
+      CLI_REF="github:input-output-hk/ouroboros-leios/{{leiosTag}}#cardano-cli-static"
+    fi
+    CARDANO_CLI="$(nix build -Lv "$CLI_REF" --no-link --print-out-paths)/bin/cardano-cli"
   elif [ "${USE_SHELL_BINS:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli"
   elif [ -n "${UNSTABLE:-}" ] && [ "${UNSTABLE:-}" != "true" ]; then
@@ -930,10 +945,25 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   fi
 
   if [[ "$ENV" == "leios" ]]; then
-    # leios uses the cardano-cli bundled with the leios prototype shell;
-    # never the -ng variant.
-    LEIOS_PIN=$(jq -r '.nodes[.nodes."cardano-node-leios".inputs."cardano-node-leios"].locked | "github:\(.owner)/\(.repo)/\(.rev)"' flake.lock)
-    CARDANO_CLI="$(nix build -Lv "$LEIOS_PIN#cardano-cli" --no-link --print-out-paths)/bin/cardano-cli"
+    # leios uses the cardano-cli from the leios prototype, never the -ng
+    # variant. Resolve it the way start-node resolves the node: the pinned
+    # cardano-node-leios input if this repo declares one, else the {{leiosTag}}
+    # tag, which needs no input.
+    LEIOS_PIN=""
+    if [ -f flake.lock ]; then
+      LEIOS_PIN=$(jq -r '
+        .nodes["cardano-node-leios"] as $top
+        | if ($top == null) then empty
+          else (.nodes[$top.inputs["cardano-node-leios"]].locked) as $l
+               | if ($l == null) then empty else "github:\($l.owner)/\($l.repo)/\($l.rev)" end
+          end' flake.lock 2>/dev/null || true)
+    fi
+    if [ -n "$LEIOS_PIN" ]; then
+      CLI_REF="$LEIOS_PIN#cardano-cli"
+    else
+      CLI_REF="github:input-output-hk/ouroboros-leios/{{leiosTag}}#cardano-cli-static"
+    fi
+    CARDANO_CLI="$(nix build -Lv "$CLI_REF" --no-link --print-out-paths)/bin/cardano-cli"
   elif [ "${USE_SHELL_BINS:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli"
   elif [ -n "${UNSTABLE:-}" ] && [ "${UNSTABLE:-}" != "true" ]; then
