@@ -38,8 +38,16 @@ profiles, and ships a downstream project template consumed via
 
 ## AI agent config
 
-`.ai/` is the canonical agent-config dir; `.claude` is a committed symlink to it. This
-`AGENTS.md` is the canonical instructions file; `.ai/CLAUDE.md` symlinks to it so Claude
-Code loads it via `.claude/CLAUDE.md`. Repo-dev skills live in `.ai/skills/`: `gha`,
-`nushell`, `pr-description`, and the `sync-status`/`sync-execute`/`sync-help` suite for
-template↔downstream syncing.
+This `AGENTS.md` is the canonical instructions file, read directly by Codex and by people.
+`.ai/` holds the canonical tool-neutral content, currently `skills/`. Each tool gets its
+own directory of committed symlinks pointing at those: `.claude/CLAUDE.md -> ../AGENTS.md`
+and `.claude/skills -> ../.ai/skills`. Another tool is another such directory, with no
+change to the canonical content.
+
+`.claude` is a real directory, not a symlink, and everything in it except those links is
+gitignored. Claude Code creates isolated-agent worktrees under the git-common-dir
+checkout's `.claude/worktrees/`, so if `.claude` resolved into tracked content every agent
+run would leave a nested checkout inside the tree.
+
+Repo-dev skills live in `.ai/skills/`: `gha`, `nushell`, `pr-description`, and the
+`sync-status`/`sync-execute`/`sync-help` suite for template↔downstream syncing.

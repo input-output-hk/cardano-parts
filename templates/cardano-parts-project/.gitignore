@@ -24,4 +24,14 @@ __pycache__
 /*.txsigned
 /*.vkey
 /workbench/
+
+# Claude Code keeps its runtime in .claude: worktrees for isolated agents,
+# sessions, local settings. Ignore all of it and re-include only the committed
+# leaf symlinks, so anything a future version adds there is ignored by default.
+# .claude itself must stay a real, mostly ignored directory: agent worktrees are
+# created under the git-common-dir checkout's .claude/worktrees, and pointing
+# that at tracked content puts a nested checkout inside the tree.
+.claude/*
+!.claude/CLAUDE.md
+!.claude/skills
 .ai/settings.local.json

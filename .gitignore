@@ -6,5 +6,13 @@ result*
 /treefmt.toml
 .ai/skills/sync-review/sync-config.local.json
 
-# Claude Code (.claude and .ai/CLAUDE.md are committed symlinks; settings stay local)
+# Claude Code keeps its runtime in .claude: worktrees for isolated agents,
+# sessions, local settings. Ignore all of it and re-include only the committed
+# leaf symlinks, so anything a future version adds there is ignored by default.
+# .claude itself must stay a real, mostly ignored directory: agent worktrees are
+# created under the git-common-dir checkout's .claude/worktrees, and pointing
+# that at tracked content puts a nested checkout inside the tree.
+.claude/*
+!.claude/CLAUDE.md
+!.claude/skills
 .ai/settings.local.json
