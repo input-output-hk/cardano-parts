@@ -30,6 +30,7 @@
 #   config.cardano-parts.perNode.meta.hostsList
 #   config.cardano-parts.perNode.meta.nodeId
 #   config.cardano-parts.perNode.pkgs.blockperf
+#   config.cardano-parts.perNode.pkgs.cardano-census
 #   config.cardano-parts.perNode.pkgs.cardano-cli
 #   config.cardano-parts.perNode.pkgs.cardano-db-sync
 #   config.cardano-parts.perNode.pkgs.cardano-db-sync-pkgs
@@ -322,6 +323,7 @@ flake @ {moduleWithSystem, ...}: {
     pkgsSubmodule = submodule {
       options = foldl' recursiveUpdate {} [
         (mkPkgOpt "blockperf" (cfg.group.pkgs.blockperf system))
+        (mkPkgOpt "cardano-census" (cfg.group.pkgs.cardano-census system))
         (mkPkgOpt "cardano-cli" (cfg.group.pkgs.cardano-cli system))
         (mkPkgOpt "cardano-db-sync" (cfg.group.pkgs.cardano-db-sync system))
         (mkPkgOpt "cardano-db-tool" (cfg.group.pkgs.cardano-db-tool system))

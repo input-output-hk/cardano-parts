@@ -66,11 +66,6 @@
     # Works with leios prototype version w36 respin w/ reduced logs
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
-    # Reachability census of the big ledger peers; move to main once merged.
-    # Not made to follow nixpkgs: the package is a static musl binary built
-    # with the toolchain that flake pins and tests.
-    cardano-census.url = "github:input-output-hk/cardano-census/jl/getting-started";
-
     # For tmp local testing pins
     # cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
     # cardano-node-11-1-3.url = "github:IntersectMBO/cardano-node/release/11.1.x";
@@ -92,6 +87,11 @@
     # are assigned to the flake.cardano-parts.pkgs.special.*-service
     # flakeModule options and do not necessarily reflect the software
     # versions running on those nixos services.
+    cardano-census-service = {
+      url = "github:input-output-hk/cardano-census";
+      flake = false;
+    };
+
     cardano-db-sync-service = {
       url = "github:IntersectMBO/cardano-db-sync/13.7.3.0";
       flake = false;

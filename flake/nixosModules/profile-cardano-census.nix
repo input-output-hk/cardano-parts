@@ -193,7 +193,7 @@
     in {
       key = ./profile-cardano-census.nix;
 
-      imports = [inputs.cardano-census.nixosModules.default];
+      imports = ["${inputs.cardano-census-service}/nix/module.nix"];
 
       config = mkMerge ([
           {
@@ -215,6 +215,7 @@
 
             services.cardano-census = {
               enable = true;
+              package = config.cardano-parts.perNode.pkgs.cardano-census;
               nodeSocket = cfgNode.socketPath 0;
               networkMagic = protocolMagic;
               nodeSocketGroup = "cardano-node";
