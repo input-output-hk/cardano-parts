@@ -461,8 +461,8 @@ in
         };
 
         pkgsSubmodule = let
-          inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
-          # blockperf = caPkgs.blockperf-johnalotoski-blockperf-main-e77333d;
+          # inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
+          blockperf = caPkgs.blockperf-johnalotoski-blockperf-main-2a6068d;
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
           dbsync-release = "input-output-hk-cardano-db-sync-13-7-3-0-8a2cd5f";
@@ -471,14 +471,14 @@ in
           faucet = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-11-0a-829b8de";
           # faucet = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
-          # faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-leios-prototype-w35-d4636dc";
-          faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
+          faucet-ng = caPkgs."\"cardano-faucet:exe:cardano-faucet\"-input-output-hk-cardano-faucet-leios-prototype-w40a-627b212";
+          # faucet-ng = localFlake.inputs.cardano-faucet.packages.x86_64-linux."cardano-faucet:exe:cardano-faucet";
 
           metadata-pkg = pkg: caPkgs."${pkg}-input-output-hk-offchain-metadata-tools-v0-5-0-0-91eba72";
           # metadata-pkg = pkg: localFlake.inputs.cardano-metadata-service.packages.${system}.${pkg};
 
           mithril-release = "input-output-hk-mithril-2630-1-hotfix-3f6cb73";
-          mithril-pre-release = "input-output-hk-mithril-unstable-ebc7c38";
+          mithril-pre-release = "input-output-hk-mithril-unstable-39b2bdb";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-3-938cba9";
           # node-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
