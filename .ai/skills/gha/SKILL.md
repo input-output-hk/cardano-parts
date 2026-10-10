@@ -123,7 +123,7 @@ Validate free-form `workflow_dispatch` inputs before use:
 
 ## Checkout credential persistence
 
-Always set `persist-credentials: false` on `actions/checkout`. The default (`true`) writes the `GITHUB_TOKEN` into `.git/config`, making it readable by every subsequent step -- including third-party actions and build tools. With `contents: write` permission, a compromised step could push to the repository.
+Set `persist-credentials: false` on `actions/checkout` unless the job needs to `git push`. The default (`true`) writes the `GITHUB_TOKEN` into `.git/config`, making it readable by every subsequent step -- including third-party actions and build tools. With `contents: write` permission, a compromised step could push to the repository.
 
 ```yaml
 - uses: actions/checkout@<pinned-sha>
@@ -131,7 +131,7 @@ Always set `persist-credentials: false` on `actions/checkout`. The default (`tru
     persist-credentials: false
 ```
 
-If git push is needed later, configure credentials explicitly for just that step.
+If the job must push, keep `persist-credentials: true` (the default) and ensure only trusted code reaches that job via the two-job trust gate.
 
 ## Secrets hygiene in `run:` blocks
 

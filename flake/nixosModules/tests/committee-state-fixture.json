@@ -1,0 +1,85 @@
+{
+  "epoch": 1300,
+  "threshold": {
+    "numerator": 2,
+    "denominator": 3
+  },
+  "committee": {
+    "keyHash-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+      "hotCredsAuthStatus": {
+        "tag": "MemberAuthorized",
+        "contents": {
+          "keyHash": "1111111111111111111111111111111111111111111111111111111111111111"
+        }
+      },
+      "status": "Active",
+      "expiration": 1400,
+      "nextEpochChange": { "tag": "NoChangeExpected" }
+    },
+    "scriptHash-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": {
+      "hotCredsAuthStatus": {
+        "tag": "MemberResigned",
+        "contents": {
+          "dataHash": "2222222222222222222222222222222222222222222222222222222222222222",
+          "url": "ipfs://bafkresignedreceipt"
+        }
+      },
+      "status": "Active",
+      "expiration": 1500,
+      "nextEpochChange": { "tag": "NoChangeExpected" }
+    },
+    "keyHash-cccccccccccccccccccccccccccccccccccccccccccccccccccc": {
+      "hotCredsAuthStatus": {
+        "tag": "MemberAuthorized",
+        "contents": {
+          "keyHash": "3333333333333333333333333333333333333333333333333333333333333333"
+        }
+      },
+      "status": "Expired",
+      "expiration": 1200,
+      "nextEpochChange": { "tag": "ToBeRemoved" }
+    },
+    "scriptHash-dddddddddddddddddddddddddddddddddddddddddddddddddddd": {
+      "hotCredsAuthStatus": {
+        "tag": "MemberNotAuthorized",
+        "contents": {}
+      },
+      "status": "Active",
+      "expiration": 1310,
+      "nextEpochChange": { "tag": "ToBeExpired" }
+    },
+    "keyHash-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": {
+      "hotCredsAuthStatus": {
+        "tag": "MemberAuthorized",
+        "contents": {
+          "keyHash": "4444444444444444444444444444444444444444444444444444444444444444"
+        }
+      },
+      "status": "Unrecognized",
+      "expiration": null,
+      "nextEpochChange": { "tag": "NoChangeExpected" }
+    },
+    "scriptHash-ffffffffffffffffffffffffffffffffffffffffffffffffffff": {
+      "hotCredsAuthStatus": {
+        "tag": "MemberAuthorized",
+        "contents": {
+          "scriptHash": "5555555555555555555555555555555555555555555555555555555555555555"
+        }
+      },
+      "status": "Active",
+      "expiration": 1305,
+      "nextEpochChange": { "tag": "TermAdjusted", "contents": 1310 }
+    },
+    "keyHash-11111111111111111111111111111111111111111111111111aa": {
+      "hotCredsAuthStatus": {
+        "tag": "MemberAuthorized",
+        "contents": {
+          "keyHash": "6666666666666666666666666666666666666666666666666666666666666666"
+        }
+      },
+      "status": "Active",
+      "expiration": null,
+      "nextEpochChange": { "tag": "ToBeEnacted" }
+    }
+  }
+}

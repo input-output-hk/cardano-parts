@@ -1634,7 +1634,7 @@
       "30d"
     ]
   },
-  "timezone": "",
+  "timezone": "utc",
   "title": "Nginx VTS",
   "uid": "ZQAsi-Xiy",
   "version": 1,

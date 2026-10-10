@@ -8,6 +8,9 @@
 # Obtainable from deadmanssnitch.com
 deadmanssnitch_api_url = "UPDATE_ME"
 
+# Obtainable from deadmanssnitch.com
+deadmanssnitch_loki_api_url = "UPDATE_ME"
+
 # An admin permissions mimir API key
 mimir_api_key = "UPDATE_ME"
 
@@ -37,3 +40,10 @@ grafana_token = "UPDATE_ME"
 
 # The base monitoring URL
 grafana_url = "https://${BASE_MONITORING_FQDN}"
+
+# The loki rules endpoint
+loki_uri = "https://${BASE_MONITORING_FQDN}/loki"
+
+# The loki admin username
+loki_username = "UPDATE_ME"
+

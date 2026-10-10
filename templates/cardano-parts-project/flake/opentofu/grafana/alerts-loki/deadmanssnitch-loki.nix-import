@@ -1,0 +1,24 @@
+{
+  namespace = "deadmanssnitch";
+  name = "deadmanssnitch-loki";
+  interval = "1m";
+  rule = [
+    {
+      alert = "DeadMansSnitchLoki";
+      # Loki supports vector() since 2.7, making this the exact analog of the
+      # mimir-side DeadMansSnitch rule in alerts/deadmanssnitch.nix-import, but
+      # evaluated by the Loki ruler
+      #
+      # It requires a snitch separate from mimir heartbeat's, otherwise either
+      # ruler would keep the shared snitch fed while the other is dead.
+      expr = "vector(1)";
+      labels.severity = "info";
+      annotations = {
+        summary = "DeadMansSnitch Loki Pipeline";
+        description = ''
+          This is a DeadMansSnitch meant to ensure that the Loki ruler alerting pipeline is functional, see: [https://deadmanssnitch.com](https://deadmanssnitch.com).
+          This alert should ALWAYS be in alerting state. This enables Deadman's Snitch to report when the Loki ruler dies or can otherwise no longer alert.'';
+      };
+    }
+  ];
+}

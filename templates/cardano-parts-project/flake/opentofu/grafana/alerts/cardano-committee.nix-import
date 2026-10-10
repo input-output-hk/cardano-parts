@@ -1,0 +1,134 @@
+let
+  # 30d: operator-schedulable through governance in a non-emergency window.
+  warnDays = 30;
+  # 7d: worst-case epoch transition (5d on mainnet/preprod) + ratification buffer.
+  pageDays = 7;
+
+  warnSeconds = toString (warnDays * 86400);
+  pageSeconds = toString (pageDays * 86400);
+in {
+  namespace = "cardano";
+  name = "cardano-committee";
+  rule = [
+    {
+      # Lower bound `> pageSeconds` carves out the urgent band so a
+      # single member doesn't dual-fire warn + urgent; it also subsumes
+      # the `> 0` exclusion of already-expired members (negative
+      # seconds) that would otherwise dual-fire alongside
+      # cardano_cc_member_expired.
+      alert = "cardano_cc_term_expiring";
+      expr = "cardano_cc_member_seconds_until_expiration > ${pageSeconds} <= ${warnSeconds}";
+      labels.severity = "warning";
+      annotations = {
+        summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} term expires within ${toString warnDays} days.";
+        description = "{{$labels.environment}}: constitutional-committee member {{$labels.cold_credential}} term expires within ${toString warnDays} days. Schedule re-activation through governance.";
+      };
+    }
+    {
+      # `> 0` clamp keeps already-expired members from dual-firing
+      # alongside cardano_cc_member_expired.
+      alert = "cardano_cc_term_expiring_urgent";
+      expr = "cardano_cc_member_seconds_until_expiration > 0 <= ${pageSeconds}";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} term expires within ${toString pageDays} days.";
+        description = "{{$labels.environment}}: constitutional-committee member {{$labels.cold_credential}} term expires within ${toString pageDays} days. Re-activate now.";
+      };
+    }
+    {
+      # Both auth states page because both mean "this member cannot
+      # vote right now"; annotations differentiate the runbook.
+      alert = "cardano_cc_hot_key_unauthorized";
+      expr = ''cardano_cc_member_hot_cred_status{status="MemberNotAuthorized"} == 1'';
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} has no authorized hot key.";
+        description = "{{$labels.environment}}: constitutional-committee member {{$labels.cold_credential}} hotCredsAuthStatus is MemberNotAuthorized. Submit the hot-key authorization certificate.";
+      };
+    }
+    {
+      alert = "cardano_cc_hot_key_resigned";
+      expr = ''cardano_cc_member_hot_cred_status{status="MemberResigned"} == 1'';
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} has resigned.";
+        description = "{{$labels.environment}}: constitutional-committee member {{$labels.cold_credential}} hotCredsAuthStatus is MemberResigned. Governance action required to restore voting.";
+      };
+    }
+    {
+      alert = "cardano_cc_member_expired";
+      expr = ''cardano_cc_member_state{state="Expired"} == 1'';
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} term has expired.";
+        description = "{{$labels.environment}}: constitutional-committee member {{$labels.cold_credential}} status is Expired. Re-activation through governance is required to restore voting.";
+      };
+    }
+    {
+      alert = "cardano_cc_member_unrecognized";
+      expr = ''cardano_cc_member_state{state="Unrecognized"} == 1'';
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} status is Unrecognized.";
+        description = "{{$labels.environment}}: constitutional-committee member {{$labels.cold_credential}} status is Unrecognized. Check node/ledger consistency.";
+      };
+    }
+    {
+      # Authoritative ledger signal: catches TermAdjusted edge cases
+      # that the bare epoch arithmetic of cardano_cc_term_expiring
+      # would miss.
+      alert = "cardano_cc_to_be_expired_next_epoch";
+      expr = ''cardano_cc_member_next_epoch_change{change="ToBeExpired"} == 1'';
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.environment}}: CC member {{$labels.cold_credential}} will be Expired at next epoch boundary.";
+        description = "{{$labels.environment}}: constitutional-committee member {{$labels.cold_credential}} will transition to Expired at the next epoch boundary (authoritative ledger signal).";
+      };
+    }
+    {
+      alert = "cardano_cc_no_members";
+      expr = "cardano_cc_member_count == 0";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.environment}}: committee-state has zero members.";
+        description = "{{$labels.environment}}: collector reports zero constitutional-committee members. Check ledger / environment configuration.";
+      };
+    }
+    {
+      # Per-instance (not absent()) because in a multi-publisher setup
+      # one stalled host wouldn't trip a bare absent.
+      #
+      # 5400s threshold: timer is hourly + RandomizedDelaySec=600s, so
+      # max healthy gap is ~4200s and the first missed run lands at
+      # ~7800s. If you change the collector cadence in
+      # profile-cardano-committee-monitor.nix, change this in lockstep —
+      # they live in separate evaluations.
+      #
+      # 10m for: absorbs alloy restarts and prometheus reloads.
+      # `instance` is the only label alloy's relabel chain sets on
+      # node_textfile_mtime_seconds; operators map it to environment in
+      # Grafana templating.
+      alert = "cardano_cc_metrics_stale";
+      expr = ''time() - max by (instance) (node_textfile_mtime_seconds{file=~".*/cardano-committee.prom"}) > 5400'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "{{$labels.instance}}: cardano_cc_* metrics have not refreshed in over 90 minutes.";
+        description = "{{$labels.instance}}: the cardano-committee-monitor textfile collector has not produced a fresh .prom file in over 90 minutes. Check the systemd unit cardano-committee-monitor.service on this host.";
+      };
+    }
+    {
+      # absent() complements metrics_stale: catches "the series exists
+      # nowhere" (missed deploy, alloy misconfig, profile disabled).
+      # No $labels.* in the summary — absent() returns no labels.
+      alert = "cardano_cc_collector_absent";
+      expr = ''absent(node_textfile_mtime_seconds{file=~".*/cardano-committee.prom"})'';
+      for = "10m";
+      labels.severity = "page";
+      annotations = {
+        summary = "No host is publishing cardano_cc_* metrics.";
+        description = "No host is publishing the cardano-committee.prom textfile collector output. Either no host imports profile-cardano-committee-monitor, or alloy is not scraping the textfile directory.";
+      };
+    }
+  ];
+}

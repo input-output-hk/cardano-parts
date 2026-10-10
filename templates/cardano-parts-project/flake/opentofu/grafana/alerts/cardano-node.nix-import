@@ -27,7 +27,8 @@
     }
     {
       alert = "cardano_node_mempool_high";
-      expr = "cardano_node_metrics_txsInMempool_int > 200";
+      # Leios is expected to have elevated mempool, so exclude it from the alert
+      expr = ''cardano_node_metrics_txsInMempool_int{environment!~"leios"} > 200'';
       for = "10m";
       labels.severity = "page";
       annotations = {
@@ -37,8 +38,8 @@
     }
     {
       alert = "cardano_node_mempool_soft_timeouts_detected";
-      # Alert on any increase in soft timeouts over a 1-hour lookback window.
-      expr = "increase(txsMempoolTimeoutSoft[1h]) > 2 or increase(cardano_node_metrics_txsMempoolTimeoutSoft_counter[1h]) > 2";
+      # Alert on increases beyond a threshold in soft timeouts over a 1-hour lookback window.
+      expr = "increase(txsMempoolTimeoutSoft[1h]) > 4 or increase(cardano_node_metrics_txsMempoolTimeoutSoft_counter[1h]) > 4";
       for = "1m";
       labels.severity = "page";
       annotations = {
@@ -48,8 +49,8 @@
     }
     {
       alert = "cardano_node_mempool_hard_timeouts_detected";
-      # Alert on any increase in hard timeouts over a 1-hour lookback window.
-      expr = "increase(txsMempoolTimeoutHard[1h]) > 0 or increase(cardano_node_metrics_txsMempoolTimeoutHard_counter[1h]) > 0";
+      # Alert on increases beyond a threshold in hard timeouts over a 1-hour lookback window.
+      expr = "increase(txsMempoolTimeoutHard[1h]) > 4 or increase(cardano_node_metrics_txsMempoolTimeoutHard_counter[1h]) > 4";
       for = "1m";
       labels.severity = "page";
       annotations = {

@@ -539,7 +539,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "utc",
   "title": "Cardano Faucet: Application Metrics",
   "uid": "XG-OjjzVl",
   "version": 1,

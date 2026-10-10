@@ -244,6 +244,12 @@ flake: {
           in {
             wantedBy = ["multi-user.target"];
 
+            # Ordering only. Deliberately not bindsTo or partOf: a unit stopped
+            # by a dependency is not brought back by Restart=, so propagating
+            # the node's stop would leave smash down after a node restart.
+            after = ["cardano-node.service"];
+            wants = ["cardano-node.service"];
+
             path = with pkgs; [
               config.services.postgresql.package
               cardano-cli
@@ -281,10 +287,35 @@ flake: {
                 echo "Waiting for cardano node socket group write permission at $SOCKET for 10 seconds..."
                 sleep 10
               done
+
+              # The socket is listening well before the ledger has replayed, so
+              # a query here returns whatever era replay has reached rather than
+              # the chain tip era. Wait for the node to actually be at tip.
+              while true; do
+                SYNC=$(cardano-cli latest query tip 2> /dev/null | jq -r '.syncProgress // empty' 2> /dev/null) || SYNC=""
+
+                if [ "$SYNC" = "100.00" ]; then
+                  echo "Node is synced, starting cardano-smash"
+                  break
+                fi
+
+                echo "Waiting for cardano node sync for 10 seconds, currently at ''${SYNC:-unknown}%"
+                sleep 10
+              done
             '';
 
             script = ''
               set -uo pipefail
+
+              # Cardano-cli 11.1 replaced -h and -p with a positional host:port
+              # and renamed -m to --network-magic.  Probe once so both release
+              # and pre-release cli are supported.
+              PING_HELP=$(cardano-cli ping --help 2>&1 || true)
+              if grep -q -- --host <<< "$PING_HELP"; then
+                PING_LEGACY_ARGS=true
+              else
+                PING_LEGACY_ARGS=false
+              fi
 
               pingAddr() {
                 index=$1
@@ -299,7 +330,11 @@ flake: {
 
                 while IFS= read -r ip; do
                   set +e
-                  PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $CARDANO_NODE_NETWORK_ID -c 1 -q --json)"
+                  if $PING_LEGACY_ARGS; then
+                    PING="$(timeout 7s cardano-cli ping -h "$ip" -p "$port" -m $TESTNET_MAGIC -c 1 -q --json)"
+                  else
+                    PING="$(timeout 7s cardano-cli ping --network-magic $TESTNET_MAGIC -c 1 -q --json "$ip:$port")"
+                  fi
                   res=$?
                   if [ $res -eq 0 ]; then
                     echo $PING | jq -c > /dev/null 2>&1
@@ -346,7 +381,7 @@ flake: {
               }
 
               run() {
-                epoch=$(cardano-cli latest query tip --testnet-magic $CARDANO_NODE_NETWORK_ID | jq .epoch)
+                epoch=$(cardano-cli latest query tip | jq .epoch)
                 db_sync_epoch=$(psql -X -U ${cfgSmash.postgres.user} -t --command="select no from epoch_sync_time order by id desc limit 1;")
 
                 if [ $(( $epoch - $db_sync_epoch )) -gt 1 ]; then

@@ -10,17 +10,6 @@ in {
   namespace = "cardano-parts-integrations";
   name = "cardano-parts";
   rule = [
-    # NixosModule profile-cardano-custom-metrics.nix from cardano-parts provides this metric:
-    {
-      alert = "coredump_detected";
-      expr = ''netdata_statsd_cardano_coredumps_last_hour_gauge_value_average > 0'';
-      for = "5m";
-      labels.severity = "page";
-      annotations = {
-        summary = "Coredumps have been detected in the past hour.";
-        description = "{{ $labels.instance }} has had {{ printf \"%.0f\" $value }} coredump(s) in the past hour. Please investigate.";
-      };
-    }
     # Alert per-instance if machine metrics go missing.
     # Uses multiple offset checks (6h, 4h, 90m, 20m) to detect machines that were up but are now down.
     # - Alerts within 5m for machines already being monitored

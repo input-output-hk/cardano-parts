@@ -3,7 +3,10 @@
 # TODO: Move this to a docs generator
 #
 # Attributes available on flakeModule import:
+#   perSystem.cardano-parts.shell.global.defaultPrePushPkg
 #   perSystem.cardano-parts.shell.global.defaultShell
+#   perSystem.cardano-parts.shell.global.prePushExcludedChecks
+#   perSystem.cardano-parts.shell.global.prePushExtraScript
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultFormatterCfg
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultFormatterCheck
 #   perSystem.cardano-parts.shell.<global|<id>>.defaultFormatterHook
@@ -20,6 +23,9 @@
 #   perSystem.cardano-parts.shell.<global|<id>>.extraPkgs
 #   perSystem.cardano-parts.shell.<global|<id>>.pkgs
 #
+# Attributes configured on flakeModule import:
+#   perSystem.packages.<menu-<id>|pre-push>
+#
 # Attributes optionally configured on flakeModule import depending on above config:
 #   perSystem.checks.<lint|treefmt>
 #   perSystem.devShells.<[default]|<id>>
@@ -32,11 +38,9 @@
 #   * Devshell declared hooks, formatter and env var options, if defined, will override the corresponding globally defined options
 #   * Importers may use perSystem scope config.cardano-parts.shell.<global|<id>>.<pkgs|extraPkgs> defns for mkShell composition
 #   * Nix flake checks and formatter are configured only through the global options (ex: lint and treefmt)
+#   * The pre-push package discovers the flake checks of the repo it runs in at runtime; customize with the global prePush* options
 #   * perSystem attrs are simply accessed through [config.]<...> from within system module context
-{
-  localFlake,
-  withSystem,
-}: flake @ {
+{localFlake}: flake @ {
   self,
   flake-parts-lib,
   lib,
@@ -60,9 +64,91 @@ in
         cfgPkgs = cfg.pkgs;
         flakeCfg = flake.config.flake.cardano-parts;
 
-        withLocal = withSystem system;
+        nufmtConfig = pkgs.writeText "nufmt.nuon" ''{indent: 2}'';
         treefmtEval = localFlake.inputs.treefmt-nix.lib.evalModule pkgs cfgShell.global.defaultFormatterCfg;
         isPartsRepo = "${getExe pkgs.gnugrep} -qiE 'cardano[- ]parts' flake.nix &> /dev/null";
+
+        # The default pre-push git hook package. Check names are not baked in
+        # at eval time; the script discovers the flake checks of whichever
+        # repo it runs in at runtime, so upstream-internal cardano-parts
+        # checks never leak into downstream repos' hooks.
+        mkPrePush = let
+          checksRef = ".#checks.${escapeShellArg system}";
+        in
+          pkgs.writeShellApplication {
+            name = "pre-push";
+            runtimeInputs = with pkgs; [coreutils gitMinimal gnugrep];
+            meta.description = "A pre-push repo check for required secrets encryption, linting and formatting";
+            text =
+              ''
+                IPURPLE='\e[1;95m'
+                IWHITE='\e[1;97m'
+                IREDBK='\e[0;101m'
+                NC='\e[0m'
+                echo -e >&2 "''${IPURPLE}To skip, run git push with --no-verify.''${NC}"
+
+                WARN() {
+                  echo -e "''${IWHITE}''${IREDBK}   *** WARNING: ***   ''${NC}"
+                }
+                TOP=$(git rev-parse --show-toplevel)
+                IPS_FN="ips-DONT-COMMIT.nix"
+                IP_SECRETS="''${TOP}/flake/nixosModules/$IPS_FN"
+
+                if [ "$(git log -m --follow --full-history "$IP_SECRETS" 2> /dev/null | wc -c)" != "0" ]; then
+                  echo
+                  WARN
+                  echo
+                  echo "For the current repo directory of $TOP:"
+                  echo "    The flake/nixosModules/$IPS_FN file has been committed, but it should not be."
+                  echo "    Remove this file from the commit history and try again."
+                  echo
+                  echo "Commit history containing this file:"
+                  git log -m --follow --full-history "$IP_SECRETS"
+                  exit 1
+                fi
+
+                SECRETS_DIR="''${TOP}/secrets"
+                if [ -d "$SECRETS_DIR" ]; then
+                  if [ "$(grep -rL '"data": "ENC' "$SECRETS_DIR" | wc -l)" != "0" ]; then
+                    echo
+                    WARN
+                    echo
+                    echo "The following secrets/ files appear to be un-encrypted or not binary encrypted:"
+                    grep -rL '"data": "ENC' "$SECRETS_DIR"
+                    exit 1
+                  fi
+                fi
+
+                declare -A excluded=(${concatMapStringsSep " " (c: "[${escapeShellArg c}]=1") cfgShell.global.prePushExcludedChecks})
+
+                if ! discovered=$(nix eval ${checksRef} --raw --apply 'checks: builtins.concatStringsSep "\n" (builtins.attrNames checks)'); then
+                  echo
+                  WARN
+                  echo
+                  echo "Unable to evaluate the flake checks of $TOP; fix the flake eval error above and try again."
+                  exit 1
+                fi
+
+                declare -a checks=()
+                while IFS= read -r check; do
+                  [ -z "$check" ] && continue
+                  if [ -n "''${excluded[$check]:-}" ]; then
+                    echo "Skipping excluded flake check: $check"
+                    continue
+                  fi
+                  checks+=(${checksRef}."$check")
+                done <<< "$discovered"
+
+                if [ "''${#checks[@]}" = "0" ]; then
+                  echo "No flake checks found to run."
+                else
+                  set -x
+                  nix build "''${checks[@]}" --no-link
+                  { set +x; } 2> /dev/null
+                fi
+              ''
+              + cfgShell.global.prePushExtraScript;
+          };
 
         globalDefault = isGlobal: default:
           if isGlobal
@@ -94,6 +180,11 @@ in
                 projectRootFile = "flake.nix";
                 programs.alejandra.enable = true;
                 settings.formatter.alejandra.includes = ["*.nix-import"];
+                settings.formatter.nufmt = {
+                  command = "${localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt}/bin/nufmt";
+                  options = ["-c" "${nufmtConfig}"];
+                  includes = ["*.nu"];
+                };
               };
             };
 
@@ -117,22 +208,10 @@ in
               type = globalType isGlobal lines;
               description = mdDoc "The cardano-parts default git and shell hooks.";
               default = globalDefault isGlobal ''
-                if ${isPartsRepo} && [ -d .git/hooks ]; then
-                  ln -sf ${getExe (withLocal ({config, ...}: config.packages.pre-push))} .git/hooks/
-                fi
-
-                # Link .ai directory for Claude Code auto-discovery
-                if [ -d .claude ] && [ ! -L .claude ]; then
-                  echo -e "\n\033[33mWARNING: .claude is a directory, not a symlink.\033[0m"
-                  echo "Migrate any local settings, remove it, and re-enter the devShell to let it be created as a symlink to .ai:"
-                  echo "  mv .claude/settings.local.json .ai/"
-                  echo "  rm -rf .claude"
-                else
-                  mkdir -p .ai
-                  ln -sfn .ai .claude
-                fi
-                if [ -f .ai/AGENTS.md ]; then
-                  ln -sf AGENTS.md .ai/CLAUDE.md
+                if ${isPartsRepo}; then
+                  if [ -d .git/hooks ]; then
+                    ln -sf ${getExe cfgShell.global.defaultPrePushPkg} .git/hooks/
+                  fi
                 fi
               '';
             };
@@ -171,16 +250,17 @@ in
             defaultZshCompFpathLoading = mkOption {
               description = mdDoc "The cardano-parts default zsh completion fpath loading hook.";
               default = globalDefault isGlobal (packages: ''
-                  # Direnv use prevents the dynamic loading of zsh completions,
-                  # requiring a zsh "reentry" upon arriving in the devShell.
-                  # (ie: `zsh` or `exec zsh -l`, etc.
-                  #
-                  # If using plain nix develop, zsh "reentry" is not required.
-                  export ZDOTDIR=$PWD/.direnv-zsh
-                  mkdir -p "$ZDOTDIR"
-                  rm -f "$ZDOTDIR/.zcompdump"*
+                  if ${isPartsRepo}; then
+                    # Direnv use prevents the dynamic loading of zsh completions,
+                    # requiring a zsh "reentry" upon arriving in the devShell.
+                    # (ie: `zsh` or `exec zsh -l`, etc.
+                    #
+                    # If using plain nix develop, zsh "reentry" is not required.
+                    export ZDOTDIR=$PWD/.direnv-zsh
+                    mkdir -p "$ZDOTDIR"
+                    rm -f "$ZDOTDIR/.zcompdump"*
 
-                  cat > "$ZDOTDIR/completions.zsh" <<'EOF'
+                    cat > "$ZDOTDIR/completions.zsh" <<'EOF'
                 for p in ${concatStringsSep " " (map (p: "${p}") packages)}; do
                   if [ -d "$p/share/zsh/site-functions" ]; then
                     fpath=("$p/share/zsh/site-functions" $fpath)
@@ -190,7 +270,7 @@ in
                 compinit
                 EOF
 
-                  cat > "$ZDOTDIR/.zshrc" <<'EOF'
+                    cat > "$ZDOTDIR/.zshrc" <<'EOF'
                 if [ -f "$HOME/.zshrc" ]; then
                   source "$HOME/.zshrc"
                 fi
@@ -207,6 +287,7 @@ in
                 echo "To re-enter the completions in this devShell with direnv, run \"zsh\" or similar."
                 echo
                 EOF
+                  fi
               '');
             };
 
@@ -287,10 +368,28 @@ in
               id = "global";
               description = mdDoc "The cardano-parts devShell global configuration options.";
               extraCfg = {
+                defaultPrePushPkg = mkOption {
+                  type = package;
+                  description = mdDoc "The cardano-parts default pre-push git hook package.";
+                  default = mkPrePush;
+                };
+
                 defaultShell = mkOption {
                   type = nullOr (enum definedIds);
                   description = mdDoc "The cardano-parts devShell to set as default, if desired.";
                   default = null;
+                };
+
+                prePushExcludedChecks = mkOption {
+                  type = listOf str;
+                  description = mdDoc "Flake check names the default pre-push package skips during its runtime check discovery.";
+                  default = [];
+                };
+
+                prePushExtraScript = mkOption {
+                  type = lines;
+                  description = mdDoc "Extra script the default pre-push package runs after the flake checks build.";
+                  default = "";
                 };
 
                 pkgs = mkOption {
@@ -327,8 +426,10 @@ in
                     localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
                     just
                     moreutils
-                    # Add a localFlake pin to avoid downstream repo nixpkgs pins <= 23.05 causing a missing features failure
-                    localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell
+                    # Add a localFlake pin for nufmt and nushell to avoid downstream repo nixpkgs pins
+                    # providing older versions that are incompatible with each other
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt
+                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell
                     patch
                     ripgrep
                     statix
@@ -440,7 +541,7 @@ in
           "menu-${id}" = (pkgs.writeShellApplication
             {
               name = "menu-${id}";
-              runtimeInputs = [localFlake.inputs.nixpkgs.legacyPackages.${system}.nushell];
+              runtimeInputs = [localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell];
 
               text = let
                 minWidth =
@@ -523,8 +624,10 @@ in
           # Add optional formatter
           formatter = optionalAttrs cfgShell.global.enableFormatter cfgShell.global.defaultFormatterPkg;
 
-          # Make devshell menu packages menu-<id>
-          packages = foldl' (acc: id: recursiveUpdate acc (mkMenu id)) {} definedIds;
+          # Make devshell menu packages menu-<id> and the pre-push git hook package
+          packages =
+            foldl' (acc: id: recursiveUpdate acc (mkMenu id)) {} definedIds
+            // {pre-push = cfgShell.global.defaultPrePushPkg;};
         };
       });
     };

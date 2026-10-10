@@ -270,7 +270,10 @@ flake @ {inputs, ...}: {
         '';
       };
       environment = {
-        CARDANO_NODE_NETWORK_ID = envBinCfgs.${env}.magic;
+        CARDANO_NODE_NETWORK_ID =
+          if env == "mainnet"
+          then "mainnet"
+          else envBinCfgs.${env}.magic;
         CARDANO_NODE_SOCKET_PATH = "${stateDir'}/${env}/cardano-node/node.socket";
       };
     };
@@ -328,7 +331,11 @@ flake @ {inputs, ...}: {
                     (env: ''
                       echo "${env}:"
                       echo "  export CARDANO_NODE_SOCKET_PATH=${stateDir'}/${env}/cardano-node/node.socket"
-                      echo "  export CARDANO_NODE_NETWORK_ID=${envBinCfgs.${env}.magic}"
+                      echo "  export CARDANO_NODE_NETWORK_ID=${
+                        if env == "mainnet"
+                        then "mainnet"
+                        else envBinCfgs.${env}.magic
+                      }"
                       echo
                     '')
                     envList}

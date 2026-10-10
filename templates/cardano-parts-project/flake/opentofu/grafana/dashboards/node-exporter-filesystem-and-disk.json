@@ -1655,7 +1655,7 @@
       ]
     }
   ],
-  "refresh": "30s",
+  "refresh": "1m",
   "schemaVersion": 39,
   "tags": [
     "linux-node-integration"

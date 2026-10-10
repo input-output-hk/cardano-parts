@@ -557,7 +557,7 @@
     }
   ],
   "preload": false,
-  "refresh": "auto",
+  "refresh": "1m",
   "schemaVersion": 41,
   "tags": [],
   "templating": {

@@ -9,8 +9,8 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, demo and sanchonet are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$|^leios$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, demo, sanchonet and leios are supported"
     exit 1
   fi
 
@@ -25,13 +25,33 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     exit 1
   fi
 
-  if [ "$(jq -re .era <<< "$TIP")" != "Conway" ]; then
+  if ! [[ "$(jq -re .era <<< "$TIP")" =~ ^Conway$|^Dijkstra$ ]]; then
     echo "Governance actions cannot be queried until Conway era."
-    echo "Try again once in Conway era."
+    echo "Try again once in Conway era or later."
     exit 1
   fi
 
-  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+  if [[ "$ENV" == "leios" ]]; then
+    # leios uses the cardano-cli from the leios prototype, never the -ng
+    # variant. Resolve it the way start-node resolves the node: the pinned
+    # cardano-node-leios input if this repo declares one, else the {{leiosTag}}
+    # tag, which needs no input.
+    LEIOS_PIN=""
+    if [ -f flake.lock ]; then
+      LEIOS_PIN=$(jq -r '
+        .nodes["cardano-node-leios"] as $top
+        | if ($top == null) then empty
+          else (.nodes[$top.inputs["cardano-node-leios"]].locked) as $l
+               | if ($l == null) then empty else "github:\($l.owner)/\($l.repo)/\($l.rev)" end
+          end' flake.lock 2>/dev/null || true)
+    fi
+    if [ -n "$LEIOS_PIN" ]; then
+      CLI_REF="$LEIOS_PIN#cardano-cli"
+    else
+      CLI_REF="github:input-output-hk/ouroboros-leios/{{leiosTag}}#cardano-cli-static"
+    fi
+    CARDANO_CLI="$(nix build -Lv "$CLI_REF" --no-link --print-out-paths)/bin/cardano-cli"
+  elif [ "${USE_SHELL_BINS:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli"
   elif [ -n "${UNSTABLE:-}" ] && [ "${UNSTABLE:-}" != "true" ]; then
     CARDANO_CLI="cardano-cli"
@@ -55,6 +75,22 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   GREEN_CHECK="$GREEN✅"
   GREEN_NA="${GREEN}n/a"
   RED_X="$RED❌"
+
+  # The era command group must match the node's era. `latest` is an alias for
+  # the newest stable era, so against a Dijkstra node it queries Conway and the
+  # node answers with an era mismatch, which the 2> /dev/null below then hides.
+  if [ -n "${ERA_CMD:-}" ]; then
+    ERA="$ERA_CMD"
+  else
+    ERA=$(jq -re .era <<< "$TIP" | tr '[:upper:]' '[:lower:]')
+  fi
+
+  if ! eval "$CARDANO_CLI" "$ERA" --help &> /dev/null; then
+    echo -e "${RED}ERROR:${OFF}"
+    echo -e "  $CARDANO_CLI has no ${RED}$ERA${OFF} era command group, but $ENV is in that era."
+    echo -e "  Pin a cardano-cli that knows it, or set ${GREEN}ERA_CMD${OFF} to override."
+    exit 1
+  fi
 
   # Check cardano-cli requirements:
   CLI_VERSION=$(eval "$CARDANO_CLI" --version | grep -oP "cardano-cli \K[0-9.]+")
@@ -98,7 +134,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   echo
 
   CURRENT_EPOCH=$(jq -re .epoch <<< "$TIP")
-  GOV_STATE=$(eval "$CARDANO_CLI" latest query gov-state 2> /dev/null)
+  GOV_STATE=$(eval "$CARDANO_CLI" "$ERA" query gov-state)
   ACTION_STATE=$(jq -re ".proposals | to_entries[] | .value" 2> /dev/null <<< "$GOV_STATE" || true)
   if ! ACTION=$(jq -re ". | select(.actionId.txId == \"$ACTION_UTXO\" and .actionId.govActionIx == $ACTION_IDX)" 2> /dev/null <<< "$ACTION_STATE"); then
     echo -e "${RED}ERROR:$OFF Action $ACTION_UTXO#$ACTION_IDX was not found in environment $ENV."
@@ -111,14 +147,14 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   # The drep-stake-distribution query includes expired dreps and system
   # alwaysAbstain and alwaysNoConfidence dreps which are funded directly from
   # stake delegation.
-  DREP_DIST=$(eval "$CARDANO_CLI" latest query drep-stake-distribution --all-dreps 2> /dev/null | jq 'to_entries | map([.key, .value])')
+  DREP_DIST=$(eval "$CARDANO_CLI" "$ERA" query drep-stake-distribution --all-dreps 2> /dev/null | jq 'to_entries | map([.key, .value])')
 
   # DREP_PWR_DIST is similar to DREP_DIST but excludes expired dreps and system dreps (alwaysAbstain and alwaysNoConfidence).
-  DREP_PWR_DIST=$(eval "$CARDANO_CLI" latest query drep-state --all-dreps --include-stake \
+  DREP_PWR_DIST=$(eval "$CARDANO_CLI" "$ERA" query drep-state --all-dreps --include-stake \
     | jq -re "[ .[] | select( .[1].expiry >= $EPOCH ) | [\"drep-\(.[0] | keys[0])-\(.[0] | to_entries[].value)\", (.[1].stake // 0)]]" 2> /dev/null)
 
   # Get a distribution of all expired dreps
-  DREP_EXP_PWR_DIST=$(eval "$CARDANO_CLI" latest query drep-state --all-dreps --include-stake \
+  DREP_EXP_PWR_DIST=$(eval "$CARDANO_CLI" "$ERA" query drep-state --all-dreps --include-stake \
     | jq -re "[ .[] | select( .[1].expiry < $EPOCH ) | [\"drep-\(.[0] | keys[0])-\(.[0] | to_entries[].value)\", (.[1].stake // 0)]]" 2> /dev/null)
 
   # Calculate active and inactive drep power based on valid or expired dreps
@@ -141,7 +177,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   R_JUSTIFY "DREP_NOCONF_TOTAL:" "$DREP_NOCONF_TOTAL" 50
   R_JUSTIFY "DREP_ALWAYS_ABSTAIN:" "$DREP_ALWAYS_ABSTAIN_TOTAL" 50
 
-  POOL_DIST=$(eval "$CARDANO_CLI" latest query spo-stake-distribution --all-spos 2> /dev/null)
+  POOL_DIST=$(eval "$CARDANO_CLI" "$ERA" query spo-stake-distribution --all-spos 2> /dev/null)
   POOL_STAKE_TOTAL=$(jq -re '[.[][1]] | add // 0' <<< "$POOL_DIST" 2> /dev/null)
   POOL_ABSTAIN_TOTAL=$(jq -re '[(.[] | select(.[2] == "drep-alwaysAbstain")) | .[1]] | add // 0' <<< "$POOL_DIST")
   POOL_NOCONF_TOTAL=$(jq -re '[(.[] | select(.[2] == "drep-alwaysNoConfidence")) | .[1]] | add // 0' <<< "$POOL_DIST")
@@ -150,7 +186,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   R_JUSTIFY "POOL_ABSTAIN_TOTAL:" "$POOL_ABSTAIN_TOTAL" 50
   R_JUSTIFY "POOL_NOCONF_TOTAL:" "$POOL_NOCONF_TOTAL" 50
 
-  COMMITTEE_DIST=$(eval "$CARDANO_CLI" latest query committee-state \
+  COMMITTEE_DIST=$(eval "$CARDANO_CLI" "$ERA" query committee-state \
     | jq -re '
       [ .committee | (to_entries[] | select(.value.hotCredsAuthStatus.tag == "MemberAuthorized" and .value.status == "Active") |
         [
@@ -185,7 +221,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
   COMMITTEE_THRESHOLD_TOTAL=$(bc <<< "scale=1; ($COMMITTEE_THRESHOLD * $COMMITTEE_TOTAL / 100) + 0.5")
   COMMITTEE_THRESHOLD_TOTAL=${COMMITTEE_THRESHOLD_TOTAL%%.*}
 
-  PPARAMS=$(eval "$CARDANO_CLI" latest query protocol-parameters)
+  PPARAMS=$(eval "$CARDANO_CLI" "$ERA" query protocol-parameters)
   PROT_MAJOR_VER=$(jq -re ".protocolVersion.major // -1" <<< "$PPARAMS" 2> /dev/null)
   R_JUSTIFY "PROT_MAJOR_VER:" "$PROT_MAJOR_VER" 50
 
@@ -432,6 +468,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       POOL_STAKE_THRESHOLD="n/a"
       POOL_THRESHOLD_TOTAL="n/a"
       COMMITTEE_THRESHOLD="n/a"
+      COMMITTEE_THRESHOLD_TOTAL="n/a"
 
       DREP_ACCEPT_ICON="$GREEN_NA"
       POOL_ACCEPT_ICON="$GREEN_NA"
@@ -499,7 +536,15 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
       case "${CHANGE_PARAMETERS}" in
         # Security group - SPOs must vote, see:
         #   https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694#protocol-parameter-groups
-        *"maxBlockBodySize"*|*"maxTxSize"*|*"maxBlockHeaderSize"*|*"maxValueSize"*|*"maxBlockExecutionUnits"*|*"txFeePerByte"*|*"txFeeFixed"*|*"utxoCostPerByte"*|*"govActionDeposit"*|*"minFeeRefScriptCostPerByte"*)
+        # CIP-1694 only covers the Conway parameters. The Dijkstra additions
+        # below take their groups from the PPGroups annotations in
+        # cardano-ledger Cardano/Ledger/Dijkstra/PParams.hs, where every new
+        # parameter is NetworkGroup + SecurityGroup except maxPledgeLeverage
+        # (technical) and minPoolMargin (economic).
+        *"maxBlockBodySize"*|*"maxTxSize"*|*"maxBlockHeaderSize"*|*"maxValueSize"*|*"maxBlockExecutionUnits"*|*"txFeePerByte"*|*"txFeeFixed"*|*"utxoCostPerByte"*|*"govActionDeposit"*|*"minFeeRefScriptCostPerByte"*|\
+        *"maxRefScriptSizePerBlock"*|*"maxRefScriptSizePerTx"*|*"refScriptCostStride"*|*"refScriptCostMultiplier"*|\
+        *"leiosAnnouncementPeriodLength"*|*"leiosVotePeriodLength"*|*"leiosDiffusionPeriodLength"*|*"leiosCommitteeSize"*|*"leiosQuorumStakeThreshold"*|\
+        *"maxEndorserBlockReferencesSize"*|*"maxEndorserBlockTxsSize"*|*"maxEndorserBlockExecutionUnits"*|*"maxRefScriptSizePerEndorserBlock"*)
           POOL_STAKE_THRESHOLD=$(jq -re '.poolVotingThresholds.ppSecurityGroup // 0' <<< "${PPARAMS}" 2> /dev/null)
           POOL_STAKE_THRESHOLD=$(bc <<< "scale=2; 100.00 * $POOL_STAKE_THRESHOLD")
           POOL_THRESHOLD_TOTAL=$(bc <<< "$POOL_STAKE_THRESHOLD * $POOL_TOTAL / 100")
@@ -508,19 +553,22 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
           ;;&
 
         # Network group
-        *"maxBlockBodySize"*|*"maxTxSize"*|*"maxBlockHeaderSize"*|*"maxValueSize"*|*"maxTxExecutionUnits"*|*"maxBlockExecutionUnits"*|*"maxCollateralInputs"*)
+        *"maxBlockBodySize"*|*"maxTxSize"*|*"maxBlockHeaderSize"*|*"maxValueSize"*|*"maxTxExecutionUnits"*|*"maxBlockExecutionUnits"*|*"maxCollateralInputs"*|\
+        *"maxRefScriptSizePerBlock"*|*"maxRefScriptSizePerTx"*|*"refScriptCostStride"*|*"refScriptCostMultiplier"*|\
+        *"leiosAnnouncementPeriodLength"*|*"leiosVotePeriodLength"*|*"leiosDiffusionPeriodLength"*|*"leiosCommitteeSize"*|*"leiosQuorumStakeThreshold"*|\
+        *"maxEndorserBlockReferencesSize"*|*"maxEndorserBlockTxsSize"*|*"maxEndorserBlockExecutionUnits"*|*"maxRefScriptSizePerEndorserBlock"*)
           DREP_STAKE_THRESHOLD=$(jq -re "[ $DREP_STAKE_THRESHOLD, .dRepVotingThresholds.ppNetworkGroup // 0 ] | max" <<< "$PPARAMS" 2> /dev/null)
           echo -e "Parameter changes are included from the ${GREEN}NETWORK$OFF group"
           ;;&
 
         # Economic group
-        *"txFeePerByte"*|*"txFeeFixed"*|*"stakeAddressDeposit"*|*"stakePoolDeposit"*|*"monetaryExpansion"*|*"treasuryCut"*|*"minPoolCost"*|*"utxoCostPerByte"*|*"executionUnitPrices"*)
+        *"txFeePerByte"*|*"txFeeFixed"*|*"stakeAddressDeposit"*|*"stakePoolDeposit"*|*"monetaryExpansion"*|*"treasuryCut"*|*"minPoolCost"*|*"utxoCostPerByte"*|*"executionUnitPrices"*|*"minFeeRefScriptCostPerByte"*|*"minPoolMargin"*)
           DREP_STAKE_THRESHOLD=$(jq -re "[ $DREP_STAKE_THRESHOLD, .dRepVotingThresholds.ppEconomicGroup // 0 ] | max" <<< "$PPARAMS" 2> /dev/null)
           echo -e "Parameter changes are included from the ${GREEN}ECONOMIC$OFF group"
           ;;&
 
         # Technical group
-        *"poolPledgeInfluence"*|*"poolRetireMaxEpoch"*|*"stakePoolTargetNum"*|*"costModels"*|*"collateralPercentage"*)
+        *"poolPledgeInfluence"*|*"poolRetireMaxEpoch"*|*"stakePoolTargetNum"*|*"costModels"*|*"collateralPercentage"*|*"maxPledgeLeverage"*)
           DREP_STAKE_THRESHOLD=$(jq -re "[ $DREP_STAKE_THRESHOLD, .dRepVotingThresholds.ppTechnicalGroup // 0 ] | max" <<< "$PPARAMS" 2> /dev/null)
           echo -e "Parameter changes are included from the ${GREEN}TECHNICAL$OFF group"
           ;;&
@@ -622,7 +670,7 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
         .[2] // {}
           | to_entries as \$entries
           | if (\$entries | length) > 0
-            then []
+            then \$entries[]
               | \"Adding $GREEN\(.key)-\(.value)\"
               | split(\"-\")
               | \"\(.[0])$OFF ► $BLUE\(.[1])$OFF (max term epoch \(.[2]))\"
@@ -763,6 +811,12 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
     local LOVELACE="$1"
     local READABLE=""
 
+    # Pass non-numeric values (e.g. "n/a" for InfoAction) through unchanged
+    if ! [[ "$LOVELACE" =~ ^[0-9]+$ ]]; then
+      echo -n "$LOVELACE"
+      return
+    fi
+
     DIGITS="${#LOVELACE}"
     if [ "$DIGITS" -gt "15" ]; then
       READABLE="$(bc <<< "scale=3; $LOVELACE / 10^15") B₳"
@@ -840,14 +894,37 @@ query-gov-action-status ENV ACTION_ID ACTION_IDX:
 
   echo -e "Full approval of the proposal: $TOTAL_ACCEPT_ICON"
 
+# Sign a CC rationale doc, upload it to IPFS and print the anchor; see scripts/gov/rationale.nu
+rationale *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  exec scripts/gov/rationale.nu {{ARGS}}
+
+# Unified interactive voting across CC, DRep and SPO roles; see scripts/gov/vote.nu --help
+vote ENV ACTION_ID ACTION_IDX *ARGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  {{checkEnvWithoutOverride}}
+
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^leios$|^demo$|^sanchonet$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, leios, demo and sanchonet are supported"
+    exit 1
+  fi
+
+  # Export the node socket + testnet magic the voting tool expects.
+  source <(just set-default-cardano-env "{{ENV}}")
+  echo
+
+  exec scripts/gov/vote.nu "{{ENV}}" "{{ACTION_ID}}" "{{ACTION_IDX}}" {{ARGS}}
+
 # Generate and submit an SPO vote on a gov action
 vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   #!/usr/bin/env bash
   set -euo pipefail
   {{checkEnvWithoutOverride}}
 
-  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$ ]]; then
-    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, demo and sanchonet are supported"
+  if ! [[ "$ENV" =~ ^mainnet$|^preprod$|^preview$|^dijkstra$|^demo$|^sanchonet$|^leios$ ]]; then
+    echo "Error: only node environments for mainnet, preprod, preview, dijkstra, demo, sanchonet and leios are supported"
     exit 1
   fi
 
@@ -856,7 +933,8 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
 
   [ -n "${DEBUG:-}" ] && set -x
 
-  if [ "$(jq -re .syncProgress <<< "$(just query-tip "{{ENV}}")")" != "100.00" ]; then
+  TIP=$(just query-tip "{{ENV}}")
+  if [ "$(jq -re .syncProgress <<< "$TIP")" != "100.00" ]; then
     echo "Please wait until the local tip of environment {{ENV}} is 100.00 before voting"
     exit 1
   fi
@@ -866,7 +944,27 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
     exit 1
   fi
 
-  if [ "${USE_SHELL_BINS:-}" = "true" ]; then
+  if [[ "$ENV" == "leios" ]]; then
+    # leios uses the cardano-cli from the leios prototype, never the -ng
+    # variant. Resolve it the way start-node resolves the node: the pinned
+    # cardano-node-leios input if this repo declares one, else the {{leiosTag}}
+    # tag, which needs no input.
+    LEIOS_PIN=""
+    if [ -f flake.lock ]; then
+      LEIOS_PIN=$(jq -r '
+        .nodes["cardano-node-leios"] as $top
+        | if ($top == null) then empty
+          else (.nodes[$top.inputs["cardano-node-leios"]].locked) as $l
+               | if ($l == null) then empty else "github:\($l.owner)/\($l.repo)/\($l.rev)" end
+          end' flake.lock 2>/dev/null || true)
+    fi
+    if [ -n "$LEIOS_PIN" ]; then
+      CLI_REF="$LEIOS_PIN#cardano-cli"
+    else
+      CLI_REF="github:input-output-hk/ouroboros-leios/{{leiosTag}}#cardano-cli-static"
+    fi
+    CARDANO_CLI="$(nix build -Lv "$CLI_REF" --no-link --print-out-paths)/bin/cardano-cli"
+  elif [ "${USE_SHELL_BINS:-}" = "true" ]; then
     CARDANO_CLI="cardano-cli"
   elif [ -n "${UNSTABLE:-}" ] && [ "${UNSTABLE:-}" != "true" ]; then
     CARDANO_CLI="cardano-cli"
@@ -878,7 +976,22 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
     CARDANO_CLI="cardano-cli-ng"
   fi
 
-  STATE_BEFORE=$(eval "$CARDANO_CLI" latest query gov-state)
+  # The era command group must match the node's era. `latest` is an alias for
+  # the newest stable era, so against a Dijkstra node it queries Conway and the
+  # node answers with an era mismatch.
+  if [ -n "${ERA_CMD:-}" ]; then
+    ERA="$ERA_CMD"
+  else
+    ERA=$(jq -re .era <<< "$TIP" | tr '[:upper:]' '[:lower:]')
+  fi
+
+  if ! eval "$CARDANO_CLI" "$ERA" --help &> /dev/null; then
+    echo "Error: $CARDANO_CLI has no \"$ERA\" era command group, but $ENV is in that era."
+    echo "Pin a cardano-cli that knows it, or set ERA_CMD to override."
+    exit 1
+  fi
+
+  STATE_BEFORE=$(eval "$CARDANO_CLI" "$ERA" query gov-state)
   ACTION_BEFORE=$(
     jq -re \
       --arg actionId {{ACTION_ID}} \
@@ -898,7 +1011,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   echo
   echo "$ACTION_BEFORE"
   echo
-  read -p "Do you wish pool \"{{POOL}}\" in environment \"{{ENV}}\" to vote \"{{VOTE}}\" on this governance action [yY]? " -n 1 -r
+  read -p "Do you wish pool \"{{POOL}}\" in environment \"{{ENV}}\" to vote \"{{VOTE}}\" on this governance action? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
@@ -914,7 +1027,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   COLD_VKEY=$(fd --max-results 1 {{POOL}}-cold.vkey secrets)
 
   # Assume secrets are properly encrypted
-  eval "$CARDANO_CLI" latest governance vote create \
+  eval "$CARDANO_CLI" "$ERA" governance vote create \
     --{{VOTE}} \
     --governance-action-tx-id {{ACTION_ID}} \
     --governance-action-index {{ACTION_IDX}} \
@@ -924,11 +1037,11 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   echo
   echo "The created vote to be submitted is the following:"
   echo
-  eval "$CARDANO_CLI" latest governance vote view \
+  eval "$CARDANO_CLI" "$ERA" governance vote view \
     --vote-file "$FILE.vote"
   echo
   echo
-  read -p "Do you wish to proceed with this vote [yY]? " -n 1 -r
+  read -p "Do you wish to proceed with this vote? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
@@ -938,7 +1051,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   RICH_ADDR=$(just sops-decrypt-binary "secrets/envs/${ENV}/utxo-keys/rich-utxo.addr")
 
   # Select the smallest available UTxO without native tokens attached and greater than 5 ADA automatically with jq:
-  RICH_UTXOS=$(eval "$CARDANO_CLI" latest query utxo --address "$RICH_ADDR" --out-file /dev/stdout)
+  RICH_UTXOS=$(eval "$CARDANO_CLI" "$ERA" query utxo --address "$RICH_ADDR" --out-file /dev/stdout)
 
   TX_SELECTED=$(jq -re '.
     | to_entries
@@ -952,7 +1065,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   echo
   echo "Selected rich key funding TX \"$TXIN\" with value $TXVALUE lovelace"
 
-  eval "$CARDANO_CLI" latest transaction build \
+  eval "$CARDANO_CLI" "$ERA" transaction build \
     --tx-in "$TXIN" \
     --change-address "$RICH_ADDR" \
     --testnet-magic "$TESTNET_MAGIC" \
@@ -960,14 +1073,14 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
     --witness-override 2 \
     --out-file "$FILE.raw"
 
-  eval "$CARDANO_CLI" latest transaction sign \
+  eval "$CARDANO_CLI" "$ERA" transaction sign \
     --tx-body-file "$FILE.raw" \
     --signing-key-file <(just sops-decrypt-binary "secrets/envs/${ENV}/utxo-keys/rich-utxo.skey") \
     --signing-key-file <(just sops-decrypt-binary "$COLD_SKEY") \
     --testnet-magic "$TESTNET_MAGIC" \
     --out-file "$FILE.signed"
 
-  TXID=$(eval "$CARDANO_CLI" latest transaction txid --tx-file "$FILE.signed")
+  TXID=$(eval "$CARDANO_CLI" "$ERA" transaction txid --tx-file "$FILE.signed")
 
   echo
   echo "The signed vote containing transaction with txid \"$TXID\" is the following:"
@@ -977,7 +1090,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
 
   echo
   echo
-  read -p "Do you wish to submit this vote to the {{ENV}} network [yY]? " -n 1 -r
+  read -p "Do you wish to submit this vote to the {{ENV}} network? [y/N] " -n 1 -r
   echo
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting the vote."
@@ -987,12 +1100,12 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   echo
   echo "Submitting the vote."
 
-  eval "$CARDANO_CLI" latest transaction submit --tx-file "$FILE.signed"
+  eval "$CARDANO_CLI" "$ERA" transaction submit --tx-file "$FILE.signed"
 
   EXISTS="true"
 
   while [ "$EXISTS" = "true" ]; do
-    EXISTS=$(eval "$CARDANO_CLI" latest query tx-mempool tx-exists $TXID | jq -r .exists || true)
+    EXISTS=$(eval "$CARDANO_CLI" "$ERA" query tx-mempool tx-exists $TXID | jq -r .exists || true)
     if [ "$EXISTS" = "true" ]; then
       echo "Vote transaction still exists in the mempool, sleeping 5s: $TXID"
     else
@@ -1003,7 +1116,7 @@ vote-with-pool ENV POOL ACTION_ID ACTION_IDX VOTE:
   echo
   echo
 
-  STATE_AFTER=$(eval "$CARDANO_CLI" latest query gov-state)
+  STATE_AFTER=$(eval "$CARDANO_CLI" "$ERA" query gov-state)
   ACTION_AFTER=$(
     jq -re \
       --arg actionId {{ACTION_ID}} \

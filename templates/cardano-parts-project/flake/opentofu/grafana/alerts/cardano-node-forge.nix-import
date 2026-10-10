@@ -13,6 +13,48 @@ let
       description = "{{$labels.instance}}: cardano-node KES expiration notice: less than 10 periods until KES expiration.";
     };
   };
+
+  # Sustained failure to adopt self forged blocks.
+  #
+  # This assumes activeSlotsCoeff, f, is 0.05, which holds across virtually all cardano
+  # networks. Benign VRF tiebreak losses run near 0.5 * f, so about 2.5% of leader slots,
+  # while a wedged forger fails close to 100% of them. ratioPct sits between the two.
+  # Revisit ratioPct if a network ever deploys a materially different f.
+  #
+  # A ratio rather than an absolute count keeps this portable across pool stake shares. A
+  # low stake pool may never reach a fixed miss count within the window even when fully
+  # wedged. The floor only guards a small denominator, so one unlucky leader slot cannot
+  # read as total failure. Isolated non adoptions are expected and deliberately do not alert.
+  #
+  # Where too few leader slots land in the window to reach the floor, the
+  # cardano_node_blockheight_unchanged and cardano_node_block_divergence alerts are the
+  # primary wedge detection, as neither depends on leader rate.
+  mkNotAdoptedAlert = {
+    didntAdopt,
+    nodeIsLeader,
+    suffix ? "",
+    window ? "6h",
+    floor ? 3,
+    ratioPct ? 25,
+  }: {
+    alert = "cardano_node_forge_not_adopted_error${suffix}";
+    expr = ''
+      (increase(${didntAdopt}[${window}]) >= ${toString floor})
+      and
+      (increase(${didntAdopt}[${window}]) / clamp_min(increase(${nodeIsLeader}[${window}]), 1) > ${toString (ratioPct / 100.0)})
+    '';
+    for = "5m";
+    labels.severity = "page";
+    annotations = {
+      summary = "{{$labels.instance}}: cardano-node is failing to adopt a sustained share of its forged blocks.";
+      description = ''
+        {{$labels.instance}}: cardano-node failed to adopt more than ${toString ratioPct}% of its leader slots over the past ${window}.
+        Isolated non-adoptions are normal VRF tiebreak losses and do not reach this threshold.
+        A sustained rate indicates the forge or chain selection path is unhealthy, for example
+        FailedToAddBlock or forging behind the immutable tip.
+        Confirm the DidntAdoptBlock and SwitchedToAFork trace reasons before restarting anything.'';
+    };
+  };
 in {
   namespace = "cardano";
   name = "cardano-node-forge";
@@ -41,30 +83,15 @@ in {
           This should be investigated, or the alert adjusted if this is expected.'';
       };
     }
-    {
-      alert = "cardano_node_forge_not_adopted_error";
-      expr = "increase(cardano_node_metrics_Forge_didnt_adopt_int[1h]) > 0";
-      for = "1m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node is failing to adopt recent forged blocks.";
-        description = ''
-          {{$labels.instance}}: cardano-node failed to adopt 1 or more blocks in the past hour.
-          A restart of node on the affected machine(s) may be required.'';
-      };
-    }
-    {
-      alert = "cardano_node_forge_not_adopted_error_new_tracing";
-      expr = "increase(cardano_node_metrics_Forge_didnt_adopt_counter[1h]) > 0";
-      for = "1m";
-      labels.severity = "page";
-      annotations = {
-        summary = "{{$labels.instance}}: cardano-node is failing to adopt recent forged blocks.";
-        description = ''
-          {{$labels.instance}}: cardano-node failed to adopt 1 or more blocks in the past hour.
-          A restart of node on the affected machine(s) may be required.'';
-      };
-    }
+    (mkNotAdoptedAlert {
+      didntAdopt = "cardano_node_metrics_Forge_didnt_adopt_int";
+      nodeIsLeader = "cardano_node_metrics_Forge_node_is_leader_int";
+    })
+    (mkNotAdoptedAlert {
+      suffix = "_new_tracing";
+      didntAdopt = "cardano_node_metrics_Forge_didnt_adopt_counter";
+      nodeIsLeader = "cardano_node_metrics_Forge_node_is_leader_counter";
+    })
     {
       alert = "cardano_node_cannot_forge_new_tracing";
       expr = "increase(cardano_node_metrics_nodeCannotForge_int[1h]) > 0";

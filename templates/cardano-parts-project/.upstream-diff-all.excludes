@@ -1,0 +1,5 @@
+# Intentionally empty: upstream-diff-all pulls EVERY changed template file for
+# review, including new secret templates (pull the placeholder down, then fill
+# in the real secret). The two-pane editor edits the local file and N files
+# prompt before copy, so nothing is clobbered without review. Add a git
+# pathspec per line here only to silence files on the pull-down pass.

@@ -48,7 +48,7 @@ start-demo:
     ERA_CMD="conway" \
       nix run .#job-gen-custom-node-config-data
   else
-    for i in "$(seq 1 "$NUM_CC_KEYS")"; do
+    for i in $(seq 1 "$NUM_CC_KEYS"); do
       INDEX="$i" \
         nix run .#job-gen-keys-cc
     done
@@ -160,7 +160,6 @@ start-demo:
   ACTION="create-protocol-parameters-update" \
     STAKE_KEY="$STAKE_POOL_DIR/no-deploy/$(cut -f1 -d' ' <<< "$POOL_NAMES")-owner-stake" \
     nix run .#job-submit-gov-action -- "${PROPOSAL_ARGS[@]}"
-  echo "Sleeping $FIXED_DELAY_SECS seconds until $(date -d  @$(($(date +%s) + $FIXED_DELAY_SECS)))"
   echo "Sleeping until cost model can be voted on, epoch 5"
   WAIT_FOR_TIP "epoch" "5"
   echo
@@ -499,7 +498,7 @@ start-demo-ng:
 
   echo "Submitting an intra-era PV11 hard fork action..."
   PREV_GOV_ACTION=$(cardano-cli latest query gov-state --testnet-magic "$TESTNET_MAGIC" | jq -r '.nextRatifyState.nextEnactState.prevGovActionIds.HardFork')
-  PREV_GOV_ACTION_TX_ID=$(jq '.txId' <<< "$PREV_GOV_ACTION")
+  PREV_GOV_ACTION_TX_ID=$(jq -r '.txId' <<< "$PREV_GOV_ACTION")
   PREV_GOV_ACTION_INDEX=$(jq '.govActionIx' <<< "$PREV_GOV_ACTION")
   PROPOSAL_ARGS=(
     "--prev-governance-action-tx-id" "$PREV_GOV_ACTION_TX_ID"

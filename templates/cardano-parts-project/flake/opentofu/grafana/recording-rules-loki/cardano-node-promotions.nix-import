@@ -1,0 +1,21 @@
+{
+  # Peer selection promotions from cold to warm, counted from the node logs
+  # once a minute so dashboards read them from mimir instead of scanning logs.
+  # Log-derived series are cardano_node_logmetrics_*, whatever counts them,
+  # as leios uses leios_logmetrics_*; the suffix names the window.
+  namespace = "cardano";
+  name = "cardano-node-promotions";
+  interval = "1m";
+  rule = let
+    count = filter: channel: result: {
+      record = "cardano_node_logmetrics_cold_promotions_count1m";
+      expr = ''sum by (environment, instance) (count_over_time({systemd_unit="cardano-node.service"} |= "${filter}" [1m]))'';
+      labels = {inherit channel result;};
+    };
+  in [
+    (count "PromoteColdBigLedgerPeerDone" "big_ledger" "done")
+    (count "PromoteColdBigLedgerPeerFailed" "big_ledger" "failed")
+    (count "PromoteColdDone" "other" "done")
+    (count "PromoteColdFailed" "other" "failed")
+  ];
+}

@@ -2,16 +2,30 @@
 #
 # Various bash helper fns which aren't used enough to move to just recipes.
 
+# The cli era command group for era typed work: tx bodies and signatures.
+# These have to match the node era and `latest` still aliases conway, so
+# export ERA_CMD to the node era where it is newer. Same variable the
+# cardano-parts nix jobs take. Queries stay on latest, they take no era typed
+# input and the prototype cli era groups are only partially populated.
+era-cmd() {
+  if [ "${ERA_CMD:-}" = "dijkstra" ]; then
+    echo "dijkstra"
+  else
+    echo "latest"
+  fi
+}
+
 # A handy transaction submission function with mempool monitoring.
 # CARDANO_NODE_{NETWORK_ID,SOCKET_PATH}, TESTNET_MAGIC should already be exported.
 submit() (
   set -euo pipefail
   TX_SIGNED="$1"
+  ERA=$(era-cmd)
 
-  TXID=$(cardano-cli latest transaction txid --tx-file "$TX_SIGNED" | jq -re .txhash)
+  TXID=$(cardano-cli "$ERA" transaction txid --tx-file "$TX_SIGNED" | jq -re .txhash)
 
   echo "Submitting $TX_SIGNED with txid $TXID..."
-  cardano-cli latest transaction submit --tx-file "$TX_SIGNED"
+  cardano-cli "$ERA" transaction submit --tx-file "$TX_SIGNED"
 
   EXISTS="true"
   while [ "$EXISTS" = "true" ]; do
@@ -73,6 +87,7 @@ return-utxo() (
 
   [ -n "${DEBUG:-}" ] && set -x
   SIGNING_TX_ARGS=()
+  ERA=$(era-cmd)
 
   if [ "$#" -ne 4 ] && [ "$#" -ne 5 ]; then
     # shellcheck disable=SC2016
@@ -101,7 +116,7 @@ return-utxo() (
 
   PROMPT() {
     echo
-    read -p "Does this look correct [yY]? " -n 1 -r
+    read -p "Does this look correct? [y/N] " -n 1 -r
     echo
     if ! [[ $REPLY =~ ^[Yy]$ ]]; then
       echo "Aborting the fund transfer."
@@ -174,14 +189,14 @@ return-utxo() (
   echo "  Funding UTxO value: $TXIN_VALUE lovelace"
   PROMPT
 
-  cardano-cli latest transaction build-raw \
+  cardano-cli "$ERA" transaction build-raw \
     --tx-in "$TXIN" \
     --tx-out "$SEND_ADDR+$((TXIN_VALUE - 200000))" \
     --fee 200000 \
     --out-file "$BASENAME.raw"
 
   # shellcheck disable=2116
-  SIGNING_CMD=$(echo "cardano-cli latest transaction sign \
+  SIGNING_CMD=$(echo "cardano-cli $ERA transaction sign \
     --tx-body-file \"\$BASENAME.raw\" \
     --signing-key-file <(echo -n \"\$PAYMENT_SKEY\") \
     ${SIGNING_TX_ARGS[*]} \
@@ -207,19 +222,20 @@ faucet() (
   RICH_ADDR="$2"
   RICH_SKEY_PATH="$3"
   LOVELACE="$4"
+  ERA=$(era-cmd)
 
   UTXOS=$(cardano-cli query utxo --address "$RICH_ADDR")
   UTXO=$(jq -r 'to_entries | max_by(.value.value.lovelace) | { (.key): .value }' <<< "$UTXOS")
   UTXO_TX=$(jq -r 'keys[0]' <<< "$UTXO")
 
-  cardano-cli latest transaction build \
+  cardano-cli "$ERA" transaction build \
     --tx-in "$UTXO_TX" \
     --tx-out "$SEND_ADDR+$LOVELACE" \
     --change-address "$RICH_ADDR" \
     --testnet-magic "$TESTNET_MAGIC" \
     --out-file faucet.txbody
 
-  cardano-cli latest transaction sign \
+  cardano-cli "$ERA" transaction sign \
     --tx-body-file faucet.txbody \
     --signing-key-file "$RICH_SKEY_PATH" \
     --testnet-magic "$TESTNET_MAGIC" \
@@ -229,6 +245,7 @@ faucet() (
 )
 
 run-node-faketime() (
+  set -x
   if [ "${USE_SHELL_BINS:-}" = "true" ]; then
     CMD=$(alias cardano-node | cut -d"'" -f2)
   elif [ "${UNSTABLE:-}" = "true" ]; then
@@ -246,7 +263,25 @@ run-node-faketime() (
     fi
   fi
 
+  # If the spec carries a libfaketime rate suffix (' xN'), add '-f' so
+  # faketime skips its 'date -d' pre-validation pass. date doesn't
+  # understand the rate token and fails the whole spec; '-f' hands the
+  # string verbatim to libfaketime's native parser, which does.
+  # Also force TZ=UTC for that invocation: libfaketime's strptime path
+  # would otherwise interpret bare 'YYYY-MM-DD HH:MM:SS' as local time,
+  # silently shifting the start anchor on non-UTC hosts. Harmless for
+  # the '+0 xN' relative case so we gate both on the same condition.
+  FAKETIME_PRE_ARGS=()
+  FAKETIME_ENV_PREFIX=()
+  case "$1" in
+    *" x"*)
+      FAKETIME_PRE_ARGS+=("-f")
+      FAKETIME_ENV_PREFIX+=("env" "TZ=UTC")
+      ;;
+  esac
+
   ARGS=(
+    "${FAKETIME_PRE_ARGS[@]}"
     "$1" "$CMD" "run"
     "--config" "$DATA_DIR/node-config.json"
     "--database-path" "$DATA_DIR/db"
@@ -264,14 +299,68 @@ run-node-faketime() (
   # export FAKETIME_FLAKE="github:nixos/nixpkgs/nixos-23.05"
   #
   if [ -n "${FAKETIME_FLAKE:-}" ]; then
-    nix run "$FAKETIME_FLAKE"#libfaketime -- \
+    "${FAKETIME_ENV_PREFIX[@]}" nix run "$FAKETIME_FLAKE"#libfaketime -- \
       "${ARGS[@]}" \
     | tee -a "$DATA_DIR"/node.log
   else
-    faketime \
+    "${FAKETIME_ENV_PREFIX[@]}" faketime \
       "${ARGS[@]}" \
     | tee -a "$DATA_DIR"/node.log
   fi
+)
+
+# Run cardano-node under an accelerated wallclock. Thin wrapper around
+# run-node-faketime that takes a numeric multiplier rather than a raw
+# libfaketime spec, so callers don't have to remember the '+0 xN' form.
+#
+# Usage: faketime-fast RATE
+#   RATE -- wallclock multiplier (e.g. 10 for 10x faster, 0.5 for half speed)
+#
+# Example: faketime-fast 10
+#   cardano-node sees wallclock advance 10x real time; useful for replay
+#   when catching up a truncated chainDB.
+faketime-fast() (
+  if [ "$#" -ne 1 ]; then
+    echo "Usage: faketime-fast RATE" >&2
+    echo "  RATE -- wallclock multiplier (e.g. 10 for 10x faster, 0.5 for half)" >&2
+    exit 1
+  fi
+
+  run-node-faketime "+0 x$1"
+)
+
+# Run cardano-node under an accelerated wallclock, starting from an absolute
+# timestamp. Wrapper around run-node-faketime that converts the timestamp
+# to the space-separated form ('@YYYY-MM-DD HH:MM:SS xRATE'). The leading
+# '@' marks the value as absolute for libfaketime's parse_ft_string when
+# combined with a rate; without it the parser rejects the spec. The
+# upstream run-node-faketime detects the ' x' rate token and adds the
+# '-f' flag (skipping faketime's 'date -d' pre-validation) plus
+# 'env TZ=UTC' (so the space-separated datetime is interpreted as UTC).
+#
+# Usage: faketime-fast-at ISO_TIMESTAMP RATE
+#   ISO_TIMESTAMP -- anything 'date -u -d' accepts (e.g. 2026-04-15T16:00:00Z)
+#   RATE          -- wallclock multiplier (e.g. 100 for 100x faster)
+#
+# Example:
+#   faketime-fast-at \
+#     "$(date -u -d "$START_TIME + 277195 seconds" "+%Y-%m-%dT%H:%M:%SZ")" \
+#     100
+faketime-fast-at() (
+  if [ "$#" -ne 2 ]; then
+    echo "Usage: faketime-fast-at ISO_TIMESTAMP RATE" >&2
+    echo "  ISO_TIMESTAMP -- anything 'date -u -d' accepts (e.g. 2026-04-15T16:00:00Z)" >&2
+    echo "  RATE          -- wallclock multiplier (e.g. 100 for 100x faster)" >&2
+    exit 1
+  fi
+
+  local fts
+  if ! fts=$(date -u -d "$1" "+%Y-%m-%d %H:%M:%S" 2>/dev/null); then
+    echo "ERROR: could not parse '$1' as a date" >&2
+    exit 1
+  fi
+
+  run-node-faketime "@$fts x$2"
 )
 
 synth-prep() (
