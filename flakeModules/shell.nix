@@ -209,8 +209,12 @@ in
               description = mdDoc "The cardano-parts default git and shell hooks.";
               default = globalDefault isGlobal ''
                 if ${isPartsRepo}; then
-                  if [ -d .git/hooks ]; then
-                    ln -sf ${getExe cfgShell.global.defaultPrePushPkg} .git/hooks/
+                  # .git is a file, not a dir, in a linked worktree, so resolve
+                  # the real hooks path; it points at the shared common dir.
+                  hooks=$(${getExe pkgs.gitMinimal} rev-parse --git-path hooks 2>/dev/null)
+                  if [ -n "$hooks" ]; then
+                    mkdir -p "$hooks"
+                    ln -sf ${getExe cfgShell.global.defaultPrePushPkg} "$hooks/"
                   fi
                 fi
               '';
