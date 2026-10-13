@@ -1728,11 +1728,11 @@
         "sodium": "sodium_4"
       },
       "locked": {
-        "lastModified": 1791788016,
-        "narHash": "sha256-VRZJ3kTxmEfOwYaPyW6ZFEQOjkn/e38zK1PmjFsQHlM=",
+        "lastModified": 1791878303,
+        "narHash": "sha256-ec2KHVMp4DsGawxYXobg8H+WjIBWnmqRI3HzoZCUL5A=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "40ef51ec4d2ef851c5b1f6c0e54c7518754d966a",
+        "rev": "b87d643ea8fba94607f07af7609324a2eb0c4c2d",
         "type": "github"
       },
       "original": {
