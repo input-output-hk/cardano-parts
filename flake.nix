@@ -18,7 +18,6 @@
 
     flake-parts.url = "github:hercules-ci/flake-parts";
 
-    # TODO
     inputs-check = {
       url = "github:input-output-hk/inputs-check";
       inputs = {
