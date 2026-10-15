@@ -54,7 +54,7 @@
 
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
-    services-flake.url = "github:juspay/services-flake";
+    services-flake.url = "github:juspay/services-flake/0.5.0";
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
