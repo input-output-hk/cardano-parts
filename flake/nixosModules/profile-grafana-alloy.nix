@@ -812,8 +812,6 @@ flake @ {moduleWithSystem, ...}: {
               "--disable-reporting"
               "--stability.level=experimental"
             ];
-
-            package = inputs'.nixpkgs-unstable.legacyPackages.grafana-alloy;
           };
 
           systemd.services.alloy = {

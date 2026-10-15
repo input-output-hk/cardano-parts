@@ -181,7 +181,7 @@ in
                 programs.alejandra.enable = true;
                 settings.formatter.alejandra.includes = ["*.nix-import"];
                 settings.formatter.nufmt = {
-                  command = "${localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt}/bin/nufmt";
+                  command = lib.getExe pkgs.nufmt;
                   options = ["-c" "${nufmtConfig}"];
                   includes = ["*.nu"];
                 };
@@ -425,15 +425,11 @@ in
                     gnugrep
                     gnused
                     icdiff
-                    # Ensure we use jq 1.7 for rc != 0 on empty file or stream test
-                    # if the downstream repo is pinned to a nixpkgs <= 23.05
-                    localFlake.inputs.nixpkgs.legacyPackages.${system}.jq
+                    jq
                     just
                     moreutils
-                    # Add a localFlake pin for nufmt and nushell to avoid downstream repo nixpkgs pins
-                    # providing older versions that are incompatible with each other
-                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nufmt
-                    localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell
+                    nufmt
+                    nushell
                     patch
                     ripgrep
                     statix
@@ -499,7 +495,7 @@ in
                         libfaketime
                         mdbook
                         mdbook-kroki-preprocessor
-                        localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.mimir
+                        mimir
                         orchestrator-cli
                         opentofu
                         postgresql
@@ -545,7 +541,7 @@ in
           "menu-${id}" = (pkgs.writeShellApplication
             {
               name = "menu-${id}";
-              runtimeInputs = [localFlake.inputs.nixpkgs-unstable.legacyPackages.${system}.nushell];
+              runtimeInputs = [pkgs.nushell];
 
               text = let
                 minWidth =

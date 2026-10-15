@@ -26,8 +26,7 @@
       };
     };
 
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     nix.url = "github:nixos/nix/2.33-maintenance";
 
     opentofu-registry = {

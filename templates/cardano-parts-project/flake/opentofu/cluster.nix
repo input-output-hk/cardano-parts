@@ -219,7 +219,7 @@ in {
                 }
                 {
                   name = "tag:version";
-                  values = ["25.11.*"];
+                  values = ["26.05.*"];
                 }
               ];
             };
