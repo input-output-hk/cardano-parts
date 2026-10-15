@@ -53,7 +53,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # TODO
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
