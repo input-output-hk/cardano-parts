@@ -16,7 +16,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # TODO
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     # TODO
