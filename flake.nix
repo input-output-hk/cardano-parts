@@ -30,7 +30,6 @@
     # TODO
     nix.url = "github:nixos/nix/2.33-maintenance"; # 26.05 defaults to 2.34
 
-    # TODO
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
