@@ -40,7 +40,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # TODO
     terranix = {
       url = "github:terranix/terranix";
       inputs = {
