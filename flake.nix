@@ -11,13 +11,16 @@
       };
     };
 
+    # TODO
     colmena = {
       url = "github:zhaofengli/colmena";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # TODO
     flake-parts.url = "github:hercules-ci/flake-parts";
 
+    # TODO
     inputs-check = {
       url = "github:input-output-hk/inputs-check";
       inputs = {
@@ -26,20 +29,23 @@
       };
     };
 
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
-    nix.url = "github:nixos/nix/2.33-maintenance"; # TODO 2.34 is stable in 26.05
+    # TODO
+    nix.url = "github:nixos/nix/2.33-maintenance"; # 26.05 defaults to 2.34
 
+    # TODO
     opentofu-registry = {
       url = "github:opentofu/registry";
       flake = false;
     };
 
+    # TODO
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # TODO
     terranix = {
       url = "github:terranix/terranix";
       inputs = {
@@ -48,17 +54,22 @@
       };
     };
 
+    # TODO
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # TODO
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
 
+    # TODO
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
+
+    # TODO all from here
 
     # Works with leios prototype version w36 respin w/ reduced logs
     iohk-nix.url = "github:input-output-hk/iohk-nix";
