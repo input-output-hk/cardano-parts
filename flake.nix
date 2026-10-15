@@ -62,7 +62,6 @@
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
 
-    # TODO
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
