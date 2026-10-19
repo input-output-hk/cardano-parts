@@ -461,8 +461,8 @@ in
         };
 
         pkgsSubmodule = let
-          # inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
-          blockperf = caPkgs.blockperf-johnalotoski-blockperf-main-2a6068d;
+          inherit (localFlake.inputs.blockperf.packages.x86_64-linux) blockperf;
+          # blockperf = caPkgs.blockperf-johnalotoski-blockperf-main-2a6068d;
 
           credential-manager-release = "IntersectMBO-credential-manager-0-1-5-0-ba221bd";
           dbsync-release = "input-output-hk-cardano-db-sync-13-7-3-0-8a2cd5f";
