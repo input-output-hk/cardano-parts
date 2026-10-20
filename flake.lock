@@ -534,16 +534,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1792455728,
-        "narHash": "sha256-lgk4UcLmh+gR2cr50MzaR2qE2dgzLtQBEyAoeiVrbNg=",
+        "lastModified": 1792531186,
+        "narHash": "sha256-dyx0gS+4PjsLcjGMTf+aSuPCa5gYCRpZ+T7x7Omanps=",
         "owner": "input-output-hk",
         "repo": "cardano-faucet",
-        "rev": "02fe4824943b03f434a22d6b0a7f110549439b84",
+        "rev": "ed0151690e950c07f17b4dc625ef6b7c0b5eb3b6",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "leios-prototype-w42",
+        "ref": "leios-prototype",
         "repo": "cardano-faucet",
         "type": "github"
       }
