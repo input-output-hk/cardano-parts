@@ -67,7 +67,8 @@
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/node-11.2";
 
     # For tmp local testing pins
-    cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
+    cardano-faucet.url = "github:input-output-hk/cardano-faucet";
+    cardano-faucet-leios.url = "github:input-output-hk/cardano-faucet/leios-prototype";
 
     blockperf.url = "github:johnalotoski/blockperf/jl/ccfg";
     cardano-node-11-2-0.url = "github:IntersectMBO/cardano-node/jl/sre-11.2.0";
