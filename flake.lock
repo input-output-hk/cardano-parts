@@ -2320,15 +2320,16 @@
         "sodium": "sodium_4"
       },
       "locked": {
-        "lastModified": 1790411967,
-        "narHash": "sha256-Ph/+tBvMDeOcKk5K1BwqUByqV8V2W7NczPp945sPcng=",
+        "lastModified": 1792608074,
+        "narHash": "sha256-gWEYPIu4iC2+W1CV+0bvuoKN+FGEb62AfdzWKiZhioE=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "84287dbfebbfb5d36498c9c816e54252927c13c5",
+        "rev": "c20cc58b8c4a830af37c98f4ea7c16d29bd11a34",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "dijkstra-2026-10",
         "repo": "iohk-nix",
         "type": "github"
       }

@@ -61,7 +61,7 @@
     capkgs.url = "github:input-output-hk/capkgs";
 
     # Works with leios prototype version w36 respin w/ reduced logs
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/dijkstra-2026-10";
 
     # Works with leios prototype version w36 respin w/ reduced logs
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/node-11.2";
