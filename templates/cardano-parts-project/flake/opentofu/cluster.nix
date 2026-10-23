@@ -316,7 +316,7 @@ in {
                 {
                   condition = "\${length(tolist(data.aws_vpc.${region}.ipv6_cidr_block_associations)) == 1}";
                   error_message = ''
-                    The default VPC in ${region}
+                    The default VPC in ${underscore region}
                     must have exactly one IPv6 CIDR block association
                     because our OpenTofu code assumes so.
                   '';
