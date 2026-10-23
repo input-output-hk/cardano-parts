@@ -26,8 +26,8 @@
 #
 # Tips:
 #   * This module provides a grafana-alloy service and configures common application metrics hooks
-flake @ {moduleWithSystem, ...}: {
-  flake.nixosModules.profile-grafana-alloy = moduleWithSystem ({inputs'}: {
+flake: {
+  flake.nixosModules.profile-grafana-alloy = {
     config,
     lib,
     name,
@@ -812,8 +812,6 @@ flake @ {moduleWithSystem, ...}: {
               "--disable-reporting"
               "--stability.level=experimental"
             ];
-
-            package = inputs'.nixpkgs-unstable.legacyPackages.grafana-alloy;
           };
 
           systemd.services.alloy = {
@@ -911,5 +909,5 @@ flake @ {moduleWithSystem, ...}: {
           };
         })
       ];
-    });
+    };
 }

@@ -12,7 +12,7 @@
     };
 
     colmena = {
-      url = "github:zhaofengli/colmena";
+      url = "github:nix-community/colmena/v0.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -26,9 +26,8 @@
       };
     };
 
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
-    nix.url = "github:nixos/nix/2.33-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
+    nix.url = "github:nixos/nix/2.34-maintenance";
 
     opentofu-registry = {
       url = "github:opentofu/registry";
@@ -55,7 +54,7 @@
 
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
-    services-flake.url = "github:juspay/services-flake";
+    services-flake.url = "github:juspay/services-flake/0.5.0";
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
