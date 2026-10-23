@@ -25,6 +25,20 @@
     ...
   }: let
     inherit (builtins) toJSON;
+    # nixpkgsUpgrade: current migration workaround
+    # Suppress system and user D-Bus change-triggered reloads and restarts
+    # during the dbus-daemon to dbus-broker migration: the running daemon
+    # cannot complete the new broker unit's notify-reload handshake.
+    # Disable after the entire cluster has upgraded AND rebooted into broker.
+    # Normal startup is unaffected, including across multiple reboots, but
+    # subsequent D-Bus changes may wait until reboot while this is enabled.
+    # Permanent SSM/DNS activation protection below is independent of this flag.
+    # Read the flag from the consuming cluster, not cardano-parts' own config.
+    nixpkgsUpgrade = config.cardano-parts.cluster.group.groupFlake.config.flake.cardano-parts.cluster.infra.generic.nixpkgsUpgrade or false;
+    deferDbusChanges = {
+      reloadIfChanged = lib.mkForce false;
+      restartIfChanged = false;
+    };
   in
     with pkgs;
     with lib; {
@@ -103,7 +117,25 @@
         '';
 
         systemd = {
+          # See nixpkgsUpgrade above for migration details and removal criteria.
+          # Both aliases and both scopes need the override.
+          user.services = mkIf (nixpkgsUpgrade && config.services.dbus.enable) {
+            dbus = deferDbusChanges;
+            dbus-broker = mkIf (config.services.dbus.implementation == "broker") deferDbusChanges;
+          };
           services = {
+            # Permanent deployment protection: retain access and DNS during
+            # activation (including AWS KMS decryption), then restart changed
+            # services later in the switch. Independent of nixpkgsUpgrade.
+            amazon-ssm-agent = mkIf config.services.amazon-ssm-agent.enable {
+              stopIfChanged = mkDefault false;
+            };
+            dnsmasq = mkIf config.services.dnsmasq.enable {
+              stopIfChanged = mkDefault false;
+            };
+            dbus = mkIf (nixpkgsUpgrade && config.services.dbus.enable) deferDbusChanges;
+            dbus-broker = mkIf (nixpkgsUpgrade && config.services.dbus.enable && config.services.dbus.implementation == "broker") deferDbusChanges;
+
             # Remove the bootstrap key after 1 week in favor of auth-keys-hub use
             remove-ssh-bootstrap-key = {
               wantedBy = ["multi-user.target"];
