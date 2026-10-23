@@ -116,9 +116,8 @@ def 'main sign' [
     print -e $"Signed + verified -> ($signed)"
   } catch {|err|
     rm --recursive --force --permanent $tmp
-    error make --unspanned {
-      msg: $err.msg
-    }
+    # Preserve the failing command's span and exit status after cleanup.
+    error make $err.raw
   }
   rm --recursive --force --permanent $tmp
   $signed
