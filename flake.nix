@@ -27,7 +27,7 @@
     };
 
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
-    nix.url = "github:nixos/nix/2.33-maintenance";
+    nix.url = "github:nixos/nix/2.34-maintenance";
 
     opentofu-registry = {
       url = "github:opentofu/registry";
