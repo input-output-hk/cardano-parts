@@ -44,10 +44,14 @@
     config = let
       arcMaxBytes = calcArcMaxBytes config.boot.zfs.zfsArcPct;
     in {
-      # Set ZFS ARC max size via kernel parameter
-      boot.kernelParams = mkIf (arcMaxBytes != null) [
-        "zfs.zfs_arc_max=${toString arcMaxBytes}"
-      ];
+      boot = {
+        # Set ZFS ARC max size via kernel parameter
+        kernelParams = mkIf (arcMaxBytes != null) [
+          "zfs.zfs_arc_max=${toString arcMaxBytes}"
+        ];
+
+        zfs.forceImportRoot = true;
+      };
 
       ec2 = {
         efi = true;
