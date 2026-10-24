@@ -116,9 +116,8 @@ def 'main sign' [
     print -e $"Signed + verified -> ($signed)"
   } catch {|err|
     rm --recursive --force --permanent $tmp
-    error make --unspanned {
-      msg: $err.msg
-    }
+    # Preserve the failing command's span and exit status after cleanup.
+    error make $err.raw
   }
   rm --recursive --force --permanent $tmp
   $signed
@@ -139,7 +138,7 @@ def 'main prepare' [
   --project-id: string = ""        # Blockfrost IPFS project id; defaults to $env.BLOCKFROST_IPFS_PROJECT_ID
   --file: path = "rationale.json"  # Rationale doc to sign + upload
   --cli: string = "cardano-cli"    # cardano-cli binary used for hashing
-  --verify                         # After upload, fetch via $env.IPFS_GATEWAY_URI (default https://ipfs.io) and confirm the hash matches
+  --verify                         # After upload, fetch via $env.IPFS_GATEWAY_URI (default https://gateway.pinata.cloud) and confirm the hash matches
 ] {
   let project_id = (blockfrost-project-id $project_id)
   let signed = (main sign $node_env --file $file --cli $cli)
@@ -150,11 +149,11 @@ def 'main prepare' [
   print -e $"Anchor: (ansi green)($url)(ansi reset)  hash: ($hash)"
   if $verify {
     print -e "Verifying the anchor is fetchable and its hash matches..."
-    let fetched = (with-env {IPFS_GATEWAY_URI: ($env.IPFS_GATEWAY_URI? | default "https://ipfs.io")} {
+    let fetched = (with-env {IPFS_GATEWAY_URI: ($env.IPFS_GATEWAY_URI? | default "https://gateway.pinata.cloud")} {
       try { ^$cli hash anchor-data --url $url | into string | str trim } catch { "" }
     })
     if ($fetched | is-empty) {
-      print -e $"(ansi yellow)Warning: could not fetch ($url) via ipfs.io yet \(propagation lag is normal\). Local hash stands.(ansi reset)"
+      print -e $"(ansi yellow)Warning: could not fetch ($url) via the configured IPFS gateway yet \(propagation lag is normal\). Local hash stands.(ansi reset)"
     } else if $fetched != $hash {
       error make --unspanned {
         msg: $"Anchor hash mismatch: local ($hash) != fetched ($fetched). Do not vote with this anchor."

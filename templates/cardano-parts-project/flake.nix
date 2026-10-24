@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.follows = "cardano-parts/nixpkgs";
-    nixpkgs-unstable.follows = "cardano-parts/nixpkgs-unstable";
     flake-parts.follows = "cardano-parts/flake-parts";
     cardano-parts.url = "github:input-output-hk/cardano-parts";
   };

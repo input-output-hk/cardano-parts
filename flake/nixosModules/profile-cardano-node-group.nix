@@ -448,8 +448,9 @@
       in
         {
           cardano-node-socket-share = mkIf cfgNode.shareNodeSocket {
+            # Follow the node lifecycle without starting an intentionally
+            # stopped node when this helper is started or retried.
             after = ["cardano-node.service"];
-            wants = ["cardano-node.service"];
             partOf = ["cardano-node.service"];
             wantedBy = ["cardano-node.service"];
 
@@ -459,6 +460,9 @@
             startLimitIntervalSec = 900;
 
             serviceConfig = {
+              # Skip rather than fail when activation starts this helper before
+              # the node. The node's Wants pulls it in when the node starts.
+              ExecCondition = "${pkgs.systemd}/bin/systemctl is-active --quiet cardano-node.service";
               ExecStart = getExe (pkgs.writeShellApplication {
                 name = "cardano-node-socket-share";
                 runtimeInputs = with pkgs; [inotify-tools];
