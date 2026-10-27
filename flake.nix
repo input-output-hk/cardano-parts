@@ -70,7 +70,7 @@
     cardano-faucet-leios.url = "github:input-output-hk/cardano-faucet/leios-prototype";
 
     blockperf.url = "github:johnalotoski/blockperf/jl/ccfg";
-    cardano-node-11-2-0.url = "github:IntersectMBO/cardano-node/jl/sre-11.2.0";
+    cardano-node-11-2-0.url = "github:IntersectMBO/cardano-node/koslambrou/prepare-11.2";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
@@ -110,7 +110,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/sre-11.2.0";
+      url = "github:IntersectMBO/cardano-node/koslambrou/prepare-11.2";
       flake = false;
     };
 
@@ -135,7 +135,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/sre-11.2.0";
+      url = "github:IntersectMBO/cardano-node/koslambrou/prepare-11.2";
       flake = false;
     };
 
@@ -145,7 +145,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/sre-11.2.0";
+      url = "github:IntersectMBO/cardano-node/koslambrou/prepare-11.2";
       flake = false;
     };
 
