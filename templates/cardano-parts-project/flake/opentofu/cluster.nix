@@ -115,7 +115,7 @@ with lib; let
                 {
                   name = "${nodeName}-${md5 dns}-AAAA";
                   value = {
-                    count = "\${data.aws_vpc.${underscore nodes.${nodeName}.aws.region}.ipv6_cidr_block != \"\" ? 1 : 0}";
+                    count = "\${length(data.aws_vpc.${underscore nodes.${nodeName}.aws.region}.ipv6_cidr_block_associations) > 0 ? 1 : 0}";
                     zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                     name = dns;
                     type = "AAAA";
@@ -460,7 +460,7 @@ in {
               }
               # Use declared ipv6 if set
               // optionalAttrs (node.aws.instance ? ipv6) {
-                ipv6_addresses = "\${length(tolist(data.aws_vpc.${underscore region}.ipv6_cidr_block)) == 0 ? null : tolist([\"${node.aws.instance.ipv6}\"])}";
+                ipv6_addresses = "\${length(tolist(data.aws_vpc.${underscore region}.ipv6_cidr_block_associations)) == 0 ? null : tolist([\"${node.aws.instance.ipv6}\"])}";
               }
               # Otherwise use aws ipv6 auto-assignment
               // optionalAttrs (!(node.aws.instance ? ipv6)) {
@@ -661,7 +661,7 @@ in {
                 nameValuePair "${nodeName}-AAAA" {
                   # When tofu applying a new aws org, tofu will need to be
                   # applied twice to create the ipv6 dns record.
-                  count = "\${data.aws_vpc.${underscore node.aws.region}.ipv6_cidr_block != \"\" ? 1 : 0}";
+                  count = "\${length(data.aws_vpc.${underscore node.aws.region}.ipv6_cidr_block_associations) > 0 ? 1 : 0}";
 
                   zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                   name = "${nodeName}.\${data.aws_route53_zone.selected.name}";
