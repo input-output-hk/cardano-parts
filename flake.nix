@@ -12,7 +12,7 @@
     };
 
     colmena = {
-      url = "github:zhaofengli/colmena";
+      url = "github:nix-community/colmena/v0.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -26,9 +26,8 @@
       };
     };
 
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
-    nix.url = "github:nixos/nix/2.33-maintenance";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
+    nix.url = "github:nixos/nix/2.34-maintenance";
 
     opentofu-registry = {
       url = "github:opentofu/registry";
@@ -55,31 +54,34 @@
 
     # Process compose related
     process-compose-flake.url = "github:Platonic-systems/process-compose-flake";
-    services-flake.url = "github:juspay/services-flake";
+    services-flake.url = "github:juspay/services-flake/0.5.0";
 
     # Cardano related inputs
     capkgs.url = "github:input-output-hk/capkgs";
 
     # Works with leios prototype version w36 respin w/ reduced logs
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/dijkstra-2026-10";
 
     # Works with leios prototype version w36 respin w/ reduced logs
     iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
 
     # For tmp local testing pins
-    # cardano-faucet.url = "github:input-output-hk/cardano-faucet/leios-prototype";
-    # cardano-node-11-1-3.url = "github:IntersectMBO/cardano-node/release/11.1.x";
+    cardano-faucet.url = "github:input-output-hk/cardano-faucet";
+    cardano-faucet-leios.url = "github:input-output-hk/cardano-faucet/leios-prototype";
+
+    blockperf.url = "github:johnalotoski/blockperf/jl/ccfg";
+    # cardano-node-11-2-0.url = "github:IntersectMBO/cardano-node/koslambrou/prepare-11.2";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
     # definitions found in flakeModule/pkgs.nix.
     cardano-db-sync-schema = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.3.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.8.0.0";
       flake = false;
     };
 
     cardano-db-sync-schema-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.3.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.8.0.0";
       flake = false;
     };
 
@@ -93,12 +95,12 @@
     };
 
     cardano-db-sync-service = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.3.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.8.0.0";
       flake = false;
     };
 
     cardano-db-sync-service-ng = {
-      url = "github:IntersectMBO/cardano-db-sync/13.7.3.0";
+      url = "github:IntersectMBO/cardano-db-sync/13.8.0.0";
       flake = false;
     };
 
@@ -108,7 +110,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/jl/sre-11.2.0";
+      url = "github:IntersectMBO/cardano-node/11.2.0";
       flake = false;
     };
 
@@ -133,7 +135,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.1.3";
+      url = "github:IntersectMBO/cardano-node/11.2.0";
       flake = false;
     };
 
@@ -143,7 +145,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/11.1.3";
+      url = "github:IntersectMBO/cardano-node/11.2.0";
       flake = false;
     };
 

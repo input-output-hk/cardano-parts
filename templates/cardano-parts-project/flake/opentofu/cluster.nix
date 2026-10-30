@@ -115,7 +115,7 @@ with lib; let
                 {
                   name = "${nodeName}-${md5 dns}-AAAA";
                   value = {
-                    count = "\${data.aws_vpc.${underscore nodes.${nodeName}.aws.region}.ipv6_cidr_block != \"\" ? 1 : 0}";
+                    count = "\${length(data.aws_vpc.${underscore nodes.${nodeName}.aws.region}.ipv6_cidr_block_associations) > 0 ? 1 : 0}";
                     zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                     name = dns;
                     type = "AAAA";
@@ -219,7 +219,7 @@ in {
                 }
                 {
                   name = "tag:version";
-                  values = ["25.11.*"];
+                  values = ["26.05.*"];
                 }
               ];
             };
@@ -310,6 +310,21 @@ in {
         #   });
 
         resource = {
+          terraform_data = mapRegions ({region, ...}: {
+            "vpc_ipv6_cidr_block_associations_${region}" = {
+              lifecycle.precondition = [
+                {
+                  condition = "\${length(tolist(data.aws_vpc.${region}.ipv6_cidr_block_associations)) == 1}";
+                  error_message = ''
+                    The default VPC in ${underscore region}
+                    must have exactly one IPv6 CIDR block association
+                    because our OpenTofu code assumes so.
+                  '';
+                }
+              ];
+            };
+          });
+
           aws_default_route_table = mapRegions (
             {
               region,
@@ -372,9 +387,9 @@ in {
                 # Dynamically calculate the subnet bits in case the default
                 # CIDR block allocation changes from /56 in the future.
                 ipv6_cidr_block = let
-                  ipv6CidrBlock = "data.aws_vpc.${region}.ipv6_cidr_block";
+                  ipv6CidrBlock = "tolist(data.aws_vpc.${region}.ipv6_cidr_block_associations)[0].ipv6_cidr_block";
                 in
-                  "\${data.aws_vpc.${region}.ipv6_cidr_block == \"\" ? null :"
+                  "\${length(tolist(data.aws_vpc.${region}.ipv6_cidr_block_associations)) == 0 ? null :"
                   + " cidrsubnet(${ipv6CidrBlock}, ${toString ipv6SubnetCidrBits} - parseint(tolist(regex(\"/([0-9]+)$\", ${ipv6CidrBlock}))[0], 10), each.key)}";
 
                 availability_zone = "\${each.value.availability_zone}";
@@ -445,11 +460,11 @@ in {
               }
               # Use declared ipv6 if set
               // optionalAttrs (node.aws.instance ? ipv6) {
-                ipv6_addresses = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : tolist([\"${node.aws.instance.ipv6}\"])}";
+                ipv6_addresses = "\${length(tolist(data.aws_vpc.${underscore region}.ipv6_cidr_block_associations)) == 0 ? null : tolist([\"${node.aws.instance.ipv6}\"])}";
               }
               # Otherwise use aws ipv6 auto-assignment
               // optionalAttrs (!(node.aws.instance ? ipv6)) {
-                ipv6_address_count = "\${data.aws_vpc.${underscore region}.ipv6_cidr_block == \"\" ? null : 1}";
+                ipv6_address_count = "\${length(tolist(data.aws_vpc.${underscore region}.ipv6_cidr_block_associations)) == 0 ? null : 1}";
               }
           );
 
@@ -646,7 +661,7 @@ in {
                 nameValuePair "${nodeName}-AAAA" {
                   # When tofu applying a new aws org, tofu will need to be
                   # applied twice to create the ipv6 dns record.
-                  count = "\${data.aws_vpc.${underscore node.aws.region}.ipv6_cidr_block != \"\" ? 1 : 0}";
+                  count = "\${length(data.aws_vpc.${underscore node.aws.region}.ipv6_cidr_block_associations) > 0 ? 1 : 0}";
 
                   zone_id = "\${data.aws_route53_zone.selected.zone_id}";
                   name = "${nodeName}.\${data.aws_route53_zone.selected.name}";

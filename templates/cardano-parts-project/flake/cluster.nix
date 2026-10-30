@@ -30,6 +30,10 @@
       # Update basic info about the cluster here.
       # This will be used for generic resource tagging where possible.
 
+      # See nixpkgsUpgrade in cardano-parts' flake/nixosModules/profile-common.nix
+      # for the current upgrade workarounds and criteria for disabling this flag.
+      # nixpkgsUpgrade = false;
+
       # organization = "ioe";
       # tribe = "coretech";
       # function = "cardano-parts";
