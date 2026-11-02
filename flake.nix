@@ -63,7 +63,7 @@
     iohk-nix.url = "github:input-output-hk/iohk-nix/dijkstra-2026-10";
 
     # Works with leios prototype version w36 respin w/ reduced logs
-    iohk-nix-ng.url = "github:input-output-hk/iohk-nix";
+    iohk-nix-ng.url = "github:input-output-hk/iohk-nix/jl/leios-w44-maxDelay";
 
     # For tmp local testing pins
     cardano-faucet.url = "github:input-output-hk/cardano-faucet";

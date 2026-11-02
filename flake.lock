@@ -1731,15 +1731,16 @@
         "sodium": "sodium_4"
       },
       "locked": {
-        "lastModified": 1793111651,
-        "narHash": "sha256-9TSfb5nqwlL2RwRmT+bFV0Xladdn1zEvKpn6ggqhT1I=",
+        "lastModified": 1793642691,
+        "narHash": "sha256-V5ovA0Cv6nsdVvVSH92jCX7rnjfjWLpZPI45jPG9HU8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "552233e3b94300c845545efd568217659c866fdf",
+        "rev": "3a26e75d58122deb8715d6a85504ebbe7183effe",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "jl/leios-w44-maxDelay",
         "repo": "iohk-nix",
         "type": "github"
       }
