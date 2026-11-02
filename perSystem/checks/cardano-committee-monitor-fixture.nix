@@ -13,11 +13,18 @@
   }:
     lib.optionalAttrs (system == "x86_64-linux") {
       checks.cardano-committee-monitor-fixture = let
-        # Match only on the trailing positional so the shim stays
-        # insensitive to --network / --socket-path plumbing changes.
+        # Require the actual ledger era: `latest` may still mean Conway
+        # even when the connected node has entered Dijkstra.
         cardano-cli = pkgs.writeShellScriptBin "cardano-cli" ''
           case " $* " in
+            *" query tip "*)
+              echo "{\"era\":\"$TEST_ERA\",\"epoch\":0}"
+              ;;
             *" committee-state "*)
+              if [ "$1" != "''${TEST_ERA,,}" ]; then
+                echo "fixture shim: wrong query era: $1" >&2
+                exit 1
+              fi
               cat ${../../flake/nixosModules/tests/committee-state-fixture.json}
               ;;
             *)
@@ -39,9 +46,11 @@
           export CARDANO_NODE_NETWORK_ID=2
           export CARDANO_NODE_SOCKET_PATH=/dev/null
 
-          ${collect}/bin/cardano-committee-monitor-collect
-
-          diff -u ${../../flake/nixosModules/tests/committee-state-expected.prom} "$OUT"
+          for TEST_ERA in Conway Dijkstra; do
+            export TEST_ERA
+            ${collect}/bin/cardano-committee-monitor-collect
+            diff -u ${../../flake/nixosModules/tests/committee-state-expected.prom} "$OUT"
+          done
           touch "$out"
         '';
     };
