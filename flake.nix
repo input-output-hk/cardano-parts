@@ -70,7 +70,7 @@
     cardano-faucet-leios.url = "github:input-output-hk/cardano-faucet/leios-prototype";
 
     blockperf.url = "github:johnalotoski/blockperf/jl/ccfg";
-    # cardano-node-11-2-0.url = "github:IntersectMBO/cardano-node/koslambrou/prepare-11.2";
+    cardano-node-11-2-1.url = "github:IntersectMBO/cardano-node/release/11.2.x";
 
     # Cardano-db-sync schema input pins, which must match the
     # versioning of the release and pre-release (-ng) dbsync
