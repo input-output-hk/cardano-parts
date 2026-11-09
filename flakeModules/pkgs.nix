@@ -478,13 +478,13 @@ in
           # metadata-pkg = pkg: localFlake.inputs.cardano-metadata-service.packages.${system}.${pkg};
 
           mithril-release = "input-output-hk-mithril-2642-0-e85df3d";
-          mithril-pre-release = "input-output-hk-mithril-unstable-1f55bfa";
+          mithril-pre-release = "input-output-hk-mithril-unstable-8040607";
 
           node-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-1-3-938cba9";
           # node-release = pkg: localFlake.inputs.cardano-node-11-1-3.packages.x86_64-linux.${pkg};
 
-          # node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-2-0-dac0d7a";
-          node-pre-release = pkg: localFlake.inputs.cardano-node-11-2-1.packages.x86_64-linux.${pkg};
+          node-pre-release = pkg: caPkgs."${pkg}-input-output-hk-cardano-node-11-2-1-90bc1cd";
+          # node-pre-release = pkg: localFlake.inputs.cardano-node-11-2-1.packages.x86_64-linux.${pkg};
         in
           submodule {
             options = foldl' recursiveUpdate {} [
