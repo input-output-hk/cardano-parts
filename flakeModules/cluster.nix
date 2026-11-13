@@ -14,6 +14,7 @@
 #   flake.cardano-parts.cluster.infra.generic.costCenter
 #   flake.cardano-parts.cluster.infra.generic.environment
 #   flake.cardano-parts.cluster.infra.generic.function
+#   flake.cardano-parts.cluster.infra.generic.nixpkgsUpgrade
 #   flake.cardano-parts.cluster.infra.generic.organization
 #   flake.cardano-parts.cluster.infra.generic.owner
 #   flake.cardano-parts.cluster.infra.generic.project
@@ -208,6 +209,20 @@ flake @ {
 
   genericSubmodule = submodule {
     options = {
+      nixpkgsUpgrade = mkOption {
+        type = bool;
+        default = false;
+        description = mdDoc ''
+          Enable temporary cluster-wide compatibility workarounds for a
+          nixpkgs upgrade. This does not change packages or pins.
+
+          Workarounds vary between nixpkgs upgrades. Before enabling or
+          disabling this option, check the nixpkgsUpgrade comments and code
+          in cardano-parts' flake/nixosModules/profile-common.nix for the
+          current behavior, operational caveats, and criteria for disabling it.
+        '';
+      };
+
       abortOnMissingIpModule = mkOption {
         type = bool;
         description = mdDoc ''

@@ -39,7 +39,7 @@
 # to have the tool sign (CIP-100 author = $env.CC_RATIONALE_AUTHOR, default
 # "CC member") + upload the rationale to IPFS (via rationale.nu) and use the
 # resulting anchor automatically. When --anchor-hash is omitted, the hash is fetched from
-# the anchor URL via $env.IPFS_GATEWAY_URI (defaults to https://ipfs.io).
+# the anchor URL via $env.IPFS_GATEWAY_URI (defaults to https://gateway.pinata.cloud).
 #
 # Whatever is passed via --anchor-url / --rationale-file is type-checked up
 # front: a CIP-108 PROPOSAL rationale doc aborts the run (votes need a CIP-136
@@ -629,7 +629,7 @@ def assemble-orch-cc [
   mkdir $workdir
   # Anchor hash: use the precomputed (local) hash if provided, else hash the
   # content fetched from the anchor URL via the gateway (IPFS_GATEWAY_URI is set
-  # for the whole run in `main`, defaulting to ipfs.io).
+  # for the whole run in `main`, defaulting to gateway.pinata.cloud).
   let anchor_hash = (if ($anchor_hash | is-not-empty) {
     $anchor_hash
   } else {
@@ -696,7 +696,7 @@ def main [
   action_idx: int             # Governance action index
   --decision: string = "yes"  # Default decision offered per voter: yes|no|abstain
   --anchor-url: string = ""   # CC rationale anchor (required for orchestrator-CC votes)
-  --anchor-hash: string = ""  # Precomputed anchor-data hash; if omitted, fetched from --anchor-url via $env.IPFS_GATEWAY_URI (default https://ipfs.io)
+  --anchor-hash: string = ""  # Precomputed anchor-data hash; if omitted, fetched from --anchor-url via $env.IPFS_GATEWAY_URI (default https://gateway.pinata.cloud)
   --rationale-file: path = "" # Sign + upload this rationale doc to IPFS, use as anchor (orchestrator-CC; alt to --anchor-url)
   --blockfrost-project-id: string = "" # Blockfrost IPFS project id for --rationale-file uploads; defaults to $env.BLOCKFROST_IPFS_PROJECT_ID
   --cli: string = ""          # Override the cardano-cli binary (default: auto)
@@ -720,7 +720,7 @@ def main [
   # Default the IPFS gateway for the whole run so cardano-cli can resolve ipfs://
   # anchors — both the anchor-hash computation and `transaction build`, which
   # re-validates the anchor — without requiring IPFS_GATEWAY_URI; respect it when set.
-  $env.IPFS_GATEWAY_URI = ($env.IPFS_GATEWAY_URI? | default "https://ipfs.io")
+  $env.IPFS_GATEWAY_URI = ($env.IPFS_GATEWAY_URI? | default "https://gateway.pinata.cloud")
   let expected_magic = (env-magic | get $node_env)
   let magic = (require-node-env $node_env $expected_magic)
   let cli_bin = (select-cli $node_env $cli)

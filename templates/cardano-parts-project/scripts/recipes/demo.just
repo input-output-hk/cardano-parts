@@ -273,7 +273,7 @@ start-demo-ng:
   export SLOT_LENGTH="${SLOT_LENGTH:-100}"
 
   # Use a final constitution copy from mainnet to indicate when we are no longer using an interim constitution.
-  export IPFS_GATEWAY_URI="https://ipfs.io"
+  export IPFS_GATEWAY_URI="https://gateway.pinata.cloud"
   export SCRIPT_FILE_URL="https://book.play.dev.cardano.org/environments/preview/guardrails-script.plutus"
   CONSTITUTION_ANCHOR_DATAHASH="2a61e2f4b63442978140c77a70daab3961b22b12b63b13949a390c097214d1c5"
   CONSTITUTION_ANCHOR_URL="ipfs://bafkreiazhhawe7sjwuthcfgl3mmv2swec7sukvclu3oli7qdyz4uhhuvmy"

@@ -1,87 +1,65 @@
-name: Checkout and merge PR
+name: Checkout reviewed PR
 
 description: >
-  Checkout base and PR branch, create local merge commit with smart shallow
-  fetch. Works in manual dispatch, PR, push and schedule contexts. Compatible
-  with fork PRs.
+  For manual test runs, verify a reviewed PR head SHA and merge that exact
+  commit into the base SHA returned by GitHub. Requires an existing checkout
+  of the workflow commit. Ordinary PR runs should use the event merge commit.
 
 inputs:
-  base_ref:
-    description: 'Base branch ref (typically github.event.pull_request.base.ref)'
-    required: true
-
-  head_ref:
-    description: 'The head branch ref of the PR (typically github.head_ref || github.ref_name)'
-    required: true
-
   pr_number:
-    description: 'PR number (typically github.event.pull_request.number)'
+    description: Optional PR number for a manual test run
+    required: false
+  head_sha:
+    description: Full reviewed head commit SHA, required with pr_number
     required: false
 
 runs:
   using: composite
   steps:
-    - if: inputs.pr_number != ''
+    - name: Verify and merge reviewed PR
+      shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
-        BASE_REF: ${{ inputs.base_ref }}
-        HEAD_REF: ${{ inputs.head_ref }}
         PR_NUMBER: ${{ inputs.pr_number }}
-        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        REVIEWED_HEAD_SHA: ${{ inputs.head_sha }}
         REPO: ${{ github.repository }}
       run: |
+        set -euo pipefail
+
+        if [ -z "$PR_NUMBER" ] && [ -z "$REVIEWED_HEAD_SHA" ]; then
+          echo "No PR requested; testing the workflow commit."
+          exit 0
+        fi
+        if ! [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || ! [[ "$REVIEWED_HEAD_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+          echo "::error::Provide both a positive pr_number and its full reviewed head_sha."
+          exit 1
+        fi
+        REVIEWED_HEAD_SHA="${REVIEWED_HEAD_SHA,,}"
+
+        PR_DATA=$(gh api "repos/$REPO/pulls/$PR_NUMBER")
+        BASE_SHA=$(jq -er '.base.sha' <<< "$PR_DATA")
+        HEAD_SHA=$(jq -er '.head.sha' <<< "$PR_DATA")
+        if ! [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || ! [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "::error::GitHub did not return valid base and head commit SHAs."
+          exit 1
+        fi
+        if [ "$HEAD_SHA" != "$REVIEWED_HEAD_SHA" ]; then
+          echo "::error::PR head changed. Review the current commit and dispatch again with its SHA."
+          exit 1
+        fi
+
+        # Resolve the PR once, then fetch only immutable commit IDs. Even if the
+        # PR changes after verification, its newer code cannot enter this run.
+        # Fetch complete ancestry so old fork points work without shallow merges.
+        fetch_options=(--no-tags --no-recurse-submodules)
+        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+          fetch_options+=(--unshallow)
+        fi
+        git fetch "${fetch_options[@]}" origin "$BASE_SHA" "$HEAD_SHA"
         git config --local user.name "GitHub Actions"
         git config --local user.email "actions@github.com"
-        git fetch --no-tags --depth=10 origin "$BASE_REF"
-        git fetch --no-tags --depth=10 origin "pull/$PR_NUMBER/head:pr"
+        git checkout --detach "$BASE_SHA"
+        git merge --no-ff --no-edit "$HEAD_SHA"
 
-        # Check if this is a fork PR
-        if [ "$HEAD_REPO" != "$REPO" ]; then
-
-          echo "Detected forked PR -- adding fork remote."
-          PR_REMOTE=$(gh pr view "$PR_NUMBER" --json headRepositoryOwner,headRepository \
-            --jq '"\(.headRepositoryOwner.login)/\(.headRepository.name)"')
-
-          if [ -n "$PR_REMOTE" ]; then
-            git remote add fork "https://github.com/$PR_REMOTE"
-            git fetch fork "$HEAD_REF"
-            UPSTREAM="fork"
-          else
-            UPSTREAM="origin"
-          fi
-        else
-          echo "Detected same-repo PR."
-          UPSTREAM="origin"
-        fi
-
-        git fetch --no-tags --depth=10 "$UPSTREAM" "refs/heads/$HEAD_REF:refs/remotes/$UPSTREAM/$HEAD_REF"
-
-        git checkout -b "$HEAD_REF" FETCH_HEAD
-        if git merge --no-ff --no-edit pr; then
-          echo "Merge succeeded."
-        else
-          echo "Merge failed, possibly due to shallow history. Retrying with deeper fetch..."
-          git fetch --unshallow || git fetch --depth=50
-
-          if git merge --no-ff --no-edit pr; then
-            echo "Merge succeeded after deeper fetch."
-          else
-            echo "Merge conflict detected."
-            exit 1
-          fi
-        fi
-
-        echo "Merged commit HEAD is:"
-        git rev-parse HEAD
+        echo "Test merge: base=$BASE_SHA reviewed_head=$HEAD_SHA"
         git log -1 --oneline
-
-        echo "Setting upstream branch to: $UPSTREAM/$HEAD_REF"
-        git branch --set-upstream-to="$UPSTREAM/$HEAD_REF" HEAD
-
-        echo "Confirmation of upstream:"
-        git status -sb
-      shell: bash
-
-    - if: inputs.pr_number == ''
-      run: echo "Not a PR event -- no merge required"
-      shell: bash

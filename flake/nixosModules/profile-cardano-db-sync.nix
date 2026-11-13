@@ -36,6 +36,11 @@
       environmentConfig = environments.${environmentName};
 
       cfg = nixos.config.services.cardano-db-sync;
+
+      # db-sync 13.8 logs through trace-dispatcher and ignores these
+      # iohk-monitoring keys, which iohk-nix's dbSyncConfig still sets.
+      traceDispatcher = versionAtLeast (cfg.package.version or "0") "13.8";
+      legacyLoggingKeys = ["defaultBackends" "defaultScribes" "minSeverity" "options" "rotation" "setupBackends" "setupScribes"];
     in {
       key = ./profile-cardano-db-sync.nix;
 
@@ -124,10 +129,26 @@
             environment = environmentConfig;
             socketPath = nodeCfg.socketPath 0;
             explorerConfig =
-              environmentConfig.dbSyncConfig
+              (
+                if traceDispatcher
+                then removeAttrs environmentConfig.dbSyncConfig legacyLoggingKeys
+                else environmentConfig.dbSyncConfig
+              )
               // {PrometheusPort = cardanoDbSyncPrometheusExporterPort;}
               // optionalAttrs (cfg.insertOptions != null) {insert_options = cfg.insertOptions;};
-            logConfig = {};
+            # As in db-sync's own config/mainnet-config.yaml from 13.8.0.0, which
+            # keeps the old mapSeverity of Mux and Subscription at Error.
+            logConfig = optionalAttrs traceDispatcher {
+              TraceOptions = {
+                "" = {
+                  severity = "Info";
+                  detail = "DNormal";
+                  backends = ["Stdout HumanFormatUncoloured"];
+                };
+                Mux.severity = "Error";
+                Subscription.severity = "Error";
+              };
+            };
             postgres.database = "cexplorer";
           };
         };

@@ -7,7 +7,7 @@ flake @ {inputs, ...}: {
     system,
     ...
   }: let
-    inherit (builtins) attrNames elem fromJSON readFile toString;
+    inherit (builtins) attrNames elem fromJSON readFile toFile toString;
     inherit (lib) boolToString concatStringsSep concatMapStringsSep foldl' mkForce optionalString recursiveUpdate replaceStrings;
     inherit (cardanoLib) environments;
     inherit (opsLib) generateStaticHTMLConfigs mithrilAllowedAncillaryNetworks mithrilAllowedNetworks mithrilVerifyingPools;
@@ -381,7 +381,7 @@ flake @ {inputs, ...}: {
         enable = true;
         dataDir = "${stateDir}/${env'}/cardano-db-sync/database";
         initialDatabases = [{name = "cexplorer";}];
-        initialScript.after = ''
+        initialScript.after = toFile "init-cexplorer.sql" ''
           CREATE USER cexplorer;
           ALTER DATABASE cexplorer OWNER TO cexplorer;
         '';
