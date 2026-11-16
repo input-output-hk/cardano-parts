@@ -128,6 +128,7 @@
             default = false;
             description = ''
               Makes the node socket for instance 0 only group writeable.
+              Removes socket permissions for other users without changing permissions on other node files.
               This is done using an inotifywait service to avoid long systemd job startups using postStart.
             '';
           };
@@ -473,8 +474,10 @@
 
                   MK_SOCKET_WRITABLE() {
                     if [ -S "$TARGET" ]; then
-                      chmod g+w "$TARGET"
-                      echo "Cardano-node socket file for instance 0 at $TARGET has been made group writeable"
+                      # Restrict only the socket, preserving group access for consumers.
+                      # Node's startup permission check may run before this helper.
+                      chmod g+w,o-rwx "$TARGET"
+                      echo "Cardano-node socket file for instance 0 at $TARGET has been made group writeable with no access for other users"
                     fi
                   }
 
