@@ -451,9 +451,9 @@
           cardano-node-socket-share = mkIf cfgNode.shareNodeSocket {
             # Follow the node lifecycle without starting an intentionally
             # stopped node when this helper is started or retried.
-            after = ["cardano-node.service"];
-            partOf = ["cardano-node.service"];
-            wantedBy = ["cardano-node.service"];
+            after = ["${serviceName 0}.service"];
+            partOf = ["${serviceName 0}.service"];
+            wantedBy = ["${serviceName 0}.service"];
 
             # Allow up to 10 failures with 30 second restarts in a 15 minute window
             # before entering failure state and alerting
@@ -462,8 +462,8 @@
 
             serviceConfig = {
               # Skip rather than fail when activation starts this helper before
-              # the node. The node's Wants pulls it in when the node starts.
-              ExecCondition = "${pkgs.systemd}/bin/systemctl is-active --quiet cardano-node.service";
+              # the node. The node's Upholds retries it once the node is active.
+              ExecCondition = "${pkgs.systemd}/bin/systemctl is-active --quiet ${serviceName 0}.service";
               ExecStart = getExe (pkgs.writeShellApplication {
                 name = "cardano-node-socket-share";
                 runtimeInputs = with pkgs; [inotify-tools];
@@ -498,6 +498,11 @@
         // foldl' (acc: i:
           recursiveUpdate acc {
             "${serviceName i}" = {
+              # Recover a helper skipped by ExecCondition during activation.
+              # This dependency runs from node to helper, so the helper cannot
+              # start an intentionally stopped node. Only instance 0 shares its socket.
+              unitConfig.Upholds = mkIf (cfgNode.shareNodeSocket && i == 0) "cardano-node-socket-share.service";
+
               # Ensure node can query from /etc/hosts properly if dnsmasq service is enabled
               after = mkIf nixos.config.services.dnsmasq.enable ["dnsmasq.service"];
               wants = mkIf nixos.config.services.dnsmasq.enable ["dnsmasq.service"];
