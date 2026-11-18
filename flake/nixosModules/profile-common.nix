@@ -53,12 +53,23 @@
         boot = {
           # Mitigate Copy.Fail (CVE-2026-31431) and Dirty Frag and Fragnesia (CVE-2026-43284, CVE-2026-43500, CVE-2026-46300).
           # Safe to remove once kernel has the right patches, likely when cardano-parts updates to nixpkgs 26.05.
-          blacklistedKernelModules = ["algif_aead" "esp4" "esp6" "rxrpc"];
+          blacklistedKernelModules = [
+            "algif_aead"
+            "esp4"
+            "esp6"
+            "rxrpc"
+            # nginx2root's separate kernel privilege escalation uses SCTP.
+            # These hosts do not require SCTP. Keep disabled until the running
+            # kernels have a verified fix; a nixpkgs update alone is insufficient.
+            # https://xint.io/blog/nginx2root-remote-code-execution (section 6.3)
+            "sctp"
+          ];
           extraModprobeConfig = ''
             install algif_aead ${coreutils}/bin/false
             install esp4 ${coreutils}/bin/false
             install esp6 ${coreutils}/bin/false
             install rxrpc ${coreutils}/bin/false
+            install sctp ${coreutils}/bin/false
           '';
         };
         # Unload vulnerable modules immediately
@@ -67,6 +78,13 @@
           ${kmod}/bin/rmmod esp4 2>/dev/null || true
           ${kmod}/bin/rmmod esp6 2>/dev/null || true
           ${kmod}/bin/rmmod rxrpc 2>/dev/null || true
+          # Blocking module loading does not remove an already loaded module.
+          # Never force removal if in use; built-in SCTP also needs a kernel change.
+          if [ -d /sys/module/sctp ]; then
+            if ! ${kmod}/bin/rmmod sctp; then
+              echo "WARNING: SCTP remains enabled; nginx2root kernel mitigation is incomplete. Check for SCTP users or built-in support before rebooting into a kernel with SCTP disabled or fixed." >&2
+            fi
+          fi
         '';
 
         environment = {
