@@ -94,6 +94,37 @@
         };
 
         services = {
+          # nginx2root: use a fixed release without updating all of nixpkgs.
+          # https://nginx.org/en/security_advisories.html
+          # Remove once the pinned nginxStable includes the fixes: 1.30.7 or
+          # 1.31.9 (or a later branch). 1.31.0-1.31.8 are still vulnerable.
+          # The nginx module still adds services.nginx.additionalModules (e.g. VTS).
+          nginx.package = mkIf config.services.nginx.enable (mkDefault (
+            let
+              fixed =
+                if versionAtLeast nginxStable.version "1.31.0"
+                then {
+                  version = "1.31.9";
+                  hash = "sha256-oRxe7uLiV/RHjw5kn4SwBAeH0nfS0+UjOVKqa23LgK0=";
+                }
+                else {
+                  version = "1.30.7";
+                  hash = "sha256-JWW1yDcFDpWPcPsPc8SOK8pFQq00n9NW9G+wxyYQvG4=";
+                };
+            in
+              if versionOlder nginxStable.version fixed.version
+              then
+                nginxStable.overrideAttrs (_: {
+                  inherit (fixed) version;
+                  nginxVersion = fixed.version;
+                  src = fetchurl {
+                    url = "https://nginx.org/download/nginx-${fixed.version}.tar.gz";
+                    inherit (fixed) hash;
+                  };
+                })
+              else nginxStable
+          ));
+
           # Enable the at scheduler
           atd.enable = true;
 
