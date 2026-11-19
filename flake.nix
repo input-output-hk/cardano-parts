@@ -68,7 +68,7 @@
     # For tmp local testing pins
     cardano-faucet.url = "github:input-output-hk/cardano-faucet";
     cardano-faucet-leios.url = "github:input-output-hk/cardano-faucet/leios-prototype";
-    cardano-node-11-2-3.url = "github:IntersectMBO/cardano-node/koslambrou/release-11.2.3-bump-cardano-protocol-0.2.0.2";
+    # cardano-node-11-2-3.url = "github:IntersectMBO/cardano-node/11.2.3";
     blockperf.url = "github:johnalotoski/blockperf/jl/ccfg";
 
     # Cardano-db-sync schema input pins, which must match the
@@ -109,7 +109,7 @@
     };
 
     cardano-node-service-ng = {
-      url = "github:IntersectMBO/cardano-node/koslambrou/release-11.2.3-bump-cardano-protocol-0.2.0.2";
+      url = "github:IntersectMBO/cardano-node/11.2.3";
       flake = false;
     };
 
@@ -134,7 +134,7 @@
     };
 
     cardano-submit-api-service-ng = {
-      url = "github:IntersectMBO/cardano-node/koslambrou/release-11.2.3-bump-cardano-protocol-0.2.0.2";
+      url = "github:IntersectMBO/cardano-node/11.2.3";
       flake = false;
     };
 
@@ -144,7 +144,7 @@
     };
 
     cardano-tracer-service-ng = {
-      url = "github:IntersectMBO/cardano-node/koslambrou/release-11.2.3-bump-cardano-protocol-0.2.0.2";
+      url = "github:IntersectMBO/cardano-node/11.2.3";
       flake = false;
     };
 
