@@ -25,6 +25,20 @@
     ...
   }: let
     inherit (builtins) toJSON;
+    # nixpkgsUpgrade: current migration workaround
+    # Suppress system and user D-Bus change-triggered reloads and restarts
+    # during the dbus-daemon to dbus-broker migration: the running daemon
+    # cannot complete the new broker unit's notify-reload handshake.
+    # Disable after the entire cluster has upgraded AND rebooted into broker.
+    # Normal startup is unaffected, including across multiple reboots, but
+    # subsequent D-Bus changes may wait until reboot while this is enabled.
+    # Permanent SSM/DNS activation protection below is independent of this flag.
+    # Read the flag from the consuming cluster, not cardano-parts' own config.
+    nixpkgsUpgrade = config.cardano-parts.cluster.group.groupFlake.config.flake.cardano-parts.cluster.infra.generic.nixpkgsUpgrade or false;
+    deferDbusChanges = {
+      reloadIfChanged = lib.mkForce false;
+      restartIfChanged = false;
+    };
   in
     with pkgs;
     with lib; {
@@ -37,20 +51,25 @@
 
       config = {
         boot = {
-          # Cardano-node >= 10.7.0 requires kernel >= 6.15 for LSM, without which
-          # large IOWAIT will be observed.
-          #
-          # Kernel 6.18 is the most recent kernel which is compatible with ZFS.
-          kernelPackages = mkDefault pkgs.linuxPackages_6_18;
-
           # Mitigate Copy.Fail (CVE-2026-31431) and Dirty Frag and Fragnesia (CVE-2026-43284, CVE-2026-43500, CVE-2026-46300).
           # Safe to remove once kernel has the right patches, likely when cardano-parts updates to nixpkgs 26.05.
-          blacklistedKernelModules = ["algif_aead" "esp4" "esp6" "rxrpc"];
+          blacklistedKernelModules = [
+            "algif_aead"
+            "esp4"
+            "esp6"
+            "rxrpc"
+            # nginx2root's separate kernel privilege escalation uses SCTP.
+            # These hosts do not require SCTP. Keep disabled until the running
+            # kernels have a verified fix; a nixpkgs update alone is insufficient.
+            # https://xint.io/blog/nginx2root-remote-code-execution (section 6.3)
+            "sctp"
+          ];
           extraModprobeConfig = ''
             install algif_aead ${coreutils}/bin/false
             install esp4 ${coreutils}/bin/false
             install esp6 ${coreutils}/bin/false
             install rxrpc ${coreutils}/bin/false
+            install sctp ${coreutils}/bin/false
           '';
         };
         # Unload vulnerable modules immediately
@@ -59,6 +78,13 @@
           ${kmod}/bin/rmmod esp4 2>/dev/null || true
           ${kmod}/bin/rmmod esp6 2>/dev/null || true
           ${kmod}/bin/rmmod rxrpc 2>/dev/null || true
+          # Blocking module loading does not remove an already loaded module.
+          # Never force removal if in use; built-in SCTP also needs a kernel change.
+          if [ -d /sys/module/sctp ]; then
+            if ! ${kmod}/bin/rmmod sctp; then
+              echo "WARNING: SCTP remains enabled; nginx2root kernel mitigation is incomplete. Check for SCTP users or built-in support before rebooting into a kernel with SCTP disabled or fixed." >&2
+            fi
+          fi
         '';
 
         environment = {
@@ -86,6 +112,37 @@
         };
 
         services = {
+          # nginx2root: use a fixed release without updating all of nixpkgs.
+          # https://nginx.org/en/security_advisories.html
+          # Remove once the pinned nginxStable includes the fixes: 1.30.7 or
+          # 1.31.9 (or a later branch). 1.31.0-1.31.8 are still vulnerable.
+          # The nginx module still adds services.nginx.additionalModules (e.g. VTS).
+          nginx.package = mkIf config.services.nginx.enable (mkDefault (
+            let
+              fixed =
+                if versionAtLeast nginxStable.version "1.31.0"
+                then {
+                  version = "1.31.9";
+                  hash = "sha256-oRxe7uLiV/RHjw5kn4SwBAeH0nfS0+UjOVKqa23LgK0=";
+                }
+                else {
+                  version = "1.30.7";
+                  hash = "sha256-JWW1yDcFDpWPcPsPc8SOK8pFQq00n9NW9G+wxyYQvG4=";
+                };
+            in
+              if versionOlder nginxStable.version fixed.version
+              then
+                nginxStable.overrideAttrs (_: {
+                  inherit (fixed) version;
+                  nginxVersion = fixed.version;
+                  src = fetchurl {
+                    url = "https://nginx.org/download/nginx-${fixed.version}.tar.gz";
+                    inherit (fixed) hash;
+                  };
+                })
+              else nginxStable
+          ));
+
           # Enable the at scheduler
           atd.enable = true;
 
@@ -109,7 +166,25 @@
         '';
 
         systemd = {
+          # See nixpkgsUpgrade above for migration details and removal criteria.
+          # Both aliases and both scopes need the override.
+          user.services = mkIf (nixpkgsUpgrade && config.services.dbus.enable) {
+            dbus = deferDbusChanges;
+            dbus-broker = mkIf (config.services.dbus.implementation == "broker") deferDbusChanges;
+          };
           services = {
+            # Permanent deployment protection: retain access and DNS during
+            # activation (including AWS KMS decryption), then restart changed
+            # services later in the switch. Independent of nixpkgsUpgrade.
+            amazon-ssm-agent = mkIf config.services.amazon-ssm-agent.enable {
+              stopIfChanged = mkDefault false;
+            };
+            dnsmasq = mkIf config.services.dnsmasq.enable {
+              stopIfChanged = mkDefault false;
+            };
+            dbus = mkIf (nixpkgsUpgrade && config.services.dbus.enable) deferDbusChanges;
+            dbus-broker = mkIf (nixpkgsUpgrade && config.services.dbus.enable && config.services.dbus.implementation == "broker") deferDbusChanges;
+
             # Remove the bootstrap key after 1 week in favor of auth-keys-hub use
             remove-ssh-bootstrap-key = {
               wantedBy = ["multi-user.target"];

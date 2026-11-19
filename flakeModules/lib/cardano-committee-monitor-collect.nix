@@ -15,10 +15,12 @@ pkgs.writeShellApplication {
     : "''${SECONDS_PER_EPOCH:?SECONDS_PER_EPOCH must be set}"
     TMP="$OUT.tmp"
 
-    # `query committee-state` returns the top-level `epoch` it was
-    # computed against, so a second `query tip` RPC would only open an
-    # epoch-boundary race window.
-    CS=$(cardano-cli latest query committee-state)
+    # `latest` is a CLI era alias, not the node's current ledger era.
+    # Discover the era on every collection so hard forks need no config change.
+    ERA=$(cardano-cli latest query tip | jq -er '.era | select(type == "string" and length > 0) | ascii_downcase')
+    CS=$(cardano-cli "$ERA" query committee-state)
+    # Keep the epoch from committee-state, not tip, so term calculations
+    # remain consistent if an epoch boundary falls between the queries.
 
     # `environment` is baked in here because alloy's node-exporter
     # relabel chain sets only `instance` and `job` for textfile-collector

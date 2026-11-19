@@ -128,6 +128,7 @@
             default = false;
             description = ''
               Makes the node socket for instance 0 only group writeable.
+              Removes socket permissions for other users without changing permissions on other node files.
               This is done using an inotifywait service to avoid long systemd job startups using postStart.
             '';
           };
@@ -448,10 +449,11 @@
       in
         {
           cardano-node-socket-share = mkIf cfgNode.shareNodeSocket {
-            after = ["cardano-node.service"];
-            wants = ["cardano-node.service"];
-            partOf = ["cardano-node.service"];
-            wantedBy = ["cardano-node.service"];
+            # Follow the node lifecycle without starting an intentionally
+            # stopped node when this helper is started or retried.
+            after = ["${serviceName 0}.service"];
+            partOf = ["${serviceName 0}.service"];
+            wantedBy = ["${serviceName 0}.service"];
 
             # Allow up to 10 failures with 30 second restarts in a 15 minute window
             # before entering failure state and alerting
@@ -459,6 +461,9 @@
             startLimitIntervalSec = 900;
 
             serviceConfig = {
+              # Skip rather than fail when activation starts this helper before
+              # the node. The node's Upholds retries it once the node is active.
+              ExecCondition = "${pkgs.systemd}/bin/systemctl is-active --quiet ${serviceName 0}.service";
               ExecStart = getExe (pkgs.writeShellApplication {
                 name = "cardano-node-socket-share";
                 runtimeInputs = with pkgs; [inotify-tools];
@@ -469,8 +474,10 @@
 
                   MK_SOCKET_WRITABLE() {
                     if [ -S "$TARGET" ]; then
-                      chmod g+w "$TARGET"
-                      echo "Cardano-node socket file for instance 0 at $TARGET has been made group writeable"
+                      # Restrict only the socket, preserving group access for consumers.
+                      # Node's startup permission check may run before this helper.
+                      chmod g+w,o-rwx "$TARGET"
+                      echo "Cardano-node socket file for instance 0 at $TARGET has been made group writeable with no access for other users"
                     fi
                   }
 
@@ -491,6 +498,11 @@
         // foldl' (acc: i:
           recursiveUpdate acc {
             "${serviceName i}" = {
+              # Recover a helper skipped by ExecCondition during activation.
+              # This dependency runs from node to helper, so the helper cannot
+              # start an intentionally stopped node. Only instance 0 shares its socket.
+              unitConfig.Upholds = mkIf (cfgNode.shareNodeSocket && i == 0) "cardano-node-socket-share.service";
+
               # Ensure node can query from /etc/hosts properly if dnsmasq service is enabled
               after = mkIf nixos.config.services.dnsmasq.enable ["dnsmasq.service"];
               wants = mkIf nixos.config.services.dnsmasq.enable ["dnsmasq.service"];

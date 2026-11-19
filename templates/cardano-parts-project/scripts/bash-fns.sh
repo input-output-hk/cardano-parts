@@ -290,7 +290,15 @@ run-node-faketime() (
     "--socket-path" "$DATA_DIR/node.socket"
     "--host-addr" "0.0.0.0"
     "--port" "3001"
+    # If adding the single pool below so bulk bls keys can be used, 2 pools
+    # need to be removed from the bulk creds: the bootstrap plus the backbone
+    # pool that is loaded by single key options.
     "--bulk-credentials-file" "$GENESIS_DIR/bulk.creds.all.json"
+    # To test with EB certification during spin up
+    # "--shelley-operational-certificate" "workbench/custom/groups/leios1/deploy/leios1-bp-a-1.opcert"
+    # "--shelley-vrf-key" "workbench/custom/groups/leios1/deploy/leios1-bp-a-1-vrf.skey"
+    # "--shelley-kes-key" "workbench/custom/groups/leios1/deploy/leios1-bp-a-1-kes.skey"
+    # "--shelley-bls-key" "$GENESIS_DIR/bls-bulk.json"
   )
 
   # If an older glibc is needed, obtain it from the correct nixpkgs.

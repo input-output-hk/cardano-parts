@@ -1,0 +1,18 @@
+{
+  namespace = "nginx";
+  name = "acme";
+  rule = [
+    {
+      # Only hosts that add acme-.* to services.alloy.systemdUnitInclude
+      # report these units.
+      alert = "acme_renewal_failed";
+      expr = ''node_systemd_unit_state{name=~"acme-order-renew-.*\\.service", state="failed"} == 1'';
+      for = "15m";
+      labels.severity = "warning";
+      annotations = {
+        summary = "{{$labels.instance}}: certificate renewal {{$labels.name}} failed.";
+        description = "{{$labels.instance}}: {{$labels.name}} failed. The current certificate stays valid until it expires, and the renewal timer retries daily. Check `journalctl -u {{$labels.name}}`; a missing or wrong DNS record for the vhost is the usual cause.";
+      };
+    }
+  ];
+}

@@ -114,10 +114,8 @@ def getPParams(*network_args) -> str:
 
 
 def getPParamsJson(*network_args) -> Any:
-    p = subprocess.Popen([cardanoCliStr(), "latest", "query", "protocol-parameters", *network_args, "--out-file", "/dev/stdout"], stdout=subprocess.PIPE)
-    p.wait()
-    output, _ = p.communicate()
-    return json.loads(output)
+    p = subprocess.run([cardanoCliStr(), "latest", "query", "protocol-parameters", *network_args, "--out-file", "/dev/stdout"], stdout=subprocess.PIPE, check=True)
+    return json.loads(p.stdout)
 
 
 def getTTL(*network_args, addnl_sec=3600) -> int:

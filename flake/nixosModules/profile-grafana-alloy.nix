@@ -26,8 +26,8 @@
 #
 # Tips:
 #   * This module provides a grafana-alloy service and configures common application metrics hooks
-flake @ {moduleWithSystem, ...}: {
-  flake.nixosModules.profile-grafana-alloy = moduleWithSystem ({inputs'}: {
+flake: {
+  flake.nixosModules.profile-grafana-alloy = {
     config,
     lib,
     name,
@@ -438,6 +438,21 @@ flake @ {moduleWithSystem, ...}: {
 
         '';
 
+        fail2ban = optional cfgSvc.prometheus.exporters.fail2ban.enable ''
+          // Fail2ban jail counters and configuration; scrape locally only.
+          prometheus.scrape "integrations_fail2ban" {
+            targets = [{
+              __address__ = "${cfgSvc.prometheus.exporters.fail2ban.host}:${toString cfgSvc.prometheus.exporters.fail2ban.port}",
+              ${concatStringsSep ", \n" (mapAttrsToList (n: v: "${n} = \"${v}\"") cfg.labels)},
+            }]
+            forward_to = [prometheus.remote_write.integrations.receiver]
+            job_name = "integrations/fail2ban"
+            scrape_interval = "1m"
+            scrape_timeout = "10s"
+          }
+
+        '';
+
         varnishCache = optional (cfgSvc.prometheus.exporters ? varnish && cfgSvc.prometheus.exporters.varnish.enable) ''
           // Varnish cache integration components
           prometheus.scrape "integrations_varnish_cache" {
@@ -769,6 +784,27 @@ flake @ {moduleWithSystem, ...}: {
 
       config = mkMerge [
         {
+          services.prometheus.exporters.fail2ban = {
+            enable = mkDefault cfgSvc.fail2ban.enable;
+            host = mkDefault "127.0.0.1";
+            openFirewall = mkDefault false;
+            # Keep serving health/error metrics during a fail2ban outage.
+            exitOnError = false;
+          };
+        }
+        (mkIf (cfgSvc.fail2ban.enable && cfgSvc.prometheus.exporters.fail2ban.enable) {
+          # Fail2ban recreates its socket on restart. Restart the exporter too,
+          # so its required setup unit reapplies the socket ACL before scraping.
+          systemd.services = {
+            prometheus-fail2ban-exporter = {
+              after = ["fail2ban.service"];
+              partOf = ["fail2ban.service"];
+              wantedBy = ["fail2ban.service"];
+            };
+            prometheus-fail2ban-exporter-setup.serviceConfig.TimeoutStartSec = "30s";
+          };
+        })
+        {
           environment.etc."alloy/config.alloy".source = let
             alloyCfg' =
               toFile "alloy-unformatted.config"
@@ -793,6 +829,7 @@ flake @ {moduleWithSystem, ...}: {
                   ++ cardanoPartsComponentCfg.cardanoNode
                   ++ cardanoPartsComponentCfg.cardanoSmash
                   ++ cardanoPartsComponentCfg.cardanoSubmitApi
+                  ++ cardanoPartsComponentCfg.fail2ban
                   ++ cardanoPartsComponentCfg.mithrilSigner
                   ++ cardanoPartsComponentCfg.nginxVts
                   ++ cardanoPartsComponentCfg.varnishCache
@@ -812,8 +849,6 @@ flake @ {moduleWithSystem, ...}: {
               "--disable-reporting"
               "--stability.level=experimental"
             ];
-
-            package = inputs'.nixpkgs-unstable.legacyPackages.grafana-alloy;
           };
 
           systemd.services.alloy = {
@@ -911,5 +946,5 @@ flake @ {moduleWithSystem, ...}: {
           };
         })
       ];
-    });
+    };
 }
